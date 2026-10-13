@@ -269,9 +269,7 @@ The ***places*** ***arrive*** as ***one*** **GeoJSON** ***file***, the ***seed**
 3. **Only the builder sends SQL.** An ***architecture*** ***test*** ***fails*** if any ***code*** ***outside*** the builder's module ***uses*** the database ***client***.
 4. **An attack changes nothing.** ***Through*** the ***real*** database, ***requests*** for the ***layers*** `x; DROP TABLE cafes` and `food.cafes'; --` each ***get*** 404, and the ***nine*** ***tables*** ***keep*** their ***rows***.
 
-**Open to talk**
-
-- ***Whether*** the ***build***'s ***check*** ***reads*** the ***source*** ***text*** or the ***compiled*** ***code***'s dependencies.
+**Decided on 14 October 2026.** The ***check*** ***reads*** the ***compiled*** ***code***, ***twice***. Every query's ***text*** ***lives*** in Sql as a ***named*** ***function***, and the query builder is `internal` to Sql, so the compiler ***refuses*** any other ***project*** that ***tries*** to ***make*** a query; an ArchUnitNET ***test*** then ***proves*** that only Sql ***references*** the database ***client***.
 
 **Critical to success**
 

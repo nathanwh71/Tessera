@@ -34,39 +34,11 @@ public sealed record TileAddress(int Z, int X, int Y)
                 : Result.Ok<TileAddress, string>(new TileAddress(z, x, y));
 }
 
-/// <summary>The SQL that builds one tile, in one query, inside the database (US-07).</summary>
+/// <summary>The tile query, built in Sql from the layer, the tile and the settings (US-07).</summary>
 public static class TileQuery
 {
-    /// <summary>
-    /// A vector tile stores positions as whole numbers inside a square 4096 units wide, the usual
-    /// size for Mapbox vector tiles.
-    /// </summary>
-    public const int Extent = 4096;
-
-    /// <summary>
-    /// Builds the tile query for one layer and one tile. Every value travels as a bound parameter;
-    /// only the catalogue's quoted names enter the text (S-01).
-    /// </summary>
-    /// <remarks>
-    /// ST_TileEnvelope gives the tile's square in Web Mercator metres. The WHERE clause turns that
-    /// square into the layer's own coordinate system, never the table's shapes into Web Mercator,
-    /// so the spatial index applies and each tile reads only the rows it needs (US-07 critical
-    /// point). ST_AsMVTGeom then moves each shape into the tile's 4096 grid, and ST_AsMVT packs the
-    /// rows into one Mapbox vector tile. The margin widens the search square by the buffer, so a
-    /// symbol near an edge still appears on both tiles.
-    /// </remarks>
     public static Query For(Layer layer, TileAddress tile, TileSettings settings) =>
-        Query.Of($"""
-            SELECT ST_AsMVT(tile.*, {layer.Id}, {Extent}, 'tessera_shape') FROM (
-              SELECT ST_AsMVTGeom(ST_Transform(t.{layer.Geometry}, 3857), ST_TileEnvelope({tile.Z}, {tile.X}, {tile.Y}), {Extent}, {settings.Buffer}, true) AS tessera_shape{Columns(layer)}
-              FROM {layer.Table} AS t
-              WHERE t.{layer.Geometry} && ST_Transform(ST_TileEnvelope({tile.Z}, {tile.X}, {tile.Y}, margin => {(double)settings.Buffer / Extent}), {layer.Srid})
-              LIMIT {settings.MaxFeatures}
-            ) AS tile
-            """);
-
-    // ', "name", "group" …' for every property column, so each tile carries them all (US-24).
-    private static NameList Columns(Layer layer) => new(layer.Properties, LeadingComma: true);
+        TileQueries.Tile(layer.Source, new TileCell(tile.Z, tile.X, tile.Y), new TileLimits(settings.MaxFeatures, settings.Buffer));
 }
 
 /// <summary>The tile route: <c>/{layer}/{z}/{x}/{y}.pbf</c>, and the same ending <c>.mvt</c> (US-07).</summary>

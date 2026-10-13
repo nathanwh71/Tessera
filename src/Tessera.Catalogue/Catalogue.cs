@@ -18,6 +18,9 @@ namespace Tessera.Catalogue;
 public sealed record Layer(TableName Table, QuotedName Geometry, int Srid, string GeometryType, ImmutableArray<QuotedName> Properties)
 {
     public string Id => Table.Id;
+
+    /// <summary>The layer as the tile query needs it.</summary>
+    public LayerSource Source => new(Table, Geometry, Srid, Properties, Id);
 }
 
 /// <summary>
@@ -36,44 +39,8 @@ public sealed record CatalogueRow(string Schema, string Name, string GeometryCol
 /// </summary>
 public sealed record LayerCatalogue(ImmutableDictionary<string, Layer> Layers)
 {
-    /// <summary>
-    /// The query that lists every table and view with a typed geometry column that the signed-in
-    /// role may read.
-    /// </summary>
-    /// <remarks>
-    /// pg_class lists tables and views; relkind tells them apart: 'r' a table, 'p' a partitioned
-    /// table, 'v' a view, 'm' a view that stores its rows. A function never appears in pg_class, so
-    /// no function becomes a layer (US-03 c5). has_table_privilege asks the database, as the
-    /// service's own role, whether a grant lets it read the table, so the database decides what is
-    /// published. A typed column carries its SRID in its "type modifier", atttypmod; for an untyped
-    /// column, or one typed without an SRID, postgis_typmod_srid gives 0, so the last condition
-    /// leaves both out (US-24: an untyped column is not published).
-    /// DISTINCT ON keeps one geometry column for each table: the first, by column number.
-    /// </remarks>
-    public static readonly Query ListQuery = Query.Of($"""
-        SELECT DISTINCT ON (n.nspname, c.relname)
-               n.nspname::text AS schema,
-               c.relname::text AS name,
-               a.attname::text AS geometrycolumn,
-               postgis_typmod_srid(a.atttypmod) AS srid,
-               postgis_typmod_type(a.atttypmod) AS geometrytype,
-               to_json(ARRAY(SELECT p.attname::text
-                     FROM pg_attribute p
-                     JOIN pg_type pt ON pt.oid = p.atttypid
-                     WHERE p.attrelid = c.oid AND p.attnum > 0 AND NOT p.attisdropped AND p.attnum <> a.attnum
-                       AND pt.typname IN ('text', 'varchar', 'bpchar', 'int2', 'int4', 'int8', 'float4', 'float8', 'numeric', 'bool')
-                     ORDER BY p.attnum))::text AS columns
-        FROM pg_class c
-        JOIN pg_namespace n ON n.oid = c.relnamespace
-        JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
-        JOIN pg_type t ON t.oid = a.atttypid AND t.typname = 'geometry'
-        WHERE c.relkind IN ('r', 'p', 'v', 'm')
-          AND n.nspname NOT IN ('pg_catalog', 'information_schema')
-          AND has_schema_privilege(n.oid, 'USAGE')
-          AND has_table_privilege(c.oid, 'SELECT')
-          AND postgis_typmod_srid(a.atttypmod) > 0
-        ORDER BY n.nspname, c.relname, a.attnum
-        """);
+    /// <summary>The query that lists the layers: <see cref="CatalogueQueries.List"/>, in Sql.</summary>
+    public static Query ListQuery => CatalogueQueries.List;
 
     /// <summary>
     /// Turns one row into a layer, quoting every name on the way in, so each name that later

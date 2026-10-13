@@ -69,7 +69,7 @@ The ***service*** is ***one*** ***program*** ***cut*** into ***seven*** modules,
 |---|---|
 | `src/Tessera.Kernel` | `Option` and `Result`, the ***two*** ***types*** every module ***uses*** for ***missing*** ***values*** and ***refusals*** (ADR 0004) |
 | `src/Tessera.Settings` | ***Reading*** `tessera.json` and the ***environment*** |
-| `src/Tessera.Sql` | The ***one*** query builder and the ***only*** ***code*** that ***talks*** to the database |
+| `src/Tessera.Sql` | Every query's ***text***, the ***one*** query builder ***behind*** it, and the ***only*** ***code*** that ***talks*** to the database |
 | `src/Tessera.Catalogue` | The ***list*** of ***layers***: every ***table*** ***granted*** to the ***service*** |
 | `src/Tessera.Import` | The `import` ***command***: ***checks*** the GeoJSON ***seed*** and ***loads*** the ***nine*** ***tables*** |
 | `src/Tessera.Tiles` | The tile ***route*** and the tile query |

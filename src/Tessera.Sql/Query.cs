@@ -12,11 +12,9 @@ namespace Tessera.Sql;
 /// A bound parameter is a value the database receives apart from the SQL text, like an answer
 /// written in a form's box rather than in its questions. The database never reads it as SQL, so no
 /// value from a request can change what a query does.
-/// The constructor is private: <see cref="Of"/> is the only way to make a query, and it accepts an
-/// interpolated string, the <c>$"…"</c> form; a plain string variable will not compile. The compiler
-/// must reach <see cref="QueryHandler"/> from other projects, so its own constructor is public, and
-/// code that called it by hand could still add raw text. No code does, and review guards that: the
-/// compiled form of every <c>$"…"</c> call looks the same, so no test can tell the two apart (S-01 c2).
+/// The constructor is private, and <see cref="Of"/> and <see cref="QueryHandler"/> are internal to
+/// this project, so only the named functions in Queries.cs can make a query (S-01 c2). Other
+/// projects receive a Query as a value and can read its text, but never write one.
 /// </remarks>
 public sealed record Query
 {
@@ -34,14 +32,14 @@ public sealed record Query
     /// <see cref="SqlType"/> in braces becomes SQL text too; any other value in braces becomes a
     /// bound parameter, a string included.
     /// </summary>
-    public static Query Of(QueryHandler query) => query.Build();
+    internal static Query Of(QueryHandler query) => query.Build();
 
     /// <summary>
     /// The compiler hands each part of a <c>$"…"</c> string to these methods in turn. Overloads
     /// decide what each part becomes; the generic one, for any other value, makes a parameter.
     /// </summary>
     [InterpolatedStringHandler]
-    public ref struct QueryHandler
+    internal ref struct QueryHandler
     {
         private readonly StringBuilder _text;
         private readonly ImmutableArray<object>.Builder _parameters;

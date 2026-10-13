@@ -94,4 +94,27 @@ public static class Result
 
         return new Result<System.Collections.Immutable.ImmutableArray<TOut>, TError>.Ok(values.ToImmutable());
     }
+
+    /// <summary>
+    /// <see cref="Traverse"/> for steps that wait, such as queries: each runs after the one before,
+    /// and the first refusal stops the rest.
+    /// </summary>
+    public static async Task<Result<System.Collections.Immutable.ImmutableArray<TOut>, TError>> TraverseAsync<TIn, TOut, TError>(
+        this IEnumerable<TIn> items, Func<TIn, Task<Result<TOut, TError>>> step)
+    {
+        var values = System.Collections.Immutable.ImmutableArray.CreateBuilder<TOut>();
+        foreach (var item in items)
+        {
+            switch (await step(item).ConfigureAwait(false))
+            {
+                case Result<TOut, TError>.Ok(var value):
+                    values.Add(value);
+                    break;
+                case Result<TOut, TError>.Refused(var error):
+                    return new Result<System.Collections.Immutable.ImmutableArray<TOut>, TError>.Refused(error);
+            }
+        }
+
+        return new Result<System.Collections.Immutable.ImmutableArray<TOut>, TError>.Ok(values.ToImmutable());
+    }
 }

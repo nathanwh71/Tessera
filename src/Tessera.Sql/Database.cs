@@ -56,9 +56,12 @@ public sealed class Database : IAsyncDisposable
     /// <remarks>
     /// A transaction groups commands so the database applies them together. If any step refuses, or
     /// the database fails, the whole group rolls back, and no reader ever sees half of it.
+    /// The steps refuse with the caller's own error type, so a step that refuses for a reason of its
+    /// own, such as an odd column name, needs no database error to carry it; <paramref name="refused"/>
+    /// turns a database failure into that same type.
     /// </remarks>
-    public async Task<Result<T, DatabaseError>> InTransaction<T>(
-        Func<Session, Task<Result<T, DatabaseError>>> steps, CancellationToken cancel = default)
+    public async Task<Result<T, TError>> InTransaction<T, TError>(
+        Func<Session, Task<Result<T, TError>>> steps, Func<DatabaseError, TError> refused, CancellationToken cancel = default)
     {
         try
         {
@@ -72,7 +75,7 @@ public sealed class Database : IAsyncDisposable
         }
         catch (NpgsqlException error)
         {
-            return Result.Refuse<T, DatabaseError>(Error(error));
+            return Result.Refuse<T, TError>(refused(Error(error)));
         }
     }
 

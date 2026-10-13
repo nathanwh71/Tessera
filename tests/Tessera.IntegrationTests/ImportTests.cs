@@ -69,8 +69,8 @@ public sealed class ImportTests(DatabaseFixture database) : IClassFixture<Databa
     }
 
     // US-24 c6: when the database fails half-way through a load, the transaction rolls back and
-    // every table keeps the rows it held. Here the second file gives 'sample' text where the
-    // column holds true or false, so the database refuses a row after the old rows are deleted.
+    // every table keeps the rows it held. Here one name holds a NUL character, which PostgreSQL text
+    // cannot store, so the database refuses that row after the old rows are deleted.
     [Fact]
     public async Task Rolls_back_a_load_the_database_refuses_half_way()
     {
@@ -80,12 +80,36 @@ public sealed class ImportTests(DatabaseFixture database) : IClassFixture<Databa
         await using var publisher = Database.Open(database.Publisher);
         var result = await Importer.Run(publisher, Samples.Sample(file =>
         {
-            ((System.Text.Json.Nodes.JsonObject)file["features"]![17]!)["properties"]!["sample"] = "yes";
+            ((System.Text.Json.Nodes.JsonObject)file["features"]![17]!)["properties"]!["name"] = "bad\u0000name";
             return file;
         }), Macau, TestContext.Current.CancellationToken);
 
         Assert.Contains("The database refused the import", result.Match(_ => "", error => error.Message), StringComparison.Ordinal);
         Assert.Equal(before, await database.OwnerValue<long>("SELECT count(*) FROM food.cafes"));
         Assert.Equal(2L, before);
+    }
+
+    // A property whose values change kind between two files changes its column's type rather than
+    // failing the load: 'sample' was true or false, and now one file gives it a word. The sample's
+    // layers come in name order, so features 2 and 3 are the two cafes.
+    [Fact]
+    public async Task Changes_a_columns_type_when_its_values_change_kind()
+    {
+        await Import(Samples.Sample());
+        await Import(Samples.Sample(file =>
+        {
+            ((System.Text.Json.Nodes.JsonObject)file["features"]![2]!)["properties"]!["sample"] = "yes";
+            return file;
+        }));
+
+        Assert.Equal("text", await database.OwnerValue<string>(
+            "SELECT data_type FROM information_schema.columns WHERE table_schema = 'food' AND table_name = 'cafes' AND column_name = 'sample'"));
+        Assert.Equal("yes", await database.OwnerValue<string>("SELECT sample FROM food.cafes WHERE id = 'cafes-001'"));
+        Assert.Equal("true", await database.OwnerValue<string>("SELECT sample FROM food.cafes WHERE id = 'cafes-002'"));
+
+        // And back again: a file of true and false values returns the column to boolean.
+        await Import(Samples.Sample());
+        Assert.Equal("boolean", await database.OwnerValue<string>(
+            "SELECT data_type FROM information_schema.columns WHERE table_schema = 'food' AND table_name = 'cafes' AND column_name = 'sample'"));
     }
 }

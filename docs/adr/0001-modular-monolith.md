@@ -37,7 +37,7 @@ This ***record*** ***covers*** the back ***end*** ***alone***. The ***map***'s *
 | Module | Owns | Stories |
 |---|---|---|
 | Settings | ***Reading*** every ***machine***'s ***name***, ***address*** and ***port*** from ***environment*** variables; ***refusing*** to ***start*** when ***one*** is ***missing*** | US-00 |
-| Sql | The ***one*** query builder, the ***one*** ***function*** that ***quotes*** ***names***, and the ***only*** ***use*** of the database ***client***, Npgsql with Dapper | S-01, US-03 (S-02) |
+| Sql | Every query's ***text***, as ***named*** ***functions***; the ***one*** query builder ***behind*** them; the ***one*** ***function*** that ***quotes*** ***names***; and the ***only*** ***use*** of the database ***client***, Npgsql with Dapper | S-01, US-03 (S-02) |
 | Catalogue | The ***list*** of ***granted*** ***tables*** and ***views***, ***built*** at ***start***-up | US-03 |
 | Import | The `import` ***command***: ***reading*** and ***checking*** the GeoJSON ***seed***, and ***replacing*** the ***rows*** of the ***nine*** ***tables*** in ***one*** transaction | US-24 |
 | Tiles | The tile ***route*** and the tile query | US-07 |
@@ -84,7 +84,7 @@ Each module ***sits*** in a ***project*** of its own, so the compiler ***guards*
 |---|---|
 | 1. A small public face | The compiler: an `internal` ***type*** ***stays*** ***inside*** its ***project*** |
 | 2. One direction | The compiler: .NET ***refuses*** a ***circle*** of ***project*** ***references***, so the ***build*** ***fails*** |
-| 3. One gate to SQL | The compiler: only Sql ***references*** the database ***client***'s ***packages***, Npgsql and Dapper, each ***marked*** `PrivateAssets="compile;contentfiles;analyzers;build"`. The ***mark*** ***stops*** the ***packages*** ***reaching*** the compiler of any ***project*** that ***references*** Sql, while their ***runtime*** ***files*** ***still*** ***reach*** the ***finished*** ***service***; `PrivateAssets="all"` would ***stop*** those too, and the ***service*** would ***fail*** at ***start***. The query builder ***hands*** Dapper ***fixed*** ***text*** and ***bound*** parameters ***alone***. An ArchUnitNET ***test*** ***repeats*** the ***check***, as S-01's ***criterion*** 2 ***names*** ***one*** |
+| 3. One gate to SQL | The compiler: only Sql ***references*** the database ***client***'s ***packages***, Npgsql and Dapper, each ***marked*** `PrivateAssets="compile;contentfiles;analyzers;build"`. The ***mark*** ***stops*** the ***packages*** ***reaching*** the compiler of any ***project*** that ***references*** Sql, while their ***runtime*** ***files*** ***still*** ***reach*** the ***finished*** ***service***; `PrivateAssets="all"` would ***stop*** those too, and the ***service*** would ***fail*** at ***start***. The query builder is `internal` to Sql, so only the ***named*** query ***functions*** in `Queries.cs` can ***make*** a query, and the compiler ***proves*** that every SQL ***text*** ***lives*** there; the builder ***hands*** Dapper ***fixed*** ***text*** and ***bound*** parameters ***alone***. An ArchUnitNET ***test*** ***repeats*** the ***check***, as S-01's ***criterion*** 2 ***names*** ***one*** |
 | 4. One shape for errors | An ArchUnitNET ***test***, ***since*** any ***project*** that ***serves*** HTTP can ***write*** a ***body*** |
 | 5. Values, not shared state | ***Review***, and the ***coding*** ***style***: immutable ***collections***, and ***nullable*** ***types*** at a module's ***edge*** ***alone*** (ADR 0004) |
 
