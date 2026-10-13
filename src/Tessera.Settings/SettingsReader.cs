@@ -1,5 +1,4 @@
 using System.Collections.Immutable;
-using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -23,30 +22,23 @@ public static class SettingsReader
         IReadOnlyDictionary<string, string> environment, string configName, Option<string> configText)
     {
         var document = Document(environment, configName, configText);
-        var area = document.Bind(ReadArea);
-        var map = document.Bind(json => Flag(json, "Map.Preview").Map(preview => new MapSettings(preview)));
-        var tiles = document.Bind(ReadTiles);
-        var port = Required(environment, EnvironmentNames.HttpPort).Bind(text => Port(EnvironmentNames.HttpPort, text));
-        var database = Database(environment, EnvironmentNames.ReaderDatabase);
-
-        var errors = Errors(document.Map(_ => 0), area, map, tiles, port, database);
-        return errors.IsEmpty
-            ? Result.Ok<ServiceSettings, ImmutableArray<SettingsError>>(
-                new ServiceSettings(Value(area), Value(map), Value(tiles), Value(port), Value(database)))
-            : Result.Refuse<ServiceSettings, ImmutableArray<SettingsError>>(errors);
+        return Result.Collect(
+                document.Bind(ReadArea),
+                document.Bind(json => Flag(json, "Map.Preview").Map(preview => new MapSettings(preview))),
+                document.Bind(ReadTiles),
+                Required(environment, EnvironmentNames.HttpPort).Bind(text => Port(EnvironmentNames.HttpPort, text)),
+                Database(environment, EnvironmentNames.ReaderDatabase))
+            .Map(found => new ServiceSettings(found.Item1, found.Item2, found.Item3, found.Item4, found.Item5))
+            // The file's own problem, if any, reaches area, map and tiles alike, so it is named once.
+            .MapError(errors => errors.Distinct().ToImmutableArray());
     }
 
     public static Result<ImportSettings, ImmutableArray<SettingsError>> ReadImport(
-        IReadOnlyDictionary<string, string> environment, string configName, Option<string> configText)
-    {
-        var box = Document(environment, configName, configText).Bind(json => ReadArea(json).Map(area => area.Box));
-        var database = Database(environment, EnvironmentNames.PublisherDatabase);
-
-        var errors = Errors(box, database);
-        return errors.IsEmpty
-            ? Result.Ok<ImportSettings, ImmutableArray<SettingsError>>(new ImportSettings(Value(box), Value(database)))
-            : Result.Refuse<ImportSettings, ImmutableArray<SettingsError>>(errors);
-    }
+        IReadOnlyDictionary<string, string> environment, string configName, Option<string> configText) =>
+        Result.Collect(
+                Document(environment, configName, configText).Bind(json => ReadArea(json).Map(area => area.Box)),
+                Database(environment, EnvironmentNames.PublisherDatabase))
+            .Map(found => new ImportSettings(found.Item1, found.Item2));
 
     /// <summary>
     /// Reads <c>postgresql://user:password@host:port/database</c>. A password may hold any
@@ -183,20 +175,4 @@ public static class SettingsReader
 
     private static Result<DatabaseAddress, SettingsError> Database(IReadOnlyDictionary<string, string> environment, string name) =>
         Required(environment, name).Bind(text => ParseDatabaseUrl(name, text));
-
-    private static ImmutableArray<SettingsError> Errors<T1, T2>(Result<T1, SettingsError> a, Result<T2, SettingsError> b) =>
-        [.. Error(a), .. Error(b)];
-
-    private static ImmutableArray<SettingsError> Errors<T1, T2, T3, T4, T5, T6>(
-        Result<T1, SettingsError> a, Result<T2, SettingsError> b, Result<T3, SettingsError> c,
-        Result<T4, SettingsError> d, Result<T5, SettingsError> e, Result<T6, SettingsError> f) =>
-        // The file's own problem, if any, appears once: area, map and tiles repeat it, so keep distinct names.
-        [.. new[] { Error(a), Error(b), Error(c), Error(d), Error(e), Error(f) }.SelectMany(error => error).Distinct()];
-
-    private static IEnumerable<SettingsError> Error<T>(Result<T, SettingsError> result) =>
-        result.Match(_ => [], error => new[] { error });
-
-    // Called only once Errors has found none, so every result here is Ok.
-    private static T Value<T>(Result<T, SettingsError> result) =>
-        result.Match(value => value, _ => throw new UnreachableException());
 }

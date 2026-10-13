@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Diagnostics;
 
 namespace Tessera.Kernel;
@@ -76,10 +77,10 @@ public static class Result
     /// Checking a list of 900 places is one step per place. This turns "a list of results" into
     /// "a result holding a list", the shape the next step wants. F# calls it traverse.
     /// </remarks>
-    public static Result<System.Collections.Immutable.ImmutableArray<TOut>, TError> Traverse<TIn, TOut, TError>(
+    public static Result<ImmutableArray<TOut>, TError> Traverse<TIn, TOut, TError>(
         this IEnumerable<TIn> items, Func<TIn, Result<TOut, TError>> step)
     {
-        var values = System.Collections.Immutable.ImmutableArray.CreateBuilder<TOut>();
+        var values = ImmutableArray.CreateBuilder<TOut>();
         foreach (var item in items)
         {
             switch (step(item))
@@ -88,21 +89,51 @@ public static class Result
                     values.Add(value);
                     break;
                 case Result<TOut, TError>.Refused(var error):
-                    return new Result<System.Collections.Immutable.ImmutableArray<TOut>, TError>.Refused(error);
+                    return new Result<ImmutableArray<TOut>, TError>.Refused(error);
             }
         }
 
-        return new Result<System.Collections.Immutable.ImmutableArray<TOut>, TError>.Ok(values.ToImmutable());
+        return new Result<ImmutableArray<TOut>, TError>.Ok(values.ToImmutable());
     }
+
+    /// <summary>
+    /// Joins steps that ran side by side and keeps every refusal, where <see cref="Result{T,TError}.Bind"/>
+    /// would stop at the first. A failed start then names every missing setting at once (US-00 c4).
+    /// </summary>
+    public static Result<(T1, T2), ImmutableArray<TError>> Collect<T1, T2, TError>(
+        Result<T1, TError> first, Result<T2, TError> second)
+    {
+        var errors = ImmutableArray.CreateRange(Refusals(first).Concat(Refusals(second)));
+        return errors.IsEmpty
+            ? new Result<(T1, T2), ImmutableArray<TError>>.Ok((Value(first), Value(second)))
+            : new Result<(T1, T2), ImmutableArray<TError>>.Refused(errors);
+    }
+
+    public static Result<(T1, T2, T3, T4, T5), ImmutableArray<TError>> Collect<T1, T2, T3, T4, T5, TError>(
+        Result<T1, TError> first, Result<T2, TError> second, Result<T3, TError> third, Result<T4, TError> fourth, Result<T5, TError> fifth)
+    {
+        var errors = ImmutableArray.CreateRange(
+            Refusals(first).Concat(Refusals(second)).Concat(Refusals(third)).Concat(Refusals(fourth)).Concat(Refusals(fifth)));
+        return errors.IsEmpty
+            ? new Result<(T1, T2, T3, T4, T5), ImmutableArray<TError>>.Ok((Value(first), Value(second), Value(third), Value(fourth), Value(fifth)))
+            : new Result<(T1, T2, T3, T4, T5), ImmutableArray<TError>>.Refused(errors);
+    }
+
+    private static IEnumerable<TError> Refusals<T, TError>(Result<T, TError> result) =>
+        result.Match(_ => [], error => new[] { error });
+
+    // Collect calls this only when it found no refusal, so the result is always Ok.
+    private static T Value<T, TError>(Result<T, TError> result) =>
+        result.Match(value => value, _ => throw new UnreachableException());
 
     /// <summary>
     /// <see cref="Traverse"/> for steps that wait, such as queries: each runs after the one before,
     /// and the first refusal stops the rest.
     /// </summary>
-    public static async Task<Result<System.Collections.Immutable.ImmutableArray<TOut>, TError>> TraverseAsync<TIn, TOut, TError>(
+    public static async Task<Result<ImmutableArray<TOut>, TError>> TraverseAsync<TIn, TOut, TError>(
         this IEnumerable<TIn> items, Func<TIn, Task<Result<TOut, TError>>> step)
     {
-        var values = System.Collections.Immutable.ImmutableArray.CreateBuilder<TOut>();
+        var values = ImmutableArray.CreateBuilder<TOut>();
         foreach (var item in items)
         {
             switch (await step(item).ConfigureAwait(false))
@@ -111,10 +142,10 @@ public static class Result
                     values.Add(value);
                     break;
                 case Result<TOut, TError>.Refused(var error):
-                    return new Result<System.Collections.Immutable.ImmutableArray<TOut>, TError>.Refused(error);
+                    return new Result<ImmutableArray<TOut>, TError>.Refused(error);
             }
         }
 
-        return new Result<System.Collections.Immutable.ImmutableArray<TOut>, TError>.Ok(values.ToImmutable());
+        return new Result<ImmutableArray<TOut>, TError>.Ok(values.ToImmutable());
     }
 }

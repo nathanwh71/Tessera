@@ -55,4 +55,17 @@ public sealed class KernelTests
         Assert.Equal(
             [1, 3, 5],
             new[] { 1, 3, 5 }.Traverse(Result.Ok<int, string>).Match(values => values.ToArray(), _ => []));
+
+    [Fact]
+    public void Collect_keeps_every_refusal() =>
+        Assert.Equal(
+            ["port missing", "database missing"],
+            Result.Collect(Result.Refuse<int, string>("port missing"), Result.Refuse<bool, string>("database missing"))
+                .Match(_ => [], errors => errors.ToArray()));
+
+    [Fact]
+    public void Collect_joins_the_values_when_none_refuses() =>
+        Assert.Equal(
+            (1, true),
+            Result.Collect(Result.Ok<int, string>(1), Result.Ok<bool, string>(true)).Match(values => values, _ => (0, false)));
 }
