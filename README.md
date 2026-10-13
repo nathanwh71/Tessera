@@ -1,5 +1,7 @@
 # Tessera
 
+> **The live build, since 14 October 2026.** The maintainer ***chose*** this .NET ***build*** as the ***one*** to ***carry*** on; the Java ***build***, `nathanwh71/JTessera`, is ***archived*** and ***kept*** to ***read***. The ***map*** in `web/` ***now*** ***lives*** here (ADR 0006, as ***amended***).
+
 Tessera is a ***small*** ***web*** ***service*** that ***serves*** a ***map*** of ***places*** as tiles. It ***reads*** ***tables*** from a database, ***cuts*** them into ***map*** tiles on ***request***, and ***answers*** every ***machine*** in the ***office*** on ***port*** 80. This ***build***, Phase Oct, ***serves*** the 900 ***places*** of Macau in ***nine*** ***layers***, and ***shows*** them on a ***map*** at `/`.
 
 A **tile** is ***one*** ***square*** of a ***map*** at ***one*** zoom ***level***. A ***web*** ***map*** is ***made*** of ***thousands*** of them, and the browser ***asks*** for only the ***ones*** on the ***screen***. Tessera ***makes*** each tile from the database the ***moment*** a ***map*** ***asks*** for it, so a ***change*** in the ***data*** ***shows*** on the ***map*** at once.
@@ -93,7 +95,7 @@ The ***service*** is ***one*** ***program*** ***cut*** into ***seven*** modules,
 - `docs/adr/0002-scripts-in-typescript-with-zx.md`: why the ***scripts*** are TypeScript on Node.js 26
 - `docs/adr/0003-settings-file.md`: why ***settings*** ***live*** in `tessera.json` and the ***environment***
 - `docs/adr/0004-functional-style.md`: why the ***code*** is ***functional***, with `Option` and `Result`
-- `docs/adr/0006-one-map-for-both-builds.md`: why the Java and .NET ***builds*** ***serve*** ***one*** ***map*** from a repository of its own
+- `docs/adr/0006-one-map-for-both-builds.md`: the ***contract*** ***between*** the ***map*** and a ***service***, and why the ***map*** ***now*** ***lives*** here
 - `docs/changes/`: what each ***day***'s ***work*** ***changed*** and why, ***newest*** ***last***
 
 The ***phase***-0 ***build*** and its ***documents*** ***stay*** in the ***archived*** ***phase***-0 repository, whose ***last*** ***commit*** is `ecb21fb`.

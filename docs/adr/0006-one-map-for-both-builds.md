@@ -2,13 +2,14 @@
 
 | | |
 |---|---|
-| Status | ***Accepted*** |
+| Status | ***Accepted***; ***amended*** 14 ***October*** 2026 |
 | Date | 13 ***October*** 2026 |
 | Decider | The maintainer |
 | Covers | The ***map***, in TypeScript 6, and the ***two*** ***services*** that ***serve*** it: Java in `nathanwh71/JTessera`, C# in `nathanwh71/Tessera` |
 | Related | US-23, which ***opens*** the ***map***; ADR 0001 of each ***build***, whose Map module ***serves*** it; ADR 0004, whose ***map*** ***section*** ***fixes*** the ***map***'s ***style*** |
 | Matches | ADR 0006 of the other ***build***, ***word*** for ***word*** |
 | Carried out | On 14 ***October*** 2026 the maintainer ***copied*** `web/` into `nathanwh71/Tessera` as the ***first*** ***step***, and that ***build*** ***now*** ***meets*** all ***three*** ***rules***. The repository of its own, and the submodules, ***remain*** to ***do***; until then the ***two*** ***copies*** ***must*** be ***kept*** the same by ***hand*** |
+| Amended | On 14 ***October*** 2026, ***later*** the same ***day***, the maintainer ***chose*** the .NET ***build*** as the ***one*** ***build*** to ***carry*** on and ***archived*** the Java ***build***. With ***one*** ***build***, the ***map*** ***needs*** no repository of its own: it ***lives*** in `nathanwh71/Tessera`'s `web/`, and the submodule ***plan*** ***lapses***. The ***contract*** ***below*** ***stands***, so a ***second*** ***build*** could ***return*** to it |
 
 ## Decision
 

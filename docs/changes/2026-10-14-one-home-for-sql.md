@@ -54,6 +54,10 @@ A ***letter***, a digit, `-`, `.`, `_` or `~` ***never*** ***needs*** encoding (
 
 A ***level***-0 tile of the ***cafés*** ***shrank*** from 31,037 bytes to 11,037 packed. The ***map***'s 20 browser ***tests*** ***passed*** ***against*** the packed ***service***. ***One*** ***test*** the ***stories*** ***name*** ***stays*** ***unwritten***: 'the ***map*** ***asks*** ***once***' is a browser ***test***, and the browser ***tests*** are the ***map***'s ***own***, ***shared*** with the Java ***build*** (ADR 0006). ***Still*** ***open***: ***whether*** a ***crowd*** ***asking*** for ***one*** ***unbuilt*** tile ***shares*** ***one*** query.
 
+## One build
+
+At the ***end*** of the ***day*** the maintainer ***chose*** this ***build*** as the ***one*** to ***carry*** on and ***archived*** `nathanwh71/JTessera`. ADR 0006 is ***amended***: the ***map*** ***lives*** in this repository's `web/`, and the ***plan*** for a repository of its own ***lapses*** while there is ***one*** ***build***.
+
 ## Tests
 
 121 ***unit*** ***tests***, 4 ***architecture*** ***tests*** and 40 integration ***tests*** ***pass***, with 123 in the ***map*** and 10 in the ***scripts***. ***New*** ***among*** them: a ***column*** ***changes*** ***type*** and ***changes*** ***back***; a ***load*** with a NUL ***character*** ***rolls*** ***back***; `%61`, `%2E`, `%31` and `%7E` are ***refused*** and `%C3%A9` ***passes***; `Collect` ***keeps*** every refusal; and the database's ***place*** ***reads*** from the ***environment***. GitHub Actions ***passed*** on every ***commit***.
