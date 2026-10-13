@@ -7,6 +7,8 @@
     "node": ">=26"
   },
   "scripts": {
+    "build": "node scripts/build.ts",
+    "test": "node scripts/test.ts",
     "start": "node --env-file-if-exists=.env scripts/start.ts",
     "publish": "node --env-file-if-exists=.env scripts/publish.ts",
     "office-port": "node --env-file-if-exists=.env scripts/office-port.ts",

@@ -8,6 +8,7 @@
 | Covers | The ***map***, in TypeScript 6, and the ***two*** ***services*** that ***serve*** it: Java in `nathanwh71/JTessera`, C# in `nathanwh71/Tessera` |
 | Related | US-23, which ***opens*** the ***map***; ADR 0001 of each ***build***, whose Map module ***serves*** it; ADR 0004, whose ***map*** ***section*** ***fixes*** the ***map***'s ***style*** |
 | Matches | ADR 0006 of the other ***build***, ***word*** for ***word*** |
+| Carried out | On 14 ***October*** 2026 the maintainer ***copied*** `web/` into `nathanwh71/Tessera` as the ***first*** ***step***, and that ***build*** ***now*** ***meets*** all ***three*** ***rules***. The repository of its own, and the submodules, ***remain*** to ***do***; until then the ***two*** ***copies*** ***must*** be ***kept*** the same by ***hand*** |
 
 ## Decision
 
@@ -39,8 +40,8 @@ A ***service*** that ***keeps*** these ***three*** ***rules*** can ***serve*** t
 | Rule | `nathanwh71/JTessera` | `nathanwh71/Tessera` |
 |---|---|---|
 | 1. Tiles | ***Done*** | ***Done*** |
-| 2. The ***page*** with the ***block*** | ***Done***: `modules/map`'s `Page.render` | To ***do***: `Tessera.Map` ***serves*** `index.html` ***unchanged***; it must ***add*** the ***block*** |
-| 3. The ***built*** ***files*** | ***Done***: `service/build.gradle.kts` ***copies*** `web/dist` into the jar | To ***do***: a zx ***script*** ***copies*** `web/dist` into `wwwroot` |
+| 2. The ***page*** with the ***block*** | ***Done***: `modules/map`'s `Page.render` | ***Done***: `Tessera.Map`'s `Page.Render` |
+| 3. The ***built*** ***files*** | ***Done***: `service/build.gradle.kts` ***copies*** `web/dist` into the jar | ***Done***: `Tessera.Service.csproj` ***copies*** `web/dist` to `wwwroot`, after `npm run build` |
 
 ## Rules
 

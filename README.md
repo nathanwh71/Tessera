@@ -1,6 +1,6 @@
 # Tessera
 
-Tessera is a ***small*** ***web*** ***service*** that ***serves*** a ***map*** of ***places*** as tiles. It ***reads*** ***tables*** from a database, ***cuts*** them into ***map*** tiles on ***request***, and ***answers*** every ***machine*** in the ***office*** on ***port*** 80. This ***build***, Phase Oct, ***serves*** the 900 ***places*** of Macau in ***nine*** ***layers***; the ***service*** is ***finished*** and ***tested***, and the ***map*** that ***shows*** the tiles ***comes*** ***next***.
+Tessera is a ***small*** ***web*** ***service*** that ***serves*** a ***map*** of ***places*** as tiles. It ***reads*** ***tables*** from a database, ***cuts*** them into ***map*** tiles on ***request***, and ***answers*** every ***machine*** in the ***office*** on ***port*** 80. This ***build***, Phase Oct, ***serves*** the 900 ***places*** of Macau in ***nine*** ***layers***, and ***shows*** them on a ***map*** at `/`.
 
 A **tile** is ***one*** ***square*** of a ***map*** at ***one*** zoom ***level***. A ***web*** ***map*** is ***made*** of ***thousands*** of them, and the browser ***asks*** for only the ***ones*** on the ***screen***. Tessera ***makes*** each tile from the database the ***moment*** a ***map*** ***asks*** for it, so a ***change*** in the ***data*** ***shows*** on the ***map*** at once.
 
@@ -18,19 +18,21 @@ The ***sixteen*** ***stories*** in `docs/user-stories/user-stories.md` ***fix***
 | S-01 SQL injection | ***Built*** and ***tested*** |
 | S-06 Malformed URLs | ***Built*** and ***tested***, with ***one*** ***gap***: the ***web*** server ***refuses*** `%00` and a ***raw*** ***control*** ***character*** ***itself***, with an ***empty*** 400 in ***place*** of a ***problem*** ***document*** |
 | US-35 Office on ***port*** 80 | ***Script*** ***written***; it ***needs*** a ***first*** ***run*** on the ***office*** ***machine*** |
-| US-23 and UI-09 to UI-17, the ***map*** | Not ***started*** |
+| US-23 and UI-09 to UI-17, the ***map*** | ***Built*** and ***tested***: the ***map*** ***copied*** from the Java ***build*** (ADR 0006), and its 20 browser ***tests*** ***pass*** ***against*** this ***service*** |
 
 ## What you need
 
 - The .NET 10 SDK, 10.0.100 or ***later***: the ***tools*** that ***build*** and ***run*** C# 14
 - Docker Engine, which ***runs*** the database in a ***container***: a ***sealed*** ***box*** with its own ***files***
-- Node.js 26, which ***runs*** the ***scripts*** (ADR 0002)
+- Node.js 26, which ***runs*** the ***scripts*** and ***builds*** the ***map*** (ADR 0002)
 
 ## The commands
 
 | Command | What it does |
 |---|---|
-| `dotnet build` | ***Builds*** the ***service*** and every ***test*** (US-00 c1) |
+| `npm run build` | ***Builds*** the ***map***, then the ***service*** with the ***map*** ***inside*** it (US-00 c1) |
+| `npm test` | ***Runs*** every ***test***: the ***scripts***', the ***map***'s, and the ***service***'s ***three*** ***suites*** (US-00 c3) |
+| `dotnet build` | ***Builds*** the ***service*** and every ***test*** ***alone***; ***needs*** `web/dist` from a ***map*** ***build*** |
 | `dotnet run --project tests/Tessera.UnitTests` | ***Runs*** the ***unit*** and ***property*** ***tests***: no database, a ***second*** or ***two*** |
 | `dotnet run --project tests/Tessera.ArchitectureTests` | ***Checks*** the ***rules*** at the module ***borders*** (ADR 0001) |
 | `dotnet run --project tests/Tessera.IntegrationTests` | ***Starts*** the ***packaged*** database in Docker and ***tests*** through it and through ***real*** HTTP (US-00 c3) |
@@ -38,6 +40,7 @@ The ***sixteen*** ***stories*** in `docs/user-stories/user-stories.md` ***fix***
 | `npm start` | ***Starts*** the database, ***imports*** the ***places*** if the ***tables*** are ***empty***, then ***starts*** the ***service*** (US-00 c2) |
 | `npm run publish` | ***Grants*** the ***nine*** ***layers*** to the ***service***, which ***serves*** them after a restart (US-24 c5) |
 | `npm run office-port` | ***Prints*** the ***steps*** that ***open*** ***port*** 80 to the ***office*** (US-35) |
+| `cd web && TESSERA_BASE_URL=http://localhost:8080 npx playwright test` | ***Runs*** the ***map***'s browser ***tests*** ***against*** a ***running*** ***service*** |
 
 ***Copy*** `.env.example` to `.env` and ***give*** each ***password*** a ***value*** before `npm start`. Git ***ignores*** `.env`, so no ***password*** ***reaches*** the repository.
 
@@ -71,7 +74,8 @@ The ***service*** is ***one*** ***program*** ***cut*** into ***seven*** modules,
 | `src/Tessera.Import` | The `import` ***command***: ***checks*** the GeoJSON ***seed*** and ***loads*** the ***nine*** ***tables*** |
 | `src/Tessera.Tiles` | The tile ***route*** and the tile query |
 | `src/Tessera.Http` | The ***screen*** for disguised ***addresses***, and every ***problem*** ***document*** |
-| `src/Tessera.Map` | ***Serving*** the ***map***'s ***files***, once the ***map*** ***exists*** |
+| `src/Tessera.Map` | ***Serving*** the ***map***'s ***page***, with the ***area*** ***written*** in, and its ***files*** |
+| `web/` | The ***map***: TypeScript, React, MapLibre GL JS, react-elmish and Tailwind CSS, ***copied*** from the Java ***build*** (ADR 0006) |
 | `src/Tessera.Service` | The ***program***, which ***puts*** the modules ***together*** |
 | `tests/` | ***Unit***, ***property***, ***architecture*** and integration ***tests*** |
 | `db/` | The ***packaged*** database: PostgreSQL 18 with PostGIS 3.6, and the ***role*** ***script*** |

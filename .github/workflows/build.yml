@@ -16,6 +16,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 26
+      # The map builds first, so the service's build copies web/dist inside it (US-23 c4).
+      - run: npm ci --no-audit --no-fund
+        working-directory: web
+      - run: npm test
+        working-directory: web
+      - run: npm run build
+        working-directory: web
       # The integration tests need no database service here: Testcontainers builds the packaged
       # database from db/Dockerfile on the runner's own Docker.
       - run: dotnet build --configuration Release

@@ -32,6 +32,9 @@ if (blocked !== undefined) {
   process.exit(1);
 }
 
+// The map is built first, so the release carries it (US-23 c4); the service then builds with it inside.
+await $`node scripts/build.ts`;
+
 // The database image is db/Dockerfile: the same image the tests start (US-01).
 await $`docker build --quiet --tag ${container} db`;
 

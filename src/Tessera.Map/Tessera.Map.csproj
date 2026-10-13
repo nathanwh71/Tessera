@@ -6,5 +6,6 @@
   <ItemGroup>
     <ProjectReference Include="../Tessera.Kernel/Tessera.Kernel.csproj" />
     <ProjectReference Include="../Tessera.Settings/Tessera.Settings.csproj" />
+    <ProjectReference Include="../Tessera.Http/Tessera.Http.csproj" />
   </ItemGroup>
 </Project>

@@ -16,6 +16,7 @@
     <ProjectReference Include="../../src/Tessera.Import/Tessera.Import.csproj" />
     <ProjectReference Include="../../src/Tessera.Tiles/Tessera.Tiles.csproj" />
     <ProjectReference Include="../../src/Tessera.Http/Tessera.Http.csproj" />
+    <ProjectReference Include="../../src/Tessera.Map/Tessera.Map.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />

@@ -2,7 +2,7 @@
   "Area": {
     "Name": "Macau",
     "Box": { "West": 113.52, "South": 22.10, "East": 113.61, "North": 22.22 },
-    "Home": { "Longitude": 113.55, "Latitude": 22.19, "Zoom": 14 }
+    "Home": { "Longitude": 113.55, "Latitude": 22.19, "Zoom": 15 }
   },
   "Map": { "Preview": true },
   "Tiles": { "MaxFeatures": 10000, "Buffer": 64 }

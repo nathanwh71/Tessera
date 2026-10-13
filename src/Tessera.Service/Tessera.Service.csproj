@@ -2,6 +2,9 @@
   <!-- The program: it puts the seven modules together and runs them as one service (ADR 0001). -->
   <PropertyGroup>
     <AssemblyName>Tessera.Service</AssemblyName>
+    <!-- The map's files go out as Vite built them, through Tessera.Map's own routes; the SDK's
+         static-web-assets pipeline, which would compress and index them, stays off. -->
+    <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Tessera.Kernel/Tessera.Kernel.csproj" />
@@ -16,6 +19,8 @@
   <ItemGroup>
     <!-- tessera.json sits beside the program, where the service looks for it (ADR 0003). -->
     <None Include="../../tessera.json" Link="tessera.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- The built map ships inside the release, beside the program (US-23 c4). `npm run build` makes web/dist first. -->
+    <Content Include="../../web/dist/**" Link="wwwroot/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <!-- The seed ships with the release, ready for the import (US-01 c2). -->
     <None Include="../../data/macau-pois.geojson" Link="data/macau-pois.geojson" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>

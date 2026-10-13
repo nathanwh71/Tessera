@@ -47,12 +47,13 @@ public sealed class ServiceFixture : IAsyncLifetime
         var catalogue = (await LayerCatalogue.Load(_reader)).Match(found => found, error => throw new InvalidOperationException(error.Message));
         var settings = new ServiceSettings(
             new Area("Macau", box, new HomeView(113.55, 22.19, 14)),
-            new MapSettings(Preview: false),
+            new MapSettings(Preview: true),
             new TileSettings(10000, 64),
             Port,
             Database.Reader);
 
-        _app = TesseraService.Build(settings, catalogue, _reader, Path.Combine(AppContext.BaseDirectory, "no-map"));
+        // The built map, copied beside the tests by the service's project reference (US-23 c4).
+        _app = TesseraService.Build(settings, catalogue, _reader, Path.Combine(AppContext.BaseDirectory, "wwwroot"));
         await _app.StartAsync();
         Client = new HttpClient { BaseAddress = new Uri($"http://127.0.0.1:{Port}") };
     }
@@ -146,12 +147,35 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         Assert.Equal(404, body.RootElement.GetProperty("status").GetInt32());
     }
 
-    // US-00: an address no route knows answers a 404 problem document too; and with the preview
-    // switched off, so does the map's address (US-23 c5).
+    // US-23 c1, c2 and ADR 0006: the page carries the area, at / and at /{layer}.html, with the
+    // browser's rules in its headers; its assets go out as Vite built them.
     [Theory]
-    [InlineData("/nothing-here")]
     [InlineData("/")]
     [InlineData("/food.cafes.html")]
+    public async Task Serves_the_map_page_with_the_area_written_in(string path)
+    {
+        using var answer = await Get(path);
+        var html = await answer.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, answer.StatusCode);
+        Assert.Equal("text/html", answer.Content.Headers.ContentType?.MediaType);
+        Assert.Contains("<script id=\"tessera-area\" type=\"application/json\">{\"name\":\"Macau\"", html, StringComparison.Ordinal);
+        Assert.Contains("<div id=\"root\"></div>", html, StringComparison.Ordinal);
+        Assert.Contains("default-src 'self'", answer.Headers.GetValues("Content-Security-Policy").Single(), StringComparison.Ordinal);
+        Assert.True(answer.Headers.CacheControl?.NoCache);
+
+        var script = System.Text.RegularExpressions.Regex.Match(html, @"src=""(/assets/[^""]+\.js)""").Groups[1].Value;
+        using var asset = await Get(script);
+        Assert.Equal(HttpStatusCode.OK, asset.StatusCode);
+        Assert.Equal("text/javascript", asset.Content.Headers.ContentType?.MediaType);
+    }
+
+    // US-00: an address no route knows answers a 404 problem document too, and so does a page named
+    // for anything but one of the nine layers.
+    [Theory]
+    [InlineData("/nothing-here")]
+    [InlineData("/index.html")]
+    [InlineData("/food.zoos.html")]
     public async Task Answers_an_unknown_address_with_a_problem_document(string path)
     {
         using var answer = await Get(path);

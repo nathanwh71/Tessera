@@ -39,9 +39,10 @@ public static class TesseraService
         var app = builder.Build();
         app.UseProblemDocuments();
         app.UseTargetScreen();
+        app.UseMapHeaders();
         app.UseRouting();
         app.MapTiles(catalogue, database, settings.Tiles);
-        app.UseMap(settings.Map, mapFolder);
+        app.UseMap(settings.Area, settings.Map, mapFolder);
         return app;
     }
 }
