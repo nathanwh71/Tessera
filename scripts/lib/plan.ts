@@ -1,5 +1,6 @@
 // Pure decisions for the scripts (ADR 0002, rule 1). Each function reads only its parameters and
 // returns a value, so node --test can check it without Docker, a database or a shell.
+import { err, ok, type Result } from '../../web/src/shared/result.ts';
 
 /** The nine layers' tables, as schema.table: the ids the stories use (US-24). */
 export const placeTables: readonly string[] = [
@@ -9,40 +10,50 @@ export const placeTables: readonly string[] = [
   'transport.trains', 'transport.buses',
 ];
 
-/** A result: a value, or the reasons it could not be made. */
-export type Checked<T> =
-  | { readonly ok: true; readonly value: T }
-  | { readonly ok: false; readonly problems: readonly string[] };
-
 /** The settings the start-up script needs, all from the environment (US-00 c4). */
 export type StartSettings = {
   readonly ownerPassword: string;
   readonly readerPassword: string;
   readonly publisherPassword: string;
   readonly httpPort: string;
-  readonly databasePort: string;
+  readonly database: DatabasePlace;
+};
+
+/** Where the database answers: the host and port the service dials, and the database's name. */
+export type DatabasePlace = {
+  readonly host: string;
+  readonly port: string;
+  readonly name: string;
 };
 
 /**
  * Reads the start-up settings, naming every missing variable at once, so one failed start tells
- * the maintainer everything to fix.
+ * the maintainer everything to fix. The result is the map's own Result type (ADR 0006), shared
+ * so the scripts and the map say "failed" one way.
  */
-export function readStartSettings(environment: Readonly<Record<string, string | undefined>>): Checked<StartSettings> {
+export function readStartSettings(environment: Readonly<Record<string, string | undefined>>): Result<StartSettings, readonly string[]> {
   const required = ['TESSERA_DB_PASSWORD', 'TESSERA_READER_PASSWORD', 'TESSERA_PUBLISHER_PASSWORD', 'TESSERA_HTTP_PORT'] as const;
   const missing = required.filter(name => !environment[name]);
-  if (missing.length > 0) {
-    return { ok: false, problems: missing.map(name => `${name}: missing or empty`) };
-  }
-  return {
-    ok: true,
-    value: {
+  return missing.length > 0
+    ? err(missing.map(name => `${name}: missing or empty`))
+    : ok({
       ownerPassword: environment['TESSERA_DB_PASSWORD'] ?? '',
       readerPassword: environment['TESSERA_READER_PASSWORD'] ?? '',
       publisherPassword: environment['TESSERA_PUBLISHER_PASSWORD'] ?? '',
       httpPort: environment['TESSERA_HTTP_PORT'] ?? '',
-      // The database answers on this machine alone, so its port may keep PostgreSQL's usual 5432.
-      databasePort: environment['TESSERA_DB_PORT'] || '5432',
-    },
+      database: readDatabasePlace(environment),
+    });
+}
+
+/**
+ * The container answers on this machine alone, so the defaults are 127.0.0.1, PostgreSQL's usual
+ * port 5432, and the name the image gives the database. Each may change, for a database elsewhere.
+ */
+export function readDatabasePlace(environment: Readonly<Record<string, string | undefined>>): DatabasePlace {
+  return {
+    host: environment['TESSERA_DB_HOST'] || '127.0.0.1',
+    port: environment['TESSERA_DB_PORT'] || '5432',
+    name: environment['TESSERA_DB_NAME'] || 'tessera',
   };
 }
 
@@ -55,9 +66,9 @@ export function readStartSettings(environment: Readonly<Record<string, string | 
 export function runArguments(settings: StartSettings, container: string, volume: string): readonly string[] {
   return [
     '--detach', '--name', container, '--restart', 'unless-stopped',
-    '--publish', `127.0.0.1:${settings.databasePort}:5432`,
+    '--publish', `127.0.0.1:${settings.database.port}:5432`,
     '--volume', `${volume}:/var/lib/postgresql`,
-    '--env', 'POSTGRES_DB=tessera',
+    '--env', `POSTGRES_DB=${settings.database.name}`,
     '--env', `POSTGRES_PASSWORD=${settings.ownerPassword}`,
     '--env', `TESSERA_READER_PASSWORD=${settings.readerPassword}`,
     '--env', `TESSERA_PUBLISHER_PASSWORD=${settings.publisherPassword}`,
@@ -69,8 +80,8 @@ export function runArguments(settings: StartSettings, container: string, volume:
  * A database URL for a role. encodeURIComponent writes each character a URL would misread, such
  * as '@' in a password, as '%' and two hexadecimal digits.
  */
-export function databaseUrl(user: string, password: string, port: string): string {
-  return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@127.0.0.1:${port}/tessera`;
+export function databaseUrl(user: string, password: string, database: DatabasePlace): string {
+  return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${database.host}:${database.port}/${encodeURIComponent(database.name)}`;
 }
 
 /**

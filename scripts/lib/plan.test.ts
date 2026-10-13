@@ -1,7 +1,7 @@
 // Tests of the scripts' pure decisions; node --test runs them, with no Docker and no database.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { databaseUrl, decideImport, parseCounts, placeTables, portProblem, readStartSettings } from './plan.ts';
+import { databaseUrl, decideImport, parseCounts, placeTables, portProblem, readDatabasePlace, readStartSettings } from './plan.ts';
 
 test('imports when all nine tables are missing', () => {
   assert.deepEqual(decideImport(new Map()), { kind: 'import' });
@@ -27,7 +27,7 @@ test('reads psql output into counts', () => {
 test('names every missing variable at once', () => {
   const result = readStartSettings({});
   assert.equal(result.ok, false);
-  assert.equal(result.ok ? 0 : result.problems.length, 4);
+  assert.equal(result.ok ? 0 : result.error.length, 4);
 });
 
 test('names the fix when port 80 lies below the unprivileged limit', () => {
@@ -40,5 +40,10 @@ test('lets a port at or above the limit through', () => {
 });
 
 test('percent-encodes a password that holds an @', () => {
-  assert.equal(databaseUrl('tessera_reader', 's@cret', '5432'), 'postgresql://tessera_reader:s%40cret@127.0.0.1:5432/tessera');
+  assert.equal(databaseUrl('tessera_reader', 's@cret', { host: '127.0.0.1', port: '5432', name: 'tessera' }), 'postgresql://tessera_reader:s%40cret@127.0.0.1:5432/tessera');
+});
+
+test('places the database on this machine unless told otherwise', () => {
+  assert.deepEqual(readDatabasePlace({}), { host: '127.0.0.1', port: '5432', name: 'tessera' });
+  assert.deepEqual(readDatabasePlace({ TESSERA_DB_HOST: 'db.office', TESSERA_DB_PORT: '5433', TESSERA_DB_NAME: 'places' }), { host: 'db.office', port: '5433', name: 'places' });
 });
