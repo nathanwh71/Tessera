@@ -8,7 +8,7 @@ A **tile** is ***one*** ***square*** of a ***map*** at ***one*** zoom ***level**
 
 ## What this build holds, story by story
 
-The ***nineteen*** ***stories*** in `docs/user-stories/user-stories.md` ***fix*** what Tessera must do. Their ***state*** on 14 ***October*** 2026:
+The ***twenty***-***four*** ***stories*** in `docs/user-stories/user-stories.md` ***fix*** what Tessera must do. Their ***state*** on 14 ***October*** 2026:
 
 | Story | State |
 |---|---|
@@ -22,6 +22,7 @@ The ***nineteen*** ***stories*** in `docs/user-stories/user-stories.md` ***fix**
 | US-35 Office on ***port*** 80 | ***Script*** ***written***; it ***needs*** a ***first*** ***run*** on the ***office*** ***machine*** |
 | US-23 and UI-09 to UI-17, the ***map*** | ***Built*** and ***tested***: the ***map*** ***copied*** from the Java ***build*** (ADR 0006), and its 20 browser ***tests*** ***pass*** ***against*** this ***service*** |
 | N-18 to N-20, tiles that ***cost*** ***less*** | ***Built*** and ***tested***: a tile ***carries*** `max-age` and a ***weak*** `ETag`, a ***kept*** ***copy*** ***answers*** without a query, and tiles and the ***map***'s ***files*** ***travel*** gzip-packed |
+| N-21 to N-25, the Java ***way*** | ***Built*** and ***tested***: pg_tileserv's ***setting*** ***names***, 503 with `Retry-After` and a `DbTimeout`, ***grants*** ***seen*** ***within*** `CatalogueRefresh` ***seconds***, ***one*** query for a ***crowd***, and `/health`. The ***service*** and the database ***start*** in any ***order*** |
 
 ## What you need
 
@@ -40,7 +41,7 @@ The ***nineteen*** ***stories*** in `docs/user-stories/user-stories.md` ***fix**
 | `dotnet run --project tests/Tessera.ArchitectureTests` | ***Checks*** the ***rules*** at the module ***borders*** (ADR 0001) |
 | `dotnet run --project tests/Tessera.IntegrationTests` | ***Starts*** the ***packaged*** database in Docker and ***tests*** through it and through ***real*** HTTP (US-00 c3) |
 | `npm install` | ***Installs*** the ***scripts***' ***tools***: zx and TypeScript |
-| `npm start` | ***Starts*** the database, ***imports*** the ***places*** if the ***tables*** are ***empty***, then ***starts*** the ***service*** (US-00 c2) |
+| `npm start` | ***Starts*** the database, ***imports*** the ***places*** if the ***tables*** are ***empty***, then ***starts*** the ***service*** and ***waits*** for `/health` to ***say*** `UP` (US-00 c2, N-25) |
 | `npm run publish` | ***Grants*** the ***nine*** ***layers*** to the ***service***, which ***serves*** them ***within*** `CatalogueRefresh` ***seconds***, 30 by ***default*** (US-24 c5, N-23) |
 | `npm run office-port` | ***Prints*** the ***steps*** that ***open*** ***port*** 80 to the ***office*** (US-35) |
 | `cd web && TESSERA_BASE_URL=http://localhost:8080 npx playwright test` | ***Runs*** the ***map***'s browser ***tests*** ***against*** a ***running*** ***service*** |
@@ -49,7 +50,7 @@ The ***nineteen*** ***stories*** in `docs/user-stories/user-stories.md` ***fix**
 
 ## Where the settings live
 
-***Machines***, ***ports*** and ***passwords*** ***come*** from ***environment*** variables: ***values*** the ***operating*** ***system*** ***hands*** a ***program*** when it ***starts***. The ***service*** ***refuses*** to ***start*** without them and ***names*** each ***one*** it ***lacks*** (US-00 c4). Every other ***setting*** ***lives*** in `tessera.json`: the ***area***'s ***name***, ***box*** and ***home*** ***view***, the ***map*** preview, the tile's ***cap*** on ***features*** and buffer, how ***long*** and how ***much*** the ***service*** and the browsers ***keep*** tiles, the database ***pool***'s ***limits***, and how ***often*** the ***list*** of ***layers*** is ***reread***. The ***file*** ***uses*** pg_tileserv's ***own*** ***key*** ***names***, such as `CacheTTL` and `DbPoolMaxConns`, and any ***key*** ***yields*** to `TESSERA_` and its ***name***, such as `TESSERA_CACHETTL` (ADR 0003).
+***Machines***, ***ports*** and ***passwords*** ***come*** from ***environment*** variables: ***values*** the ***operating*** ***system*** ***hands*** a ***program*** when it ***starts***. The ***service*** ***refuses*** to ***start*** without them and ***names*** each ***one*** it ***lacks*** (US-00 c4); it ***starts*** ***whether*** or not the database ***answers*** yet, and ***answers*** 503 until it does (N-23). Every other ***setting*** ***lives*** in `tessera.json`: the ***area***'s ***name***, ***box*** and ***home*** ***view***, the ***map*** preview, the tile's ***cap*** on ***features*** and buffer, how ***long*** and how ***much*** the ***service*** and the browsers ***keep*** tiles, the database ***pool***'s ***limits***, and how ***often*** the ***list*** of ***layers*** is ***reread***. The ***file*** ***uses*** pg_tileserv's ***own*** ***key*** ***names***, such as `CacheTTL` and `DbPoolMaxConns`, and any ***key*** ***yields*** to `TESSERA_` and its ***name***, such as `TESSERA_CACHETTL` (ADR 0003).
 
 | Variable | Read by | Holds |
 |---|---|---|
@@ -75,13 +76,13 @@ The ***service*** is ***one*** ***program*** ***cut*** into ***seven*** modules,
 | `src/Tessera.Kernel` | `Option` and `Result`, the ***two*** ***types*** every module ***uses*** for ***missing*** ***values*** and ***refusals*** (ADR 0004) |
 | `src/Tessera.Settings` | ***Reading*** `tessera.json` and the ***environment*** |
 | `src/Tessera.Sql` | Every query's ***text***, the ***one*** query builder ***behind*** it, and the ***only*** ***code*** that ***talks*** to the database |
-| `src/Tessera.Catalogue` | The ***list*** of ***layers***: every ***table*** ***granted*** to the ***service*** |
+| `src/Tessera.Catalogue` | The ***list*** of ***layers***: every ***table*** ***granted*** to the ***service***, ***reread*** every `CatalogueRefresh` ***seconds*** |
 | `src/Tessera.Import` | The `import` ***command***: ***checks*** the GeoJSON ***seed*** and ***loads*** the ***nine*** ***tables*** |
 | `src/Tessera.Tiles` | The tile ***route***, the tile query, and the ***kept*** ***copies*** with their ***tags*** |
 | `src/Tessera.Http` | The ***screen*** for disguised ***addresses***, and every ***problem*** ***document*** |
 | `src/Tessera.Map` | ***Serving*** the ***map***'s ***page***, with the ***area*** ***written*** in, and its ***files*** |
 | `web/` | The ***map***: TypeScript, React, MapLibre GL JS, react-elmish and Tailwind CSS, ***copied*** from the Java ***build*** (ADR 0006) |
-| `src/Tessera.Service` | The ***program***, which ***puts*** the modules ***together*** |
+| `src/Tessera.Service` | The ***program***, which ***puts*** the modules ***together***, and `/health` |
 | `tests/` | ***Unit***, ***property***, ***architecture*** and integration ***tests*** |
 | `db/` | The ***packaged*** database: PostgreSQL 18 with PostGIS 3.6, and the ***role*** ***script*** |
 | `data/` | The ***seed***: 900 ***places*** in longitude and latitude, as `nathanwh71/JTessera` ***holds*** them |
@@ -90,7 +91,7 @@ The ***service*** is ***one*** ***program*** ***cut*** into ***seven*** modules,
 
 ## The documents
 
-- `docs/user-stories/user-stories.md`: the ***nineteen*** ***stories*** of Phase Oct, in ***build*** ***order***
+- `docs/user-stories/user-stories.md`: the ***twenty***-***four*** ***stories*** of Phase Oct, in ***build*** ***order***
 - `docs/adr/0001-modular-monolith.md`: why the ***service*** is ***one*** ***program*** in ***seven*** modules
 - `docs/adr/0002-scripts-in-typescript-with-zx.md`: why the ***scripts*** are TypeScript on Node.js 26
 - `docs/adr/0003-settings-file.md`: why ***settings*** ***live*** in `tessera.json` and the ***environment***
