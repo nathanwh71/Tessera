@@ -32,7 +32,7 @@ export type DatabasePlace = {
  * so the scripts and the map say "failed" one way.
  */
 export function readStartSettings(environment: Readonly<Record<string, string | undefined>>): Result<StartSettings, readonly string[]> {
-  const required = ['TESSERA_DB_PASSWORD', 'TESSERA_READER_PASSWORD', 'TESSERA_PUBLISHER_PASSWORD', 'TESSERA_HTTP_PORT'] as const;
+  const required = ['TESSERA_DB_PASSWORD', 'TESSERA_READER_PASSWORD', 'TESSERA_PUBLISHER_PASSWORD', 'TESSERA_HTTPPORT'] as const;
   const missing = required.filter(name => !environment[name]);
   return missing.length > 0
     ? err(missing.map(name => `${name}: missing or empty`))
@@ -40,7 +40,7 @@ export function readStartSettings(environment: Readonly<Record<string, string | 
       ownerPassword: environment['TESSERA_DB_PASSWORD'] ?? '',
       readerPassword: environment['TESSERA_READER_PASSWORD'] ?? '',
       publisherPassword: environment['TESSERA_PUBLISHER_PASSWORD'] ?? '',
-      httpPort: environment['TESSERA_HTTP_PORT'] ?? '',
+      httpPort: environment['TESSERA_HTTPPORT'] ?? '',
       database: readDatabasePlace(environment),
     });
 }

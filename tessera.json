@@ -1,9 +1,17 @@
 {
+  "ShowPreview": true,
+  "DbPoolMaxConns": 4,
+  "DbPoolMaxConnLifeTime": "1h",
+  "DbTimeout": 10,
+  "DbPoolConnectionTimeout": 3,
+  "MaxFeaturesPerTile": 10000,
+  "DefaultBuffer": 64,
+  "CacheTTL": 60,
+  "TileCacheMegabytes": 64,
+  "CatalogueRefresh": 30,
   "Area": {
     "Name": "Macau",
     "Box": { "West": 113.52, "South": 22.10, "East": 113.61, "North": 22.22 },
     "Home": { "Longitude": 113.55, "Latitude": 22.19, "Zoom": 15 }
-  },
-  "Map": { "Preview": true },
-  "Tiles": { "MaxFeatures": 10000, "Buffer": 64, "CacheSeconds": 60, "CacheMegabytes": 64 }
+  }
 }

@@ -21,16 +21,18 @@ public static class SettingsReader
     public static Result<ServiceSettings, ImmutableArray<SettingsError>> ReadService(
         IReadOnlyDictionary<string, string> environment, string configName, Option<string> configText)
     {
-        var document = Document(environment, configName, configText);
+        var document = Document(environment, configName, configText).MapError(One);
         return Result.Collect(
-                document.Bind(ReadArea),
-                document.Bind(json => Flag(json, "Map.Preview").Map(preview => new MapSettings(preview))),
-                document.Bind(ReadTiles),
-                Required(environment, EnvironmentNames.HttpPort).Bind(text => Port(EnvironmentNames.HttpPort, text)),
-                Database(environment, EnvironmentNames.ReaderDatabase))
-            .Map(found => new ServiceSettings(found.Item1, found.Item2, found.Item3, found.Item4, found.Item5))
-            // The file's own problem, if any, reaches area, map and tiles alike, so it is named once.
-            .MapError(errors => errors.Distinct().ToImmutableArray());
+                document.Bind(json => ReadArea(json).MapError(One)),
+                document.Bind(json => FlagOr(json, "ShowPreview", true).Map(preview => new MapSettings(preview)).MapError(One)),
+                document.Bind(json => ReadTiles(json).MapError(One)),
+                document.Bind(json => ReadHttp(json).MapError(One)),
+                // DATABASE_URL lives in the environment, so its problem is named even when the file has one.
+                ReadDb(document.Match(json => json, _ => new JsonObject()), environment),
+                document.Bind(json => ReadCatalogue(json).MapError(One)))
+            .Map(found => new ServiceSettings(found.Item1, found.Item2, found.Item3, found.Item4, found.Item5, found.Item6))
+            // The file's own problem, if any, reaches every group alike, so it is named once.
+            .MapError(errors => errors.SelectMany(group => group).Distinct().ToImmutableArray());
     }
 
     public static Result<ImportSettings, ImmutableArray<SettingsError>> ReadImport(
@@ -90,16 +92,35 @@ public static class SettingsReader
         node is not JsonObject json || json.All(entry => entry.Value is null || Touch(entry.Value));
 
     /// <summary>
-    /// Copies the file's settings and lays each <c>TESSERA_Section__Key</c> variable over the key it
-    /// names. The copy keeps the parsed file unchanged.
+    /// The keys the service reads, spelt as pg_tileserv spells them where it has the same setting
+    /// (ADR 0003, as amended for N-21). An override must name one of these.
+    /// </summary>
+    public static readonly ImmutableArray<string> Keys =
+    [
+        "HttpPort", "ShowPreview",
+        "DbPoolMaxConns", "DbPoolMaxConnLifeTime", "DbTimeout", "DbPoolConnectionTimeout",
+        "MaxFeaturesPerTile", "DefaultBuffer", "CacheTTL", "TileCacheMegabytes", "CatalogueRefresh",
+        "Area.Name", "Area.Box.West", "Area.Box.South", "Area.Box.East", "Area.Box.North",
+        "Area.Home.Longitude", "Area.Home.Latitude", "Area.Home.Zoom",
+    ];
+
+    /// <summary>
+    /// Copies the file's settings and lays each override over the key it names: <c>TESSERA_</c>, then
+    /// the key in any case, as pg_tileserv's <c>TS_HTTPPORT</c> overrides <c>HttpPort</c>. "__" steps
+    /// down a level, so <c>TESSERA_AREA__HOME__ZOOM</c> overrides <c>Area.Home.Zoom</c>. A variable that
+    /// names no key, such as <c>TESSERA_DB_PASSWORD</c>, is left alone. The copy keeps the parsed
+    /// file unchanged.
     /// </summary>
     private static JsonObject Override(JsonObject file, IReadOnlyDictionary<string, string> environment) =>
         environment
-            .Where(variable => variable.Key.StartsWith(EnvironmentNames.OverridePrefix, StringComparison.Ordinal)
-                               && variable.Key.Contains("__", StringComparison.Ordinal))
+            .Where(variable => variable.Key.StartsWith(EnvironmentNames.OverridePrefix, StringComparison.OrdinalIgnoreCase))
+            .Select(variable => (Key: KeyOf(variable.Key[EnvironmentNames.OverridePrefix.Length..]), variable.Value))
+            .Where(variable => variable.Key is not null)
             .OrderBy(variable => variable.Key, StringComparer.Ordinal)
-            .Aggregate((JsonObject)file.DeepClone(), (json, variable) =>
-                Set(json, variable.Key[EnvironmentNames.OverridePrefix.Length..].Split("__"), variable.Value));
+            .Aggregate((JsonObject)file.DeepClone(), (json, variable) => Set(json, variable.Key!.Split('.'), variable.Value));
+
+    private static string? KeyOf(string name) =>
+        Keys.FirstOrDefault(key => string.Equals(key.Replace(".", "__", StringComparison.Ordinal), name, StringComparison.OrdinalIgnoreCase));
 
     // JsonObject is mutable, so Override hands this a fresh copy and nothing outside sees the change.
     private static JsonObject Set(JsonObject json, string[] path, string value)
@@ -128,14 +149,32 @@ public static class SettingsReader
     private const int SecondsInAYear = 365 * 24 * 60 * 60;
 
     private static Result<TileSettings, SettingsError> ReadTiles(JsonObject json) =>
-        from maxFeatures in Number(json, "Tiles.MaxFeatures", 1, 1_000_000)
-        from buffer in Number(json, "Tiles.Buffer", 0, 4096)
-        from cacheSeconds in NumberOr(json, "Tiles.CacheSeconds", 60, 0, SecondsInAYear)
-        from cacheMegabytes in NumberOr(json, "Tiles.CacheMegabytes", 64, 1, 65_536)
-        from whole in maxFeatures % 1 == 0 && buffer % 1 == 0 && cacheSeconds % 1 == 0 && cacheMegabytes % 1 == 0
-            ? Result.Ok<bool, SettingsError>(true)
-            : Result.Refuse<bool, SettingsError>(new SettingsError("Tiles", "MaxFeatures, Buffer, CacheSeconds and CacheMegabytes must be whole numbers"))
-        select new TileSettings((int)maxFeatures, (int)buffer, (int)cacheSeconds, (int)cacheMegabytes);
+        from maxFeatures in WholeOr(json, "MaxFeaturesPerTile", 10_000, 1, 1_000_000)
+        from buffer in WholeOr(json, "DefaultBuffer", 64, 0, 4096)
+        from cacheSeconds in WholeOr(json, "CacheTTL", 60, 0, SecondsInAYear)
+        from cacheMegabytes in WholeOr(json, "TileCacheMegabytes", 64, 1, 65_536)
+        select new TileSettings(maxFeatures, buffer, cacheSeconds, cacheMegabytes);
+
+    // The port has no default: the environment, or the file, must name it (US-00 c4). The shipped
+    // file leaves it out, so the office names port 80 in TESSERA_HTTPPORT.
+    private static Result<HttpSettings, SettingsError> ReadHttp(JsonObject json) =>
+        Find(json, "HttpPort").Match(
+            _ => Whole(json, "HttpPort", 1, 65_535).Map(port => new HttpSettings(port)),
+            () => Result.Refuse<HttpSettings, SettingsError>(new SettingsError("HttpPort", $"missing; set {EnvironmentNames.HttpPort}")));
+
+    private static Result<DbSettings, ImmutableArray<SettingsError>> ReadDb(JsonObject json, IReadOnlyDictionary<string, string> environment) =>
+        Result.Collect(
+                Database(environment, EnvironmentNames.ReaderDatabase),
+                WholeOr(json, "DbPoolMaxConns", 4, 1, 1000),
+                DurationOr(json, "DbPoolMaxConnLifeTime", TimeSpan.FromHours(1)),
+                WholeOr(json, "DbTimeout", 10, 1, 3600),
+                WholeOr(json, "DbPoolConnectionTimeout", 3, 1, 600))
+            .Map(found => new DbSettings(found.Item1, found.Item2, found.Item3, TimeSpan.FromSeconds(found.Item4), TimeSpan.FromSeconds(found.Item5)));
+
+    private static ImmutableArray<SettingsError> One(SettingsError error) => [error];
+
+    private static Result<CatalogueSettings, SettingsError> ReadCatalogue(JsonObject json) =>
+        WholeOr(json, "CatalogueRefresh", 30, 0, 86_400).Map(seconds => new CatalogueSettings(TimeSpan.FromSeconds(seconds)));
 
     private static Option<JsonNode> Find(JsonObject json, string path) =>
         path.Split('.')
@@ -162,9 +201,36 @@ public static class SettingsReader
                 ? Result.Ok<double, SettingsError>(number)
                 : Result.Refuse<double, SettingsError>(new SettingsError(path, $"expected a number from {lowest} to {highest}")));
 
-    /// <summary>A number the file may leave out: the fallback then stands, and still within the range.</summary>
-    private static Result<double, SettingsError> NumberOr(JsonObject json, string path, double fallback, double lowest, double highest) =>
-        Find(json, path).Match(_ => Number(json, path, lowest, highest), () => Result.Ok<double, SettingsError>(fallback));
+    /// <summary>A whole number within a range.</summary>
+    private static Result<int, SettingsError> Whole(JsonObject json, string path, int lowest, int highest) =>
+        Number(json, path, lowest, highest).Bind(number => number % 1 == 0
+            ? Result.Ok<int, SettingsError>((int)number)
+            : Result.Refuse<int, SettingsError>(new SettingsError(path, $"expected a whole number from {lowest} to {highest}")));
+
+    /// <summary>A whole number the file may leave out, as pg_tileserv's keys may be: the fallback then stands.</summary>
+    private static Result<int, SettingsError> WholeOr(JsonObject json, string path, int fallback, int lowest, int highest) =>
+        Find(json, path).Match(_ => Whole(json, path, lowest, highest), () => Result.Ok<int, SettingsError>(fallback));
+
+    /// <summary>
+    /// A length of time in pg_tileserv's form, such as <c>1h</c>, <c>30m</c> or <c>1h30m</c>: hours,
+    /// minutes and seconds, each a whole number, in that order. It must lie from a second to a day.
+    /// </summary>
+    private static Result<TimeSpan, SettingsError> DurationOr(JsonObject json, string path, TimeSpan fallback) =>
+        Find(json, path).Match(
+            _ => Text(json, path).Bind(text => ParseDuration(text) is { } time && time >= TimeSpan.FromSeconds(1) && time <= TimeSpan.FromDays(1)
+                ? Result.Ok<TimeSpan, SettingsError>(time)
+                : Result.Refuse<TimeSpan, SettingsError>(new SettingsError(path, "expected a time such as 1h, 30m or 90s, from 1s to 24h"))),
+            () => Result.Ok<TimeSpan, SettingsError>(fallback));
+
+    public static TimeSpan? ParseDuration(string text)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(text, @"^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$");
+        int Part(int group) => match.Groups[group].Success ? int.Parse(match.Groups[group].Value, CultureInfo.InvariantCulture) : 0;
+        return match.Success && text.Length > 0 ? new TimeSpan(Part(1), Part(2), Part(3)) : null;
+    }
+
+    private static Result<bool, SettingsError> FlagOr(JsonObject json, string path, bool fallback) =>
+        Find(json, path).Match(_ => Flag(json, path), () => Result.Ok<bool, SettingsError>(fallback));
 
     private static Result<bool, SettingsError> Flag(JsonObject json, string path) =>
         Node(json, path).Bind(node =>
@@ -178,11 +244,6 @@ public static class SettingsReader
         environment.GetValueOrDefault(name).ToOption()
             .Bind(value => value.Length > 0 ? Option.Some(value) : Option.None<string>())
             .OrRefuse(new SettingsError(name, "missing or empty"));
-
-    private static Result<int, SettingsError> Port(string name, string text) =>
-        int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var port) && port is >= 1 and <= 65535
-            ? Result.Ok<int, SettingsError>(port)
-            : Result.Refuse<int, SettingsError>(new SettingsError(name, "expected a port from 1 to 65535"));
 
     private static Result<DatabaseAddress, SettingsError> Database(IReadOnlyDictionary<string, string> environment, string name) =>
         Required(environment, name).Bind(text => ParseDatabaseUrl(name, text));

@@ -37,7 +37,7 @@ public sealed class StartTests
         var (code, errors) = await Run();
 
         Assert.Equal(1, code);
-        Assert.Contains("TESSERA_HTTP_PORT", errors, StringComparison.Ordinal);
+        Assert.Contains("TESSERA_HTTPPORT", errors, StringComparison.Ordinal);
         Assert.Contains("DATABASE_URL", errors, StringComparison.Ordinal);
     }
 
@@ -47,7 +47,7 @@ public sealed class StartTests
     {
         var (code, errors) = await Run(new Dictionary<string, string>
         {
-            ["TESSERA_HTTP_PORT"] = Http.FreePort().ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["TESSERA_HTTPPORT"] = Http.FreePort().ToString(System.Globalization.CultureInfo.InvariantCulture),
             ["DATABASE_URL"] = $"postgresql://tessera_reader:x@127.0.0.1:{Http.FreePort()}/tessera",
         });
 

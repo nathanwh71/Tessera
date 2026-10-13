@@ -6,7 +6,8 @@
 //   TESSERA_DB_PASSWORD          the database owner's password, for this script alone
 //   TESSERA_READER_PASSWORD      tessera_reader's password, which the service signs in with
 //   TESSERA_PUBLISHER_PASSWORD   tessera_publisher's password, which the import signs in with
-//   TESSERA_HTTP_PORT            the port the service answers on: 80 in the office (US-35)
+//   TESSERA_HTTPPORT             the port the service answers on: 80 in the office (US-35);
+//                                it overrides HttpPort, as pg_tileserv's TS_HTTPPORT does
 //   TESSERA_DB_HOST              optional; where the service finds the database, 127.0.0.1 by default
 //   TESSERA_DB_PORT              optional; the database's port, 5432 by default
 //   TESSERA_DB_NAME              optional; the database's name, tessera by default

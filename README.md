@@ -49,11 +49,11 @@ The ***nineteen*** ***stories*** in `docs/user-stories/user-stories.md` ***fix**
 
 ## Where the settings live
 
-***Machines***, ***ports*** and ***passwords*** ***come*** from ***environment*** variables: ***values*** the ***operating*** ***system*** ***hands*** a ***program*** when it ***starts***. The ***service*** ***refuses*** to ***start*** without them and ***names*** each ***one*** it ***lacks*** (US-00 c4). Every other ***setting*** ***lives*** in `tessera.json`: the ***area***'s ***name***, ***box*** and ***home*** ***view***, the ***map*** preview, the tile's ***cap*** on ***features*** and buffer, and how ***long*** and how ***much*** the ***service*** and the browsers ***keep*** tiles (ADR 0003).
+***Machines***, ***ports*** and ***passwords*** ***come*** from ***environment*** variables: ***values*** the ***operating*** ***system*** ***hands*** a ***program*** when it ***starts***. The ***service*** ***refuses*** to ***start*** without them and ***names*** each ***one*** it ***lacks*** (US-00 c4). Every other ***setting*** ***lives*** in `tessera.json`: the ***area***'s ***name***, ***box*** and ***home*** ***view***, the ***map*** preview, the tile's ***cap*** on ***features*** and buffer, how ***long*** and how ***much*** the ***service*** and the browsers ***keep*** tiles, the database ***pool***'s ***limits***, and how ***often*** the ***list*** of ***layers*** is ***reread***. The ***file*** ***uses*** pg_tileserv's ***own*** ***key*** ***names***, such as `CacheTTL` and `DbPoolMaxConns`, and any ***key*** ***yields*** to `TESSERA_` and its ***name***, such as `TESSERA_CACHETTL` (ADR 0003).
 
 | Variable | Read by | Holds |
 |---|---|---|
-| `TESSERA_HTTP_PORT` | The ***service*** | The ***port*** it ***answers*** on: 80 in the ***office*** |
+| `TESSERA_HTTPPORT` | The ***service*** | The ***port*** it ***answers*** on: 80 in the ***office***; it ***overrides*** `HttpPort`, as pg_tileserv's `TS_HTTPPORT` does |
 | `DATABASE_URL` | The ***service*** | `postgresql://tessera_reader:<password>@<host>:<port>/tessera` |
 | `TESSERA_PUBLISHER_DATABASE_URL` | `import` | `postgresql://tessera_publisher:<password>@<host>:<port>/tessera` |
 | `TESSERA_CONFIG` | The ***service*** | ***Optional***: a ***path*** to `tessera.json` ***elsewhere*** |

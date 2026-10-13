@@ -49,8 +49,9 @@ public sealed class ServiceFixture : IAsyncLifetime
             new Area("Macau", box, new HomeView(113.55, 22.19, 14)),
             new MapSettings(Preview: true),
             new TileSettings(10000, 64, 60, 64),
-            Port,
-            Database.Reader);
+            new HttpSettings(Port),
+            new DbSettings(Database.Reader, 4, TimeSpan.FromHours(1), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(3)),
+            new CatalogueSettings(TimeSpan.FromSeconds(30)));
 
         // The built map, copied beside the tests by the service's project reference (US-23 c4).
         _app = TesseraService.Build(settings, catalogue, _reader, Path.Combine(AppContext.BaseDirectory, "wwwroot"));
@@ -318,7 +319,7 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         var port = Http.FreePort();
         var start = new System.Diagnostics.ProcessStartInfo("dotnet") { RedirectStandardOutput = true, RedirectStandardError = true };
         start.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "Tessera.Service.dll"));
-        start.Environment["TESSERA_HTTP_PORT"] = port.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        start.Environment["TESSERA_HTTPPORT"] = port.ToString(System.Globalization.CultureInfo.InvariantCulture);
         start.Environment["DATABASE_URL"] = $"postgresql://{service.Database.Reader.User}:{service.Database.Reader.Password}@{service.Database.Reader.Host}:{service.Database.Reader.Port}/tessera";
         using var program = System.Diagnostics.Process.Start(start)!;
         try

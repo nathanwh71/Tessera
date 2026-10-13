@@ -20,7 +20,7 @@ static async Task<int> Serve() =>
     await SettingsLoader.LoadService().Match(
         async settings =>
         {
-            await using var database = Database.Open(settings.Database);
+            await using var database = Database.Open(settings.Db.Address);
             return await (await LayerCatalogue.Load(database)).Match(
                 async catalogue =>
                 {

@@ -33,7 +33,7 @@ public static class TesseraService
     public static WebApplication Build(ServiceSettings settings, LayerCatalogue catalogue, Database database, string mapFolder)
     {
         var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions());
-        builder.WebHost.UseKestrelCore().ConfigureKestrel(kestrel => kestrel.Listen(IPAddress.Any, settings.Port));
+        builder.WebHost.UseKestrelCore().ConfigureKestrel(kestrel => kestrel.Listen(IPAddress.Any, settings.Http.Port));
         builder.Services.AddRoutingCore();
         // The map's own files travel gzip-packed when the browser accepts it (N-20); a tile packs
         // itself, once, in Tiles. The usual text types are on the list already; .NET names a script

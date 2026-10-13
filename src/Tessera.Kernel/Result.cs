@@ -119,6 +119,16 @@ public static class Result
             : new Result<(T1, T2, T3, T4, T5), ImmutableArray<TError>>.Refused(errors);
     }
 
+    public static Result<(T1, T2, T3, T4, T5, T6), ImmutableArray<TError>> Collect<T1, T2, T3, T4, T5, T6, TError>(
+        Result<T1, TError> first, Result<T2, TError> second, Result<T3, TError> third, Result<T4, TError> fourth, Result<T5, TError> fifth, Result<T6, TError> sixth)
+    {
+        var errors = ImmutableArray.CreateRange(
+            Refusals(first).Concat(Refusals(second)).Concat(Refusals(third)).Concat(Refusals(fourth)).Concat(Refusals(fifth)).Concat(Refusals(sixth)));
+        return errors.IsEmpty
+            ? new Result<(T1, T2, T3, T4, T5, T6), ImmutableArray<TError>>.Ok((Value(first), Value(second), Value(third), Value(fourth), Value(fifth), Value(sixth)))
+            : new Result<(T1, T2, T3, T4, T5, T6), ImmutableArray<TError>>.Refused(errors);
+    }
+
     private static IEnumerable<TError> Refusals<T, TError>(Result<T, TError> result) =>
         result.Match(_ => [], error => new[] { error });
 

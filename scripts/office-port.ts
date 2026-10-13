@@ -10,7 +10,7 @@
 import { $ } from 'zx';
 import { officePortSteps } from './lib/office.ts';
 
-const port = process.env['TESSERA_HTTP_PORT'] || '80';
+const port = process.env['TESSERA_HTTPPORT'] || '80';
 const inWsl = (await $({ nothrow: true })`grep -qi microsoft /proc/version`).exitCode === 0;
 if (!inWsl) {
   console.error('Run this inside Ubuntu on WSL2, on the office machine.');
