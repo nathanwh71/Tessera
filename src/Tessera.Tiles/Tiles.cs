@@ -1,6 +1,9 @@
+using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Tessera.Catalogue;
 using Tessera.Http;
 using Tessera.Kernel;
@@ -107,9 +110,19 @@ public delegate Task<Result<Option<byte[]>, DatabaseError>> TileReader(Query que
 /// <remarks>
 /// The reader is a function, not the database itself, so a test can count the queries with a
 /// double and prove that a second request runs none (N-19 test 3).
+/// When a crowd asks for one tile no copy holds yet, the first request starts the query and every
+/// later one waits for that same answer, so the database builds each tile once (N-24). The queries
+/// in flight sit in a map keyed by tile; each leaves the map the moment it ends.
 /// </remarks>
-public sealed class TileServer(Func<Option<LayerCatalogue>> catalogue, TileReader read, TileSettings settings, TileCache cache)
+/// <param name="catalogue">The list of layers as it stands, or none before the first load (N-23).</param>
+/// <param name="read">Runs the tile query.</param>
+/// <param name="settings">The tile's limits and how long a copy lives.</param>
+/// <param name="cache">The copies already built.</param>
+/// <param name="stopping">Ends a shared query when the service stops; one browser leaving never does.</param>
+public sealed class TileServer(Func<Option<LayerCatalogue>> catalogue, TileReader read, TileSettings settings, TileCache cache, CancellationToken stopping = default)
 {
+    private readonly ConcurrentDictionary<TileKey, Lazy<Task<Result<KeptTile, DatabaseError>>>> _inFlight = new();
+
     /// <summary>
     /// Finds the layer, checks the address, then looks for a kept copy before it asks the database.
     /// An unknown layer is refused before any query runs (US-07 test 1), so a hostile name never
@@ -132,14 +145,42 @@ public sealed class TileServer(Func<Option<LayerCatalogue>> catalogue, TileReade
             refusal => Task.FromResult(refusal)).ConfigureAwait(false);
     }
 
-    private async Task<IResult> Build(Layer layer, TileAddress tile, TileRequest request, CancellationToken cancel) =>
-        (await read(TileQuery.For(layer, tile, settings), cancel).ConfigureAwait(false)).Match(
-            bytes =>
+    // Joins the query in flight for this tile, or starts it. Lazy makes sure that when two requests
+    // race to add the same tile, only one query starts. Each request waits on its own token, so a
+    // browser that leaves stops waiting without cancelling the query for the rest.
+    private async Task<IResult> Build(Layer layer, TileAddress tile, TileRequest request, CancellationToken cancel)
+    {
+        var key = new TileKey(layer.Id, tile.Z, tile.X, tile.Y);
+        var flight = _inFlight.GetOrAdd(key, _ => Flight(key, layer, tile));
+        return Answer(await flight.Value.WaitAsync(cancel).ConfigureAwait(false), request);
+    }
+
+    private Lazy<Task<Result<KeptTile, DatabaseError>>> Flight(TileKey key, Layer layer, TileAddress tile)
+    {
+        Lazy<Task<Result<KeptTile, DatabaseError>>>? flight = null;
+        flight = new Lazy<Task<Result<KeptTile, DatabaseError>>>(async () =>
+        {
+            try
             {
-                var built = KeptTile.Of(bytes.OrElse([]), cache.Now);
-                cache.Keep(new TileKey(layer.Id, tile.Z, tile.X, tile.Y), built);
-                return Reply(built, request);
-            },
+                return (await read(TileQuery.For(layer, tile, settings), stopping).ConfigureAwait(false)).Map(bytes =>
+                {
+                    var built = KeptTile.Of(bytes.OrElse([]), cache.Now);
+                    cache.Keep(key, built);
+                    return built;
+                });
+            }
+            finally
+            {
+                // Removes this flight only, never a newer one for the same tile.
+                _inFlight.TryRemove(KeyValuePair.Create(key, flight!));
+            }
+        });
+        return flight;
+    }
+
+    private IResult Answer(Result<KeptTile, DatabaseError> built, TileRequest request) =>
+        built.Match(
+            tile => Reply(tile, request),
             // A table revoked since start-up answers 42501; it has left, so it is not found (US-03 c6).
             // A database that cannot answer now asks the browser to try again (N-22); anything else is a fault.
             error => error.IsMissingTable ? Problems.NotFound("No published layer has that name.")
@@ -160,7 +201,8 @@ public static class TileRoutes
 
     public static IEndpointRouteBuilder MapTiles(this IEndpointRouteBuilder routes, LiveCatalogue catalogue, Database database, TileSettings settings, TileCache cache)
     {
-        var server = new TileServer(() => catalogue.Current, database.Single<byte[]>, settings, cache);
+        var stopping = routes.ServiceProvider.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping;
+        var server = new TileServer(() => catalogue.Current, database.Single<byte[]>, settings, cache, stopping);
         Task<IResult> Serve(string layer, int z, int x, int y, HttpRequest request, CancellationToken cancel) =>
             server.Answer(layer, z, x, y, TileRequest.Of(request), cancel);
 

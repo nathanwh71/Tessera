@@ -150,4 +150,21 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
             await Task.Delay(100, TestContext.Current.CancellationToken);
         Assert.True(condition(), "the list did not change within five seconds");
     }
+
+    // N-24 test 2: twenty requests for one tile of a view that sleeps three seconds finish in about
+    // three seconds, all 200. Twenty queries on a pool of four would take fifteen, or give up.
+    [Fact]
+    public async Task Serves_a_crowd_from_one_query()
+    {
+        await using var reader = Database.Open(database.Reader);
+        var catalogue = await Load(reader);
+        var server = Server(catalogue, reader);
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+
+        var answers = await Task.WhenAll(Enumerable.Range(0, 20).Select(_ =>
+            server.Answer("stage.slow", 0, 0, 0, TileRequest.Plain, TestContext.Current.CancellationToken)));
+
+        Assert.All(answers, answer => Assert.IsType<TileResult>(answer));
+        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(6), $"took {clock.Elapsed}");
+    }
 }

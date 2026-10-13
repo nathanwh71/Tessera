@@ -282,4 +282,82 @@ public sealed class TileCacheTests
         Assert.False(cache.Find(Key()).Match(_ => true, () => false));
         Assert.True(cache.Find(new TileKey("food.markets", 15, 27154, 14280)).Match(_ => true, () => false));
     }
+
+    // A reader that counts its queries and holds each one until the test lets it finish.
+    private sealed class Gate
+    {
+        private readonly TaskCompletionSource _open = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _queries;
+
+        public int Queries => Volatile.Read(ref _queries);
+
+        public void Open() => _open.SetResult();
+
+        public async Task<Result<Option<byte[]>, DatabaseError>> Read(Query query, CancellationToken cancel)
+        {
+            Interlocked.Increment(ref _queries);
+            await _open.Task.WaitAsync(cancel);
+            return Result.Ok<Option<byte[]>, DatabaseError>(Option.Some(new byte[] { 1, 2, 3 }));
+        }
+    }
+
+    private static async Task Until(Func<bool> condition)
+    {
+        for (var attempt = 0; attempt < 200 && !condition(); attempt++)
+            await Task.Delay(10, TestContext.Current.CancellationToken);
+    }
+
+    // N-24 c1 and test 1: a hundred requests for one unbuilt tile run one query and all get the tile.
+    [Fact]
+    public async Task Runs_one_query_for_a_crowd_asking_at_once()
+    {
+        var gate = new Gate();
+        var settings = new TileSettings(10000, 64, 60, 64);
+        var server = new TileServer(() => Option.Some(Catalogue), gate.Read, settings, new TileCache(settings, new Clock()));
+
+        var crowd = Enumerable.Range(0, 100)
+            .Select(_ => Task.Run(() => server.Answer("food.cafes", 15, 27154, 14280, TileRequest.Plain, CancellationToken.None)))
+            .ToArray();
+        await Until(() => gate.Queries > 0);
+        await Task.Delay(50, TestContext.Current.CancellationToken);
+        gate.Open();
+        var answers = await Task.WhenAll(crowd);
+
+        Assert.Equal(1, gate.Queries);
+        Assert.All(answers, answer => Assert.IsType<TileResult>(answer));
+    }
+
+    // N-24 c2: one browser that leaves stops waiting, and the rest still get the tile from the one query.
+    [Fact]
+    public async Task Lets_one_browser_leave_without_cancelling_the_query_for_the_rest()
+    {
+        var gate = new Gate();
+        var settings = new TileSettings(10000, 64, 60, 64);
+        var server = new TileServer(() => Option.Some(Catalogue), gate.Read, settings, new TileCache(settings, new Clock()));
+        using var leaving = new CancellationTokenSource();
+
+        var first = server.Answer("food.cafes", 15, 27154, 14280, TileRequest.Plain, leaving.Token);
+        await Until(() => gate.Queries > 0);
+        var second = server.Answer("food.cafes", 15, 27154, 14280, TileRequest.Plain, CancellationToken.None);
+        await leaving.CancelAsync();
+        gate.Open();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => first);
+        Assert.IsType<TileResult>(await second);
+        Assert.Equal(1, gate.Queries);
+    }
+
+    // N-24 c3: with nothing kept (CacheTTL 0), a request after the query ends starts a new one.
+    [Fact]
+    public async Task Starts_a_new_query_once_the_last_has_ended()
+    {
+        var counter = new Counter();
+        var settings = new TileSettings(10000, 64, 0, 64);
+        var server = new TileServer(() => Option.Some(Catalogue), counter.Read, settings, new TileCache(settings, new Clock()));
+
+        await server.Answer("food.cafes", 15, 27154, 14280, TileRequest.Plain, CancellationToken.None);
+        await server.Answer("food.cafes", 15, 27154, 14280, TileRequest.Plain, CancellationToken.None);
+
+        Assert.Equal(2, counter.Queries);
+    }
 }
