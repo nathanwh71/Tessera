@@ -67,7 +67,7 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
         await using var reader = Database.Open(database.Reader);
         var catalogue = await Load(reader);
 
-        var answer = await Server(catalogue, reader).Answer("stage.odd \"name\"", 0, 0, 0, Option.None<string>(), TestContext.Current.CancellationToken);
+        var answer = await Server(catalogue, reader).Answer("stage.odd \"name\"", 0, 0, 0, TileRequest.Plain, TestContext.Current.CancellationToken);
 
         Assert.Equal(200, await Http.Status(answer));
     }
@@ -81,7 +81,7 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
         var catalogue = await Load(reader);
         await database.Owner("REVOKE SELECT ON stage.revoked FROM tessera_reader;");
 
-        var answer = await Server(catalogue, reader).Answer("stage.revoked", 0, 0, 0, Option.None<string>(), TestContext.Current.CancellationToken);
+        var answer = await Server(catalogue, reader).Answer("stage.revoked", 0, 0, 0, TileRequest.Plain, TestContext.Current.CancellationToken);
 
         Assert.Equal((404, "application/problem+json"), await Http.StatusAndType(answer));
     }

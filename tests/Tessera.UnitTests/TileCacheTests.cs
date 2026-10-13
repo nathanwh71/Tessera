@@ -33,7 +33,13 @@ public sealed class TileCacheTests
 
     private static TileKey Key(int z = 15, int x = 27154, int y = 14280) => new("food.cafes", z, x, y);
 
-    private static KeptTile Tile(int size, DateTimeOffset built) => new(new byte[size], TileTag.Of(new byte[size]), built);
+    // A tile of random bytes, which gzip cannot shrink, so its size is what the test says.
+    private static KeptTile Tile(int size, DateTimeOffset built)
+    {
+        var bytes = new byte[size];
+        new Random(size).NextBytes(bytes);
+        return new KeptTile(bytes, [], TileTag.Of(bytes), built);
+    }
 
     // N-19 test 1: the tag follows the bytes alone.
     [Property]
@@ -121,12 +127,12 @@ public sealed class TileCacheTests
         var settings = new TileSettings(10000, 64, 60, 64);
         var server = new TileServer(Catalogue, counter.Read, settings, new TileCache(settings, clock));
 
-        await server.Answer("food.cafes", 15, 27154, 14280, Option.None<string>(), CancellationToken.None);
-        await server.Answer("food.cafes", 15, 27154, 14280, Option.None<string>(), CancellationToken.None);
+        await server.Answer("food.cafes", 15, 27154, 14280, TileRequest.Plain, CancellationToken.None);
+        await server.Answer("food.cafes", 15, 27154, 14280, TileRequest.Plain, CancellationToken.None);
         Assert.Equal(1, counter.Queries);
 
         clock.Now += TimeSpan.FromSeconds(60);
-        await server.Answer("food.cafes", 15, 27154, 14280, Option.None<string>(), CancellationToken.None);
+        await server.Answer("food.cafes", 15, 27154, 14280, TileRequest.Plain, CancellationToken.None);
         Assert.Equal(2, counter.Queries);
     }
 
@@ -138,8 +144,8 @@ public sealed class TileCacheTests
         var settings = new TileSettings(10000, 64, 60, 64);
         var server = new TileServer(Catalogue, counter.Read, settings, new TileCache(settings, new Clock()));
 
-        var first = Assert.IsType<TileResult>(await server.Answer("food.cafes", 15, 27154, 14280, Option.None<string>(), CancellationToken.None));
-        var second = Assert.IsType<NotModifiedResult>(await server.Answer("food.cafes", 15, 27154, 14280, Option.Some(first.Tag), CancellationToken.None));
+        var first = Assert.IsType<TileResult>(await server.Answer("food.cafes", 15, 27154, 14280, TileRequest.Plain, CancellationToken.None));
+        var second = Assert.IsType<NotModifiedResult>(await server.Answer("food.cafes", 15, 27154, 14280, new TileRequest(Option.Some(first.Tag), AcceptsGzip: false), CancellationToken.None));
 
         Assert.Equal(first.Tag, second.Tag);
         Assert.Equal("public, max-age=60", second.CacheControl);
@@ -154,8 +160,8 @@ public sealed class TileCacheTests
         var settings = new TileSettings(10000, 64, 0, 64);
         var server = new TileServer(Catalogue, counter.Read, settings, new TileCache(settings, new Clock()));
 
-        var first = Assert.IsType<TileResult>(await server.Answer("food.cafes", 15, 27154, 14280, Option.None<string>(), CancellationToken.None));
-        Assert.IsType<NotModifiedResult>(await server.Answer("food.cafes", 15, 27154, 14280, Option.Some(first.Tag), CancellationToken.None));
+        var first = Assert.IsType<TileResult>(await server.Answer("food.cafes", 15, 27154, 14280, TileRequest.Plain, CancellationToken.None));
+        Assert.IsType<NotModifiedResult>(await server.Answer("food.cafes", 15, 27154, 14280, new TileRequest(Option.Some(first.Tag), AcceptsGzip: false), CancellationToken.None));
 
         Assert.Equal(2, counter.Queries);
         Assert.Equal("no-cache", first.CacheControl);
@@ -168,9 +174,50 @@ public sealed class TileCacheTests
         var settings = new TileSettings(10000, 64, 60, 64);
         var server = new TileServer(Catalogue, counter.Read, settings, new TileCache(settings, new Clock()));
 
-        var answer = await server.Answer("food.zoos", 0, 0, 0, Option.None<string>(), CancellationToken.None);
+        var answer = await server.Answer("food.zoos", 0, 0, 0, TileRequest.Plain, CancellationToken.None);
 
         Assert.IsNotType<TileResult>(answer);
         Assert.Equal(0, counter.Queries);
+    }
+
+    // N-20 c1 and c2: the packed form unpacks to the plain bytes, and a browser that accepts gzip gets it.
+    [Fact]
+    public void Packs_and_unpacks_to_the_same_bytes()
+    {
+        var bytes = System.Text.Encoding.UTF8.GetBytes(string.Concat(Enumerable.Repeat("tessera ", 200)));
+        var tile = KeptTile.Of(bytes, DateTimeOffset.UnixEpoch);
+
+        using var unpack = new System.IO.Compression.GZipStream(new MemoryStream(tile.Packed), System.IO.Compression.CompressionMode.Decompress);
+        using var plain = new MemoryStream();
+        unpack.CopyTo(plain);
+
+        Assert.Equal(bytes, plain.ToArray());
+        Assert.True(tile.Packed.Length < bytes.Length / 2);
+    }
+
+    [Theory]
+    [InlineData("gzip, deflate, br", true)]
+    [InlineData("gzip;q=0.8, br", true)]
+    [InlineData("*", true)]
+    [InlineData("br", false)]
+    [InlineData("gzip;q=0", false)]
+    [InlineData("", false)]
+    public void Reads_whether_the_browser_accepts_gzip(string header, bool accepts) =>
+        Assert.Equal(accepts, TilePack.AcceptsGzip(header));
+
+    [Fact]
+    public async Task Sends_the_packed_form_to_a_browser_that_accepts_it()
+    {
+        var counter = new Counter();
+        var settings = new TileSettings(10000, 64, 60, 64);
+        var server = new TileServer(Catalogue, counter.Read, settings, new TileCache(settings, new Clock()));
+
+        var packed = Assert.IsType<TileResult>(await server.Answer("food.cafes", 15, 27154, 14280, new TileRequest(Option.None<string>(), AcceptsGzip: true), CancellationToken.None));
+        var plain = Assert.IsType<TileResult>(await server.Answer("food.cafes", 15, 27154, 14280, TileRequest.Plain, CancellationToken.None));
+
+        Assert.True(packed.Packed);
+        Assert.False(plain.Packed);
+        Assert.Equal(packed.Tag, plain.Tag);
+        Assert.Equal(1, counter.Queries);
     }
 }

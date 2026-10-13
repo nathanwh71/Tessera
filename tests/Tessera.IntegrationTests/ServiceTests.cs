@@ -193,6 +193,57 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         Assert.Equal("text/javascript", asset.Content.Headers.ContentType?.MediaType);
     }
 
+    private async Task<HttpResponseMessage> GetPacked(string path)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, path);
+        request.Headers.AcceptEncoding.ParseAdd("gzip");
+        return await service.Client.SendAsync(request, TestContext.Current.CancellationToken);
+    }
+
+    private static byte[] Unpack(byte[] packed)
+    {
+        using var unpack = new System.IO.Compression.GZipStream(new MemoryStream(packed), System.IO.Compression.CompressionMode.Decompress);
+        using var plain = new MemoryStream();
+        unpack.CopyTo(plain);
+        return plain.ToArray();
+    }
+
+    // N-20 c1 to c3 and tests 1 and 3: a tile travels packed when asked, plain when not, and
+    // unpacks to the same bytes; both forms say Vary.
+    [Fact]
+    public async Task Packs_a_tile_when_the_browser_accepts_gzip()
+    {
+        using var plain = await Get($"/food.cafes/{Zoom}/{Tile.X}/{Tile.Y}.pbf");
+        using var packed = await GetPacked($"/food.cafes/{Zoom}/{Tile.X}/{Tile.Y}.pbf");
+
+        Assert.Empty(plain.Content.Headers.ContentEncoding);
+        Assert.Equal(["gzip"], packed.Content.Headers.ContentEncoding);
+        Assert.Equal(["Accept-Encoding"], plain.Headers.Vary);
+        Assert.Equal(["Accept-Encoding"], packed.Headers.Vary);
+        Assert.Equal(
+            await plain.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken),
+            Unpack(await packed.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken)));
+        Assert.Equal(plain.Headers.ETag, packed.Headers.ETag);
+    }
+
+    // N-20 test 2: the map's main script arrives packed, at under half its plain size.
+    [Fact]
+    public async Task Packs_the_maps_script_to_under_half_its_size()
+    {
+        var html = await service.Client.GetStringAsync("/", TestContext.Current.CancellationToken);
+        var script = System.Text.RegularExpressions.Regex.Match(html, @"src=""(/assets/[^""]+\.js)""").Groups[1].Value;
+
+        using var plain = await Get(script);
+        using var packed = await GetPacked(script);
+        var plainBytes = await plain.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken);
+        var packedBytes = await packed.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(["gzip"], packed.Content.Headers.ContentEncoding);
+        Assert.Equal(["Accept-Encoding"], packed.Headers.Vary);
+        Assert.True(packedBytes.Length < plainBytes.Length / 2, $"{packedBytes.Length} packed against {plainBytes.Length} plain");
+        Assert.Equal(plainBytes, Unpack(packedBytes));
+    }
+
     // US-00: an address no route knows answers a 404 problem document too, and so does a page named
     // for anything but one of the nine layers.
     [Theory]

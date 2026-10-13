@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.IO.Compression;
 using System.Security.Cryptography;
 using Tessera.Kernel;
 using Tessera.Settings;
@@ -37,8 +39,43 @@ public static class TileTag
 /// <summary>One tile's place in the grid of one layer: the key a kept copy is found by.</summary>
 public readonly record struct TileKey(string LayerId, int Z, int X, int Y);
 
-/// <summary>A tile the service built: its bytes, its tag, and when it was built.</summary>
-public sealed record KeptTile(byte[] Bytes, string Tag, DateTimeOffset Built);
+/// <summary>
+/// A tile the service built: its bytes, the same bytes gzip-packed, its tag, and when it was built.
+/// The packed form is made once, here, so a kept tile never packs again (N-20).
+/// </summary>
+public sealed record KeptTile(byte[] Bytes, byte[] Packed, string Tag, DateTimeOffset Built)
+{
+    public static KeptTile Of(byte[] bytes, DateTimeOffset built) => new(bytes, TilePack.Gzip(bytes), TileTag.Of(bytes), built);
+
+    /// <summary>The memory the copy takes: both forms count.</summary>
+    public long Size => Bytes.LongLength + Packed.LongLength;
+}
+
+/// <summary>gzip, the packing every browser unpacks (N-20).</summary>
+public static class TilePack
+{
+    public static byte[] Gzip(byte[] bytes)
+    {
+        using var packed = new MemoryStream();
+        using (var zip = new GZipStream(packed, CompressionLevel.Fastest, leaveOpen: true))
+            zip.Write(bytes);
+        return packed.ToArray();
+    }
+
+    /// <summary>
+    /// True when the browser's <c>Accept-Encoding</c> names gzip, or any encoding, with a weight
+    /// above 0. A browser writes each as <c>gzip</c> or <c>gzip;q=0.5</c>, separated by commas.
+    /// </summary>
+    public static bool AcceptsGzip(string acceptEncoding) =>
+        acceptEncoding.Split(',')
+            .Select(part => part.Split(';', 2))
+            .Any(part => part[0].Trim() is "gzip" or "*" && Weight(part) > 0);
+
+    private static double Weight(string[] part) =>
+        part.Length == 1 ? 1
+            : double.TryParse(part[1].Trim().Replace("q=", "", StringComparison.OrdinalIgnoreCase), NumberStyles.Float, CultureInfo.InvariantCulture, out var weight) ? weight
+            : 0;
+}
 
 /// <summary>
 /// The tiles the service has built, kept in memory so a second request costs no query (N-19 c3).
@@ -97,18 +134,18 @@ public sealed class TileCache
     /// </summary>
     public void Keep(TileKey key, KeptTile tile)
     {
-        if (_life <= TimeSpan.Zero || tile.Bytes.LongLength > _room)
+        if (_life <= TimeSpan.Zero || tile.Size > _room)
             return;
         lock (_gate)
         {
             if (_byKey.TryGetValue(key, out var old))
                 Drop(old);
-            while (Bytes + tile.Bytes.LongLength > _room && _byUse.Last is { } oldest)
+            while (Bytes + tile.Size > _room && _byUse.Last is { } oldest)
                 Drop(oldest);
             var node = new LinkedListNode<(TileKey, KeptTile)>((key, tile));
             _byUse.AddFirst(node);
             _byKey[key] = node;
-            Bytes += tile.Bytes.LongLength;
+            Bytes += tile.Size;
         }
     }
 
@@ -116,6 +153,6 @@ public sealed class TileCache
     {
         _byUse.Remove(node);
         _byKey.Remove(node.Value.Key);
-        Bytes -= node.Value.Tile.Bytes.LongLength;
+        Bytes -= node.Value.Tile.Size;
     }
 }

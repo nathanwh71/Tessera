@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Net;
@@ -34,11 +35,20 @@ public static class TesseraService
         var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions());
         builder.WebHost.UseKestrelCore().ConfigureKestrel(kestrel => kestrel.Listen(IPAddress.Any, settings.Port));
         builder.Services.AddRoutingCore();
+        // The map's own files travel gzip-packed when the browser accepts it (N-20); a tile packs
+        // itself, once, in Tiles. The usual text types are on the list already; .NET names a script
+        // text/javascript, and a problem document has a type of its own.
+        builder.Services.AddResponseCompression(compression =>
+        {
+            compression.Providers.Add<GzipCompressionProvider>();
+            compression.MimeTypes = [.. ResponseCompressionDefaults.MimeTypes, "text/javascript", "application/problem+json"];
+        });
         builder.Logging.AddConsole();
 
         var app = builder.Build();
         app.UseProblemDocuments();
         app.UseTargetScreen();
+        app.UseResponseCompression();
         app.UseMapHeaders();
         app.UseRouting();
         app.MapTiles(catalogue, database, settings.Tiles, new TileCache(settings.Tiles, TimeProvider.System));
