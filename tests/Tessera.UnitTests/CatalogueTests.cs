@@ -5,7 +5,7 @@ namespace Tessera.UnitTests;
 /// <summary>US-03 test 2: a row of the database's list of tables becomes a layer, purely.</summary>
 public sealed class CatalogueTests
 {
-    private static readonly CatalogueRow Cafes = new("food", "cafes", "geom", 4326, "POINT", ["layer", "name"]);
+    private static readonly CatalogueRow Cafes = new("food", "cafes", "geom", 4326, "POINT", """["layer","name"]""");
 
     [Fact]
     public void Turns_a_row_into_a_layer_whose_id_is_schema_dot_name()

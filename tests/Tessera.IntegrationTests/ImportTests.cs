@@ -1,0 +1,78 @@
+using Tessera.Catalogue;
+using Tessera.Import;
+using Tessera.Settings;
+using Tessera.Sql;
+
+namespace Tessera.IntegrationTests;
+
+/// <summary>US-24 tests 1, 5 and 6: nine typed tables, published by grant alone, replaced whole.</summary>
+public sealed class ImportTests(DatabaseFixture database) : IClassFixture<DatabaseFixture>
+{
+    private static readonly AreaBox Macau = new(113.52, 22.10, 113.61, 22.22);
+
+    private async Task<ImportSummary> Import(string json)
+    {
+        await using var publisher = Database.Open(database.Publisher);
+        return (await Importer.Run(publisher, json, Macau, TestContext.Current.CancellationToken))
+            .Match(summary => summary, error => throw new Xunit.Sdk.XunitException(error.Message));
+    }
+
+    private async Task<ImmutableArray<string>> Layers()
+    {
+        await using var reader = Database.Open(database.Reader);
+        return (await LayerCatalogue.Load(reader, TestContext.Current.CancellationToken))
+            .Match(found => found.Layers.Keys.Order(StringComparer.Ordinal).ToImmutableArray(), error => throw new Xunit.Sdk.XunitException(error.Message));
+    }
+
+    // Tests 1, 5 and 6 share one database and run in this order, as a publisher would work.
+    [Fact]
+    public async Task Loads_publishes_and_replaces_the_places()
+    {
+        // Test 1: nine typed tables from a small sample.
+        var summary = await Import(Samples.Sample());
+        Assert.Equal(9, summary.PlacesInLayer.Count);
+        Assert.All(summary.PlacesInLayer.Values, count => Assert.Equal(2, count));
+        Assert.Equal(9L, await database.OwnerValue<long>(
+            "SELECT count(*) FROM geometry_columns WHERE f_table_schema IN ('food', 'outdoors', 'culture', 'transport') AND srid = 4326 AND type = 'POINT'"));
+        Assert.Equal(9L, await database.OwnerValue<long>(
+            "SELECT count(*) FROM pg_indexes WHERE schemaname IN ('food', 'outdoors', 'culture', 'transport') AND indexdef LIKE '%USING gist%'"));
+        Assert.Equal(9L, await database.OwnerValue<long>(
+            "SELECT count(*) FROM pg_stat_user_tables WHERE schemaname IN ('food', 'outdoors', 'culture', 'transport') AND last_analyze IS NOT NULL"));
+        Assert.Equal("boolean", await database.OwnerValue<string>(
+            "SELECT data_type FROM information_schema.columns WHERE table_schema = 'food' AND table_name = 'cafes' AND column_name = 'sample'"));
+
+        // Test 5: with no grant, the catalogue lists none of the nine; after the grant, all nine.
+        Assert.Empty(await Layers());
+        await database.GrantPlaces();
+        Assert.Equal(
+            ["culture.libraries", "culture.museums", "food.cafes", "food.markets", "food.restaurants", "outdoors.parks", "outdoors.playgrounds", "transport.buses", "transport.trains"],
+            await Layers());
+
+        // Test 6: a second, smaller sample leaves its own rows in all nine tables, and none of the first.
+        await Import(Samples.Sample(copies: 1));
+        Assert.Equal(9L, await database.OwnerValue<long>(
+            "SELECT (SELECT count(*) FROM food.cafes) + (SELECT count(*) FROM food.restaurants) + (SELECT count(*) FROM food.markets) + (SELECT count(*) FROM outdoors.parks) + (SELECT count(*) FROM outdoors.playgrounds) + (SELECT count(*) FROM culture.museums) + (SELECT count(*) FROM culture.libraries) + (SELECT count(*) FROM transport.trains) + (SELECT count(*) FROM transport.buses)"));
+        Assert.Equal(0L, await database.OwnerValue<long>("SELECT count(*) FROM food.cafes WHERE id = 'cafes-002'"));
+    }
+
+    // The whole seed: 900 places, in longitude and latitude, stored as they arrive.
+    [Fact]
+    public async Task Loads_the_whole_seed()
+    {
+        var seed = await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "data", "macau-pois.geojson"), TestContext.Current.CancellationToken);
+        var summary = await Import(seed);
+
+        Assert.Equal(900, summary.PlacesInLayer.Values.Sum());
+        Assert.Equal(113.577677, await database.OwnerValue<double>("SELECT ST_X(geom) FROM food.cafes WHERE id = 'cafes-001'"), 6);
+    }
+
+    // A refused file changes nothing: the checks run before any query does.
+    [Fact]
+    public async Task Leaves_the_database_alone_when_it_refuses_a_file()
+    {
+        await using var publisher = Database.Open(database.Publisher);
+        var result = await Importer.Run(publisher, "{ not json", Macau, TestContext.Current.CancellationToken);
+
+        Assert.Contains("not valid JSON", result.Match(_ => "", error => error.Message), StringComparison.Ordinal);
+    }
+}

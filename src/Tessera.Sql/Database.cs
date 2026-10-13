@@ -95,7 +95,8 @@ public sealed class Database : IAsyncDisposable
     {
         var parameters = new DynamicParameters();
         for (var index = 0; index < query.Parameters.Length; index++)
-            parameters.Add($"p{index}", query.Parameters[index]);
+            // Dapper turns a parameter of null into the database's NULL; this is the one place a null appears.
+            parameters.Add($"p{index}", query.Parameters[index] is SqlNull ? null : query.Parameters[index]);
         return new CommandDefinition(query.Text, parameters, transaction, cancellationToken: cancel);
     }
 

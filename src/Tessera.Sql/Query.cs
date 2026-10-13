@@ -92,6 +92,17 @@ public sealed record NameList(ImmutableArray<QuotedName> Names, bool LeadingComm
 }
 
 /// <summary>
+/// The value "nothing", for a column a row leaves empty, such as a place with no website. A bound
+/// parameter must be a value, so this stands in for the database's NULL.
+/// </summary>
+public sealed record SqlNull
+{
+    private SqlNull() { }
+
+    public static readonly SqlNull Value = new();
+}
+
+/// <summary>
 /// Values that each become a bound parameter after a comma: <c>, @p3, @p4</c>. The import uses it
 /// for a row whose number of columns the file decides.
 /// </summary>

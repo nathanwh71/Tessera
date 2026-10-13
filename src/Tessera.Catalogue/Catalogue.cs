@@ -24,7 +24,11 @@ public sealed record Layer(TableName Table, QuotedName Geometry, int Srid, strin
 /// One row of the database's own list of tables, before its names are quoted. Dapper fills it by
 /// matching each column's name to a parameter's name.
 /// </summary>
-public sealed record CatalogueRow(string Schema, string Name, string GeometryColumn, int Srid, string GeometryType, string[] Columns);
+/// <remarks>
+/// Columns arrives as a JSON list of names, such as <c>["layer","name"]</c>: Dapper cannot fill a
+/// list from a database array, but it can fill text, and JSON keeps any name intact.
+/// </remarks>
+public sealed record CatalogueRow(string Schema, string Name, string GeometryColumn, int Srid, string GeometryType, string Columns);
 
 /// <summary>
 /// The list of layers the service builds at start-up: every table and view granted to its role
@@ -52,12 +56,12 @@ public sealed record LayerCatalogue(ImmutableDictionary<string, Layer> Layers)
                a.attname::text AS geometrycolumn,
                postgis_typmod_srid(a.atttypmod) AS srid,
                postgis_typmod_type(a.atttypmod) AS geometrytype,
-               ARRAY(SELECT p.attname::text
+               to_json(ARRAY(SELECT p.attname::text
                      FROM pg_attribute p
                      JOIN pg_type pt ON pt.oid = p.atttypid
                      WHERE p.attrelid = c.oid AND p.attnum > 0 AND NOT p.attisdropped AND p.attnum <> a.attnum
                        AND pt.typname IN ('text', 'varchar', 'bpchar', 'int2', 'int4', 'int8', 'float4', 'float8', 'numeric', 'bool')
-                     ORDER BY p.attnum) AS columns
+                     ORDER BY p.attnum))::text AS columns
         FROM pg_class c
         JOIN pg_namespace n ON n.oid = c.relnamespace
         JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
@@ -77,8 +81,24 @@ public sealed record LayerCatalogue(ImmutableDictionary<string, Layer> Layers)
     public static Result<Layer, string> ToLayer(CatalogueRow row) =>
         from table in TableName.Of(row.Schema, row.Name)
         from geometry in QuotedName.Quote(row.GeometryColumn)
-        from properties in row.Columns.Traverse(QuotedName.Quote)
+        from names in ColumnNames(row.Columns)
+        from properties in names.Traverse(QuotedName.Quote)
         select new Layer(table, geometry, row.Srid, row.GeometryType, properties);
+
+    private static Result<ImmutableArray<string>, string> ColumnNames(string json)
+    {
+        try
+        {
+            return System.Text.Json.JsonSerializer.Deserialize<ImmutableArray<string>>(json) is { IsDefault: false } names
+                ? Result.Ok<ImmutableArray<string>, string>(names)
+                : Result.Refuse<ImmutableArray<string>, string>("expected a list of column names");
+        }
+        catch (System.Text.Json.JsonException error)
+        {
+            // System.Text.Json reports bad JSON by throwing; this is the one place that catches it.
+            return Result.Refuse<ImmutableArray<string>, string>(error.Message);
+        }
+    }
 
     /// <summary>Builds the catalogue from rows; a row whose names will not quote is left out.</summary>
     public static LayerCatalogue FromRows(IEnumerable<CatalogueRow> rows) =>

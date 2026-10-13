@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Tests through the real database and real HTTP. Each test class starts its own copy of the
+    packaged database (db/Dockerfile) in Docker, through Testcontainers, so classes never share rows.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="NetTopologySuite.IO.VectorTiles.Mapbox" />
+    <!-- The tests sign in as the database's owner to set the stage: grants, test tables. The service never does. -->
+    <PackageReference Include="Npgsql" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Tessera.Service/Tessera.Service.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Two classes at a time: each starts a database, and the build machine may have two cores. -->
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="System.Collections.Immutable" />
+    <Using Include="Tessera.Kernel" />
+  </ItemGroup>
+</Project>

@@ -109,8 +109,8 @@ public static class Importer
         PropertyValue.Number(var number) => number.ToString(System.Globalization.CultureInfo.InvariantCulture),
         PropertyValue.Flag(var flag) => flag ? "true" : "false",
         PropertyValue.Text(var text) => text,
-        // DBNull is how .NET hands a database "no value": the column stays empty for this place.
-        _ => DBNull.Value,
+        // The column stays empty for this place.
+        _ => SqlNull.Value,
     };
 
     private static ImportSummary Summary(ImmutableArray<Place> places) =>
