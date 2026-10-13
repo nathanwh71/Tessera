@@ -212,6 +212,7 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
     [InlineData("/food.cafes\\15/1/2.pbf")]
     [InlineData("/food.cafes/15/1/2.pbf%zz")]
     [InlineData("/food.cafes/15/1/2.pbf%01")]
+    [InlineData("/food.c%61fes/15/1/2.pbf")]
     public async Task Refuses_a_malformed_target_before_any_route(string target)
     {
         var answer = await Http.Raw(service.Port, target);

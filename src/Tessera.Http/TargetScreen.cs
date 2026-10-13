@@ -14,6 +14,9 @@ namespace Tessera.Http;
 /// percent-encoded, and the web server would tidy it into a step up the folder tree before routing
 /// saw it. So this screen reads the raw target, exactly as it arrived, and never repairs it.
 /// Percent-encoding writes a character as '%' and two hexadecimal digits: '/' is %2F and '.' is %2E.
+/// A letter, a digit, '-', '.', '_' or '~' never needs encoding (RFC 3986 section 2.3), so an
+/// encoded one, such as %61 for 'a', serves only to disguise an address and is refused too. A space
+/// or a quote may be encoded, since a layer's name may hold one.
 /// </remarks>
 public static class TargetScreen
 {
@@ -27,6 +30,7 @@ public static class TargetScreen
             : path.Contains('\\') || path.Contains("%5c", StringComparison.OrdinalIgnoreCase) ? Option.Some("a backslash")
             : path.Contains("%2f", StringComparison.OrdinalIgnoreCase) ? Option.Some("an encoded slash")
             : path.Split('/').Any(DotSegment) ? Option.Some("a dot segment")
+            : EncodesPlain(path) ? Option.Some("an encoded plain character")
             : Option.None<string>();
     }
 
@@ -57,8 +61,14 @@ public static class TargetScreen
 
     // %00 to %1F and %7F decode to control characters, which no tile address holds.
     private static bool EncodesControl(string target) =>
+        Encoded(target).Any(code => code is < 0x20 or 0x7F);
+
+    private static bool EncodesPlain(string path) =>
+        Encoded(path).Any(code => code is (>= 'A' and <= 'Z') or (>= 'a' and <= 'z') or (>= '0' and <= '9') or '-' or '.' or '_' or '~');
+
+    // The code of each percent-encoded character, in order; the caller has already refused a stray '%'.
+    private static IEnumerable<int> Encoded(string target) =>
         target.Select((character, index) => (character, index))
-            .Any(pair => pair.character == '%'
-                         && pair.index + 2 < target.Length
-                         && Convert.ToInt32(target.Substring(pair.index + 1, 2), 16) is < 0x20 or 0x7F);
+            .Where(pair => pair.character == '%' && pair.index + 2 < target.Length)
+            .Select(pair => Convert.ToInt32(target.Substring(pair.index + 1, 2), 16));
 }

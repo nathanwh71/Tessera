@@ -304,9 +304,7 @@ The ***places*** ***arrive*** as ***one*** **GeoJSON** ***file***, the ***seed**
 2. **The answer hides the target.** No 400 ***body*** ***holds*** any ***part*** of its ***target***.
 3. **Clean targets pass.** A tile ***request*** with no ***character*** to ***refuse*** ***reaches*** US-07's ***route***.
 
-**Open to talk**
-
-- ***Whether*** a `%` that ***encodes*** an ***ordinary*** ***letter***, such as `%61`, ***counts*** as malformed.
+**Decided on 14 October 2026.** A `%` that ***encodes*** a ***plain*** ***character*** ***counts*** as malformed. A ***letter***, a digit, `-`, `.`, `_` or `~` ***never*** ***needs*** encoding (RFC 3986 ***section*** 2.3), so `%61` for `a` ***serves*** only to disguise an ***address***, and the ***service*** ***answers*** 400. A ***space*** or a ***quote*** may ***still*** ***travel*** encoded, as `%20` and `%22`, ***since*** a ***layer***'s ***name*** may ***hold*** ***one***. ***One*** ***gap*** ***stays***: the ***web*** server ***itself*** ***refuses*** `%00` and a ***raw*** ***control*** ***character***, with an ***empty*** 400 in ***place*** of a ***problem*** ***document***.
 
 **Critical to success**
 
