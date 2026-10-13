@@ -599,7 +599,7 @@ The ***places*** ***arrive*** as ***one*** **GeoJSON** ***file***, the ***seed**
 
 ## Part C · Tiles that cost less
 
-***Three*** ***stories*** ***joined*** on 14 ***October*** 2026, and ***none*** is ***built*** yet. They ***take*** ***new*** ***numbers***, N-18 to N-20, after ***phase*** ***one***'s non-functional ***requirements*** N-01 to N-17, which ***cover*** ***none*** of them; if a ***later*** ***reading*** of that ***list*** ***finds*** a ***match***, the ***story*** ***takes*** that ***number***. All ***three*** ***follow*** ***one*** ***idea***: a tile the ***service*** has ***already*** ***built*** should ***cost*** it ***nothing*** to ***serve*** ***again***, and ***little*** to ***send***.
+***Three*** ***stories*** ***joined*** on 14 ***October*** 2026, and all ***three*** were ***built*** the same ***day***. They ***take*** ***new*** ***numbers***, N-18 to N-20, after ***phase*** ***one***'s non-functional ***requirements*** N-01 to N-17, which ***cover*** ***none*** of them; if a ***later*** ***reading*** of that ***list*** ***finds*** a ***match***, the ***story*** ***takes*** that ***number***. All ***three*** ***follow*** ***one*** ***idea***: a tile the ***service*** has ***already*** ***built*** should ***cost*** it ***nothing*** to ***serve*** ***again***, and ***little*** to ***send***.
 
 ### Step 17 · N-18 Let a browser keep a tile
 
@@ -625,7 +625,7 @@ The ***places*** ***arrive*** as ***one*** **GeoJSON** ***file***, the ***seed**
 
 1. **The header follows the setting.** A ***pure*** ***function*** ***turns*** 60 into `public, max-age=60` and 0 into `no-cache`, and ***refuses*** -1.
 2. **Through the real service.** A tile ***carries*** the header; a 404 ***carries*** `no-store`.
-3. **The map asks once.** In the browser ***test***, panning ***away*** from a tile and ***back*** ***within*** the ***minute*** ***sends*** ***one*** ***request*** for it, not ***two***.
+3. **The map asks once.** In the browser ***test***, panning ***away*** from a tile and ***back*** ***within*** the ***minute*** ***sends*** ***one*** ***request*** for it, not ***two***. Not yet ***written***: the browser ***tests*** are the ***map***'s ***own*** (ADR 0006), so this ***one*** ***belongs*** in its ***shared*** ***suite***.
 
 **Open to talk**
 
@@ -683,6 +683,8 @@ The ***places*** ***arrive*** as ***one*** **GeoJSON** ***file***, the ***seed**
 | Builds on | US-07: the tile; US-23: the ***map***'s ***files***; N-19: the ETag |
 | Traces | ***none***; ***new*** on 14 ***October*** 2026 |
 
+**Decided on 14 October 2026.** A ***kept*** tile (N-19) ***holds*** its packed ***form*** ***beside*** the ***plain*** ***one***, ***made*** ***once*** when the tile is ***built***, and both ***count*** ***towards*** `Tiles.CacheMegabytes`. The ***map***'s ***files***, the ***page*** and ***problem*** ***documents*** ***travel*** ***through*** .NET's ***own*** ***response*** compression.
+
 **In plain words.** The ***map***'s ***own*** ***code*** is ***about*** a megabyte of JavaScript, and a tile is some kilobytes. Both shrink when **gzip** packs them: a tile by ***about*** ***half***, ***text*** by ***two*** ***thirds*** or more. A browser ***says*** `Accept-Encoding: gzip` in every ***request***; the ***service*** may then ***answer*** with the packed ***body*** and `Content-Encoding: gzip`, and the browser unpacks it before it ***reads*** it. The ***office*** ***network*** is ***fast***, but each ***visitor***'s ***first*** ***open*** ***loads*** the ***whole*** ***map***, so the ***saving*** ***shows*** there most.
 
 > **Story.** **As** a ***visitor***, **I want** the ***map*** and its tiles to ***arrive*** packed, **so that** the ***map*** ***opens*** ***sooner*** and each pan ***costs*** the ***network*** ***less***.
@@ -705,7 +707,6 @@ The ***places*** ***arrive*** as ***one*** **GeoJSON** ***file***, the ***seed**
 
 - Brotli ***beside*** gzip: browsers ***prefer*** it and it packs ***text*** ***tighter***; .NET ***offers*** both.
 - ***Whether*** a ***body*** ***under*** a kilobyte ***travels*** ***plain***, ***since*** packing it ***gains*** ***nothing***.
-- ***Whether*** a ***kept*** tile (N-19) is ***kept*** packed, so the ***work*** is ***done*** ***once***.
 
 **Critical to success**
 

@@ -19,7 +19,7 @@ The ***nineteen*** ***stories*** in `docs/user-stories/user-stories.md` ***fix**
 | S-06 Malformed URLs | ***Built*** and ***tested***, with ***one*** ***gap***: the ***web*** server ***refuses*** `%00` and a ***raw*** ***control*** ***character*** ***itself***, with an ***empty*** 400 in ***place*** of a ***problem*** ***document*** |
 | US-35 Office on ***port*** 80 | ***Script*** ***written***; it ***needs*** a ***first*** ***run*** on the ***office*** ***machine*** |
 | US-23 and UI-09 to UI-17, the ***map*** | ***Built*** and ***tested***: the ***map*** ***copied*** from the Java ***build*** (ADR 0006), and its 20 browser ***tests*** ***pass*** ***against*** this ***service*** |
-| N-18 to N-20, tiles that ***cost*** ***less*** | ***Written*** on 14 ***October*** 2026; not ***built*** |
+| N-18 to N-20, tiles that ***cost*** ***less*** | ***Built*** and ***tested***: a tile ***carries*** `max-age` and a ***weak*** `ETag`, a ***kept*** ***copy*** ***answers*** without a query, and tiles and the ***map***'s ***files*** ***travel*** gzip-packed |
 
 ## What you need
 
@@ -47,7 +47,7 @@ The ***nineteen*** ***stories*** in `docs/user-stories/user-stories.md` ***fix**
 
 ## Where the settings live
 
-***Machines***, ***ports*** and ***passwords*** ***come*** from ***environment*** variables: ***values*** the ***operating*** ***system*** ***hands*** a ***program*** when it ***starts***. The ***service*** ***refuses*** to ***start*** without them and ***names*** each ***one*** it ***lacks*** (US-00 c4). Every other ***setting*** ***lives*** in `tessera.json`: the ***area***'s ***name***, ***box*** and ***home*** ***view***, the ***map*** preview, and the tile's ***cap*** on ***features*** and buffer (ADR 0003).
+***Machines***, ***ports*** and ***passwords*** ***come*** from ***environment*** variables: ***values*** the ***operating*** ***system*** ***hands*** a ***program*** when it ***starts***. The ***service*** ***refuses*** to ***start*** without them and ***names*** each ***one*** it ***lacks*** (US-00 c4). Every other ***setting*** ***lives*** in `tessera.json`: the ***area***'s ***name***, ***box*** and ***home*** ***view***, the ***map*** preview, the tile's ***cap*** on ***features*** and buffer, and how ***long*** and how ***much*** the ***service*** and the browsers ***keep*** tiles (ADR 0003).
 
 | Variable | Read by | Holds |
 |---|---|---|
@@ -75,7 +75,7 @@ The ***service*** is ***one*** ***program*** ***cut*** into ***seven*** modules,
 | `src/Tessera.Sql` | Every query's ***text***, the ***one*** query builder ***behind*** it, and the ***only*** ***code*** that ***talks*** to the database |
 | `src/Tessera.Catalogue` | The ***list*** of ***layers***: every ***table*** ***granted*** to the ***service*** |
 | `src/Tessera.Import` | The `import` ***command***: ***checks*** the GeoJSON ***seed*** and ***loads*** the ***nine*** ***tables*** |
-| `src/Tessera.Tiles` | The tile ***route*** and the tile query |
+| `src/Tessera.Tiles` | The tile ***route***, the tile query, and the ***kept*** ***copies*** with their ***tags*** |
 | `src/Tessera.Http` | The ***screen*** for disguised ***addresses***, and every ***problem*** ***document*** |
 | `src/Tessera.Map` | ***Serving*** the ***map***'s ***page***, with the ***area*** ***written*** in, and its ***files*** |
 | `web/` | The ***map***: TypeScript, React, MapLibre GL JS, react-elmish and Tailwind CSS, ***copied*** from the Java ***build*** (ADR 0006) |

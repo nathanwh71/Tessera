@@ -19,6 +19,7 @@ The ***service*** ***reads*** its ***settings*** from ***two*** ***sources***, *
 | The ***area***'s ***name***, ***box*** and ***home*** ***view*** | `tessera.json` | The ***stories*** ***call*** them ***settings*** the ***office*** ***sets*** |
 | The ***map*** preview, on or off | `tessera.json` | US-23, ***criterion*** 5 |
 | The tile's ***cap*** on ***features***, and its buffer | `tessera.json` | US-07 ***leaves*** them ***open***; the ***file*** ***lets*** you ***tune*** them without a ***build*** |
+| How ***long*** a tile is ***kept***, `Tiles.CacheSeconds`, and the ***room*** for ***kept*** ***copies***, `Tiles.CacheMegabytes` | `tessera.json`; 60 and 64 when ***left*** out | N-18, N-19 (***added*** 14 ***October*** 2026) |
 | The ***port*** the ***service*** ***listens*** on, `TESSERA_HTTP_PORT` | ***Environment*** | US-00, ***criterion*** 4 |
 | `DATABASE_URL`, `TESSERA_PUBLISHER_DATABASE_URL` | ***Environment*** | US-00 and ADR 0001; a ***password*** ***never*** ***sits*** in a ***file*** |
 

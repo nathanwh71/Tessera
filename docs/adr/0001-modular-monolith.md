@@ -40,7 +40,7 @@ This ***record*** ***covers*** the back ***end*** ***alone***. The ***map***'s *
 | Sql | Every query's ***text***, as ***named*** ***functions***; the ***one*** query builder ***behind*** them; the ***one*** ***function*** that ***quotes*** ***names***; and the ***only*** ***use*** of the database ***client***, Npgsql with Dapper | S-01, US-03 (S-02) |
 | Catalogue | The ***list*** of ***granted*** ***tables*** and ***views***, ***built*** at ***start***-up | US-03 |
 | Import | The `import` ***command***: ***reading*** and ***checking*** the GeoJSON ***seed***, and ***replacing*** the ***rows*** of the ***nine*** ***tables*** in ***one*** transaction | US-24 |
-| Tiles | The tile ***route*** and the tile query | US-07 |
+| Tiles | The tile ***route***, the tile query, and the ***kept*** ***copies*** with their ***tags*** | US-07, N-18 to N-20 |
 | Http | ***Screening*** ***raw*** ***request*** ***targets***, and ***writing*** every ***problem*** ***document*** | S-06, US-07 |
 | Map | ***Serving*** the ***front*** ***end***'s ***built*** ***files*** | US-23 |
 
