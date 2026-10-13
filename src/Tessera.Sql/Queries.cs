@@ -145,3 +145,9 @@ public static class ImportQueries
     public static Query ColumnTypes(ImportTable table) =>
         Query.Of($"SELECT column_name AS name, data_type AS type FROM information_schema.columns WHERE table_schema = {table.Table.Schema.Raw} AND table_name = {table.Table.Table.Raw}");
 }
+
+public static class HealthQueries
+{
+    /// <summary>The smallest question the database can answer: it proves the database is up and lets the service in (N-25).</summary>
+    public static readonly Query Ping = Query.Of($"SELECT 1");
+}

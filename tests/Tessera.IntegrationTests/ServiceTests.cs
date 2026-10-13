@@ -362,6 +362,18 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         }
     }
 
+    // N-25 c1 and test 1: with the list loaded and the database answering, /health says UP.
+    [Fact]
+    public async Task Says_up_when_the_service_can_serve_tiles()
+    {
+        using var answer = await Get("/health");
+
+        Assert.Equal(HttpStatusCode.OK, answer.StatusCode);
+        Assert.Equal("""{"status":"UP"}""", await answer.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        Assert.Equal("application/json", answer.Content.Headers.ContentType?.MediaType);
+        Assert.True(answer.Headers.CacheControl?.NoStore);
+    }
+
     // S-06 test 3: a clean target reaches US-07's route.
     [Fact]
     public async Task Lets_a_clean_raw_target_reach_the_route() =>

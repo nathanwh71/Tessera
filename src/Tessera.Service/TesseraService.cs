@@ -64,6 +64,7 @@ public static class TesseraService
                 error => log.LogWarning("Could not read the list of layers ({SqlState}): {Message}", error.SqlState, error.Message));
         });
         builder.Services.AddHostedService(services => new CatalogueRefresh(services.GetRequiredService<LiveCatalogue>(), settings.Catalogue.Refresh));
+        builder.Services.AddTesseraHealth(database);
 
         var app = builder.Build();
         app.UseProblemDocuments();
@@ -71,6 +72,7 @@ public static class TesseraService
         app.UseResponseCompression();
         app.UseMapHeaders();
         app.UseRouting();
+        app.MapTesseraHealth();
         app.MapTiles(app.Services.GetRequiredService<LiveCatalogue>(), database, settings.Tiles, cache);
         app.UseMap(settings.Area, settings.Map, mapFolder);
         return app;

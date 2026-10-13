@@ -16,7 +16,7 @@
 import { resolve } from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { $ } from 'zx';
-import { waitForDatabase } from './lib/database.ts';
+import { waitForDatabase, waitForHealth } from './lib/database.ts';
 import { countQuery, databaseUrl, decideImport, parseCounts, portProblem, readStartSettings, runArguments } from './lib/plan.ts';
 
 const container = 'tessera-db';
@@ -72,4 +72,12 @@ if (decision.kind === 'import') {
 }
 
 console.log(`Starting the service on port ${settings.httpPort}.`);
-await $({ env: { ...process.env, DATABASE_URL: databaseUrl('tessera_reader', settings.readerPassword, settings.database) }, stdio: 'inherit' })`dotnet run --project src/Tessera.Service --configuration Release`;
+const service = $({ env: { ...process.env, DATABASE_URL: databaseUrl('tessera_reader', settings.readerPassword, settings.database) }, stdio: 'inherit' })`dotnet run --project src/Tessera.Service --configuration Release`;
+
+// The service answers at once, but serves tiles only once its list of layers loads, so the script
+// says 'ready' only when /health says UP (N-25). It keeps running beside the service either way.
+const health = await waitForHealth(`http://127.0.0.1:${settings.httpPort}/health`, 60);
+console.log(health === 'up'
+  ? `Tessera is ready: http://127.0.0.1:${settings.httpPort}/`
+  : 'The service has not said UP within a minute; it keeps trying. Read its log above.');
+await service;

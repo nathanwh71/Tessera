@@ -1,4 +1,4 @@
-// The one step the scripts share that needs Docker: waiting for the database in its container.
+// The waits the scripts share: for the database in its container, and for the service to say UP.
 import { $, sleep } from 'zx';
 
 /**
@@ -13,4 +13,17 @@ export async function waitForDatabase(container: string, name: string): Promise<
     await sleep(1000);
   }
   return `The database did not answer within a minute; read "docker logs ${container}".`;
+}
+
+/**
+ * Asks the service's /health once a second, for up to `seconds`, until it answers {"status":"UP"}
+ * (N-25). A refused connection means the service is still starting, so it counts as 'not yet'.
+ */
+export async function waitForHealth(url: string, seconds: number): Promise<'up' | 'not yet'> {
+  for (let attempt = 1; attempt <= seconds; attempt++) {
+    const status = await fetch(url).then(answer => answer.ok ? answer.json() as Promise<{ status?: string }> : undefined, () => undefined);
+    if (status?.status === 'UP') return 'up';
+    await sleep(1000);
+  }
+  return 'not yet';
 }

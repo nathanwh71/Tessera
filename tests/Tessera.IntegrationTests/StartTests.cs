@@ -45,7 +45,7 @@ public sealed class StartTests
         Assert.Contains("DATABASE_URL", errors, StringComparison.Ordinal);
     }
 
-    // N-23 c4 and test 4: with the database down, the program starts anyway and asks each browser
+    // N-23 c4 and test 4, and N-25: with the database down, the program starts anyway and asks each browser
     // to wait, so the service and the database may start in either order.
     [Fact]
     public async Task Starts_with_the_database_down_and_answers_503()
@@ -79,6 +79,11 @@ public sealed class StartTests
             Assert.Equal(TimeSpan.FromSeconds(5), answer.Headers.RetryAfter?.Delta);
             Assert.False(program.HasExited);
             answer.Dispose();
+
+            // N-25 c2: /health says DOWN, and names no fault.
+            using var health = await client.GetAsync("/health", TestContext.Current.CancellationToken);
+            Assert.Equal(System.Net.HttpStatusCode.ServiceUnavailable, health.StatusCode);
+            Assert.Equal("""{"status":"DOWN"}""", await health.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         }
         finally
         {
