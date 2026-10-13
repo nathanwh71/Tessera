@@ -131,10 +131,11 @@ public static class SettingsReader
         from maxFeatures in Number(json, "Tiles.MaxFeatures", 1, 1_000_000)
         from buffer in Number(json, "Tiles.Buffer", 0, 4096)
         from cacheSeconds in NumberOr(json, "Tiles.CacheSeconds", 60, 0, SecondsInAYear)
-        from whole in maxFeatures % 1 == 0 && buffer % 1 == 0 && cacheSeconds % 1 == 0
+        from cacheMegabytes in NumberOr(json, "Tiles.CacheMegabytes", 64, 1, 65_536)
+        from whole in maxFeatures % 1 == 0 && buffer % 1 == 0 && cacheSeconds % 1 == 0 && cacheMegabytes % 1 == 0
             ? Result.Ok<bool, SettingsError>(true)
-            : Result.Refuse<bool, SettingsError>(new SettingsError("Tiles", "MaxFeatures, Buffer and CacheSeconds must be whole numbers"))
-        select new TileSettings((int)maxFeatures, (int)buffer, (int)cacheSeconds);
+            : Result.Refuse<bool, SettingsError>(new SettingsError("Tiles", "MaxFeatures, Buffer, CacheSeconds and CacheMegabytes must be whole numbers"))
+        select new TileSettings((int)maxFeatures, (int)buffer, (int)cacheSeconds, (int)cacheMegabytes);
 
     private static Option<JsonNode> Find(JsonObject json, string path) =>
         path.Split('.')

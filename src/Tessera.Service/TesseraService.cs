@@ -41,7 +41,7 @@ public static class TesseraService
         app.UseTargetScreen();
         app.UseMapHeaders();
         app.UseRouting();
-        app.MapTiles(catalogue, database, settings.Tiles);
+        app.MapTiles(catalogue, database, settings.Tiles, new TileCache(settings.Tiles, TimeProvider.System));
         app.UseMap(settings.Area, settings.Map, mapFolder);
         return app;
     }

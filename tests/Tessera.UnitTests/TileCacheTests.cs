@@ -1,0 +1,176 @@
+using FsCheck.Xunit;
+using Tessera.Catalogue;
+using Tessera.Settings;
+using Tessera.Sql;
+using Tessera.Tiles;
+
+namespace Tessera.UnitTests;
+
+/// <summary>N-19: the tag follows the bytes, a kept copy costs no query, and the room holds.</summary>
+public sealed class TileCacheTests
+{
+    private static readonly LayerCatalogue Catalogue = LayerCatalogue.FromRows([new CatalogueRow("food", "cafes", "geom", 4326, "POINT", """["name"]""")]);
+
+    // A clock the test moves by hand, so a copy's life passes without waiting.
+    private sealed class Clock : TimeProvider
+    {
+        public DateTimeOffset Now { get; set; } = new(2026, 10, 14, 0, 0, 0, TimeSpan.Zero);
+
+        public override DateTimeOffset GetUtcNow() => Now;
+    }
+
+    // A reader that counts its queries and answers with bytes made from the query's parameters.
+    private sealed class Counter
+    {
+        public int Queries { get; private set; }
+
+        public Task<Result<Option<byte[]>, DatabaseError>> Read(Query query, CancellationToken cancel)
+        {
+            Queries++;
+            return Task.FromResult(Result.Ok<Option<byte[]>, DatabaseError>(Option.Some(query.Parameters.Select(value => (byte)value.GetHashCode()).ToArray())));
+        }
+    }
+
+    private static TileKey Key(int z = 15, int x = 27154, int y = 14280) => new("food.cafes", z, x, y);
+
+    private static KeptTile Tile(int size, DateTimeOffset built) => new(new byte[size], TileTag.Of(new byte[size]), built);
+
+    // N-19 test 1: the tag follows the bytes alone.
+    [Property]
+    public bool Gives_the_same_bytes_the_same_tag(byte[] bytes) => TileTag.Of(bytes) == TileTag.Of([.. bytes]);
+
+    [Property]
+    public bool Gives_different_bytes_different_tags(byte[] first, byte[] second) =>
+        first.SequenceEqual(second) || TileTag.Of(first) != TileTag.Of(second);
+
+    [Fact]
+    public void Writes_a_weak_tag() =>
+        Assert.Matches("^W/\"[0-9a-f]{32}\"$", TileTag.Of([1, 2, 3]));
+
+    [Theory]
+    [InlineData("W/\"abc\"", true)]
+    [InlineData("\"abc\"", true)]
+    [InlineData("W/\"xyz\", W/\"abc\"", true)]
+    [InlineData("*", true)]
+    [InlineData("W/\"xyz\"", false)]
+    [InlineData("", false)]
+    public void Matches_the_browsers_tag_weakly(string ifNoneMatch, bool matches) =>
+        Assert.Equal(matches, TileTag.Matches(ifNoneMatch, "W/\"abc\""));
+
+    [Fact]
+    public void Finds_a_kept_copy_until_its_life_ends()
+    {
+        var clock = new Clock();
+        var cache = new TileCache(new TileSettings(10000, 64, 60, 64), clock);
+        cache.Keep(Key(), Tile(10, clock.Now));
+
+        clock.Now += TimeSpan.FromSeconds(59);
+        Assert.True(cache.Find(Key()).Match(_ => true, () => false));
+        clock.Now += TimeSpan.FromSeconds(1);
+        Assert.False(cache.Find(Key()).Match(_ => true, () => false));
+        Assert.Equal(0, cache.Bytes);
+    }
+
+    // N-19 c4: with CacheSeconds at 0, nothing is kept.
+    [Fact]
+    public void Keeps_nothing_when_cache_seconds_is_zero()
+    {
+        var clock = new Clock();
+        var cache = new TileCache(new TileSettings(10000, 64, 0, 64), clock);
+        cache.Keep(Key(), Tile(10, clock.Now));
+
+        Assert.False(cache.Find(Key()).Match(_ => true, () => false));
+    }
+
+    // N-19 c5 and test 4: the room holds, and the copy used longest ago goes first.
+    [Fact]
+    public void Drops_the_copy_used_longest_ago_when_the_room_is_full()
+    {
+        var clock = new Clock();
+        var cache = new TileCache(new TileSettings(10000, 64, 60, 1), clock);
+        var third = 1024 * 1024 / 3;
+        cache.Keep(Key(x: 1), Tile(third, clock.Now));
+        cache.Keep(Key(x: 2), Tile(third, clock.Now));
+        cache.Keep(Key(x: 3), Tile(third, clock.Now));
+        cache.Find(Key(x: 1));
+
+        cache.Keep(Key(x: 4), Tile(third, clock.Now));
+
+        Assert.True(cache.Bytes <= 1024 * 1024);
+        Assert.True(cache.Find(Key(x: 1)).Match(_ => true, () => false));
+        Assert.False(cache.Find(Key(x: 2)).Match(_ => true, () => false));
+        Assert.True(cache.Find(Key(x: 4)).Match(_ => true, () => false));
+    }
+
+    [Fact]
+    public void Never_keeps_a_tile_larger_than_the_room()
+    {
+        var clock = new Clock();
+        var cache = new TileCache(new TileSettings(10000, 64, 60, 1), clock);
+        cache.Keep(Key(), Tile(1024 * 1024 + 1, clock.Now));
+
+        Assert.Equal(0, cache.Bytes);
+    }
+
+    // N-19 c3 and test 3: two requests for one tile run one query; after the copy expires, two.
+    [Fact]
+    public async Task Runs_one_query_for_two_requests_within_the_minute()
+    {
+        var clock = new Clock();
+        var counter = new Counter();
+        var settings = new TileSettings(10000, 64, 60, 64);
+        var server = new TileServer(Catalogue, counter.Read, settings, new TileCache(settings, clock));
+
+        await server.Answer("food.cafes", 15, 27154, 14280, Option.None<string>(), CancellationToken.None);
+        await server.Answer("food.cafes", 15, 27154, 14280, Option.None<string>(), CancellationToken.None);
+        Assert.Equal(1, counter.Queries);
+
+        clock.Now += TimeSpan.FromSeconds(60);
+        await server.Answer("food.cafes", 15, 27154, 14280, Option.None<string>(), CancellationToken.None);
+        Assert.Equal(2, counter.Queries);
+    }
+
+    // N-19 c2: a browser that sends the tile's tag back gets 304, and still no query.
+    [Fact]
+    public async Task Answers_304_to_a_browser_that_holds_the_tile()
+    {
+        var counter = new Counter();
+        var settings = new TileSettings(10000, 64, 60, 64);
+        var server = new TileServer(Catalogue, counter.Read, settings, new TileCache(settings, new Clock()));
+
+        var first = Assert.IsType<TileResult>(await server.Answer("food.cafes", 15, 27154, 14280, Option.None<string>(), CancellationToken.None));
+        var second = Assert.IsType<NotModifiedResult>(await server.Answer("food.cafes", 15, 27154, 14280, Option.Some(first.Tag), CancellationToken.None));
+
+        Assert.Equal(first.Tag, second.Tag);
+        Assert.Equal("public, max-age=60", second.CacheControl);
+        Assert.Equal(1, counter.Queries);
+    }
+
+    // N-19 c4: with CacheSeconds at 0, each request runs the query, and a matching tag still answers 304.
+    [Fact]
+    public async Task Still_answers_304_when_nothing_is_kept()
+    {
+        var counter = new Counter();
+        var settings = new TileSettings(10000, 64, 0, 64);
+        var server = new TileServer(Catalogue, counter.Read, settings, new TileCache(settings, new Clock()));
+
+        var first = Assert.IsType<TileResult>(await server.Answer("food.cafes", 15, 27154, 14280, Option.None<string>(), CancellationToken.None));
+        Assert.IsType<NotModifiedResult>(await server.Answer("food.cafes", 15, 27154, 14280, Option.Some(first.Tag), CancellationToken.None));
+
+        Assert.Equal(2, counter.Queries);
+        Assert.Equal("no-cache", first.CacheControl);
+    }
+
+    [Fact]
+    public async Task Refuses_an_unknown_layer_before_any_query()
+    {
+        var counter = new Counter();
+        var settings = new TileSettings(10000, 64, 60, 64);
+        var server = new TileServer(Catalogue, counter.Read, settings, new TileCache(settings, new Clock()));
+
+        var answer = await server.Answer("food.zoos", 0, 0, 0, Option.None<string>(), CancellationToken.None);
+
+        Assert.IsNotType<TileResult>(answer);
+        Assert.Equal(0, counter.Queries);
+    }
+}

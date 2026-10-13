@@ -39,7 +39,7 @@ The ***shipped*** `tessera.json` for Macau ***looks*** ***like*** this. The ***b
     "Home": { "Longitude": 113.55, "Latitude": 22.19, "Zoom": 15 }
   },
   "Map": { "Preview": true },
-  "Tiles": { "MaxFeatures": 10000, "Buffer": 64, "CacheSeconds": 60 }
+  "Tiles": { "MaxFeatures": 10000, "Buffer": 64, "CacheSeconds": 60, "CacheMegabytes": 64 }
 }
 ```
 

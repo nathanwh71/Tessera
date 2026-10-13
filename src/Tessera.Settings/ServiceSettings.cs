@@ -22,10 +22,11 @@ public sealed record MapSettings(bool Preview);
 /// <summary>
 /// The most features one tile may carry, and how far past its edge it reaches, in tile units
 /// (US-07). A tile is 4096 units wide, so a buffer of 64 reaches 1/64 of a tile beyond each edge.
-/// CacheSeconds is how long a browser may keep a tile before it asks again (N-18); 0 means it
-/// asks every time.
+/// CacheSeconds is how long a browser may keep a tile before it asks again (N-18), and how long
+/// the service keeps its own copy (N-19); 0 means neither keeps one. CacheMegabytes caps the
+/// memory the service's copies take together.
 /// </summary>
-public sealed record TileSettings(int MaxFeatures, int Buffer, int CacheSeconds);
+public sealed record TileSettings(int MaxFeatures, int Buffer, int CacheSeconds, int CacheMegabytes);
 
 /// <summary>Everything the service needs to start, read from the environment and from tessera.json (ADR 0003).</summary>
 public sealed record ServiceSettings(Area Area, MapSettings Map, TileSettings Tiles, int Port, DatabaseAddress Database);

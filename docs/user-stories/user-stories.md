@@ -664,11 +664,11 @@ The ***places*** ***arrive*** as ***one*** **GeoJSON** ***file***, the ***seed**
 3. **One query a tile.** A ***test*** double ***counts*** the queries: ***two*** ***requests*** for ***one*** tile ***run*** ***one*** query; after the ***kept*** ***copy*** ***expires***, ***two***.
 4. **The room holds.** With `Tiles.CacheMegabytes` ***set*** to 1 and ***hundreds*** of tiles ***asked*** for, the ***kept*** bytes ***stay*** ***under*** the ***cap***.
 
+**Decided on 14 October 2026.** ***Kept*** ***copies*** ***live*** in ***memory***, ***behind*** ***one*** ***lock***, in a ***list*** ***ordered*** by ***use***; a restart ***starts*** ***empty***. The ***tag*** is the ***first*** ***half*** of a SHA-256 hash of the bytes, ***since*** the ***tag*** ***guards*** ***freshness***, not ***secrets***.
+
 **Open to talk**
 
-- ***Whether*** a ***crowd*** ***asking*** for ***one*** ***unbuilt*** tile ***shares*** ***one*** query, the ***rest*** ***waiting*** for the ***first***, or each ***runs*** its ***own***.
-- ***Whether*** to ***keep*** ***copies*** in the database ***instead*** of ***memory***, so a restart ***loses*** ***nothing***.
-- The hash ***behind*** the ***tag***: any ***quick*** ***one*** ***serves***, ***since*** the ***tag*** ***guards*** ***freshness***, not ***secrets***.
+- ***Whether*** a ***crowd*** ***asking*** for ***one*** ***unbuilt*** tile ***shares*** ***one*** query, the ***rest*** ***waiting*** for the ***first***, or each ***runs*** its ***own***, as ***now***.
 
 **Critical to success**
 

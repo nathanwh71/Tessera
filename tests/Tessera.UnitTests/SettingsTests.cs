@@ -36,7 +36,7 @@ public sealed class SettingsTests
         Assert.Equal(8080, settings.Port);
         // %40 is '@', percent-encoded so it cannot be mistaken for the '@' before the host.
         Assert.Equal(new DatabaseAddress("db.office", 5433, "tessera", "tessera_reader", "s@cret"), settings.Database);
-        Assert.Equal(new TileSettings(10000, 64, 60), settings.Tiles);
+        Assert.Equal(new TileSettings(10000, 64, 60, 64), settings.Tiles);
     }
 
     // US-00 test 2: started with no variables set, the service names each one it lacks.
@@ -108,6 +108,12 @@ public sealed class SettingsTests
     public void Reads_cache_seconds_with_a_minute_as_the_default(string tiles, int expected) =>
         Assert.Equal(expected, Read(Machines, File.Replace("\"MaxFeatures\": 10000, \"Buffer\": 64", tiles, StringComparison.Ordinal))
             .Match(found => found.Tiles.CacheSeconds, _ => -1));
+
+    // N-19 c5: the room for kept copies is 64 MB unless the file says otherwise.
+    [Fact]
+    public void Reads_cache_megabytes_with_64_as_the_default() =>
+        Assert.Equal((64, 8), Read(Machines, File.Replace("\"Buffer\": 64", "\"Buffer\": 64, \"CacheMegabytes\": 8", StringComparison.Ordinal))
+            .Match(found => (Read(Machines).Match(plain => plain.Tiles.CacheMegabytes, _ => -1), found.Tiles.CacheMegabytes), _ => (-1, -1)));
 
     [Theory]
     [InlineData("-1")]

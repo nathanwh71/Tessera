@@ -52,14 +52,82 @@ public static class TileHeaders
         cacheSeconds > 0 ? $"public, max-age={cacheSeconds}" : "no-cache";
 }
 
-/// <summary>A tile's bytes, with its headers, ready to write (US-07, N-18).</summary>
-public sealed record TileResult(byte[] Bytes, string CacheControl) : IResult
+/// <summary>A tile's bytes, with its headers, ready to write (US-07, N-18, N-19).</summary>
+public sealed record TileResult(byte[] Bytes, string Tag, string CacheControl) : IResult
 {
     public Task ExecuteAsync(HttpContext context)
     {
         context.Response.Headers.CacheControl = CacheControl;
+        context.Response.Headers.ETag = Tag;
         return Results.Bytes(Bytes, TileRoutes.ContentType).ExecuteAsync(context);
     }
+}
+
+/// <summary>
+/// 304 'Not Modified': the browser's copy is still good, so no body travels (N-19 c2). It carries
+/// the same tag and cache rule a 200 would, as RFC 9110 asks, so the browser refreshes its copy's life.
+/// </summary>
+public sealed record NotModifiedResult(string Tag, string CacheControl) : IResult
+{
+    public Task ExecuteAsync(HttpContext context)
+    {
+        context.Response.StatusCode = StatusCodes.Status304NotModified;
+        context.Response.Headers.CacheControl = CacheControl;
+        context.Response.Headers.ETag = Tag;
+        return Task.CompletedTask;
+    }
+}
+
+/// <summary>Runs the tile query and gives the tile's bytes, or none for an empty tile.</summary>
+public delegate Task<Result<Option<byte[]>, DatabaseError>> TileReader(Query query, CancellationToken cancel);
+
+/// <summary>
+/// Answers a tile request: from a kept copy when there is one, else from the database (US-07, N-19).
+/// </summary>
+/// <remarks>
+/// The reader is a function, not the database itself, so a test can count the queries with a
+/// double and prove that a second request runs none (N-19 test 3).
+/// </remarks>
+public sealed class TileServer(LayerCatalogue catalogue, TileReader read, TileSettings settings, TileCache cache)
+{
+    /// <summary>
+    /// Finds the layer, checks the address, then looks for a kept copy before it asks the database.
+    /// An unknown layer is refused before any query runs (US-07 test 1), so a hostile name never
+    /// reaches the database at all.
+    /// </summary>
+    public async Task<IResult> Answer(string layerId, int z, int x, int y, Option<string> ifNoneMatch, CancellationToken cancel)
+    {
+        var request =
+            // The detail never repeats the request's layer id: an answer should not echo what a stranger sent.
+            from layer in catalogue.Find(layerId).OrRefuse(Problems.NotFound("No published layer has that name."))
+            from tile in TileAddress.Of(z, x, y).MapError(Problems.BadRequest)
+            select (Layer: layer, Tile: tile);
+
+        return await request.Match(
+            found => cache.Find(new TileKey(found.Layer.Id, z, x, y)).Match(
+                kept => Task.FromResult(Reply(kept, ifNoneMatch)),
+                () => Build(found.Layer, found.Tile, ifNoneMatch, cancel)),
+            refusal => Task.FromResult(refusal)).ConfigureAwait(false);
+    }
+
+    private async Task<IResult> Build(Layer layer, TileAddress tile, Option<string> ifNoneMatch, CancellationToken cancel) =>
+        (await read(TileQuery.For(layer, tile, settings), cancel).ConfigureAwait(false)).Match(
+            bytes =>
+            {
+                var built = new KeptTile(bytes.OrElse([]), TileTag.Of(bytes.OrElse([])), cache.Now);
+                cache.Keep(new TileKey(layer.Id, tile.Z, tile.X, tile.Y), built);
+                return Reply(built, ifNoneMatch);
+            },
+            // A table revoked since start-up answers 42501; it has left, so it is not found (US-03 c6).
+            error => error.IsMissingTable
+                ? Problems.NotFound("No published layer has that name.")
+                : Problems.Answer(StatusCodes.Status500InternalServerError, Option.None<string>()));
+
+    // The browser that already holds this tile gets 304 and no body; any other gets the bytes.
+    private IResult Reply(KeptTile tile, Option<string> ifNoneMatch) =>
+        ifNoneMatch.Match(header => TileTag.Matches(header, tile.Tag), () => false)
+            ? new NotModifiedResult(tile.Tag, TileHeaders.CacheControl(settings.CacheSeconds))
+            : new TileResult(tile.Bytes, tile.Tag, TileHeaders.CacheControl(settings.CacheSeconds));
 }
 
 /// <summary>The tile route: <c>/{layer}/{z}/{x}/{y}.pbf</c>, and the same ending <c>.mvt</c> (US-07).</summary>
@@ -67,35 +135,14 @@ public static class TileRoutes
 {
     public const string ContentType = "application/vnd.mapbox-vector-tile";
 
-    public static IEndpointRouteBuilder MapTiles(this IEndpointRouteBuilder routes, LayerCatalogue catalogue, Database database, TileSettings settings)
+    public static IEndpointRouteBuilder MapTiles(this IEndpointRouteBuilder routes, LayerCatalogue catalogue, Database database, TileSettings settings, TileCache cache)
     {
-        routes.MapGet("/{layer}/{z:int}/{x:int}/{y:int}.pbf", (string layer, int z, int x, int y, CancellationToken cancel) =>
-            Serve(catalogue, database, settings, layer, z, x, y, cancel));
-        routes.MapGet("/{layer}/{z:int}/{x:int}/{y:int}.mvt", (string layer, int z, int x, int y, CancellationToken cancel) =>
-            Serve(catalogue, database, settings, layer, z, x, y, cancel));
+        var server = new TileServer(catalogue, database.Single<byte[]>, settings, cache);
+        Task<IResult> Serve(string layer, int z, int x, int y, HttpRequest request, CancellationToken cancel) =>
+            server.Answer(layer, z, x, y, request.Headers.IfNoneMatch.ToString() is { Length: > 0 } header ? Option.Some(header) : Option.None<string>(), cancel);
+
+        routes.MapGet("/{layer}/{z:int}/{x:int}/{y:int}.pbf", Serve);
+        routes.MapGet("/{layer}/{z:int}/{x:int}/{y:int}.mvt", Serve);
         return routes;
-    }
-
-    /// <summary>
-    /// Finds the layer, checks the address, then asks the database. An unknown layer is refused
-    /// before any query runs (US-07 test 1), so a hostile name never reaches the database at all.
-    /// </summary>
-    public static async Task<IResult> Serve(
-        LayerCatalogue catalogue, Database database, TileSettings settings, string layerId, int z, int x, int y, CancellationToken cancel)
-    {
-        var request =
-            // The detail never repeats the request's layer id: an answer should not echo what a stranger sent.
-            from layer in catalogue.Find(layerId).OrRefuse(Problems.NotFound("No published layer has that name."))
-            from tile in TileAddress.Of(z, x, y).MapError(Problems.BadRequest)
-            select TileQuery.For(layer, tile, settings);
-
-        return await request.Match(
-            async query => (await database.Single<byte[]>(query, cancel).ConfigureAwait(false)).Match(
-                bytes => new TileResult(bytes.OrElse([]), TileHeaders.CacheControl(settings.CacheSeconds)),
-                // A table revoked since start-up answers 42501; it has left, so it is not found (US-03 c6).
-                error => error.IsMissingTable
-                    ? Problems.NotFound("No published layer has that name.")
-                    : Problems.Answer(StatusCodes.Status500InternalServerError, Option.None<string>())),
-            refusal => Task.FromResult(refusal)).ConfigureAwait(false);
     }
 }

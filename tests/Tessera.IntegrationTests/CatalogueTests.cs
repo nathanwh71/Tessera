@@ -8,7 +8,10 @@ namespace Tessera.IntegrationTests;
 /// <summary>US-03 test 4: publish a table by granting it, signed in as the real role.</summary>
 public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<DatabaseFixture>, IAsyncLifetime
 {
-    private static readonly TileSettings Tiles = new(10000, 64, 60);
+    private static readonly TileSettings Tiles = new(10000, 64, 60, 64);
+
+    private static TileServer Server(LayerCatalogue catalogue, Database reader) =>
+        new(catalogue, reader.Single<byte[]>, Tiles, new TileCache(Tiles, TimeProvider.System));
 
     // The stage: one of each kind US-03 names. xUnit runs this before each test, so every step may
     // run again on a stage it has already set. The test makes its own tables, as US-03 asks;
@@ -64,7 +67,7 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
         await using var reader = Database.Open(database.Reader);
         var catalogue = await Load(reader);
 
-        var answer = await TileRoutes.Serve(catalogue, reader, Tiles, "stage.odd \"name\"", 0, 0, 0, TestContext.Current.CancellationToken);
+        var answer = await Server(catalogue, reader).Answer("stage.odd \"name\"", 0, 0, 0, Option.None<string>(), TestContext.Current.CancellationToken);
 
         Assert.Equal(200, await Http.Status(answer));
     }
@@ -78,7 +81,7 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
         var catalogue = await Load(reader);
         await database.Owner("REVOKE SELECT ON stage.revoked FROM tessera_reader;");
 
-        var answer = await TileRoutes.Serve(catalogue, reader, Tiles, "stage.revoked", 0, 0, 0, TestContext.Current.CancellationToken);
+        var answer = await Server(catalogue, reader).Answer("stage.revoked", 0, 0, 0, Option.None<string>(), TestContext.Current.CancellationToken);
 
         Assert.Equal((404, "application/problem+json"), await Http.StatusAndType(answer));
     }

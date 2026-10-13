@@ -48,7 +48,7 @@ public sealed class ServiceFixture : IAsyncLifetime
         var settings = new ServiceSettings(
             new Area("Macau", box, new HomeView(113.55, 22.19, 14)),
             new MapSettings(Preview: true),
-            new TileSettings(10000, 64, 60),
+            new TileSettings(10000, 64, 60, 64),
             Port,
             Database.Reader);
 
@@ -102,6 +102,26 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         Assert.Equal(HttpStatusCode.OK, answer.StatusCode);
         Assert.Equal("application/vnd.mapbox-vector-tile", answer.Content.Headers.ContentType?.MediaType);
         Assert.Equal("public, max-age=60", answer.Headers.CacheControl?.ToString());
+    }
+
+    // N-19 c1, c2 and test 2: a tile carries a weak tag, and a request that sends it back gets
+    // 304 with no body and the same headers.
+    [Fact]
+    public async Task Answers_304_to_a_browser_that_sends_the_tag_back()
+    {
+        using var first = await Get($"/food.cafes/{Zoom}/{Tile.X}/{Tile.Y}.pbf");
+        var tag = first.Headers.ETag;
+        Assert.NotNull(tag);
+        Assert.True(tag.IsWeak);
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/food.cafes/{Zoom}/{Tile.X}/{Tile.Y}.pbf");
+        request.Headers.IfNoneMatch.Add(tag);
+        using var second = await service.Client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.NotModified, second.StatusCode);
+        Assert.Equal(tag, second.Headers.ETag);
+        Assert.Equal("public, max-age=60", second.Headers.CacheControl?.ToString());
+        Assert.Empty(await second.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken));
     }
 
     // US-07 c2.
