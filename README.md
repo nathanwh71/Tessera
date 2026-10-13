@@ -6,7 +6,7 @@ A **tile** is ***one*** ***square*** of a ***map*** at ***one*** zoom ***level**
 
 ## What this build holds, story by story
 
-The ***sixteen*** ***stories*** in `docs/user-stories/user-stories.md` ***fix*** what Tessera must do. Their ***state*** on 13 ***October*** 2026:
+The ***nineteen*** ***stories*** in `docs/user-stories/user-stories.md` ***fix*** what Tessera must do. Their ***state*** on 14 ***October*** 2026:
 
 | Story | State |
 |---|---|
@@ -19,6 +19,7 @@ The ***sixteen*** ***stories*** in `docs/user-stories/user-stories.md` ***fix***
 | S-06 Malformed URLs | ***Built*** and ***tested***, with ***one*** ***gap***: the ***web*** server ***refuses*** `%00` and a ***raw*** ***control*** ***character*** ***itself***, with an ***empty*** 400 in ***place*** of a ***problem*** ***document*** |
 | US-35 Office on ***port*** 80 | ***Script*** ***written***; it ***needs*** a ***first*** ***run*** on the ***office*** ***machine*** |
 | US-23 and UI-09 to UI-17, the ***map*** | ***Built*** and ***tested***: the ***map*** ***copied*** from the Java ***build*** (ADR 0006), and its 20 browser ***tests*** ***pass*** ***against*** this ***service*** |
+| N-18 to N-20, tiles that ***cost*** ***less*** | ***Written*** on 14 ***October*** 2026; not ***built*** |
 
 ## What you need
 
@@ -85,7 +86,7 @@ The ***service*** is ***one*** ***program*** ***cut*** into ***seven*** modules,
 
 ## The documents
 
-- `docs/user-stories/user-stories.md`: the ***sixteen*** ***stories*** of Phase Oct, in ***build*** ***order***
+- `docs/user-stories/user-stories.md`: the ***nineteen*** ***stories*** of Phase Oct, in ***build*** ***order***
 - `docs/adr/0001-modular-monolith.md`: why the ***service*** is ***one*** ***program*** in ***seven*** modules
 - `docs/adr/0002-scripts-in-typescript-with-zx.md`: why the ***scripts*** are TypeScript on Node.js 26
 - `docs/adr/0003-settings-file.md`: why ***settings*** ***live*** in `tessera.json` and the ***environment***
