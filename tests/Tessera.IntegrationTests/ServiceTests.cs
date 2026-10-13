@@ -48,7 +48,7 @@ public sealed class ServiceFixture : IAsyncLifetime
         var settings = new ServiceSettings(
             new Area("Macau", box, new HomeView(113.55, 22.19, 14)),
             new MapSettings(Preview: true),
-            new TileSettings(10000, 64),
+            new TileSettings(10000, 64, 60),
             Port,
             Database.Reader);
 
@@ -93,7 +93,7 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
 
     private Task<HttpResponseMessage> Get(string path) => service.Client.GetAsync(path, TestContext.Current.CancellationToken);
 
-    // US-07 c1.
+    // US-07 c1, and N-18 c1 and test 2: a tile carries the minute the browser may keep it.
     [Fact]
     public async Task Serves_a_tile_as_a_mapbox_vector_tile()
     {
@@ -101,6 +101,7 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
 
         Assert.Equal(HttpStatusCode.OK, answer.StatusCode);
         Assert.Equal("application/vnd.mapbox-vector-tile", answer.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("public, max-age=60", answer.Headers.CacheControl?.ToString());
     }
 
     // US-07 c2.
@@ -141,6 +142,8 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         using var body = JsonDocument.Parse(await answer.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
 
         Assert.Equal(HttpStatusCode.NotFound, answer.StatusCode);
+        // N-18 c3: no browser keeps a problem document.
+        Assert.Equal("no-store", answer.Headers.CacheControl?.ToString());
         Assert.Equal("application/problem+json", answer.Content.Headers.ContentType?.MediaType);
         Assert.Equal("about:blank", body.RootElement.GetProperty("type").GetString());
         Assert.Equal("Not Found", body.RootElement.GetProperty("title").GetString());

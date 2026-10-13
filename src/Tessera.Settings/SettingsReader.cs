@@ -124,19 +124,25 @@ public static class SettingsReader
         from zoom in Number(json, "Area.Home.Zoom", 0, 22)
         select new Area(name, box, new HomeView(longitude, latitude, zoom));
 
+    // A browser may keep a tile for a year at most, the longest HTTP's max-age means anything.
+    private const int SecondsInAYear = 365 * 24 * 60 * 60;
+
     private static Result<TileSettings, SettingsError> ReadTiles(JsonObject json) =>
         from maxFeatures in Number(json, "Tiles.MaxFeatures", 1, 1_000_000)
         from buffer in Number(json, "Tiles.Buffer", 0, 4096)
-        from whole in maxFeatures % 1 == 0 && buffer % 1 == 0
+        from cacheSeconds in NumberOr(json, "Tiles.CacheSeconds", 60, 0, SecondsInAYear)
+        from whole in maxFeatures % 1 == 0 && buffer % 1 == 0 && cacheSeconds % 1 == 0
             ? Result.Ok<bool, SettingsError>(true)
-            : Result.Refuse<bool, SettingsError>(new SettingsError("Tiles", "MaxFeatures and Buffer must be whole numbers"))
-        select new TileSettings((int)maxFeatures, (int)buffer);
+            : Result.Refuse<bool, SettingsError>(new SettingsError("Tiles", "MaxFeatures, Buffer and CacheSeconds must be whole numbers"))
+        select new TileSettings((int)maxFeatures, (int)buffer, (int)cacheSeconds);
 
-    private static Result<JsonNode, SettingsError> Node(JsonObject json, string path) =>
+    private static Option<JsonNode> Find(JsonObject json, string path) =>
         path.Split('.')
             .Aggregate(Option.Some<JsonNode>(json), (node, key) => node.Bind(found =>
-                found is JsonObject parent ? parent[key].ToOption() : Option.None<JsonNode>()))
-            .OrRefuse(new SettingsError(path, "missing"));
+                found is JsonObject parent ? parent[key].ToOption() : Option.None<JsonNode>()));
+
+    private static Result<JsonNode, SettingsError> Node(JsonObject json, string path) =>
+        Find(json, path).OrRefuse(new SettingsError(path, "missing"));
 
     private static Result<string, SettingsError> Text(JsonObject json, string path) =>
         Node(json, path).Bind(node =>
@@ -154,6 +160,10 @@ public static class SettingsReader
             && number >= lowest && number <= highest
                 ? Result.Ok<double, SettingsError>(number)
                 : Result.Refuse<double, SettingsError>(new SettingsError(path, $"expected a number from {lowest} to {highest}")));
+
+    /// <summary>A number the file may leave out: the fallback then stands, and still within the range.</summary>
+    private static Result<double, SettingsError> NumberOr(JsonObject json, string path, double fallback, double lowest, double highest) =>
+        Find(json, path).Match(_ => Number(json, path, lowest, highest), () => Result.Ok<double, SettingsError>(fallback));
 
     private static Result<bool, SettingsError> Flag(JsonObject json, string path) =>
         Node(json, path).Bind(node =>

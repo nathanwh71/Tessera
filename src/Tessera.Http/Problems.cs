@@ -20,9 +20,21 @@ public static class Problems
 {
     public const string ContentType = "application/problem+json";
 
-    /// <summary>An answer for a status code, with a sentence of detail where one helps.</summary>
-    public static IResult Answer(int status, Option<string> detail) =>
-        Results.Json(Body(status, detail), contentType: ContentType, statusCode: status);
+    /// <summary>
+    /// An answer for a status code, with a sentence of detail where one helps. It carries
+    /// <c>Cache-Control: no-store</c>, so no browser keeps a problem document and shows it again
+    /// after the problem has gone (N-18 c3).
+    /// </summary>
+    public static IResult Answer(int status, Option<string> detail) => new ProblemResult(status, detail);
+
+    private sealed record ProblemResult(int Status, Option<string> Detail) : IResult
+    {
+        public Task ExecuteAsync(HttpContext context)
+        {
+            context.Response.Headers.CacheControl = "no-store";
+            return Results.Json(Body(Status, Detail), contentType: ContentType, statusCode: Status).ExecuteAsync(context);
+        }
+    }
 
     public static IResult NotFound(string detail) => Answer(StatusCodes.Status404NotFound, Option.Some(detail));
 

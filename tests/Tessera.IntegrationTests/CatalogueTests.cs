@@ -8,7 +8,7 @@ namespace Tessera.IntegrationTests;
 /// <summary>US-03 test 4: publish a table by granting it, signed in as the real role.</summary>
 public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<DatabaseFixture>, IAsyncLifetime
 {
-    private static readonly TileSettings Tiles = new(10000, 64);
+    private static readonly TileSettings Tiles = new(10000, 64, 60);
 
     // The stage: one of each kind US-03 names. xUnit runs this before each test, so every step may
     // run again on a stage it has already set. The test makes its own tables, as US-03 asks;

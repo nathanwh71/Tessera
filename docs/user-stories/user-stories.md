@@ -617,7 +617,7 @@ The ***places*** ***arrive*** as ***one*** **GeoJSON** ***file***, the ***seed**
 
 1. **Given** a tile ***answered*** 200, **then** it ***carries*** `Cache-Control: public, max-age=N`, where N is `Tiles.CacheSeconds` from `tessera.json`, and 60 when the ***file*** ***leaves*** it out.
 2. **Given** `Tiles.CacheSeconds` ***set*** to 0, **then** a tile ***carries*** `Cache-Control: no-cache`, so a browser ***checks*** with the ***service*** before it ***reuses*** a ***copy***; N-19 ***makes*** that ***check*** ***cheap***.
-3. **Given** any ***error*** ***answer***, such as the 404 of US-07, **then** it ***carries*** `Cache-Control: no-store`, as it does ***now***, so no browser ***keeps*** a ***problem*** ***document***.
+3. **Given** any ***error*** ***answer***, such as the 404 of US-07, **then** it ***carries*** `Cache-Control: no-store`, so no browser ***keeps*** a ***problem*** ***document***.
 4. **Given** a ***new*** ***import***, **when** `max-age` ***seconds*** ***pass***, **then** every browser ***asks*** ***again*** and ***sees*** the ***new*** ***places***.
 5. **Given** a ***setting*** ***below*** 0, or not a ***whole*** ***number***, **then** the ***service*** ***refuses*** to ***start*** and ***names*** the ***setting*** (US-00 c4).
 

@@ -32,7 +32,7 @@ public sealed class TileTests
     [Fact]
     public void Matches_the_approved_tile_query()
     {
-        var query = TileQuery.For(Cafes, new TileAddress(15, 27154, 14280), new TileSettings(10000, 64));
+        var query = TileQuery.For(Cafes, new TileAddress(15, 27154, 14280), new TileSettings(10000, 64, 60));
         var approved = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "approved", "tile-query.sql"));
 
         Assert.Equal(approved.ReplaceLineEndings().TrimEnd(), query.Text.ReplaceLineEndings().TrimEnd());
@@ -49,16 +49,23 @@ public sealed class TileTests
         var size = 1L << z;
         var tile = new TileAddress(z, (int)(column % size), (int)(row % size));
         var approved = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "approved", "tile-query.sql")).ReplaceLineEndings().TrimEnd();
-        return TileQuery.For(Cafes, tile, new TileSettings(10000, 64)).Text.ReplaceLineEndings().TrimEnd() == approved;
+        return TileQuery.For(Cafes, tile, new TileSettings(10000, 64, 60)).Text.ReplaceLineEndings().TrimEnd() == approved;
     }
 
     [Fact]
     public void Keeps_the_tile_numbers_out_of_the_text()
     {
-        var text = TileQuery.For(Cafes, new TileAddress(15, 27154, 14280), new TileSettings(10000, 64)).Text;
+        var text = TileQuery.For(Cafes, new TileAddress(15, 27154, 14280), new TileSettings(10000, 64, 60)).Text;
 
         Assert.DoesNotContain("27154", text, StringComparison.Ordinal);
         Assert.DoesNotContain("14280", text, StringComparison.Ordinal);
         Assert.DoesNotContain("food.cafes", text, StringComparison.Ordinal);
     }
+
+    // N-18 test 1: the header follows the setting.
+    [Theory]
+    [InlineData(60, "public, max-age=60")]
+    [InlineData(0, "no-cache")]
+    public void Tells_the_browser_how_long_to_keep_a_tile(int cacheSeconds, string header) =>
+        Assert.Equal(header, TileHeaders.CacheControl(cacheSeconds));
 }

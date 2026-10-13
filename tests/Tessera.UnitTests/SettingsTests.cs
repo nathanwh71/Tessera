@@ -36,7 +36,7 @@ public sealed class SettingsTests
         Assert.Equal(8080, settings.Port);
         // %40 is '@', percent-encoded so it cannot be mistaken for the '@' before the host.
         Assert.Equal(new DatabaseAddress("db.office", 5433, "tessera", "tessera_reader", "s@cret"), settings.Database);
-        Assert.Equal(new TileSettings(10000, 64), settings.Tiles);
+        Assert.Equal(new TileSettings(10000, 64, 60), settings.Tiles);
     }
 
     // US-00 test 2: started with no variables set, the service names each one it lacks.
@@ -98,4 +98,24 @@ public sealed class SettingsTests
         entry.Value is System.Text.Json.Nodes.JsonObject child
             ? child.SelectMany(Keys).Prepend(entry.Key)
             : [entry.Key];
+
+    // N-18 c1 and c5: CacheSeconds may be left out, and then a browser keeps a tile for a minute;
+    // a negative or broken number refuses the start.
+    [Theory]
+    [InlineData("\"MaxFeatures\": 10000, \"Buffer\": 64", 60)]
+    [InlineData("\"MaxFeatures\": 10000, \"Buffer\": 64, \"CacheSeconds\": 0", 0)]
+    [InlineData("\"MaxFeatures\": 10000, \"Buffer\": 64, \"CacheSeconds\": 300", 300)]
+    public void Reads_cache_seconds_with_a_minute_as_the_default(string tiles, int expected) =>
+        Assert.Equal(expected, Read(Machines, File.Replace("\"MaxFeatures\": 10000, \"Buffer\": 64", tiles, StringComparison.Ordinal))
+            .Match(found => found.Tiles.CacheSeconds, _ => -1));
+
+    [Theory]
+    [InlineData("-1")]
+    [InlineData("1.5")]
+    [InlineData("\"soon\"")]
+    public void Refuses_a_cache_seconds_that_is_not_a_whole_number_from_zero(string value) =>
+        Assert.Contains(
+            Read(Machines, File.Replace("\"Buffer\": 64", $"\"Buffer\": 64, \"CacheSeconds\": {value}", StringComparison.Ordinal))
+                .Match(_ => [], errors => errors.Select(error => error.Name)),
+            name => name.StartsWith("Tiles", StringComparison.Ordinal));
 }

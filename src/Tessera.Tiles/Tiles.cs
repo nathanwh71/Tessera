@@ -41,6 +41,27 @@ public static class TileQuery
         TileQueries.Tile(layer.Source, new TileCell(tile.Z, tile.X, tile.Y), new TileLimits(settings.MaxFeatures, settings.Buffer));
 }
 
+/// <summary>The headers that tell a browser how to treat a tile it has received (N-18).</summary>
+public static class TileHeaders
+{
+    /// <summary>
+    /// <c>public, max-age=N</c> lets a browser keep the tile for N seconds and ask nothing; with
+    /// 0, <c>no-cache</c> makes it check with the service before it reuses a copy (N-18 c1, c2).
+    /// </summary>
+    public static string CacheControl(int cacheSeconds) =>
+        cacheSeconds > 0 ? $"public, max-age={cacheSeconds}" : "no-cache";
+}
+
+/// <summary>A tile's bytes, with its headers, ready to write (US-07, N-18).</summary>
+public sealed record TileResult(byte[] Bytes, string CacheControl) : IResult
+{
+    public Task ExecuteAsync(HttpContext context)
+    {
+        context.Response.Headers.CacheControl = CacheControl;
+        return Results.Bytes(Bytes, TileRoutes.ContentType).ExecuteAsync(context);
+    }
+}
+
 /// <summary>The tile route: <c>/{layer}/{z}/{x}/{y}.pbf</c>, and the same ending <c>.mvt</c> (US-07).</summary>
 public static class TileRoutes
 {
@@ -70,7 +91,7 @@ public static class TileRoutes
 
         return await request.Match(
             async query => (await database.Single<byte[]>(query, cancel).ConfigureAwait(false)).Match(
-                bytes => Results.Bytes(bytes.OrElse([]), ContentType),
+                bytes => new TileResult(bytes.OrElse([]), TileHeaders.CacheControl(settings.CacheSeconds)),
                 // A table revoked since start-up answers 42501; it has left, so it is not found (US-03 c6).
                 error => error.IsMissingTable
                     ? Problems.NotFound("No published layer has that name.")
