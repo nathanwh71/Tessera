@@ -1,0 +1,12 @@
+bin/
+obj/
+out/
+TestResults/
+
+# This machine's settings and secrets
+.env
+
+.idea/
+.vscode/
+*.user
+*.swp

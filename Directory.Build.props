@@ -1,0 +1,22 @@
+<Project>
+  <!--
+    Every project in the solution shares these settings (ADR 0004).
+    LangVersion 14 keeps to settled features: a feature the language still marks as "preview" can
+    change between releases, and code built on it can break without warning.
+    Nullable stays on, so the compiler checks every value that may be null at a module's edge.
+    TreatWarningsAsErrors turns each warning into an error, so a forgotten null stops the build.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>14</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <!-- The compiler checks each `///` comment that exists; CS1591 stays off, so a member may go without one. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,3 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Option, Result and the few values every module shares. It references nothing, so every module can reference it. -->
+</Project>

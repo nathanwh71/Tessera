@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The tile route and the tile query (US-07). -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Tessera.Kernel/Tessera.Kernel.csproj" />
+    <ProjectReference Include="../Tessera.Settings/Tessera.Settings.csproj" />
+    <ProjectReference Include="../Tessera.Sql/Tessera.Sql.csproj" />
+    <ProjectReference Include="../Tessera.Catalogue/Tessera.Catalogue.csproj" />
+    <ProjectReference Include="../Tessera.Http/Tessera.Http.csproj" />
+  </ItemGroup>
+</Project>
