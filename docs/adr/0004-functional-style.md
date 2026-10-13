@@ -7,7 +7,7 @@
 | Decider | The maintainer |
 | Covers | Every ***line*** of the back ***end***, in C# 14 on .NET 10, in `nathanwh71/Tessera`; the ***map*** and the ***scripts*** ***follow*** the same ***style*** in TypeScript 6 |
 | Related | ADR 0001, ***rule*** 5; ADR 0002, ***rules*** 1 and 2 |
-| Replaces | The `main` ***commit*** `ecb21fb` of 12 ***October*** 2026, which ***dropped*** `Option<T>` for ***nullable*** ***types***; it ***stays*** on the `archive/phase-0` ***branch*** |
+| Replaces | The ***commit*** `ecb21fb` of 12 ***October*** 2026, which ***dropped*** `Option<T>` for ***nullable*** ***types***; it ***stays*** in the ***archived*** ***phase***-0 repository |
 
 ## Decision
 

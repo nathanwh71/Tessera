@@ -87,7 +87,7 @@ The ***service*** is ***one*** ***program*** ***cut*** into ***seven*** modules,
 - `docs/adr/0003-settings-file.md`: why ***settings*** ***live*** in `tessera.json` and the ***environment***
 - `docs/adr/0004-functional-style.md`: why the ***code*** is ***functional***, with `Option` and `Result`
 
-The ***phase***-0 ***build*** and its ***documents*** ***stay*** on the `archive/phase-0` ***branch***.
+The ***phase***-0 ***build*** and its ***documents*** ***stay*** in the ***archived*** ***phase***-0 repository, whose ***last*** ***commit*** is `ecb21fb`.
 
 ## Comments in the code
 
