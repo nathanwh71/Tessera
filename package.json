@@ -1,0 +1,21 @@
+{
+  "name": "tessera",
+  "private": true,
+  "type": "module",
+  "description": "Tessera's scripts: start the database and the service, and open port 80 to the office (ADR 0002).",
+  "engines": {
+    "node": ">=26"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env scripts/start.ts",
+    "publish": "node --env-file-if-exists=.env scripts/publish.ts",
+    "office-port": "node --env-file-if-exists=.env scripts/office-port.ts",
+    "test:scripts": "node --test \"scripts/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.5",
+    "typescript": "6.0.3",
+    "zx": "8.8.5"
+  }
+}

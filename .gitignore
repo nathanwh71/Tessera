@@ -10,3 +10,5 @@ TestResults/
 .vscode/
 *.user
 *.swp
+
+node_modules/

@@ -1,0 +1,21 @@
+{
+  // Node.js 26 runs each .ts file directly by stripping its types, so tsc only checks them (ADR 0002).
+  "compilerOptions": {
+    "target": "es2024",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "strict": true,
+    "noEmit": true,
+    // Node.js strips types but compiles nothing, so syntax that produces code, such as enum or
+    // namespace, is refused here before it reaches a run (ADR 0002, rule 4).
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": false,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "types": ["node"],
+    "skipLibCheck": true
+  },
+  "include": ["scripts/**/*.ts"]
+}
