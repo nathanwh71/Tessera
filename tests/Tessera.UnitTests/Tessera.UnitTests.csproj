@@ -25,5 +25,7 @@
   <ItemGroup>
     <!-- Approved snapshots: the text a test compares its output with (S-01 test 2). -->
     <None Include="approved/**" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The shipped settings file, so a test can check it names no machine and holds no password (ADR 0003). -->
+    <None Include="../../tessera.json" Link="tessera.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

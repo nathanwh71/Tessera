@@ -75,4 +75,21 @@ public sealed class SettingsTests
     [Fact]
     public void Hides_the_password_when_printed() =>
         Assert.DoesNotContain("secret", new DatabaseAddress("db", 5432, "tessera", "reader", "secret").ToString());
+
+    // ADR 0003: the shipped tessera.json names no machine and holds no password; the environment does.
+    [Fact]
+    public void Ships_a_file_with_no_machine_and_no_password()
+    {
+        var shipped = System.IO.File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "tessera.json"));
+        var keys = System.Text.Json.Nodes.JsonNode.Parse(shipped)!.AsObject().SelectMany(Keys);
+
+        Assert.DoesNotContain("://", shipped, StringComparison.Ordinal);
+        Assert.DoesNotContain(keys, key => new[] { "password", "host", "url", "port", "user" }.Any(word => key.Contains(word, StringComparison.OrdinalIgnoreCase)));
+        Assert.True(Read(Machines, shipped).Match(_ => true, _ => false));
+    }
+
+    private static IEnumerable<string> Keys(KeyValuePair<string, System.Text.Json.Nodes.JsonNode?> entry) =>
+        entry.Value is System.Text.Json.Nodes.JsonObject child
+            ? child.SelectMany(Keys).Prepend(entry.Key)
+            : [entry.Key];
 }
