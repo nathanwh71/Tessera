@@ -1,6 +1,6 @@
 # Phase Oct: the user stories, in build order
 
-***Sixteen*** ***user*** ***stories***, in the ***order*** you ***build*** them. Each ***builds*** only on ***stories*** ***above*** it, so you can ***build*** and ***ship*** them ***one*** at a ***time*** from the ***top***. They ***build*** ***two*** ***things***: an HTTP API that ***serves*** a tile of a ***layer***, and a ***map*** that ***shows*** those tiles. ***Office*** ***machines*** ***call*** the API on ***port*** 80, in ***plain*** HTTP, and ***ask*** for each tile by ***layer*** ***name***; no ***client***, the ***map*** ***included***, ***loads*** a ***list*** of ***layers***.
+***Nineteen*** ***user*** ***stories***, in the ***order*** you ***build*** them. Each ***builds*** only on ***stories*** ***above*** it, so you can ***build*** and ***ship*** them ***one*** at a ***time*** from the ***top***. They ***build*** ***two*** ***things***: an HTTP API that ***serves*** a tile of a ***layer***, and a ***map*** that ***shows*** those tiles. ***Office*** ***machines*** ***call*** the API on ***port*** 80, in ***plain*** HTTP, and ***ask*** for each tile by ***layer*** ***name***; no ***client***, the ***map*** ***included***, ***loads*** a ***list*** of ***layers***.
 
 The ***stories*** ***say*** what the ***service*** must do and how to ***prove*** it, and ***leave*** the ***operating*** ***system***, the ***language***, the framework and the ***tools*** to the ***team***. ***One*** ***story*** ***names*** its ***platform***, ***because*** the ***office***'s ***machine*** ***fixes*** it: US-35 ***opens*** ***port*** 80 on Ubuntu 24.04 ***inside*** WSL2 on Windows 11. Every ***criterion*** ***holds*** for any ***language***: a ***build*** in C# on .NET ***meets*** it as ***written***, as a ***build*** in Java does. ***Standards*** that ***fix*** the ***data*** or the interface ***stay*** ***named***: HTTP, RFC 9457's ***problem*** ***details***, GeoJSON, WGS 84 and Web Mercator; so does Material 3, the ***design*** ***system*** of the ***map***'s ***design***, in the NTessera Project's `claude/design/map/`. Each ***story*** ***keeps*** its ***number*** from the ***full*** ***list*** of ***phase*** ***one***, which ***stays*** with ***phase*** ***one*** and ***lies*** ***outside*** this repository; the ***archived*** ***phase***-0 repository's `docs/user-stories/user-stories.md` and `docs/requirements/security-requirements.md` ***carry*** the same ***numbers***. The ***two*** ***security*** ***stories*** ***take*** theirs, S-01 and S-06, from ***phase*** ***one***'s ***security*** ***requirements***, and the UI ***stories*** ***take*** theirs from the ***map*** prototype.
 
@@ -8,7 +8,7 @@ The ***stories*** ***name*** **the area**, the ***place*** the tiles ***cover***
 
 ***Three*** ***decisions*** of 11 ***October*** 2026 ***still*** ***hold***. The ***service*** has no ***front*** ***door***: ***office*** ***machines*** ***reach*** it ***directly***, and no proxy ***stands*** ***between*** them (US-35). Every non-functional ***requirement*** and every ***security*** ***requirement*** ***left***, ***except*** SQL injection (S-01, with S-02, which ***quotes*** the ***names*** that ***reach*** SQL) and malformed URLs (S-06). Every ***error*** the HTTP API ***answers*** ***follows*** RFC 9457, as a ***problem*** ***document*** (US-07), and every ***machine***'s ***name***, ***address*** and ***port*** ***comes*** from an ***environment*** variable (US-00).
 
-On 12 ***October*** 2026 Phase Oct ***narrowed*** to the tile API. The ***map*** and its ***stories***, US-23 and every UI ***story***, ***left***, and so did US-05, the ***list*** of ***layers*** a ***client*** would ***load***. US-00, US-24 and US-35 ***lost*** the criteria that ***served*** them. ***Later*** that ***night*** SQL injection and malformed URLs ***became*** ***stories*** of their ***own***, S-01 and S-06, and US-07 ***handed*** them its criteria. After ***midnight*** on 13 ***October*** the ***map*** ***came*** ***back***: US-23 and ***seven*** UI ***stories*** ***returned*** as they ***stood*** before the ***cut***, and US-23 ***now*** ***names*** the ***nine*** ***layers*** in its own ***code***.
+On 12 ***October*** 2026 Phase Oct ***narrowed*** to the tile API. The ***map*** and its ***stories***, US-23 and every UI ***story***, ***left***, and so did US-05, the ***list*** of ***layers*** a ***client*** would ***load***. US-00, US-24 and US-35 ***lost*** the criteria that ***served*** them. ***Later*** that ***night*** SQL injection and malformed URLs ***became*** ***stories*** of their ***own***, S-01 and S-06, and US-07 ***handed*** them its criteria. After ***midnight*** on 13 ***October*** the ***map*** ***came*** ***back***: US-23 and ***seven*** UI ***stories*** ***returned*** as they ***stood*** before the ***cut***, and US-23 ***now*** ***names*** the ***nine*** ***layers*** in its own ***code***. On 14 ***October*** 2026 ***three*** ***stories*** ***joined*** as Part C, N-18 to N-20: a browser ***keeps*** a tile, a ***kept*** tile ***costs*** no query, and tiles ***travel*** packed.
 
 ## INVEST in plain words
 
@@ -45,9 +45,13 @@ The ***table*** at the ***end*** ***checks*** each ***story*** ***against*** all
 | 14 | UI-10 See ***crowded*** ***places*** merge into clusters that ***open*** as I zoom | 3 | UI-09 |
 | 15 | UI-11 Read ***place*** ***names*** when zoomed in | 1 | UI-10 |
 | 16 | UI-17 Keep ***place*** ***names*** from overlapping | 2 | UI-11 |
-| | **All 16** | **29** | |
+| | **Part C · Tiles that cost less** | | |
+| 17 | N-18 Let a browser ***keep*** a tile | 1 | US-07 |
+| 18 | N-19 Answer a ***kept*** tile without a query | 2 | N-18 |
+| 19 | N-20 Send tiles and the ***map***'s ***files*** packed | 1 | US-07, US-23, N-19 |
+| | **All 19** | **33** | |
 
-The ***service*** ***builds*** from the database up: the database, then the ***layers*** in it, then the tiles ***cut*** from them. S-01 and S-06 ***follow*** the tile they ***guard***. US-35 then ***opens*** the ***service*** to the ***office***, which ***reaches*** it only once it ***serves*** tiles ***safely***. The ***map*** ***follows***: US-23 ***opens*** it, and each UI ***story*** ***teaches*** it ***one*** more ***thing*** to ***show***. UI-15 ***comes*** ***early*** ***because*** it ***sets*** ***rules*** that every ***later*** ***control*** must ***meet***.
+The ***service*** ***builds*** from the database up: the database, then the ***layers*** in it, then the tiles ***cut*** from them. S-01 and S-06 ***follow*** the tile they ***guard***. US-35 then ***opens*** the ***service*** to the ***office***, which ***reaches*** it only once it ***serves*** tiles ***safely***. The ***map*** ***follows***: US-23 ***opens*** it, and each UI ***story*** ***teaches*** it ***one*** more ***thing*** to ***show***. UI-15 ***comes*** ***early*** ***because*** it ***sets*** ***rules*** that every ***later*** ***control*** must ***meet***. Part C ***comes*** ***last***: each of its ***stories*** ***makes*** a ***working*** tile ***cheaper***, so ***none*** is ***needed*** before the ***map*** ***works***.
 
 ## Part A · The service
 
@@ -595,6 +599,120 @@ The ***places*** ***arrive*** as ***one*** **GeoJSON** ***file***, the ***seed**
 - Which ***group*** ***wins*** ***between*** ***layers***.
 - The ***space*** ***kept*** ***around*** each ***name***.
 
+## Part C · Tiles that cost less
+
+***Three*** ***stories*** ***joined*** on 14 ***October*** 2026, and ***none*** is ***built*** yet. They ***take*** ***new*** ***numbers***, N-18 to N-20, after ***phase*** ***one***'s non-functional ***requirements*** N-01 to N-17, which ***cover*** ***none*** of them; if a ***later*** ***reading*** of that ***list*** ***finds*** a ***match***, the ***story*** ***takes*** that ***number***. All ***three*** ***follow*** ***one*** ***idea***: a tile the ***service*** has ***already*** ***built*** should ***cost*** it ***nothing*** to ***serve*** ***again***, and ***little*** to ***send***.
+
+### Step 17 · N-18 Let a browser keep a tile
+
+| | |
+|---|---|
+| Size | 1 ***point*** |
+| Builds on | US-07: the tile |
+| Traces | ***none***; ***new*** on 14 ***October*** 2026 |
+
+**In plain words.** A browser ***asks*** for the same tile every ***time*** the ***visitor*** pans ***back*** over it, and every ***request*** ***costs*** the ***service*** a query. HTTP ***lets*** the ***service*** ***say*** how ***long*** an ***answer*** ***stays*** ***good***: a `Cache-Control` header with `max-age`, in ***seconds***. For that ***long*** the browser ***keeps*** its ***copy*** and ***asks*** ***nothing***. The ***places*** ***change*** only when the ***data*** publisher ***imports*** a ***file***, so a ***minute*** is ***safe***: a ***new*** ***file*** ***shows*** on every ***screen*** ***within*** a ***minute***.
+
+> **Story.** **As** the maintainer, **I want** every tile to ***tell*** the browser how ***long*** to ***keep*** it, **so that** a ***visitor*** who pans ***back*** and forth ***costs*** the ***service*** ***one*** query a tile a ***minute***, not ***one*** a pan.
+
+**Acceptance criteria**
+
+1. **Given** a tile ***answered*** 200, **then** it ***carries*** `Cache-Control: public, max-age=N`, where N is `Tiles.CacheSeconds` from `tessera.json`, and 60 when the ***file*** ***leaves*** it out.
+2. **Given** `Tiles.CacheSeconds` ***set*** to 0, **then** a tile ***carries*** `Cache-Control: no-cache`, so a browser ***checks*** with the ***service*** before it ***reuses*** a ***copy***; N-19 ***makes*** that ***check*** ***cheap***.
+3. **Given** any ***error*** ***answer***, such as the 404 of US-07, **then** it ***carries*** `Cache-Control: no-store`, as it does ***now***, so no browser ***keeps*** a ***problem*** ***document***.
+4. **Given** a ***new*** ***import***, **when** `max-age` ***seconds*** ***pass***, **then** every browser ***asks*** ***again*** and ***sees*** the ***new*** ***places***.
+5. **Given** a ***setting*** ***below*** 0, or not a ***whole*** ***number***, **then** the ***service*** ***refuses*** to ***start*** and ***names*** the ***setting*** (US-00 c4).
+
+**Tests to write first**
+
+1. **The header follows the setting.** A ***pure*** ***function*** ***turns*** 60 into `public, max-age=60` and 0 into `no-cache`, and ***refuses*** -1.
+2. **Through the real service.** A tile ***carries*** the header; a 404 ***carries*** `no-store`.
+3. **The map asks once.** In the browser ***test***, panning ***away*** from a tile and ***back*** ***within*** the ***minute*** ***sends*** ***one*** ***request*** for it, not ***two***.
+
+**Open to talk**
+
+- The ***setting***'s ***name***: `Tiles.CacheSeconds` ***says*** its ***unit***; pg_tileserv ***calls*** it `CacheTTL`.
+- ***Whether*** the ***map***'s ***page*** and ***files*** ***keep*** their ***own*** ***rules***, as they do ***now***: the ***page*** `no-cache`, each ***built*** ***file*** a ***year***, ***since*** its ***name*** ***changes*** with its ***content***.
+
+**Critical to success**
+
+- **One number everywhere.** N-19's ***kept*** ***copies*** ***live*** no ***longer*** than `max-age`, or a ***new*** ***import*** ***hides*** ***behind*** a stale ***copy*** on the ***service*** ***itself***.
+
+### Step 18 · N-19 Answer a kept tile without a query
+
+| | |
+|---|---|
+| Size | 2 ***points*** |
+| Builds on | N-18: `max-age`; US-07: the tile |
+| Traces | ***none***; ***new*** on 14 ***October*** 2026 |
+
+**In plain words.** When `max-age` ***passes***, the browser ***asks*** ***again***, but it ***still*** ***holds*** its ***copy***. HTTP ***lets*** it ***say*** so: it ***sends*** the ***copy***'s ***label***, an **ETag**, in an `If-None-Match` header, and the ***service*** may ***answer*** 304 ('Not Modified') with no ***body***, which ***means*** 'yours is ***still*** ***good***'. An ETag is a ***short*** ***text*** the ***service*** ***makes*** from the tile's bytes, so the same bytes ***always*** ***give*** the same ETag. To ***answer*** 304 without a query, the ***service*** ***keeps*** each tile it ***builds***, with its ETag, for `max-age` ***seconds***. A ***second*** ***request*** for that tile, from any browser, then ***costs*** no query: either the ETag ***matches*** and the ***answer*** is 304, or the ***kept*** ***copy*** ***serves***. A ***thousand*** ***visitors*** who ***open*** the ***map*** at ***nine*** o'clock ***ask*** for the same ***few*** ***hundred*** tiles, and the database ***builds*** each ***once***.
+
+> **Story.** **As** the maintainer, **I want** the ***service*** to ***recognise*** a tile a browser ***already*** ***holds***, and to ***keep*** each tile it ***builds*** for a ***minute***, **so that** a ***crowd*** ***opening*** the ***map*** ***costs*** the database ***one*** query a tile, not ***one*** a ***visitor***.
+
+**Acceptance criteria**
+
+1. **Given** a tile ***answered*** 200, **then** it ***carries*** an `ETag`: a ***weak*** ***tag***, `W/"…"`, ***made*** from the tile's bytes ***alone***, so ***two*** ***builds*** of the same bytes ***carry*** the same ***tag***, on any ***machine*** and after a restart. It is ***weak*** ***because*** N-20's packed ***form*** is the same tile.
+2. **Given** a ***request*** whose `If-None-Match` ***equals*** the tile's ***current*** ETag, **then** the ***service*** ***answers*** 304 with no ***body***, and with the same `ETag` and `Cache-Control` a 200 would ***carry***.
+3. **Given** a tile the ***service*** ***built*** ***within*** the ***last*** `Tiles.CacheSeconds` ***seconds***, **when** any ***request*** for the same tile ***arrives***, **then** no query ***runs***: the ***service*** ***answers*** from its ***kept*** ***copy***, 304 or 200.
+4. **Given** `Tiles.CacheSeconds` ***set*** to 0, **then** the ***service*** ***keeps*** ***nothing***; each ***request*** ***runs*** the query, and a ***matching*** ETag ***still*** ***answers*** 304, so the bytes are ***saved*** though the query is not.
+5. **Given** ***kept*** ***copies***, **then** ***together*** they ***take*** no more than `Tiles.CacheMegabytes` of ***memory***, 64 when the ***file*** ***leaves*** it out; when the ***room*** is ***full***, the ***copies*** ***used*** ***least*** ***go*** ***first***.
+6. **Given** a ***new*** ***import***, **when** `max-age` ***seconds*** ***pass***, **then** every ***kept*** ***copy*** has ***expired***, and the ***next*** ***request*** ***builds*** the tile ***again***.
+
+**Tests to write first**
+
+1. **The tag follows the bytes.** A ***property*** ***test***: the same bytes ***always*** ***give*** the same ***tag***, and ***two*** tiles that ***differ*** ***give*** ***different*** ***tags***.
+2. **A second ask is 304.** ***Through*** the ***real*** ***service***, a ***request*** that ***sends*** the ***first*** ***answer***'s ETag ***back*** ***gets*** 304, no ***body***, and the same headers.
+3. **One query a tile.** A ***test*** double ***counts*** the queries: ***two*** ***requests*** for ***one*** tile ***run*** ***one*** query; after the ***kept*** ***copy*** ***expires***, ***two***.
+4. **The room holds.** With `Tiles.CacheMegabytes` ***set*** to 1 and ***hundreds*** of tiles ***asked*** for, the ***kept*** bytes ***stay*** ***under*** the ***cap***.
+
+**Open to talk**
+
+- ***Whether*** a ***crowd*** ***asking*** for ***one*** ***unbuilt*** tile ***shares*** ***one*** query, the ***rest*** ***waiting*** for the ***first***, or each ***runs*** its ***own***.
+- ***Whether*** to ***keep*** ***copies*** in the database ***instead*** of ***memory***, so a restart ***loses*** ***nothing***.
+- The hash ***behind*** the ***tag***: any ***quick*** ***one*** ***serves***, ***since*** the ***tag*** ***guards*** ***freshness***, not ***secrets***.
+
+**Critical to success**
+
+- **One clock.** The ***kept*** ***copies*** and `max-age` ***share*** `Tiles.CacheSeconds`, so a ***new*** ***import*** ***shows*** on every ***screen*** ***within*** that ***time***.
+- **Count queries, not seconds.** A ***test*** that ***proves*** 'no query' ***counts*** queries; ***timing*** ***alone*** ***proves*** ***nothing***.
+
+### Step 19 · N-20 Send tiles and the map's files packed
+
+| | |
+|---|---|
+| Size | 1 ***point*** |
+| Builds on | US-07: the tile; US-23: the ***map***'s ***files***; N-19: the ETag |
+| Traces | ***none***; ***new*** on 14 ***October*** 2026 |
+
+**In plain words.** The ***map***'s ***own*** ***code*** is ***about*** a megabyte of JavaScript, and a tile is some kilobytes. Both shrink when **gzip** packs them: a tile by ***about*** ***half***, ***text*** by ***two*** ***thirds*** or more. A browser ***says*** `Accept-Encoding: gzip` in every ***request***; the ***service*** may then ***answer*** with the packed ***body*** and `Content-Encoding: gzip`, and the browser unpacks it before it ***reads*** it. The ***office*** ***network*** is ***fast***, but each ***visitor***'s ***first*** ***open*** ***loads*** the ***whole*** ***map***, so the ***saving*** ***shows*** there most.
+
+> **Story.** **As** a ***visitor***, **I want** the ***map*** and its tiles to ***arrive*** packed, **so that** the ***map*** ***opens*** ***sooner*** and each pan ***costs*** the ***network*** ***less***.
+
+**Acceptance criteria**
+
+1. **Given** a ***request*** with `Accept-Encoding: gzip` for a tile, the ***page*** or ***one*** of the ***map***'s ***files***, **when** the ***answer*** is 200, **then** its ***body*** is gzip-packed, it ***carries*** `Content-Encoding: gzip`, and the unpacked bytes ***equal*** the ***plain*** ***answer***'s.
+2. **Given** a ***request*** without `Accept-Encoding`, **then** the ***body*** ***travels*** ***plain***, with no `Content-Encoding`.
+3. **Given** either ***answer***, **then** it ***carries*** `Vary: Accept-Encoding`, so no browser or proxy ***hands*** a packed ***body*** to a ***client*** that ***asked*** for ***plain***.
+4. **Given** a 304 (N-19), **then** the ***weak*** ETag ***matches*** whichever ***form*** the browser ***holds***, ***since*** both ***forms*** are the same tile.
+
+**Tests to write first**
+
+1. **A tile packs and unpacks.** ***Through*** the ***real*** ***service***, a packed tile unpacks to the ***plain*** ***answer***'s bytes.
+2. **The map's script shrinks.** The ***map***'s ***main*** script ***arrives*** packed, at ***under*** ***half*** its ***plain*** ***size***.
+3. **Plain on request.** Without `Accept-Encoding`, the ***body*** is ***plain***, and `Vary` is ***still*** there.
+4. **The map still opens.** The browser ***tests*** ***pass*** ***unchanged***; a browser ***always*** ***sends*** `Accept-Encoding`.
+
+**Open to talk**
+
+- Brotli ***beside*** gzip: browsers ***prefer*** it and it packs ***text*** ***tighter***; .NET ***offers*** both.
+- ***Whether*** a ***body*** ***under*** a kilobyte ***travels*** ***plain***, ***since*** packing it ***gains*** ***nothing***.
+- ***Whether*** a ***kept*** tile (N-19) is ***kept*** packed, so the ***work*** is ***done*** ***once***.
+
+**Critical to success**
+
+- **Pack once.** A ***kept*** tile ***keeps*** its packed ***form***; packing on every ***request*** ***costs*** more than the query it ***saves***.
+
 ## The INVEST check
 
 A tick ***means*** the ***story*** ***meets*** the ***test*** in ***full***; 'Partly' ***names*** the ***reason***. ***Under*** 'Independent', each ***story*** ***names*** the ***stories*** ***above*** it that it ***needs***; ***none*** ***needs*** a ***story*** ***below*** it.
@@ -617,5 +735,8 @@ A tick ***means*** the ***story*** ***meets*** the ***test*** in ***full***; 'Pa
 | 14 | UI-10 Clusters | ✓ after UI-09 | ✓ | ✓ | ✓ | ✓ 3 | ✓ |
 | 15 | UI-11 Names | ✓ after UI-10 | ✓ | ✓ | ✓ | ✓ 1 | ✓ |
 | 16 | UI-17 Names that ***never*** overlap | ✓ after UI-11 | ✓ | ✓ | ✓ | ✓ 2 | ✓ |
+| 17 | N-18 A browser ***keeps*** a tile | ✓ after US-07 | ✓ | ✓ | ✓ | ✓ 1 | ✓ |
+| 18 | N-19 A ***kept*** tile ***costs*** no query | ✓ after N-18 | ✓ | ✓ | ✓ | ✓ 2 | ✓ |
+| 19 | N-20 Packed ***answers*** | ✓ after US-07, US-23, N-19 | ✓ | ✓ | ✓ | ✓ 1 | ✓ |
 
-The ***sixteen*** ***stories*** ***come*** to 29 ***points***: 13 for the ***service*** and 16 for the ***map***. Some criteria ***name*** a ***later*** ***story***: US-03 for its ***problem*** ***documents*** (US-07), US-07 for the 400 of S-06, and UI-09 for a ***click*** on a cluster (UI-10). Each such ***criterion*** ***holds*** once that ***story*** is ***built***, and the ***later*** ***story***'s ***tests*** ***prove*** it.
+The ***nineteen*** ***stories*** ***come*** to 33 ***points***: 13 for the ***service***, 16 for the ***map*** and 4 for Part C. Some criteria ***name*** a ***later*** ***story***: US-03 for its ***problem*** ***documents*** (US-07), US-07 for the 400 of S-06, and UI-09 for a ***click*** on a cluster (UI-10). Each such ***criterion*** ***holds*** once that ***story*** is ***built***, and the ***later*** ***story***'s ***tests*** ***prove*** it.
