@@ -7,6 +7,8 @@
 | Decider | The maintainer |
 | Covers | Every ***line*** of the back ***end***, in C# 14 on .NET 10, in `nathanwh71/Tessera`; the ***map*** and the ***scripts*** ***follow*** the same ***style*** in TypeScript 6 |
 | Related | ADR 0001, ***rule*** 5; ADR 0002, ***rules*** 1 and 2 |
+| Matches | ADR 0004 of `nathanwh71/JTessera`, the Java ***build's*** ***record*** of the ***same*** ***style***, which ***takes*** these ***types*** from Vavr where this ***build*** ***writes*** its ***own*** |
+| Carried out | The ***three*** ***habits***, `Option` and `Result`, ***since*** the ***first*** ***build***. The ***types*** that ***say*** what a ***value*** is, and the ***map's*** `pipe` and `flow`: ***decided*** on 13 ***October*** 2026, and not ***yet*** in this ***build's*** ***code*** |
 | Replaces | The ***commit*** `ecb21fb` of 12 ***October*** 2026, which ***dropped*** `Option<T>` for ***nullable*** ***types***; it ***stays*** in the ***archived*** ***phase***-0 repository |
 
 ## Decision
@@ -45,6 +47,24 @@ var request =
     select TileQuery.For(layer, tile, settings);
 ```
 
+## Types that say what a value is
+
+F# ***makes*** ***illegal*** ***states*** unrepresentable with its ***types***, and Tessera ***follows*** it in both ***builds***. ***Three*** ***tools*** ***serve***, ***each*** with a ***place*** in this ***build's*** ***code***:
+
+| Tool | Where this ***build*** ***uses*** it | What the compiler then ***refuses*** |
+|---|---|---|
+| A closed set in place of a flag: an `enum`, or an abstract record whose only cases are its own sealed nested records, as `Result` is built | `MapSettings(bool Preview)` ***becomes*** a ***page*** that is `Shown`, `Off` or `Missing`; `Problems.Answer(int status, …)` ***takes*** a `ProblemStatus` of the ***seven*** ***codes*** Tessera ***answers*** with | A ***page*** both off and ***shown***; a ***status*** Tessera ***never*** ***answers*** with |
+| A record in place of a long list of arguments | Any ***call*** that ***takes*** ***several*** ***values*** of ***one*** ***type***, which a ***reader*** would ***tell*** ***apart*** by their ***place*** ***alone***; the Java ***build's*** `PoolSettings` ***names*** the ***five*** ***numbers*** of a ***pool*** and what it may do | ***Arguments*** swapped by ***mistake***, which compile ***because*** they ***share*** a ***type*** |
+| A single-case type: a `readonly record struct` round one value | `Zoom`, for `TileAddress.Z` and the ***settings***' ***range*** of ***levels*** | A ***column*** or a ***row*** ***passed*** where a ***level*** ***belongs*** |
+
+C# 14 has no ***closed*** ***unions***, so a ***closed*** ***record*** ***set*** ***gains*** a `Match` ***method***, as `Result` has, and ***code*** ***takes*** it ***apart*** ***through*** `Match`: the compiler then ***requires*** a ***function*** for every ***case***. Wrap ***only*** a ***value*** that ***travels*** ***between*** ***functions*** and could be mistaken for another; wrapping every ***number*** ***adds*** noise and ***catches*** ***nothing***.
+
+## The map and the scripts
+
+The ***map*** is the ***same*** in both ***builds***, in TypeScript 6. It ***keeps*** a `Result` ***type*** of its ***own***, in `web/src/shared/result.ts`, whose ***functions*** ***take*** the ***result*** ***last***, as F#'s do: `map`, `flatMap`, `fold` and `defaultWith`. `parseJson` ***turns*** `JSON.parse`'s ***throw*** into a `Result` ***once***, so no other ***code*** ***needs*** a `try`.
+
+JavaScript's pipe operator is a ***proposal*** at ***stage*** 2 of 4, and TypeScript ***cannot*** ***read*** it, so ***two*** ***functions*** in `web/src/shared/pipe.ts` ***stand*** in for F#'s operators: `pipe` for `|>`, and `flow` for `>>`. ***Three*** ***rules*** ***keep*** a ***chain*** readable: ***steps*** ***run*** in the ***order*** ***written***, ***each*** ***joined*** ***function*** has a ***name***, and a direct ***call*** ***serves*** where it ***reads*** ***better***, which for `pipe` ***means*** a ***chain*** of ***fewer*** than ***three*** ***steps***. A web-map ***level*** and MapLibre's zoom differ by ***one***, so ***each*** has a ***branded*** ***type***, `Level` and `MapZoom`, and the compiler ***refuses*** ***one*** where the other ***belongs***, as F#'s ***units*** of ***measure*** would.
+
 ## The rule at the edge
 
 Dapper, System.Text.Json and ASP.NET Core ***speak*** ***nullable*** ***types***. They ***stay*** in the ***thin*** ***layer*** at each module's ***edge***, which ***turns*** `T?` into `Option<T>` with `ToOption()` the ***moment*** a ***value*** ***arrives***.
@@ -65,8 +85,11 @@ Dapper, System.Text.Json and ASP.NET Core ***speak*** ***nullable*** ***types***
 - C# 14 has no ***closed*** ***unions***, so `Match` ***takes*** the ***place*** of F#'s ***exhaustive*** `match`; the compiler ***cannot*** ***warn*** of a ***missing*** ***case*** in a `switch` on these ***types***.
 - ***Two*** ***ways*** to ***say*** '***missing***' ***exist***, ***kept*** ***apart*** by a ***rule*** that ***review*** ***guards***.
 - `Option` and `Result` ***need*** ***tests*** of their own, ***including*** FsCheck ***property*** ***tests*** of the ***laws*** `Map` and `Bind` must ***keep***.
+- ***Each*** ***closed*** ***record*** ***set*** ***needs*** its ***own*** `Match`, a ***few*** ***lines*** the compiler ***cannot*** ***write*** for it.
+- ***Small*** wrapper ***types***, such as `Zoom`, ***cost*** a ***little*** ***code*** at ***each*** ***edge***, where a ***plain*** ***number*** ***arrives*** and is wrapped ***once***.
 
 ## When to revisit
 
-- C# ***settles*** ***closed*** ***unions***; `Option` and `Result` may then ***become*** ***unions***, and the compiler can ***check*** every ***case***.
+- C# ***settles*** ***closed*** ***unions***; `Option`, `Result` and the ***closed*** ***record*** ***sets*** may then ***become*** ***unions***, and the compiler can ***check*** every `switch` ***without*** `Match`.
+- JavaScript's pipe operator ***reaches*** ***stage*** 3. Then weigh `x |> f(%)` ***against*** `pipe`. The operator ***follows*** the Hack ***style***, with `%` for the ***value***, not F#'s, so `pipe` may ***still*** ***read*** closer to F#.
 - A ***second*** maintainer ***joins*** who ***reads*** ***idiomatic*** C# ***better*** than F#-***style*** C#.
