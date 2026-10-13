@@ -220,4 +220,37 @@ public sealed class TileCacheTests
         Assert.Equal(packed.Tag, plain.Tag);
         Assert.Equal(1, counter.Queries);
     }
+
+    // N-22: which failures ask the browser to wait, and which are faults.
+    [Theory]
+    [InlineData("08006", true)]
+    [InlineData("08001", true)]
+    [InlineData("57014", true)]
+    [InlineData("57P01", true)]
+    [InlineData("57P03", true)]
+    [InlineData("53300", true)]
+    [InlineData("42501", false)]
+    [InlineData("23505", false)]
+    [InlineData("XX000", false)]
+    public void Tells_a_wait_from_a_fault(string sqlState, bool unavailable) =>
+        Assert.Equal(unavailable, new DatabaseError(sqlState, "").IsUnavailable);
+
+    // N-22 c3: a failure is never kept, so the next request asks the database again.
+    [Fact]
+    public async Task Keeps_no_failure()
+    {
+        var queries = 0;
+        var settings = new TileSettings(10000, 64, 60, 64);
+        var server = new TileServer(Catalogue, (_, _) =>
+        {
+            queries++;
+            return Task.FromResult(Result.Refuse<Option<byte[]>, DatabaseError>(new DatabaseError("08006", "down")));
+        }, settings, new TileCache(settings, new Clock()));
+
+        var first = await server.Answer("food.cafes", 0, 0, 0, TileRequest.Plain, CancellationToken.None);
+        await server.Answer("food.cafes", 0, 0, 0, TileRequest.Plain, CancellationToken.None);
+
+        Assert.IsNotType<TileResult>(first);
+        Assert.Equal(2, queries);
+    }
 }

@@ -27,9 +27,10 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
         CREATE TABLE IF NOT EXISTS stage.untyped (id int PRIMARY KEY, geom geometry);
         CREATE TABLE IF NOT EXISTS stage."odd ""name""" (id int PRIMARY KEY, geom geometry(Point, 4326));
         INSERT INTO stage."odd ""name""" VALUES (1, ST_SetSRID(ST_MakePoint(113.54, 22.19), 4326)) ON CONFLICT DO NOTHING;
+        CREATE OR REPLACE VIEW stage.slow AS SELECT g.id, g.geom FROM stage.granted g CROSS JOIN LATERAL (SELECT pg_sleep(3)) AS pause;
         CREATE OR REPLACE FUNCTION stage.places_near(z int, x int, y int) RETURNS bytea LANGUAGE sql AS 'SELECT NULL::bytea';
         GRANT USAGE ON SCHEMA stage TO tessera_reader;
-        GRANT SELECT ON stage.granted, stage.mercator, stage.granted_view, stage.stored_view, stage.untyped, stage."odd ""name""" TO tessera_reader;
+        GRANT SELECT ON stage.granted, stage.mercator, stage.granted_view, stage.stored_view, stage.untyped, stage."odd ""name""", stage.slow TO tessera_reader;
         GRANT EXECUTE ON FUNCTION stage.places_near(int, int, int) TO tessera_reader;
         """");
 
@@ -46,7 +47,7 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
         var ids = (await Load(reader)).Layers.Keys.Order(StringComparer.Ordinal).ToArray();
 
         // c1, c2 and c4 publish; c3 (never granted), c5 (a function) and an untyped column do not.
-        Assert.Equal(["stage.granted", "stage.granted_view", "stage.mercator", "stage.odd \"name\"", "stage.stored_view"], ids);
+        Assert.Equal(["stage.granted", "stage.granted_view", "stage.mercator", "stage.odd \"name\"", "stage.slow", "stage.stored_view"], ids);
     }
 
     // c1: a layer carries its SRID and geometry type.
@@ -84,5 +85,36 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
         var answer = await Server(catalogue, reader).Answer("stage.revoked", 0, 0, 0, TileRequest.Plain, TestContext.Current.CancellationToken);
 
         Assert.Equal((404, "application/problem+json"), await Http.StatusAndType(answer));
+    }
+
+    // N-22 c1 and test 2: a database that cannot be reached answers 503 with Retry-After, not 500.
+    [Fact]
+    public async Task Answers_503_when_the_database_cannot_be_reached()
+    {
+        await using var reader = Database.Open(database.Reader);
+        var catalogue = await Load(reader);
+        await using var gone = Database.Open(database.Reader with { Port = Http.FreePort() }, PoolLimits.Default with { ConnectionTimeout = TimeSpan.FromSeconds(1) });
+
+        var answer = await Server(catalogue, gone).Answer("stage.granted", 0, 0, 0, TileRequest.Plain, TestContext.Current.CancellationToken);
+        var (status, headers) = await Http.StatusAndHeaders(answer);
+
+        Assert.Equal(503, status);
+        Assert.Equal("5", headers.RetryAfter.ToString());
+        Assert.Equal("no-store", headers.CacheControl.ToString());
+    }
+
+    // N-22 c2 and test 3: a query past DbTimeout is cancelled and answers 503; here a view that
+    // sleeps three seconds meets a limit of one.
+    [Fact]
+    public async Task Answers_503_when_a_query_runs_past_its_time()
+    {
+        await using var reader = Database.Open(database.Reader, PoolLimits.Default with { CommandTimeout = TimeSpan.FromSeconds(1) });
+        var catalogue = await Load(reader);
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+
+        var answer = await Server(catalogue, reader).Answer("stage.slow", 0, 0, 0, TileRequest.Plain, TestContext.Current.CancellationToken);
+
+        Assert.Equal(503, await Http.Status(answer));
+        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(3), $"took {clock.Elapsed}");
     }
 }

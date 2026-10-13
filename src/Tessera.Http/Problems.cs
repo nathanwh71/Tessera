@@ -25,13 +25,27 @@ public static class Problems
     /// <c>Cache-Control: no-store</c>, so no browser keeps a problem document and shows it again
     /// after the problem has gone (N-18 c3).
     /// </summary>
-    public static IResult Answer(int status, Option<string> detail) => new ProblemResult(status, detail);
+    public static IResult Answer(int status, Option<string> detail) => new ProblemResult(status, detail, Option.None<int>());
 
-    private sealed record ProblemResult(int Status, Option<string> Detail) : IResult
+    /// <summary>The seconds a client should wait before it asks again after a 503 (N-22).</summary>
+    public const int RetryAfterSeconds = 5;
+
+    /// <summary>
+    /// 503 'Service Unavailable', with <c>Retry-After: 5</c>: the service is well but cannot answer
+    /// now, such as while the database is down or busy, so a client should wait and ask again
+    /// rather than report a fault (N-22).
+    /// </summary>
+    public static IResult Unavailable(string detail) =>
+        new ProblemResult(StatusCodes.Status503ServiceUnavailable, Option.Some(detail), Option.Some(RetryAfterSeconds));
+
+    private sealed record ProblemResult(int Status, Option<string> Detail, Option<int> RetryAfter) : IResult
     {
         public Task ExecuteAsync(HttpContext context)
         {
             context.Response.Headers.CacheControl = "no-store";
+            RetryAfter.Match(
+                seconds => context.Response.Headers.RetryAfter = seconds.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                () => default);
             return Results.Json(Body(Status, Detail), contentType: ContentType, statusCode: Status).ExecuteAsync(context);
         }
     }

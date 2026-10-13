@@ -7,12 +7,34 @@ namespace Tessera.Sql;
 
 /// <summary>Why the database refused a query: its five-character SQLSTATE code and its message.</summary>
 /// <remarks>
-/// PostgreSQL labels each failure with a SQLSTATE code. Two matter to Tessera: 42501, "insufficient
-/// privilege", when a table's grant has gone (US-03 c6), and 42P01, "undefined table".
+/// PostgreSQL labels each failure with a SQLSTATE code; the first two characters name its class.
+/// Two codes mean a table has left: 42501, "insufficient privilege", when a table's grant has gone
+/// (US-03 c6), and 42P01, "undefined table". Others mean the database cannot answer now but may
+/// soon, so the service says 'try again' rather than 'fault' (N-22).
 /// </remarks>
 public sealed record DatabaseError(string SqlState, string Message)
 {
     public bool IsMissingTable => SqlState is PostgresErrorCodes.InsufficientPrivilege or PostgresErrorCodes.UndefinedTable;
+
+    /// <summary>
+    /// True when waiting may cure the failure: the connection failed (class 08), a query ran past
+    /// its time (57014), the server is shutting down or starting (57P01 to 57P03), or it has no
+    /// room for another connection (53300).
+    /// </summary>
+    public bool IsUnavailable =>
+        SqlState.StartsWith("08", StringComparison.Ordinal)
+        || SqlState is PostgresErrorCodes.QueryCanceled or PostgresErrorCodes.AdminShutdown or PostgresErrorCodes.CrashShutdown
+            or PostgresErrorCodes.CannotConnectNow or PostgresErrorCodes.TooManyConnections;
+}
+
+/// <summary>
+/// The limits on the service's use of the database (N-22): the most connections the pool holds,
+/// how long each lives, the longest a query may run, and the longest a request waits for a free
+/// connection. The Java build's tuning guide chose the defaults by measurement.
+/// </summary>
+public sealed record PoolLimits(int MaxConns, TimeSpan MaxConnLifeTime, TimeSpan CommandTimeout, TimeSpan ConnectionTimeout)
+{
+    public static readonly PoolLimits Default = new(4, TimeSpan.FromHours(1), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(3));
 }
 
 /// <summary>
@@ -30,7 +52,14 @@ public sealed class Database : IAsyncDisposable
 
     private Database(NpgsqlDataSource source) => _source = source;
 
-    public static Database Open(DatabaseAddress address) =>
+    public static Database Open(DatabaseAddress address) => Open(address, PoolLimits.Default);
+
+    /// <summary>
+    /// Opens a pool of connections within the given limits. A query past its time is cancelled on
+    /// the server too, so it frees its connection; a request that finds every connection busy
+    /// waits for one, then gives up.
+    /// </summary>
+    public static Database Open(DatabaseAddress address, PoolLimits limits) =>
         new(NpgsqlDataSource.Create(new NpgsqlConnectionStringBuilder
         {
             Host = address.Host,
@@ -40,6 +69,11 @@ public sealed class Database : IAsyncDisposable
             Password = address.Password,
             // The name shows in pg_stat_activity, so the maintainer can tell Tessera's connections apart.
             ApplicationName = "tessera",
+            MaxPoolSize = limits.MaxConns,
+            ConnectionLifetime = (int)limits.MaxConnLifeTime.TotalSeconds,
+            CommandTimeout = (int)limits.CommandTimeout.TotalSeconds,
+            // Npgsql's Timeout covers both opening a connection and waiting for a free one in the pool.
+            Timeout = (int)limits.ConnectionTimeout.TotalSeconds,
         }.ConnectionString));
 
     /// <summary>Runs a query and maps each row to <typeparamref name="T"/> by column name.</summary>
@@ -94,12 +128,16 @@ public sealed class Database : IAsyncDisposable
         }
     }
 
-    // A PostgresException is the database's own refusal, with its SQLSTATE. Any other
-    // NpgsqlException means the database never answered, such as when it is down; 08006,
-    // "connection failure", names that case.
-    private static DatabaseError Error(NpgsqlException error) => error is PostgresException refusal
-        ? new DatabaseError(refusal.SqlState, refusal.MessageText)
-        : new DatabaseError(PostgresErrorCodes.ConnectionFailure, error.Message);
+    // A PostgresException is the database's own refusal, with its SQLSTATE. Npgsql reports a query
+    // past its time, or a wait for a connection past its time, with a TimeoutException inside; 57014,
+    // "query cancelled", names both. Any other NpgsqlException means the database never answered,
+    // such as when it is down; 08006, "connection failure", names that case.
+    private static DatabaseError Error(NpgsqlException error) => error switch
+    {
+        PostgresException refusal => new DatabaseError(refusal.SqlState, refusal.MessageText),
+        { InnerException: TimeoutException } => new DatabaseError(PostgresErrorCodes.QueryCanceled, error.Message),
+        _ => new DatabaseError(PostgresErrorCodes.ConnectionFailure, error.Message),
+    };
 
     internal static CommandDefinition Command(Query query, NpgsqlTransaction? transaction, CancellationToken cancel)
     {

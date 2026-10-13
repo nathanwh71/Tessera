@@ -26,6 +26,18 @@ public static class Http
         return (context.Response.StatusCode, context.Response.ContentType ?? "");
     }
 
+    /// <summary>Runs an answer against an empty request and returns its status code and headers.</summary>
+    public static async Task<(int Status, IHeaderDictionary Headers)> StatusAndHeaders(IResult answer)
+    {
+        var context = new DefaultHttpContext
+        {
+            RequestServices = new ServiceCollection().AddLogging().AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance).BuildServiceProvider(),
+        };
+        context.Response.Body = new MemoryStream();
+        await answer.ExecuteAsync(context);
+        return (context.Response.StatusCode, context.Response.Headers);
+    }
+
     /// <summary>A port no other program is using, so each test's service has its own.</summary>
     public static int FreePort()
     {

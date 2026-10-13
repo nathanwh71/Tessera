@@ -20,7 +20,8 @@ static async Task<int> Serve() =>
     await SettingsLoader.LoadService().Match(
         async settings =>
         {
-            await using var database = Database.Open(settings.Db.Address);
+            await using var database = Database.Open(settings.Db.Address, new PoolLimits(
+                settings.Db.PoolMaxConns, settings.Db.PoolMaxConnLifeTime, settings.Db.Timeout, settings.Db.PoolConnectionTimeout));
             return await (await LayerCatalogue.Load(database)).Match(
                 async catalogue =>
                 {

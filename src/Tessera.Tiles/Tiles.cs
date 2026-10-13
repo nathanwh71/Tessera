@@ -139,8 +139,9 @@ public sealed class TileServer(LayerCatalogue catalogue, TileReader read, TileSe
                 return Reply(built, request);
             },
             // A table revoked since start-up answers 42501; it has left, so it is not found (US-03 c6).
-            error => error.IsMissingTable
-                ? Problems.NotFound("No published layer has that name.")
+            // A database that cannot answer now asks the browser to try again (N-22); anything else is a fault.
+            error => error.IsMissingTable ? Problems.NotFound("No published layer has that name.")
+                : error.IsUnavailable ? Problems.Unavailable("The database cannot answer now. Try again shortly.")
                 : Problems.Answer(StatusCodes.Status500InternalServerError, Option.None<string>()));
 
     // The browser that already holds this tile gets 304 and no body; any other gets the bytes, packed if it can unpack them.
