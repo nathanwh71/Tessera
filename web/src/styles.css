@@ -1,0 +1,251 @@
+/*
+  styles.css: the page's one theme, Material 3 as design/README.md sets it (UI-15).
+
+  Every colour the page uses lives in the @theme block below. Code that cannot read CSS, such as
+  MapLibre's paint and the canvas pins, reads these variables at run time (design/theme.ts), so
+  rules.test.ts can refuse a colour written anywhere else.
+*/
+
+@import "tailwindcss";
+@import "@fontsource/roboto/latin-400.css";
+@import "@fontsource/roboto/latin-500.css";
+@import "@fontsource/roboto/latin-ext-400.css";
+@import "@fontsource/roboto/latin-ext-500.css";
+
+/*
+  Material Symbols, rounded (UI-15, criterion 2), cut down to the two icons the map draws, 'add' and
+  'remove', at its one setting: fill 0, weight 400, grade 0, size 24. The whole font is 5.4 MB; this
+  one is under 3 kB, which matters with a thousand visitors. `npm run icons` cuts it again from the
+  package, and must run whenever the map draws a new icon.
+*/
+@font-face {
+  font-family: "Material Symbols Rounded";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("./assets/fonts/material-symbols-rounded-subset.woff2") format("woff2");
+}
+
+/* `static` emits every variable, used by a class or not, since MapLibre and the canvas read them by name. */
+@theme static {
+  /* Tailwind's own palette goes, so no class can bring a colour from outside these roles. */
+  --color-*: initial;
+
+  /* Material 3 colour roles, built from the seed #1F5FA8 (design/tokens.css). */
+  --color-primary: #1F5FA8; /* 5.8:1 on surface-low, as text */
+  --color-on-primary: #FFFFFF; /* 6.4:1 on primary */
+  --color-primary-container: #D6E3FF;
+  --color-on-primary-container: #001B3E; /* 13.3:1 */
+  --color-secondary-container: #DAE2F9;
+  --color-on-secondary-container: #131C2B; /* 13.2:1 */
+
+  --color-surface: #F9F9FF;
+  --color-surface-lowest: #FFFFFF;
+  --color-surface-low: #F3F3FA;
+  --color-surface-container: #EDEDF4;
+  --color-surface-high: #E7E8EE;
+  --color-surface-highest: #E2E2E9;
+  --color-on-surface: #1A1B20; /* 14.1:1 on surface-high */
+  --color-on-surface-variant: #44474F; /* 7.2:1 on surface-highest */
+  --color-outline: #74777F; /* borders: 4.1:1 on surface-low */
+  --color-outline-variant: #C4C6D0; /* dividers only */
+  --color-inverse-surface: #2F3036;
+  --color-inverse-on-surface: #F1F0F7; /* 11.6:1: the names on the map */
+  /* Material's shadow role: the colour of every shadow the canvas paints. */
+  --color-shadow: #000000;
+
+  /* Layer groups (UI-12): each travels with a shape (design/theme.ts). */
+  --color-group-food: #B5452B; /* circle · 4.9:1 on surface-low */
+  --color-group-outdoors: #4F7040; /* triangle · 5.1:1 on surface-low */
+  --color-group-culture: #74466F; /* square · 7.4:1 on surface-lowest */
+  --color-group-transport: #35578A; /* diamond · 6.6:1 on surface-low */
+
+  /* The compass's north needle and 'N' (UI-19): Material's error red, 5.9:1 on surface-low. */
+  --color-north: #B3261E;
+
+  --font-sans: "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-icons: "Material Symbols Rounded";
+
+  /* Material's type scale, as the design names it. */
+  --text-headline-small: 24px;
+  --text-headline-small--line-height: 32px;
+  --text-title-large: 22px;
+  --text-title-large--line-height: 28px;
+  --text-title-medium: 16px;
+  --text-title-medium--line-height: 24px;
+  --text-title-medium--letter-spacing: 0.15px;
+  --text-title-medium--font-weight: 500;
+  --text-body-large: 16px;
+  --text-body-large--line-height: 24px;
+  --text-body-large--letter-spacing: 0.5px;
+  --text-body-medium: 14px;
+  --text-body-medium--line-height: 20px;
+  --text-body-medium--letter-spacing: 0.25px;
+  --text-body-small: 12px;
+  --text-body-small--line-height: 16px;
+  --text-body-small--letter-spacing: 0.4px;
+  --text-label-large: 14px;
+  --text-label-large--line-height: 20px;
+  --text-label-large--letter-spacing: 0.1px;
+  --text-label-large--font-weight: 500;
+  --text-label-medium: 12px;
+  --text-label-medium--line-height: 16px;
+  --text-label-medium--letter-spacing: 0.5px;
+  --text-label-medium--font-weight: 500;
+  --text-label-small: 11px;
+  --text-label-small--line-height: 16px;
+  --text-label-small--letter-spacing: 0.5px;
+  --text-label-small--font-weight: 500;
+
+  /* Material's elevation levels 1 to 3. */
+  --shadow-level-1: 0 1px 2px rgb(0 0 0 / 0.3), 0 1px 3px 1px rgb(0 0 0 / 0.15);
+  --shadow-level-2: 0 1px 2px rgb(0 0 0 / 0.3), 0 2px 6px 2px rgb(0 0 0 / 0.15);
+  --shadow-level-3: 0 1px 3px rgb(0 0 0 / 0.3), 0 4px 8px 3px rgb(0 0 0 / 0.15);
+
+  /* Material's corner scale, kept whole. The map uses extra-small for name tooltips, medium for the zoom
+     buttons, the scale bar and the coordinates, and rounded-full for the compass. */
+  --radius-extra-small: 4px;
+  --radius-small: 8px;
+  --radius-medium: 12px;
+  --radius-large: 16px;
+  --radius-extra-large: 28px;
+
+  /* Material's emphasised easing: in place, entering and leaving. */
+  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --ease-emphasized-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
+}
+
+/* Durations and state layers sit outside @theme: Tailwind has no namespace for them. */
+:root {
+  --motion-short: 150ms; /* state layers and colour changes */
+  --motion-exit: 200ms; /* anything leaving */
+  --motion-medium: 300ms; /* zoom, pins dropping in and leaving a cluster: the ceiling for any movement */
+  --state-hover: 0.08;
+  --state-pressed: 0.12;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+  }
+
+  body {
+    background: var(--color-surface);
+    color: var(--color-on-surface);
+    font-family: var(--font-sans);
+  }
+
+  button {
+    font: inherit;
+    color: inherit;
+  }
+
+  /* A clear focus ring on every control. */
+  :focus-visible {
+    outline: 3px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Material Symbols, rounded, drawn by ligature: the text names the icon (UI-15, criterion 2). */
+  .icon {
+    font-family: var(--font-icons);
+    font-weight: normal;
+    font-style: normal;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    direction: ltr;
+    font-feature-settings: "liga";
+    -webkit-font-smoothing: antialiased;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+    user-select: none;
+  }
+
+  .icon-bold {
+    font-variation-settings: "FILL" 0, "wght" 700, "GRAD" 0, "opsz" 24;
+  }
+
+  /* UI-15, criterion 5: a state layer of the control's own text colour, 8 per cent on hover, 12 per cent on press and focus. */
+  .state-layer {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .state-layer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: currentColor;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--motion-short) linear;
+  }
+
+  .state-layer:hover::after {
+    opacity: var(--state-hover);
+  }
+
+  .state-layer:active::after,
+  .state-layer:focus-visible::after {
+    opacity: var(--state-pressed);
+  }
+
+  /*
+    UI-15, criterion 6: a pin that drops into place as the page opens. It starts 16 pixels above its
+    place, unseen, and falls into place in 300 ms, decelerating; each pin's delay sets the order.
+  */
+  .pin-drop {
+    opacity: 0;
+    transform: translate(-50%, calc(-100% - 16px));
+    filter: drop-shadow(0 1px 2px color-mix(in srgb, var(--color-shadow) 30%, transparent));
+    transition:
+      transform var(--motion-medium) var(--ease-emphasized-decelerate),
+      opacity var(--motion-exit) linear;
+  }
+
+  .pin-drop-landed {
+    opacity: 1;
+    transform: translate(-50%, -100%);
+  }
+
+  /* UI-19, criterion 2: the scale bar's four sections, filled and empty in turn. */
+  .scale-sections {
+    background: linear-gradient(
+      90deg,
+      var(--color-on-surface) 0 25%,
+      transparent 25% 50%,
+      var(--color-on-surface) 50% 75%,
+      transparent 75% 100%
+    );
+  }
+
+  /* A control at the end of its range (UI-09, criterion 2): grey, as Material greys a disabled control. */
+  .state-layer[aria-disabled="true"] {
+    color: color-mix(in srgb, var(--color-on-surface) 38%, transparent);
+    cursor: default;
+  }
+
+  .state-layer[aria-disabled="true"]::after {
+    opacity: 0;
+  }
+}
+
+/* UI-15, criterion 8: nothing moves for a visitor who has asked their system to reduce motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

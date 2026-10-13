@@ -1,0 +1,110 @@
+// map/places.ts: the places MapLibre, the map-drawing library, has loaded, as one list for the clustered
+// source (UI-10, UI-17). A source is the data a map layer draws from; a cluster is one mark that stands
+// for several places close together.
+//
+// MapLibre clusters only a GeoJSON source (GeoJSON is the JSON form of points and shapes), and the
+// service sends vector tiles, square pieces of the map holding points rather than pictures. So the map
+// reads the features, the points with their properties, of the tiles it has loaded for each layer that
+// is on, and feeds them here. A point near a tile's edge arrives in each tile whose margin holds it,
+// which is why each id is kept once.
+
+import type { GroupKey } from "../design";
+import { type LayerId, layerOf } from "../layers";
+
+/** A property value as a vector tile carries it: text, a number, true or false, or null. */
+export type PropertyValue = string | number | boolean | null;
+
+/** A feature as `map.querySourceFeatures` returns it, reduced to what this module reads. */
+export interface SourceFeature {
+	readonly properties: Readonly<Record<string, unknown>>;
+	readonly geometry: { readonly type: string; readonly coordinates?: unknown };
+}
+
+/** The features loaded for one layer that is on. */
+export interface LoadedLayer {
+	readonly layerId: LayerId;
+	readonly features: readonly SourceFeature[];
+}
+
+/** A place's properties on the clustered source: the tile's own, plus its layer, its group and its rank in the fixed order. */
+export type PlaceProperties = Readonly<Record<string, PropertyValue>> & {
+	readonly id: string;
+	readonly name: string;
+	readonly layerId: LayerId;
+	readonly group: GroupKey;
+	/** One of the layer's places in words, such as 'Café', for the pin's label. */
+	readonly one: string;
+	/** UI-17, criterion 2: a lower number wins the space for its name; layers in the map's order first, then ids within a layer. */
+	readonly sort: number;
+};
+
+/** One place on the clustered source. */
+export interface PlaceFeature {
+	readonly type: "Feature";
+	readonly geometry: { readonly type: "Point"; readonly coordinates: readonly [number, number] };
+	readonly properties: PlaceProperties;
+}
+
+/** The places for the clustered source, as GeoJSON. */
+export interface PlaceCollection {
+	readonly type: "FeatureCollection";
+	readonly features: readonly PlaceFeature[];
+}
+
+/** The step between layers in a sort key, larger than any layer's count of places, so no two layers' keys overlap. */
+const LAYER_STEP = 1_000_000;
+
+const isValue = (v: unknown): v is PropertyValue =>
+	v === null || typeof v === "string" || typeof v === "number" || typeof v === "boolean";
+
+function pointOf(feature: SourceFeature): readonly [number, number] | null {
+	const c = feature.geometry.coordinates;
+	return feature.geometry.type === "Point" && Array.isArray(c) && typeof c[0] === "number" && typeof c[1] === "number"
+		? [c[0], c[1]]
+		: null;
+}
+
+const textOf = (v: unknown): string => (typeof v === "string" ? v : typeof v === "number" ? String(v) : "");
+
+/** The tile's properties that are plain values, with the place's id and name as text. */
+function valuesOf(feature: SourceFeature): Readonly<Record<string, PropertyValue>> & { id: string; name: string } {
+	const values = Object.fromEntries(Object.entries(feature.properties).filter(([, v]) => isValue(v)));
+	return { ...values, id: textOf(feature.properties["id"]), name: textOf(feature.properties["name"]) };
+}
+
+const byId = (a: { values: { id: string } }, b: { values: { id: string } }): number =>
+	a.values.id < b.values.id ? -1 : a.values.id > b.values.id ? 1 : 0;
+
+/**
+ * Joins the loaded layers into one list for the clustered source. It is a pure function: it reads only
+ * its inputs and changes nothing outside itself.
+ *
+ * Takes the layers in the map's order. Keeps each place once, by its `id`, and drops features that are
+ * not points or carry no id. Each place gains its layer, its group and a sort key that ranks layers in
+ * order, then ids within a layer, so the same name wins every time (UI-17, criterion 2).
+ */
+export function placeCollection(loaded: readonly LoadedLayer[]): PlaceCollection {
+	const features = loaded.flatMap(({ layerId, features: raw }, layerIndex) => {
+		const layer = layerOf(layerId);
+		if (layer === undefined) return [];
+		const unique = new Map(
+			raw
+				.map((f) => ({ point: pointOf(f), values: valuesOf(f) }))
+				.filter((f) => f.point !== null && f.values.id !== "")
+				.map((f) => [f.values.id, f] as const),
+		);
+		return [...unique.values()].toSorted(byId).map(
+			({ point, values }, rank): PlaceFeature => ({
+				type: "Feature",
+				geometry: { type: "Point", coordinates: point ?? [0, 0] },
+				properties: { ...values, layerId, group: layer.group, one: layer.one, sort: layerIndex * LAYER_STEP + rank },
+			}),
+		);
+	});
+	return { type: "FeatureCollection", features };
+}
+
+/** A short fingerprint, the ids joined into one string, of a list's places, so the map resets its source only when they change. */
+export function fingerprint(collection: PlaceCollection): string {
+	return collection.features.map((f) => f.properties.id).join("|");
+}

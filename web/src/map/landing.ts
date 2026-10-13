@@ -1,0 +1,71 @@
+// map/landing.ts: the pins' landing as the page opens (UI-15, criterion 6), as a pure state machine.
+//
+// A state machine is a value that says which stage something is at, and a function that moves it on
+// when an event happens. This one reads only its inputs and changes nothing outside itself, so every
+// path through the landing is tested with values alone, including the two a browser test rarely
+// reaches: a visitor who moves the map before the first tile arrives, and a map whose places never
+// come. The component keeps the timers and the drawing; it sends each event here and shows the stage.
+
+import { type GroupKey, dropDelays, dropMs } from "../design";
+
+/** A pin in view, as the map reports it: where its tip sits on screen and its group's colour. */
+export interface PinInView {
+	readonly key: string;
+	readonly x: number;
+	readonly y: number;
+	readonly group: GroupKey;
+}
+
+/** A pin dropping in: where it lands and when it starts, in milliseconds after the first. */
+export interface Drop extends PinInView {
+	readonly delay: number;
+}
+
+/** The stages of the landing. A sealed set: a `switch` must handle each, and the pins cannot be both dropping and landed. */
+export type Landing =
+	/** The first places have not come yet (`fed` false), or have come and the map has not yet come to rest. */
+	| { readonly stage: "waiting"; readonly fed: boolean }
+	/** The pins in view are dropping; `ms` is how long the whole show takes. */
+	| { readonly stage: "dropping"; readonly drops: readonly Drop[]; readonly ms: number }
+	/** The map's own pins show; nothing moves this stage on. */
+	| { readonly stage: "landed" };
+
+/** What can happen during the landing. */
+export type LandingEvent =
+	/** The clustered source gained its first places. */
+	| { readonly name: "placesFed" }
+	/** The map came to rest, with these pins in view; `reduced` is the visitor's wish for less motion (criterion 8). */
+	| { readonly name: "mapIdle"; readonly pins: readonly PinInView[]; readonly reduced: boolean }
+	/** The visitor moved the map, so the show is not wanted. */
+	| { readonly name: "visitorMoved" }
+	/** The last drop came to rest. */
+	| { readonly name: "dropsDone" }
+	/** The wait for the first places ran out. */
+	| { readonly name: "timedOut" };
+
+/** Before the page has its places. */
+export const START: Landing = { stage: "waiting", fed: false };
+
+const LANDED: Landing = { stage: "landed" };
+
+/** The stage after an event. An event that means nothing at the current stage returns that stage unchanged. */
+export function step(landing: Landing, event: LandingEvent): Landing {
+	switch (event.name) {
+		case "visitorMoved":
+		case "timedOut":
+			return landing.stage === "landed" ? landing : LANDED;
+		case "placesFed":
+			return landing.stage === "waiting" && !landing.fed ? { stage: "waiting", fed: true } : landing;
+		case "mapIdle":
+			return landing.stage === "waiting" && landing.fed ? drop(event.pins, event.reduced) : landing;
+		case "dropsDone":
+			return landing.stage === "dropping" ? LANDED : landing;
+	}
+}
+
+/** The drop for the pins in view: none, and so landed at once, when there is nothing to drop or the visitor asks for less motion. */
+function drop(pins: readonly PinInView[], reduced: boolean): Landing {
+	const delays = dropDelays(pins.length, reduced);
+	if (delays.length === 0) return LANDED;
+	return { stage: "dropping", drops: pins.map((pin, i) => ({ ...pin, delay: delays[i] ?? 0 })), ms: dropMs(delays) };
+}

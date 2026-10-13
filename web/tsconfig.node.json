@@ -1,0 +1,22 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": [
+      "es2025",
+      "dom",
+      "dom.iterable"
+    ],
+    "types": [
+      "node",
+      "geojson"
+    ],
+    "allowJs": true,
+    "checkJs": false
+  },
+  "include": [
+    "vite.config.ts",
+    "playwright.config.ts",
+    "eslint.config.js",
+    "e2e"
+  ]
+}
