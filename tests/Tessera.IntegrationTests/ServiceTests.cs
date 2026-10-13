@@ -44,7 +44,6 @@ public sealed class ServiceFixture : IAsyncLifetime
             """);
 
         _reader = Sql.Database.Open(Database.Reader);
-        var catalogue = (await LayerCatalogue.Load(_reader)).Match(found => found, error => throw new InvalidOperationException(error.Message));
         var settings = new ServiceSettings(
             new Area("Macau", box, new HomeView(113.55, 22.19, 14)),
             new MapSettings(Preview: true),
@@ -54,9 +53,20 @@ public sealed class ServiceFixture : IAsyncLifetime
             new CatalogueSettings(TimeSpan.FromSeconds(30)));
 
         // The built map, copied beside the tests by the service's project reference (US-23 c4).
-        _app = TesseraService.Build(settings, catalogue, _reader, Path.Combine(AppContext.BaseDirectory, "wwwroot"));
+        _app = TesseraService.Build(settings, _reader, Path.Combine(AppContext.BaseDirectory, "wwwroot"));
         await _app.StartAsync();
         Client = new HttpClient { BaseAddress = new Uri($"http://127.0.0.1:{Port}") };
+
+        // The list of layers loads in the background (N-23); until it does, a tile answers 503.
+        for (var attempt = 0; attempt < 100; attempt++)
+        {
+            using var answer = await Client.GetAsync("/food.cafes/0/0/0.pbf");
+            if (answer.StatusCode != HttpStatusCode.ServiceUnavailable)
+                return;
+            await Task.Delay(100);
+        }
+
+        throw new InvalidOperationException("The list of layers did not load within ten seconds.");
     }
 
     public async ValueTask DisposeAsync()
@@ -332,6 +342,9 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
                 {
                     using var answer = await client.GetAsync($"/food.cafes/{Zoom}/{Tile.X}/{Tile.Y}.pbf", TestContext.Current.CancellationToken);
                     status = answer.StatusCode;
+                    // 503 until the list of layers loads (N-23).
+                    if (status != HttpStatusCode.OK)
+                        await Task.Delay(100, TestContext.Current.CancellationToken);
                 }
                 catch (HttpRequestException)
                 {

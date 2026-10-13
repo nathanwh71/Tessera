@@ -108,7 +108,7 @@ public delegate Task<Result<Option<byte[]>, DatabaseError>> TileReader(Query que
 /// The reader is a function, not the database itself, so a test can count the queries with a
 /// double and prove that a second request runs none (N-19 test 3).
 /// </remarks>
-public sealed class TileServer(LayerCatalogue catalogue, TileReader read, TileSettings settings, TileCache cache)
+public sealed class TileServer(Func<Option<LayerCatalogue>> catalogue, TileReader read, TileSettings settings, TileCache cache)
 {
     /// <summary>
     /// Finds the layer, checks the address, then looks for a kept copy before it asks the database.
@@ -118,8 +118,10 @@ public sealed class TileServer(LayerCatalogue catalogue, TileReader read, TileSe
     public async Task<IResult> Answer(string layerId, int z, int x, int y, TileRequest request, CancellationToken cancel)
     {
         var target =
+            // Before the first list of layers loads, nothing can be found, so the browser is asked to wait (N-23 c4).
+            from layers in catalogue().OrRefuse(Problems.Unavailable("The list of layers has not loaded yet. Try again shortly."))
             // The detail never repeats the request's layer id: an answer should not echo what a stranger sent.
-            from layer in catalogue.Find(layerId).OrRefuse(Problems.NotFound("No published layer has that name."))
+            from layer in layers.Find(layerId).OrRefuse(Problems.NotFound("No published layer has that name."))
             from tile in TileAddress.Of(z, x, y).MapError(Problems.BadRequest)
             select (Layer: layer, Tile: tile);
 
@@ -156,9 +158,9 @@ public static class TileRoutes
 {
     public const string ContentType = "application/vnd.mapbox-vector-tile";
 
-    public static IEndpointRouteBuilder MapTiles(this IEndpointRouteBuilder routes, LayerCatalogue catalogue, Database database, TileSettings settings, TileCache cache)
+    public static IEndpointRouteBuilder MapTiles(this IEndpointRouteBuilder routes, LiveCatalogue catalogue, Database database, TileSettings settings, TileCache cache)
     {
-        var server = new TileServer(catalogue, database.Single<byte[]>, settings, cache);
+        var server = new TileServer(() => catalogue.Current, database.Single<byte[]>, settings, cache);
         Task<IResult> Serve(string layer, int z, int x, int y, HttpRequest request, CancellationToken cancel) =>
             server.Answer(layer, z, x, y, TileRequest.Of(request), cancel);
 

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Net;
 using Tessera.Catalogue;
@@ -30,8 +31,9 @@ public static class TesseraService
     /// The service builds on an empty host, so it reads no appsettings.json: tessera.json and the
     /// environment hold every setting (ADR 0003).
     /// </remarks>
-    public static WebApplication Build(ServiceSettings settings, LayerCatalogue catalogue, Database database, string mapFolder)
+    public static WebApplication Build(ServiceSettings settings, Database database, string mapFolder)
     {
+        var cache = new TileCache(settings.Tiles, TimeProvider.System);
         var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions());
         builder.WebHost.UseKestrelCore().ConfigureKestrel(kestrel => kestrel.Listen(IPAddress.Any, settings.Http.Port));
         builder.Services.AddRoutingCore();
@@ -44,6 +46,24 @@ public static class TesseraService
             compression.MimeTypes = [.. ResponseCompressionDefaults.MimeTypes, "text/javascript", "application/problem+json"];
         });
         builder.Logging.AddConsole();
+        // The list of layers loads in the background, so the service answers from its first moment,
+        // with 503 until the database answers (N-23 c4). A layer that leaves the list takes its kept
+        // tiles with it (N-23 c3).
+        builder.Services.AddSingleton(services =>
+        {
+            var log = services.GetRequiredService<ILoggerFactory>().CreateLogger("Tessera.Catalogue");
+            return LiveCatalogue.From(
+                database,
+                (old, fresh) =>
+                {
+                    var departed = LiveCatalogue.Departed(old, fresh);
+                    cache.DropLayers(departed);
+                    if (old.Layers.Count != fresh.Layers.Count || departed.Length > 0)
+                        log.LogInformation("The service publishes {Count} layers.", fresh.Layers.Count);
+                },
+                error => log.LogWarning("Could not read the list of layers ({SqlState}): {Message}", error.SqlState, error.Message));
+        });
+        builder.Services.AddHostedService(services => new CatalogueRefresh(services.GetRequiredService<LiveCatalogue>(), settings.Catalogue.Refresh));
 
         var app = builder.Build();
         app.UseProblemDocuments();
@@ -51,8 +71,18 @@ public static class TesseraService
         app.UseResponseCompression();
         app.UseMapHeaders();
         app.UseRouting();
-        app.MapTiles(catalogue, database, settings.Tiles, new TileCache(settings.Tiles, TimeProvider.System));
+        app.MapTiles(app.Services.GetRequiredService<LiveCatalogue>(), database, settings.Tiles, cache);
         app.UseMap(settings.Area, settings.Map, mapFolder);
         return app;
     }
+}
+
+/// <summary>
+/// Runs the live catalogue's refresh loop for as long as the service runs (N-23). Until the first
+/// load succeeds it tries every five seconds, the same wait a 503 asks of a browser.
+/// </summary>
+internal sealed class CatalogueRefresh(LiveCatalogue catalogue, TimeSpan every) : BackgroundService
+{
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        catalogue.Run(every, TimeSpan.FromSeconds(Problems.RetryAfterSeconds), TimeProvider.System, stoppingToken);
 }

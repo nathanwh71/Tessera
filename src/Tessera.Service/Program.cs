@@ -1,5 +1,4 @@
 using System.Collections.Immutable;
-using Tessera.Catalogue;
 using Tessera.Import;
 using Tessera.Service;
 using Tessera.Settings;
@@ -16,20 +15,17 @@ return args is ["import", var path]
         ? await Serve()
         : Usage();
 
+// The service starts whether or not the database answers yet, so the two may start in either
+// order; until the list of layers loads, tiles answer 503 (N-23 c4).
 static async Task<int> Serve() =>
     await SettingsLoader.LoadService().Match(
         async settings =>
         {
             await using var database = Database.Open(settings.Db.Address, new PoolLimits(
                 settings.Db.PoolMaxConns, settings.Db.PoolMaxConnLifeTime, settings.Db.Timeout, settings.Db.PoolConnectionTimeout));
-            return await (await LayerCatalogue.Load(database)).Match(
-                async catalogue =>
-                {
-                    var mapFolder = Path.Combine(AppContext.BaseDirectory, "wwwroot");
-                    await TesseraService.Build(settings, catalogue, database, mapFolder).RunAsync();
-                    return 0;
-                },
-                error => Task.FromResult(FailWith($"Could not read the list of layers ({error.SqlState}): {error.Message}")));
+            var mapFolder = Path.Combine(AppContext.BaseDirectory, "wwwroot");
+            await TesseraService.Build(settings, database, mapFolder).RunAsync();
+            return 0;
         },
         errors => Task.FromResult(Fail(errors)));
 

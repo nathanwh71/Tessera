@@ -2,13 +2,21 @@ using System.Diagnostics;
 
 namespace Tessera.IntegrationTests;
 
-/// <summary>US-00 c4 and test 2: started with no variables set, the program stops and names each one it lacks.</summary>
+/// <summary>US-00 c4 and test 2, and N-23 c4: the program stops when a setting is missing, and starts when only the database is.</summary>
 public sealed class StartTests
 {
     private static Task<(int Code, string Errors)> Run(params string[] arguments) =>
         Run(new Dictionary<string, string>(), arguments);
 
     private static async Task<(int Code, string Errors)> Run(IReadOnlyDictionary<string, string> variables, params string[] arguments)
+    {
+        using var process = Process.Start(Start(variables, arguments))!;
+        var errors = await process.StandardError.ReadToEndAsync(TestContext.Current.CancellationToken);
+        await process.WaitForExitAsync(TestContext.Current.CancellationToken);
+        return (process.ExitCode, errors);
+    }
+
+    private static ProcessStartInfo Start(IReadOnlyDictionary<string, string> variables, params string[] arguments)
     {
         var start = new ProcessStartInfo("dotnet") { RedirectStandardError = true, RedirectStandardOutput = true };
         start.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "Tessera.Service.dll"));
@@ -24,11 +32,7 @@ public sealed class StartTests
 
         foreach (var (name, value) in variables)
             start.Environment[name] = value;
-
-        using var process = Process.Start(start)!;
-        var errors = await process.StandardError.ReadToEndAsync(TestContext.Current.CancellationToken);
-        await process.WaitForExitAsync(TestContext.Current.CancellationToken);
-        return (process.ExitCode, errors);
+        return start;
     }
 
     [Fact]
@@ -41,18 +45,46 @@ public sealed class StartTests
         Assert.Contains("DATABASE_URL", errors, StringComparison.Ordinal);
     }
 
-    // With the database down, the program names the failure rather than crashing.
+    // N-23 c4 and test 4: with the database down, the program starts anyway and asks each browser
+    // to wait, so the service and the database may start in either order.
     [Fact]
-    public async Task Names_a_database_it_cannot_reach()
+    public async Task Starts_with_the_database_down_and_answers_503()
     {
-        var (code, errors) = await Run(new Dictionary<string, string>
+        var port = Http.FreePort();
+        var start = Start(new Dictionary<string, string>
         {
-            ["TESSERA_HTTPPORT"] = Http.FreePort().ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["TESSERA_HTTPPORT"] = port.ToString(System.Globalization.CultureInfo.InvariantCulture),
             ["DATABASE_URL"] = $"postgresql://tessera_reader:x@127.0.0.1:{Http.FreePort()}/tessera",
         });
+        using var program = Process.Start(start)!;
+        try
+        {
+            using var client = new HttpClient { BaseAddress = new Uri($"http://127.0.0.1:{port}") };
+            HttpResponseMessage? answer = null;
+            for (var attempt = 0; attempt < 100 && answer is null; attempt++)
+            {
+                try
+                {
+                    answer = await client.GetAsync("/food.cafes/0/0/0.pbf", TestContext.Current.CancellationToken);
+                }
+                catch (HttpRequestException)
+                {
+                    // Not listening yet: the program is still starting.
+                    await Task.Delay(100, TestContext.Current.CancellationToken);
+                }
+            }
 
-        Assert.Equal(1, code);
-        Assert.Contains("Could not read the list of layers (08006)", errors, StringComparison.Ordinal);
+            Assert.NotNull(answer);
+            Assert.Equal(System.Net.HttpStatusCode.ServiceUnavailable, answer.StatusCode);
+            Assert.Equal(TimeSpan.FromSeconds(5), answer.Headers.RetryAfter?.Delta);
+            Assert.False(program.HasExited);
+            answer.Dispose();
+        }
+        finally
+        {
+            program.Kill(entireProcessTree: true);
+            await program.WaitForExitAsync(TestContext.Current.CancellationToken);
+        }
     }
 
     [Fact]

@@ -41,7 +41,7 @@ The ***nineteen*** ***stories*** in `docs/user-stories/user-stories.md` ***fix**
 | `dotnet run --project tests/Tessera.IntegrationTests` | ***Starts*** the ***packaged*** database in Docker and ***tests*** through it and through ***real*** HTTP (US-00 c3) |
 | `npm install` | ***Installs*** the ***scripts***' ***tools***: zx and TypeScript |
 | `npm start` | ***Starts*** the database, ***imports*** the ***places*** if the ***tables*** are ***empty***, then ***starts*** the ***service*** (US-00 c2) |
-| `npm run publish` | ***Grants*** the ***nine*** ***layers*** to the ***service***, which ***serves*** them after a restart (US-24 c5) |
+| `npm run publish` | ***Grants*** the ***nine*** ***layers*** to the ***service***, which ***serves*** them ***within*** `CatalogueRefresh` ***seconds***, 30 by ***default*** (US-24 c5, N-23) |
 | `npm run office-port` | ***Prints*** the ***steps*** that ***open*** ***port*** 80 to the ***office*** (US-35) |
 | `cd web && TESSERA_BASE_URL=http://localhost:8080 npx playwright test` | ***Runs*** the ***map***'s browser ***tests*** ***against*** a ***running*** ***service*** |
 

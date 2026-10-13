@@ -11,7 +11,7 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
     private static readonly TileSettings Tiles = new(10000, 64, 60, 64);
 
     private static TileServer Server(LayerCatalogue catalogue, Database reader) =>
-        new(catalogue, reader.Single<byte[]>, Tiles, new TileCache(Tiles, TimeProvider.System));
+        new(() => Option.Some(catalogue), reader.Single<byte[]>, Tiles, new TileCache(Tiles, TimeProvider.System));
 
     // The stage: one of each kind US-03 names. xUnit runs this before each test, so every step may
     // run again on a stage it has already set. The test makes its own tables, as US-03 asks;
@@ -116,5 +116,38 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
 
         Assert.Equal(503, await Http.Status(answer));
         Assert.True(clock.Elapsed < TimeSpan.FromSeconds(3), $"took {clock.Elapsed}");
+    }
+
+    // N-23 c1 to c3 and test 2: a table granted after start-up joins the list within one refresh,
+    // and leaves it, with its kept tiles, once revoked.
+    [Fact]
+    public async Task Sees_a_grant_and_a_revoke_within_one_refresh()
+    {
+        await database.Owner("CREATE TABLE IF NOT EXISTS stage.late (id int PRIMARY KEY, geom geometry(Point, 4326)); REVOKE SELECT ON stage.late FROM tessera_reader;");
+        await using var reader = Database.Open(database.Reader);
+        var departed = new System.Collections.Concurrent.ConcurrentBag<string>();
+        var live = LiveCatalogue.From(reader, (old, fresh) => { foreach (var id in LiveCatalogue.Departed(old, fresh)) departed.Add(id); }, _ => { });
+        using var stop = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        var loop = live.Run(TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(100), TimeProvider.System, stop.Token);
+
+        await Until(() => live.Current.Match(found => found.Layers.ContainsKey("stage.granted"), () => false));
+        Assert.False(live.Current.Match(found => found.Layers.ContainsKey("stage.late"), () => true));
+
+        await database.Owner("GRANT SELECT ON stage.late TO tessera_reader;");
+        await Until(() => live.Current.Match(found => found.Layers.ContainsKey("stage.late"), () => false));
+
+        await database.Owner("REVOKE SELECT ON stage.late FROM tessera_reader;");
+        await Until(() => departed.Contains("stage.late"));
+        Assert.False(live.Current.Match(found => found.Layers.ContainsKey("stage.late"), () => true));
+
+        await stop.CancelAsync();
+        await loop;
+    }
+
+    private static async Task Until(Func<bool> condition)
+    {
+        for (var attempt = 0; attempt < 50 && !condition(); attempt++)
+            await Task.Delay(100, TestContext.Current.CancellationToken);
+        Assert.True(condition(), "the list did not change within five seconds");
     }
 }

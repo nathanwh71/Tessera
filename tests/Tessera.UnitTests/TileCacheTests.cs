@@ -125,7 +125,7 @@ public sealed class TileCacheTests
         var clock = new Clock();
         var counter = new Counter();
         var settings = new TileSettings(10000, 64, 60, 64);
-        var server = new TileServer(Catalogue, counter.Read, settings, new TileCache(settings, clock));
+        var server = new TileServer(() => Option.Some(Catalogue), counter.Read, settings, new TileCache(settings, clock));
 
         await server.Answer("food.cafes", 15, 27154, 14280, TileRequest.Plain, CancellationToken.None);
         await server.Answer("food.cafes", 15, 27154, 14280, TileRequest.Plain, CancellationToken.None);
@@ -142,7 +142,7 @@ public sealed class TileCacheTests
     {
         var counter = new Counter();
         var settings = new TileSettings(10000, 64, 60, 64);
-        var server = new TileServer(Catalogue, counter.Read, settings, new TileCache(settings, new Clock()));
+        var server = new TileServer(() => Option.Some(Catalogue), counter.Read, settings, new TileCache(settings, new Clock()));
 
         var first = Assert.IsType<TileResult>(await server.Answer("food.cafes", 15, 27154, 14280, TileRequest.Plain, CancellationToken.None));
         var second = Assert.IsType<NotModifiedResult>(await server.Answer("food.cafes", 15, 27154, 14280, new TileRequest(Option.Some(first.Tag), AcceptsGzip: false), CancellationToken.None));
@@ -158,7 +158,7 @@ public sealed class TileCacheTests
     {
         var counter = new Counter();
         var settings = new TileSettings(10000, 64, 0, 64);
-        var server = new TileServer(Catalogue, counter.Read, settings, new TileCache(settings, new Clock()));
+        var server = new TileServer(() => Option.Some(Catalogue), counter.Read, settings, new TileCache(settings, new Clock()));
 
         var first = Assert.IsType<TileResult>(await server.Answer("food.cafes", 15, 27154, 14280, TileRequest.Plain, CancellationToken.None));
         Assert.IsType<NotModifiedResult>(await server.Answer("food.cafes", 15, 27154, 14280, new TileRequest(Option.Some(first.Tag), AcceptsGzip: false), CancellationToken.None));
@@ -172,7 +172,7 @@ public sealed class TileCacheTests
     {
         var counter = new Counter();
         var settings = new TileSettings(10000, 64, 60, 64);
-        var server = new TileServer(Catalogue, counter.Read, settings, new TileCache(settings, new Clock()));
+        var server = new TileServer(() => Option.Some(Catalogue), counter.Read, settings, new TileCache(settings, new Clock()));
 
         var answer = await server.Answer("food.zoos", 0, 0, 0, TileRequest.Plain, CancellationToken.None);
 
@@ -210,7 +210,7 @@ public sealed class TileCacheTests
     {
         var counter = new Counter();
         var settings = new TileSettings(10000, 64, 60, 64);
-        var server = new TileServer(Catalogue, counter.Read, settings, new TileCache(settings, new Clock()));
+        var server = new TileServer(() => Option.Some(Catalogue), counter.Read, settings, new TileCache(settings, new Clock()));
 
         var packed = Assert.IsType<TileResult>(await server.Answer("food.cafes", 15, 27154, 14280, new TileRequest(Option.None<string>(), AcceptsGzip: true), CancellationToken.None));
         var plain = Assert.IsType<TileResult>(await server.Answer("food.cafes", 15, 27154, 14280, TileRequest.Plain, CancellationToken.None));
@@ -241,7 +241,7 @@ public sealed class TileCacheTests
     {
         var queries = 0;
         var settings = new TileSettings(10000, 64, 60, 64);
-        var server = new TileServer(Catalogue, (_, _) =>
+        var server = new TileServer(() => Option.Some(Catalogue), (_, _) =>
         {
             queries++;
             return Task.FromResult(Result.Refuse<Option<byte[]>, DatabaseError>(new DatabaseError("08006", "down")));
@@ -252,5 +252,34 @@ public sealed class TileCacheTests
 
         Assert.IsNotType<TileResult>(first);
         Assert.Equal(2, queries);
+    }
+
+    // N-23 c4: before the first list of layers loads, a tile answers 503 and runs no query.
+    [Fact]
+    public async Task Asks_the_browser_to_wait_before_the_list_loads()
+    {
+        var counter = new Counter();
+        var settings = new TileSettings(10000, 64, 60, 64);
+        var server = new TileServer(() => Option.None<LayerCatalogue>(), counter.Read, settings, new TileCache(settings, new Clock()));
+
+        var answer = await server.Answer("food.cafes", 0, 0, 0, TileRequest.Plain, CancellationToken.None);
+
+        Assert.IsNotType<TileResult>(answer);
+        Assert.Equal(0, counter.Queries);
+    }
+
+    // N-23 c3: a layer that leaves the list takes its kept tiles with it, and no other layer's.
+    [Fact]
+    public void Drops_the_kept_tiles_of_a_layer_that_left()
+    {
+        var clock = new Clock();
+        var cache = new TileCache(new TileSettings(10000, 64, 60, 64), clock);
+        cache.Keep(Key(), Tile(10, clock.Now));
+        cache.Keep(new TileKey("food.markets", 15, 27154, 14280), Tile(10, clock.Now));
+
+        cache.DropLayers(["food.cafes"]);
+
+        Assert.False(cache.Find(Key()).Match(_ => true, () => false));
+        Assert.True(cache.Find(new TileKey("food.markets", 15, 27154, 14280)).Match(_ => true, () => false));
     }
 }

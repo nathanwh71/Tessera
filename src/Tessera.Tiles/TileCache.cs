@@ -149,6 +149,21 @@ public sealed class TileCache
         }
     }
 
+    /// <summary>
+    /// Drops every kept copy of the layers named, such as layers whose grant has gone (N-23 c3).
+    /// Otherwise a revoked table would go on serving from its kept copies for up to CacheTTL seconds.
+    /// </summary>
+    public void DropLayers(IReadOnlyCollection<string> layerIds)
+    {
+        if (layerIds.Count == 0)
+            return;
+        lock (_gate)
+        {
+            foreach (var key in _byKey.Keys.Where(key => layerIds.Contains(key.LayerId)).ToList())
+                Drop(_byKey[key]);
+        }
+    }
+
     private void Drop(LinkedListNode<(TileKey Key, KeptTile Tile)> node)
     {
         _byUse.Remove(node);
