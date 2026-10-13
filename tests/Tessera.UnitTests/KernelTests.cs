@@ -19,7 +19,7 @@ public sealed class KernelTests
         value.ToOption().Map(found => found + 1).Map(found => found * 2)
         == value.ToOption().Map(found => (found + 1) * 2);
 
-    // Bind with Some changes nothing: the law that makes chains of steps safe to rearrange.
+    // Bind with Some changes nothing: a step that only wraps its value adds nothing to a chain.
     [Property]
     public bool Option_bind_some_is_identity(int? value) =>
         value.ToOption().Bind(Option.Some) == value.ToOption();

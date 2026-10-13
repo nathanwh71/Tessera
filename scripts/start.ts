@@ -11,8 +11,9 @@
 //
 // Each step's decision comes from a pure function in lib/plan.ts; this file only runs commands.
 import { resolve } from 'node:path';
+import { readFile } from 'node:fs/promises';
 import { $, sleep } from 'zx';
-import { countQuery, databaseUrl, decideImport, parseCounts, readStartSettings, runArguments } from './lib/plan.ts';
+import { countQuery, databaseUrl, decideImport, parseCounts, portProblem, readStartSettings, runArguments } from './lib/plan.ts';
 
 const container = 'tessera-db';
 const volume = 'tessera-data';
@@ -23,6 +24,13 @@ if (!checked.ok) {
   process.exit(1);
 }
 const settings = checked.value;
+
+const unprivilegedStart = Number.parseInt(await readFile('/proc/sys/net/ipv4/ip_unprivileged_port_start', 'utf8').catch(() => '0'), 10);
+const blocked = portProblem(settings.httpPort, unprivilegedStart);
+if (blocked !== undefined) {
+  console.error(blocked);
+  process.exit(1);
+}
 
 // The database image is db/Dockerfile: the same image the tests start (US-01).
 await $`docker build --quiet --tag ${container} db`;

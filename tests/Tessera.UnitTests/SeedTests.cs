@@ -87,29 +87,33 @@ public sealed class SeedTests
         Assert.Contains("'buses-001' (number 1 in the file)", message, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public void Refuses_a_feature_that_is_not_a_point() =>
-        Assert.Contains("is not a point", Problem(Sample(file =>
+    // US-24 c3: each refusal names the feature by its id and its place in the file.
+    [Theory]
+    [InlineData("geometry", "type", "LineString", "is not a point")]
+    [InlineData("properties", "layer", "zoos", "names no layer of the nine")]
+    [InlineData("properties", "group", "food", "gives a group other than 'transport'")]
+    public void Refuses_a_feature_and_names_it(string member, string key, string value, string problem)
+    {
+        var message = Problem(Sample(file =>
         {
-            FirstFeature(file)["geometry"]!["type"] = "LineString";
+            FirstFeature(file)[member]![key] = value;
             return file;
-        })), StringComparison.Ordinal);
+        }));
 
-    [Fact]
-    public void Refuses_a_layer_outside_the_nine() =>
-        Assert.Contains("names no layer of the nine", Problem(Sample(file =>
-        {
-            FirstFeature(file)["properties"]!["layer"] = "zoos";
-            return file;
-        })), StringComparison.Ordinal);
+        Assert.Contains(problem, message, StringComparison.Ordinal);
+        Assert.StartsWith("Feature 'buses-001' (number 1 in the file)", message, StringComparison.Ordinal);
+    }
 
-    [Fact]
-    public void Refuses_a_group_that_differs_from_the_layers_group() =>
-        Assert.Contains("gives a group other than 'transport'", Problem(Sample(file =>
-        {
-            FirstFeature(file)["properties"]!["group"] = "food";
-            return file;
-        })), StringComparison.Ordinal);
+    // A file may hold any JSON at all; each odd shape is refused with a message, never an exception
+    // (ADR 0004: no function throws for an expected failure).
+    [Theory]
+    [InlineData("""{"type":"FeatureCollection","crs":null,"features":[]}""", "another coordinate system")]
+    [InlineData("""{"type":5,"features":[]}""", "must be a GeoJSON FeatureCollection")]
+    [InlineData("""{"type":"FeatureCollection","features":[5]}""", "has no id")]
+    [InlineData("""{"type":"FeatureCollection","features":[{"id":"a","geometry":{"type":"Point","coordinates":["113.54","22.19"]},"properties":{"layer":"cafes","group":"food"}}]}""", "is not a point")]
+    [InlineData("""{"type":"FeatureCollection","features":[{"id":"a","geometry":{"type":"Point","coordinates":[113.54,22.19]},"properties":{"layer":"cafes","group":"food","name":"x","name":"y"}}]}""", "names one property twice")]
+    public void Refuses_an_odd_shape_without_throwing(string json, string problem) =>
+        Assert.Contains(problem, Problem(json), StringComparison.Ordinal);
 
     [Fact]
     public void Refuses_text_that_is_not_json() =>
@@ -124,7 +128,7 @@ public sealed class SeedTests
         Assert.Equal(4, queries.Count(text => text.StartsWith("CREATE SCHEMA", StringComparison.Ordinal)));
         Assert.Equal(9, queries.Count(text => text.Contains("geometry(Point, 4326)", StringComparison.Ordinal)));
         Assert.Equal(9, queries.Count(text => text.Contains("USING GIST", StringComparison.Ordinal)));
-        Assert.Equal(9, queries.Count(text => text.StartsWith("TRUNCATE", StringComparison.Ordinal)));
+        Assert.Equal(9, queries.Count(text => text.StartsWith("DELETE FROM", StringComparison.Ordinal)));
         Assert.Equal(18, queries.Count(text => text.StartsWith("INSERT", StringComparison.Ordinal)));
         Assert.Equal(9, queries.Count(text => text.StartsWith("ANALYZE", StringComparison.Ordinal)));
         Assert.DoesNotContain(queries, text => text.Contains("GRANT", StringComparison.Ordinal));

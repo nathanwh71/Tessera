@@ -65,8 +65,8 @@ public static class Option
     /// Turns a value that may be null into an Option, at the edge of a module (ADR 0004).
     /// </summary>
     /// <remarks>
-    /// Libraries such as Dapper and System.Text.Json hand back null for a missing value. This is
-    /// the one place a null becomes an Option, so nothing inside a module ever sees a null.
+    /// Libraries such as Dapper and System.Text.Json hand back null for a missing value. The edge of
+    /// a module turns it into an Option at once, so no null crosses the module's public face.
     /// </remarks>
     public static Option<T> ToOption<T>(this T? value) where T : class =>
         value is null ? None<T>() : Some(value);

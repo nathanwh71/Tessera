@@ -40,6 +40,18 @@ public sealed class TileTests
             query.Parameters.Select(value => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture)));
     }
 
+    // S-01 c1: whatever tile a request names, the query's text stays the approved text; the numbers
+    // travel as bound parameters alone.
+    [FsCheck.Xunit.Property]
+    public bool Keeps_every_tile_address_out_of_the_text(byte level, uint column, uint row)
+    {
+        var z = level % (TileAddress.MaxZoom + 1);
+        var size = 1L << z;
+        var tile = new TileAddress(z, (int)(column % size), (int)(row % size));
+        var approved = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "approved", "tile-query.sql")).ReplaceLineEndings().TrimEnd();
+        return TileQuery.For(Cafes, tile, new TileSettings(10000, 64)).Text.ReplaceLineEndings().TrimEnd() == approved;
+    }
+
     [Fact]
     public void Keeps_the_tile_numbers_out_of_the_text()
     {

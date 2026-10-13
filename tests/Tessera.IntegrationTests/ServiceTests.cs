@@ -212,6 +212,43 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         Assert.DoesNotContain("food.cafes", answer, StringComparison.Ordinal);
     }
 
+    // US-00 c2 and test 1: the run command itself starts the service, which answers on its port.
+    [Fact]
+    public async Task Starts_from_the_run_command_and_answers()
+    {
+        var port = Http.FreePort();
+        var start = new System.Diagnostics.ProcessStartInfo("dotnet") { RedirectStandardOutput = true, RedirectStandardError = true };
+        start.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "Tessera.Service.dll"));
+        start.Environment["TESSERA_HTTP_PORT"] = port.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        start.Environment["DATABASE_URL"] = $"postgresql://{service.Database.Reader.User}:{service.Database.Reader.Password}@{service.Database.Reader.Host}:{service.Database.Reader.Port}/tessera";
+        using var program = System.Diagnostics.Process.Start(start)!;
+        try
+        {
+            using var client = new HttpClient { BaseAddress = new Uri($"http://127.0.0.1:{port}") };
+            var status = HttpStatusCode.ServiceUnavailable;
+            for (var attempt = 0; attempt < 100 && status != HttpStatusCode.OK; attempt++)
+            {
+                try
+                {
+                    using var answer = await client.GetAsync($"/food.cafes/{Zoom}/{Tile.X}/{Tile.Y}.pbf", TestContext.Current.CancellationToken);
+                    status = answer.StatusCode;
+                }
+                catch (HttpRequestException)
+                {
+                    // Not listening yet: the program is still starting.
+                    await Task.Delay(100, TestContext.Current.CancellationToken);
+                }
+            }
+
+            Assert.Equal(HttpStatusCode.OK, status);
+        }
+        finally
+        {
+            program.Kill(entireProcessTree: true);
+            await program.WaitForExitAsync(TestContext.Current.CancellationToken);
+        }
+    }
+
     // S-06 test 3: a clean target reaches US-07's route.
     [Fact]
     public async Task Lets_a_clean_raw_target_reach_the_route() =>

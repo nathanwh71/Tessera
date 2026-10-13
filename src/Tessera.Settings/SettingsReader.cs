@@ -81,16 +81,21 @@ public static class SettingsReader
     {
         try
         {
-            return JsonNode.Parse(text) is JsonObject json
+            // Touching every key makes JsonObject read them all now, so a key written twice fails here.
+            return JsonNode.Parse(text) is JsonObject json && Touch(json)
                 ? Result.Ok<JsonObject, SettingsError>(json)
                 : Result.Refuse<JsonObject, SettingsError>(new SettingsError(configName, "expected a JSON object"));
         }
-        catch (JsonException error)
+        catch (Exception error) when (error is JsonException or ArgumentException)
         {
-            // System.Text.Json reports bad JSON by throwing; this is the one place that catches it.
+            // System.Text.Json reports text that is not JSON, or a key written twice, by throwing,
+            // so the parse alone sits in a try.
             return Result.Refuse<JsonObject, SettingsError>(new SettingsError(configName, error.Message));
         }
     }
+
+    private static bool Touch(JsonNode node) =>
+        node is not JsonObject json || json.All(entry => entry.Value is null || Touch(entry.Value));
 
     /// <summary>
     /// Copies the file's settings and lays each <c>TESSERA_Section__Key</c> variable over the key it

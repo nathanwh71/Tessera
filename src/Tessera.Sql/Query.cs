@@ -13,7 +13,10 @@ namespace Tessera.Sql;
 /// written in a form's box rather than in its questions. The database never reads it as SQL, so no
 /// value from a request can change what a query does.
 /// The constructor is private: <see cref="Of"/> is the only way to make a query, and it accepts an
-/// interpolated string, the <c>$"…"</c> form, alone. A plain string variable will not compile.
+/// interpolated string, the <c>$"…"</c> form; a plain string variable will not compile. The compiler
+/// must reach <see cref="QueryHandler"/> from other projects, so its own constructor is public, and
+/// code that called it by hand could still add raw text. No code does, and review guards that: the
+/// compiled form of every <c>$"…"</c> call looks the same, so no test can tell the two apart (S-01 c2).
 /// </remarks>
 public sealed record Query
 {

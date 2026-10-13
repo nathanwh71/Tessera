@@ -9,6 +9,9 @@
  */
 export function officePortSteps(ubuntuAddress: string, port: string): readonly string[] {
   return [
+    `First, in Ubuntu, let an ordinary user open port ${port}, so the service can answer on it:`,
+    `  echo "net.ipv4.ip_unprivileged_port_start=${port}" | sudo tee /etc/sysctl.d/90-tessera.conf && sudo sysctl --system`,
+    '',
     'Option 1, mirrored networking (no step after a restart):',
     '  1. In Windows, add these two lines to %UserProfile%\\.wslconfig, then run "wsl --shutdown":',
     '       [wsl2]',

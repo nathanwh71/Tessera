@@ -70,9 +70,9 @@ public sealed class Database : IAsyncDisposable
                 _ => transaction.RollbackAsync(cancel)).ConfigureAwait(false);
             return result;
         }
-        catch (PostgresException error)
+        catch (NpgsqlException error)
         {
-            return Result.Refuse<T, DatabaseError>(new DatabaseError(error.SqlState, error.MessageText));
+            return Result.Refuse<T, DatabaseError>(Error(error));
         }
     }
 
@@ -85,17 +85,24 @@ public sealed class Database : IAsyncDisposable
             await using var connection = await _source.OpenConnectionAsync().ConfigureAwait(false);
             return Result.Ok<T, DatabaseError>(await work(connection).ConfigureAwait(false));
         }
-        catch (PostgresException error)
+        catch (NpgsqlException error)
         {
-            return Result.Refuse<T, DatabaseError>(new DatabaseError(error.SqlState, error.MessageText));
+            return Result.Refuse<T, DatabaseError>(Error(error));
         }
     }
+
+    // A PostgresException is the database's own refusal, with its SQLSTATE. Any other
+    // NpgsqlException means the database never answered, such as when it is down; 08006,
+    // "connection failure", names that case.
+    private static DatabaseError Error(NpgsqlException error) => error is PostgresException refusal
+        ? new DatabaseError(refusal.SqlState, refusal.MessageText)
+        : new DatabaseError(PostgresErrorCodes.ConnectionFailure, error.Message);
 
     internal static CommandDefinition Command(Query query, NpgsqlTransaction? transaction, CancellationToken cancel)
     {
         var parameters = new DynamicParameters();
         for (var index = 0; index < query.Parameters.Length; index++)
-            // Dapper turns a parameter of null into the database's NULL; this is the one place a null appears.
+            // Dapper turns a parameter of null into the database's NULL, so SqlNull becomes null here.
             parameters.Add($"p{index}", query.Parameters[index] is SqlNull ? null : query.Parameters[index]);
         return new CommandDefinition(query.Text, parameters, transaction, cancellationToken: cancel);
     }

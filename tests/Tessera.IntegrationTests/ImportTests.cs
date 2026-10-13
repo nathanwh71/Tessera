@@ -38,6 +38,8 @@ public sealed class ImportTests(DatabaseFixture database) : IClassFixture<Databa
             "SELECT count(*) FROM pg_indexes WHERE schemaname IN ('food', 'outdoors', 'culture', 'transport') AND indexdef LIKE '%USING gist%'"));
         Assert.Equal(9L, await database.OwnerValue<long>(
             "SELECT count(*) FROM pg_stat_user_tables WHERE schemaname IN ('food', 'outdoors', 'culture', 'transport') AND last_analyze IS NOT NULL"));
+        Assert.Equal(9L, await database.OwnerValue<long>(
+            "SELECT count(*) FROM information_schema.key_column_usage k JOIN information_schema.table_constraints c USING (constraint_schema, constraint_name) WHERE c.constraint_type = 'PRIMARY KEY' AND k.column_name = 'id' AND k.table_schema IN ('food', 'outdoors', 'culture', 'transport')"));
         Assert.Equal("boolean", await database.OwnerValue<string>(
             "SELECT data_type FROM information_schema.columns WHERE table_schema = 'food' AND table_name = 'cafes' AND column_name = 'sample'"));
 
@@ -66,13 +68,24 @@ public sealed class ImportTests(DatabaseFixture database) : IClassFixture<Databa
         Assert.Equal(113.577677, await database.OwnerValue<double>("SELECT ST_X(geom) FROM food.cafes WHERE id = 'cafes-001'"), 6);
     }
 
-    // A refused file changes nothing: the checks run before any query does.
+    // US-24 c6: when the database fails half-way through a load, the transaction rolls back and
+    // every table keeps the rows it held. Here the second file gives 'sample' text where the
+    // column holds true or false, so the database refuses a row after the old rows are deleted.
     [Fact]
-    public async Task Leaves_the_database_alone_when_it_refuses_a_file()
+    public async Task Rolls_back_a_load_the_database_refuses_half_way()
     {
-        await using var publisher = Database.Open(database.Publisher);
-        var result = await Importer.Run(publisher, "{ not json", Macau, TestContext.Current.CancellationToken);
+        await Import(Samples.Sample());
+        var before = await database.OwnerValue<long>("SELECT count(*) FROM food.cafes");
 
-        Assert.Contains("not valid JSON", result.Match(_ => "", error => error.Message), StringComparison.Ordinal);
+        await using var publisher = Database.Open(database.Publisher);
+        var result = await Importer.Run(publisher, Samples.Sample(file =>
+        {
+            ((System.Text.Json.Nodes.JsonObject)file["features"]![17]!)["properties"]!["sample"] = "yes";
+            return file;
+        }), Macau, TestContext.Current.CancellationToken);
+
+        Assert.Contains("The database refused the import", result.Match(_ => "", error => error.Message), StringComparison.Ordinal);
+        Assert.Equal(before, await database.OwnerValue<long>("SELECT count(*) FROM food.cafes"));
+        Assert.Equal(2L, before);
     }
 }

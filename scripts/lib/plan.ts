@@ -73,6 +73,19 @@ export function databaseUrl(user: string, password: string, port: string): strin
   return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@127.0.0.1:${port}/tessera`;
 }
 
+/**
+ * Ubuntu lets an ordinary user open a port from ip_unprivileged_port_start upwards, 1024 by
+ * default, so the service cannot answer on port 80 until that limit drops. This names the problem
+ * and its fix before the service tries and fails (US-35).
+ */
+export function portProblem(port: string, unprivilegedStart: number): string | undefined {
+  const number = Number.parseInt(port, 10);
+  return number < unprivilegedStart
+    ? `Port ${number} lies below ${unprivilegedStart}, the lowest port an ordinary user may open. Run once:\n` +
+      `  echo "net.ipv4.ip_unprivileged_port_start=${number}" | sudo tee /etc/sysctl.d/90-tessera.conf && sudo sysctl --system`
+    : undefined;
+}
+
 /** What to do with the places: load them, leave them, or stop because the tables disagree. */
 export type ImportDecision =
   | { readonly kind: 'import' }

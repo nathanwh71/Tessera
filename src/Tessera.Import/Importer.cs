@@ -38,9 +38,10 @@ public static class Importer
     /// rows of all nine tables replaced, then fresh statistics.
     /// </summary>
     /// <remarks>
-    /// "IF NOT EXISTS" lets the import run again on a database it has filled before. TRUNCATE empties
-    /// a table; inside the one transaction, readers keep seeing the old rows until the new ones are
-    /// all in, so no tile ever carries half a file (US-24 c6). A spatial index (GIST) sorts shapes by
+    /// "IF NOT EXISTS" lets the import run again on a database it has filled before. DELETE empties
+    /// each table inside the one transaction, and readers keep seeing the old rows until the new
+    /// ones are all in, so no tile ever carries half a file (US-24 c6). TRUNCATE would be faster, but
+    /// it locks each table until the import ends, so every tile request would wait. A spatial index (GIST) sorts shapes by
     /// where they lie, so a tile finds its few places without reading the whole table; ANALYZE then
     /// gathers the statistics the database uses to choose that index.
     /// </remarks>
@@ -56,7 +57,7 @@ public static class Importer
         select ImmutableArray.CreateRange(
             schemas
                 .Concat(tables.SelectMany(table => Shape(table, id, geometry)))
-                .Concat(tables.Select(table => Query.Of($"TRUNCATE {table.Table}")))
+                .Concat(tables.Select(table => Query.Of($"DELETE FROM {table.Table}")))
                 .Concat(tables.SelectMany(table => places
                     .Where(place => place.Layer == table.Layer)
                     .Select(place => Insert(table, id, geometry, place))))
@@ -109,7 +110,6 @@ public static class Importer
         PropertyValue.Number(var number) => number.ToString(System.Globalization.CultureInfo.InvariantCulture),
         PropertyValue.Flag(var flag) => flag ? "true" : "false",
         PropertyValue.Text(var text) => text,
-        // The column stays empty for this place.
         _ => SqlNull.Value,
     };
 

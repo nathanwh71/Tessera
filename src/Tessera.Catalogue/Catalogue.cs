@@ -45,8 +45,9 @@ public sealed record LayerCatalogue(ImmutableDictionary<string, Layer> Layers)
     /// table, 'v' a view, 'm' a view that stores its rows. A function never appears in pg_class, so
     /// no function becomes a layer (US-03 c5). has_table_privilege asks the database, as the
     /// service's own role, whether a grant lets it read the table, so the database decides what is
-    /// published. A typed column carries its SRID in its "type modifier", atttypmod, and an untyped
-    /// one carries 0, so the last condition leaves untyped columns out.
+    /// published. A typed column carries its SRID in its "type modifier", atttypmod; for an untyped
+    /// column, or one typed without an SRID, postgis_typmod_srid gives 0, so the last condition
+    /// leaves both out (US-24: an untyped column is not published).
     /// DISTINCT ON keeps one geometry column for each table: the first, by column number.
     /// </remarks>
     public static readonly Query ListQuery = Query.Of($"""
@@ -95,7 +96,7 @@ public sealed record LayerCatalogue(ImmutableDictionary<string, Layer> Layers)
         }
         catch (System.Text.Json.JsonException error)
         {
-            // System.Text.Json reports bad JSON by throwing; this is the one place that catches it.
+            // System.Text.Json reports text that is not JSON by throwing, so the parse alone sits in a try.
             return Result.Refuse<ImmutableArray<string>, string>(error.Message);
         }
     }

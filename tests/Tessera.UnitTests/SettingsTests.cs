@@ -71,6 +71,12 @@ public sealed class SettingsTests
             Read(Machines.SetItem("TESSERA_Area__Home__Zoom", "40")).Match(_ => [], found => found),
             error => error.Name == "Area.Home.Zoom");
 
+    [Fact]
+    public void Refuses_a_key_written_twice() =>
+        Assert.Contains(
+            Read(Machines, """{ "Area": { "Name": "a", "Name": "b" } }""").Match(_ => [], found => found),
+            error => error.Name == "tessera.json");
+
     // A password in the address is never printed: a log line may reach someone it should not.
     [Fact]
     public void Hides_the_password_when_printed() =>

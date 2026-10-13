@@ -1,7 +1,7 @@
 // Tests of the scripts' pure decisions; node --test runs them, with no Docker and no database.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { databaseUrl, decideImport, parseCounts, placeTables, readStartSettings } from './plan.ts';
+import { databaseUrl, decideImport, parseCounts, placeTables, portProblem, readStartSettings } from './plan.ts';
 
 test('imports when all nine tables are missing', () => {
   assert.deepEqual(decideImport(new Map()), { kind: 'import' });
@@ -28,6 +28,15 @@ test('names every missing variable at once', () => {
   const result = readStartSettings({});
   assert.equal(result.ok, false);
   assert.equal(result.ok ? 0 : result.problems.length, 4);
+});
+
+test('names the fix when port 80 lies below the unprivileged limit', () => {
+  assert.match(portProblem('80', 1024) ?? '', /ip_unprivileged_port_start=80/);
+});
+
+test('lets a port at or above the limit through', () => {
+  assert.equal(portProblem('80', 80), undefined);
+  assert.equal(portProblem('8080', 1024), undefined);
 });
 
 test('percent-encodes a password that holds an @', () => {

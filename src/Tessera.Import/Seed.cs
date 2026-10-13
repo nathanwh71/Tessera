@@ -78,16 +78,16 @@ public static class Seed
         }
         catch (JsonException error)
         {
-            // System.Text.Json reports bad JSON by throwing; this is the one place that catches it.
+            // System.Text.Json reports text that is not JSON by throwing, so the parse alone sits in a try.
             return Refuse<ImmutableArray<Place>>($"The file is not valid JSON: {error.Message}");
         }
     }
 
     private static Result<ImmutableArray<Place>, ImportError> Read(JsonElement root, AreaBox box) =>
-        from collection in root.ValueKind == JsonValueKind.Object
-                           && root.TryGetProperty("type", out var type) && type.ValueEquals("FeatureCollection")
-                           && root.TryGetProperty("features", out var features) && features.ValueKind == JsonValueKind.Array
-            ? Result.Ok<JsonElement, ImportError>(features)
+        from collection in IsText(Child(root, "type"), "FeatureCollection")
+            ? Child(root, "features")
+                .Bind(features => features.ValueKind == JsonValueKind.Array ? Option.Some(features) : Option.None<JsonElement>())
+                .OrRefuse(new ImportError("The file must be a GeoJSON FeatureCollection with a list of features."))
             : Refuse<JsonElement>("The file must be a GeoJSON FeatureCollection with a list of features.")
         from _ in CheckCrs(root)
         from places in collection.EnumerateArray().Select((feature, index) => (feature, index))
@@ -98,27 +98,21 @@ public static class Seed
         select unique;
 
     private static Result<bool, ImportError> CheckCrs(JsonElement root) =>
-        !root.TryGetProperty("crs", out var crs)
-        || (crs.TryGetProperty("properties", out var properties)
-            && properties.TryGetProperty("name", out var name)
-            && name.ValueKind == JsonValueKind.String
-            && Wgs84Names.Contains(name.GetString() ?? ""))
+        Child(root, "crs").Match(
+            crs => Text(Child(crs, "properties").OrElse(default), "name").Match(name => Wgs84Names.Contains(name), () => false),
+            () => true)
             ? Result.Ok<bool, ImportError>(true)
             : Refuse<bool>("The file names another coordinate system. Give positions as longitude and latitude in WGS 84, in degrees, as RFC 7946 sets.");
 
     private static Result<Place, ImportError> ReadFeature(JsonElement feature, int index, AreaBox box)
     {
-        var properties = feature.TryGetProperty("properties", out var found) && found.ValueKind == JsonValueKind.Object
-            ? found
-            : default;
-        var id = Text(feature, "id").Match(text => Option.Some(text), () => properties.ValueKind == JsonValueKind.Object ? Text(properties, "id") : Option.None<string>());
+        var properties = Child(feature, "properties").Bind(found => found.ValueKind == JsonValueKind.Object ? Option.Some(found) : Option.None<JsonElement>());
+        var id = Text(feature, "id").Match(Option.Some, () => properties.Bind(found => Text(found, "id")));
         var name = id.Match(text => $"Feature '{text}' (number {index + 1} in the file)", () => $"Feature number {index + 1} in the file");
 
         return
             from identity in id.OrRefuse(new ImportError($"{name} has no id."))
-            from props in properties.ValueKind == JsonValueKind.Object
-                ? Result.Ok<JsonElement, ImportError>(properties)
-                : Refuse<JsonElement>($"{name} has no properties.")
+            from props in properties.OrRefuse(new ImportError($"{name} has no properties."))
             from position in Point(feature).OrRefuse(new ImportError($"{name} is not a point."))
             from layer in Text(props, "layer").Bind(layer => Layers.GroupOfLayer.ContainsKey(layer) ? Option.Some(layer) : Option.None<string>())
                 .OrRefuse(new ImportError($"{name} names no layer of the nine."))
@@ -128,32 +122,51 @@ public static class Seed
                 ? Result.Ok<bool, ImportError>(true)
                 // Swapped longitude and latitude, or metres in place of degrees, land far outside the box (US-24 c4).
                 : Refuse<bool>($"{name} lies outside the area's box at [{position.Longitude}, {position.Latitude}]. Check that positions are longitude then latitude, in degrees.")
-            from values in props.TryGetProperty(GeometryColumn, out _)
-                ? Refuse<ImmutableSortedDictionary<string, PropertyValue>>($"{name} has a property named '{GeometryColumn}', the name of the geometry column.")
-                : Result.Ok<ImmutableSortedDictionary<string, PropertyValue>, ImportError>(Values(props))
+            from values in Values(props, name)
             select new Place(identity, groupName, layer, position.Longitude, position.Latitude, values);
     }
 
     private static Option<(double Longitude, double Latitude)> Point(JsonElement feature) =>
-        feature.TryGetProperty("geometry", out var geometry)
-        && geometry.ValueKind == JsonValueKind.Object
-        && geometry.TryGetProperty("type", out var type) && type.ValueEquals("Point")
-        && geometry.TryGetProperty("coordinates", out var coordinates)
-        && coordinates.ValueKind == JsonValueKind.Array && coordinates.GetArrayLength() >= 2
-        && coordinates[0].TryGetDouble(out var longitude) && coordinates[1].TryGetDouble(out var latitude)
-            ? Option.Some((longitude, latitude))
-            : Option.None<(double, double)>();
+        from geometry in Child(feature, "geometry")
+        from coordinates in IsText(Child(geometry, "type"), "Point") ? Child(geometry, "coordinates") : Option.None<JsonElement>()
+        from pair in coordinates.ValueKind == JsonValueKind.Array && coordinates.GetArrayLength() >= 2
+            ? Option.Some((coordinates[0], coordinates[1]))
+            : Option.None<(JsonElement, JsonElement)>()
+        from longitude in Number(pair.Item1)
+        from latitude in Number(pair.Item2)
+        select (longitude, latitude);
+
+    /// <summary>
+    /// A member of a JSON object, or nothing. System.Text.Json throws if asked for a member of
+    /// something that is not an object, such as a number or null, so every lookup comes through here.
+    /// </summary>
+    private static Option<JsonElement> Child(JsonElement element, string name) =>
+        element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out var value)
+            ? Option.Some(value)
+            : Option.None<JsonElement>();
+
+    private static bool IsText(Option<JsonElement> element, string expected) =>
+        element.Match(found => found.ValueKind == JsonValueKind.String && found.ValueEquals(expected), () => false);
+
+    private static Option<double> Number(JsonElement element) =>
+        element.ValueKind == JsonValueKind.Number && element.TryGetDouble(out var number) ? Option.Some(number) : Option.None<double>();
 
     private static Option<string> Text(JsonElement element, string name) =>
-        element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String && value.GetString() is { Length: > 0 } text
-            ? Option.Some(text)
-            : Option.None<string>();
+        Child(element, name).Bind(value =>
+            value.ValueKind == JsonValueKind.String && value.GetString() is { Length: > 0 } text ? Option.Some(text) : Option.None<string>());
 
-    // Every property but the id becomes a column; the id is the primary key instead.
-    private static ImmutableSortedDictionary<string, PropertyValue> Values(JsonElement properties) =>
-        properties.EnumerateObject()
-            .Where(property => property.Name != "id" && property.Name.Length > 0)
-            .ToImmutableSortedDictionary(property => property.Name, property => Value(property.Value), StringComparer.Ordinal);
+    // Every property but the id becomes a column; the id is the primary key instead. JSON allows
+    // one name twice in an object, but a table cannot hold two columns of one name.
+    private static Result<ImmutableSortedDictionary<string, PropertyValue>, ImportError> Values(JsonElement properties, string feature)
+    {
+        var members = properties.EnumerateObject().Where(property => property.Name != "id" && property.Name.Length > 0).ToImmutableArray();
+        return members.Any(property => property.Name == GeometryColumn)
+            ? Refuse<ImmutableSortedDictionary<string, PropertyValue>>($"{feature} has a property named '{GeometryColumn}', the name of the geometry column.")
+            : members.Select(property => property.Name).Distinct(StringComparer.Ordinal).Count() != members.Length
+                ? Refuse<ImmutableSortedDictionary<string, PropertyValue>>($"{feature} names one property twice.")
+                : Result.Ok<ImmutableSortedDictionary<string, PropertyValue>, ImportError>(
+                    members.ToImmutableSortedDictionary(property => property.Name, property => Value(property.Value), StringComparer.Ordinal));
+    }
 
     private static PropertyValue Value(JsonElement value) => value.ValueKind switch
     {

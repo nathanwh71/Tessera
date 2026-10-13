@@ -91,7 +91,8 @@ public static class TileRoutes
         LayerCatalogue catalogue, Database database, TileSettings settings, string layerId, int z, int x, int y, CancellationToken cancel)
     {
         var request =
-            from layer in catalogue.Find(layerId).OrRefuse(Problems.NotFound($"No layer is named '{layerId}'."))
+            // The detail never repeats the request's layer id: an answer should not echo what a stranger sent.
+            from layer in catalogue.Find(layerId).OrRefuse(Problems.NotFound("No published layer has that name."))
             from tile in TileAddress.Of(z, x, y).MapError(Problems.BadRequest)
             select TileQuery.For(layer, tile, settings);
 
@@ -100,7 +101,7 @@ public static class TileRoutes
                 bytes => Results.Bytes(bytes.OrElse([]), ContentType),
                 // A table revoked since start-up answers 42501; it has left, so it is not found (US-03 c6).
                 error => error.IsMissingTable
-                    ? Problems.NotFound($"No layer is named '{layerId}'.")
+                    ? Problems.NotFound("No published layer has that name.")
                     : Problems.Answer(StatusCodes.Status500InternalServerError, Option.None<string>())),
             refusal => Task.FromResult(refusal)).ConfigureAwait(false);
     }

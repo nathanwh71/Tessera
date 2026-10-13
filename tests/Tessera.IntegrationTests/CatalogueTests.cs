@@ -80,6 +80,6 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
 
         var answer = await TileRoutes.Serve(catalogue, reader, Tiles, "stage.revoked", 0, 0, 0, TestContext.Current.CancellationToken);
 
-        Assert.Equal(404, await Http.Status(answer));
+        Assert.Equal((404, "application/problem+json"), await Http.StatusAndType(answer));
     }
 }

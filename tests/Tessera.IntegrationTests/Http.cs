@@ -12,7 +12,10 @@ namespace Tessera.IntegrationTests;
 public static class Http
 {
     /// <summary>Runs an answer against an empty request and returns its status code.</summary>
-    public static async Task<int> Status(IResult answer)
+    public static async Task<int> Status(IResult answer) => (await StatusAndType(answer)).Status;
+
+    /// <summary>Runs an answer against an empty request and returns its status code and content type.</summary>
+    public static async Task<(int Status, string Type)> StatusAndType(IResult answer)
     {
         var context = new DefaultHttpContext
         {
@@ -20,7 +23,7 @@ public static class Http
         };
         context.Response.Body = new MemoryStream();
         await answer.ExecuteAsync(context);
-        return context.Response.StatusCode;
+        return (context.Response.StatusCode, context.Response.ContentType ?? "");
     }
 
     /// <summary>A port no other program is using, so each test's service has its own.</summary>
