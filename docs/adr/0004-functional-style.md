@@ -57,7 +57,7 @@ F# ***makes*** ***illegal*** ***states*** unrepresentable with its ***types***, 
 | A record in place of a long list of arguments | Any ***call*** that ***takes*** ***several*** ***values*** of ***one*** ***type***, which a ***reader*** would ***tell*** ***apart*** by their ***place*** ***alone***; the Java ***build's*** `PoolSettings` ***names*** the ***five*** ***numbers*** of a ***pool*** and what it may do | ***Arguments*** swapped by ***mistake***, which compile ***because*** they ***share*** a ***type*** |
 | A single-case type: a `readonly record struct` round one value | `Zoom`, for `TileAddress.Z` and the ***settings***' ***range*** of ***levels*** | A ***column*** or a ***row*** ***passed*** where a ***level*** ***belongs*** |
 
-C# 14 has no ***closed*** ***unions***, so a ***closed*** ***record*** ***set*** ***gains*** a `Match` ***method***, as `Result` has, and ***code*** ***takes*** it ***apart*** ***through*** `Match`: the compiler then ***requires*** a ***function*** for every ***case***. Wrap ***only*** a ***value*** that ***travels*** ***between*** ***functions*** and could be mistaken for another; wrapping every ***number*** ***adds*** noise and ***catches*** ***nothing***.
+C# 14 has no ***closed*** ***unions***, so a ***closed*** ***record*** ***set*** ***gains*** a `Match` ***method***, as `Result` has, and ***code*** ***takes*** it ***apart*** ***through*** `Match`: the compiler then ***requires*** a ***function*** for every ***case***. An ArchUnitNET ***test***, `Only_match_takes_option_result_and_page_apart`, ***fails*** the ***build*** if any ***code*** ***outside*** a ***type*** ***names*** ***one*** of its ***cases***, as a `switch` or an `is` would (***added*** 14 ***October*** 2026). Wrap ***only*** a ***value*** that ***travels*** ***between*** ***functions*** and could be mistaken for another; wrapping every ***number*** ***adds*** noise and ***catches*** ***nothing***.
 
 ## The map and the scripts
 
@@ -82,7 +82,7 @@ Dapper, System.Text.Json and ASP.NET Core ***speak*** ***nullable*** ***types***
 
 ## Consequences
 
-- C# 14 has no ***closed*** ***unions***, so `Match` ***takes*** the ***place*** of F#'s ***exhaustive*** `match`; the compiler ***cannot*** ***warn*** of a ***missing*** ***case*** in a `switch` on these ***types***.
+- C# 14 has no ***closed*** ***unions***, so `Match` ***takes*** the ***place*** of F#'s ***exhaustive*** `match`; the compiler ***cannot*** ***warn*** of a ***missing*** ***case*** in a `switch` on these ***types***. The ***architecture*** ***test*** ***closes*** that ***gap***: a `switch` on a ***case*** ***outside*** its ***type*** ***fails*** the ***build***.
 - ***Two*** ***ways*** to ***say*** '***missing***' ***exist***, ***kept*** ***apart*** by a ***rule*** that ***review*** ***guards***.
 - `Option` and `Result` ***need*** ***tests*** of their own, ***including*** FsCheck ***property*** ***tests*** of the ***laws*** `Map` and `Bind` must ***keep***.
 - ***Each*** ***closed*** ***record*** ***set*** ***needs*** its ***own*** `Match`, a ***few*** ***lines*** the compiler ***cannot*** ***write*** for it.

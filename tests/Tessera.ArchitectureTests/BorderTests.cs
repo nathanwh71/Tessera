@@ -64,4 +64,23 @@ public sealed class BorderTests
         Types().That().ResideInAssembly(typeof(Kernel.Option).Assembly)
             .Should().NotDependOnAny(Modules)
             .Check(Tessera);
+
+    // The two cases of Option, the two of Result and the three of Page, which only their own Match may take apart.
+    private static readonly IObjectProvider<IType> Cases =
+        Types().That().ResideInAssembly(typeof(Kernel.Option).Assembly, typeof(Map.Page).Assembly)
+            .And().HaveNameMatching("^(Some|None|Ok|Refused|Shown|Off|Missing)$");
+
+    // ADR 0004: no code outside a type takes its cases apart with a switch or an "is"; it calls
+    // Match, so a new case cannot be forgotten anywhere. The provider is counted first, since a rule
+    // over no types would pass for nothing.
+    [Fact]
+    public void Only_match_takes_option_result_and_page_apart()
+    {
+        Assert.Equal(7, Cases.GetObjects(Tessera).Count());
+        Types().That().ResideInNamespaceMatching(@"^Tessera(\.|$)")
+            .And().DoNotResideInAssembly(typeof(Kernel.Option).Assembly)
+            .And().AreNot(typeof(Map.Page)).And().AreNot(Cases)
+            .Should().NotDependOnAny(Cases)
+            .Check(Tessera);
+    }
 }
