@@ -16,6 +16,7 @@ export type StartSettings = {
   readonly readerPassword: string;
   readonly publisherPassword: string;
   readonly httpPort: string;
+  readonly servicePort: string;
   readonly database: DatabasePlace;
 };
 
@@ -41,6 +42,7 @@ export function readStartSettings(environment: Readonly<Record<string, string | 
       readerPassword: environment['TESSERA_READER_PASSWORD'] ?? '',
       publisherPassword: environment['TESSERA_PUBLISHER_PASSWORD'] ?? '',
       httpPort: environment['TESSERA_HTTPPORT'] ?? '',
+      servicePort: environment['TESSERA_SERVICE_PORT'] || '7800',
       database: readDatabasePlace(environment),
     });
 }
@@ -85,17 +87,23 @@ export function databaseUrl(user: string, password: string, database: DatabasePl
 }
 
 /**
- * Ubuntu lets an ordinary user open a port from ip_unprivileged_port_start upwards, 1024 by
- * default, so the service cannot answer on port 80 until that limit drops. This names the problem
- * and its fix before the service tries and fails (US-35).
+ * The arguments for "docker run" that start Nginx in front of the service (ADR 0008). Nginx shares
+ * the machine's own network, so it reaches the service at 127.0.0.1 and opens the office port
+ * itself; it runs as root inside its container, so port 80 needs no change to Ubuntu. The image
+ * fills the two ports into the template when it starts.
  */
-export function portProblem(port: string, unprivilegedStart: number): string | undefined {
-  const number = Number.parseInt(port, 10);
-  return number < unprivilegedStart
-    ? `Port ${number} lies below ${unprivilegedStart}, the lowest port an ordinary user may open. Run once:\n` +
-      `  echo "net.ipv4.ip_unprivileged_port_start=${number}" | sudo tee /etc/sysctl.d/90-tessera.conf && sudo sysctl --system`
-    : undefined;
+export function nginxArguments(container: string, httpPort: string, servicePort: string, template: string): readonly string[] {
+  return [
+    '--detach', '--name', container, '--restart', 'unless-stopped', '--network', 'host',
+    '--env', `TESSERA_HTTPPORT=${httpPort}`,
+    '--env', `TESSERA_SERVICE_PORT=${servicePort}`,
+    '--volume', `${template}:/etc/nginx/templates/default.conf.template:ro`,
+    nginxImage,
+  ];
 }
+
+/** The Nginx image both the start-up script and the browser tests run. */
+export const nginxImage = 'nginx:1.29-alpine';
 
 /** What to do with the places: load them, leave them, or stop because the tables disagree. */
 export type ImportDecision =
