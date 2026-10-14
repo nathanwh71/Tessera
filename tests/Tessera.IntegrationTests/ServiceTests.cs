@@ -23,7 +23,6 @@ public sealed class ServiceFixture : IAsyncLifetime
     public HttpClient Client { get; private set; } = new();
 
     private WebApplication? _app;
-    private Database? _reader;
 
     public async ValueTask InitializeAsync()
     {
@@ -42,11 +41,14 @@ public sealed class ServiceFixture : IAsyncLifetime
             GRANT SELECT ON stage.cafes_3857 TO tessera_reader;
             """);
 
-        _reader = Sql.Database.Open(Database.Reader);
-        var settings = new ServiceSettings { Http = new HttpSettings { Port = Port }, Tiles = new TileSettings { Buffer = 64 } };
 
         // The built map, copied beside the tests by the service's project reference (US-23 c4).
-        _app = TesseraService.Build(settings, _reader, Path.Combine(AppContext.BaseDirectory, "wwwroot"));
+        _app = TesseraService.Build(new Dictionary<string, string?>
+        {
+            ["Urls"] = $"http://127.0.0.1:{Port}",
+            ["DATABASE_URL"] = Database.ReaderUrl,
+            ["Tiles:Buffer"] = "64",
+        });
         await _app.StartAsync();
         Client = new HttpClient { BaseAddress = new Uri($"http://127.0.0.1:{Port}") };
 
@@ -67,8 +69,6 @@ public sealed class ServiceFixture : IAsyncLifetime
         Client.Dispose();
         if (_app is not null)
             await _app.DisposeAsync();
-        if (_reader is not null)
-            await _reader.DisposeAsync();
         await Database.DisposeAsync();
     }
 }
@@ -246,7 +246,7 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         var port = Http.FreePort();
         var start = new System.Diagnostics.ProcessStartInfo("dotnet") { RedirectStandardOutput = true, RedirectStandardError = true };
         start.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "Tessera.dll"));
-        start.Environment["TESSERA__HTTP__PORT"] = port.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        start.Environment["Urls"] = $"http://127.0.0.1:{port}";
         start.Environment["DATABASE_URL"] = service.Database.ReaderUrl;
         using var program = System.Diagnostics.Process.Start(start)!;
         try

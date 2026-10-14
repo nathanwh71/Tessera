@@ -1,3 +1,6 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Tessera;
 using Tessera.Import;
 using Tessera.Settings;
@@ -19,26 +22,41 @@ return args switch
 // may start in either order; until the list of layers loads, tiles answer 503 (N-23 c4).
 static async Task<int> Serve()
 {
-    var loaded = SettingsLoader.Load(SettingsLoader.ReaderDatabase);
-    if (loaded.IsFailure)
-        return Fail(loaded.Error);
+    Microsoft.AspNetCore.Builder.WebApplication app;
+    try
+    {
+        app = TesseraService.Build();
+    }
+    catch (Exception error) when (error is OptionsValidationException or AggregateException or InvalidOperationException)
+    {
+        return Fail(TesseraSettings.Problems(error));
+    }
 
-    await using var database = Database.Open(loaded.Value.Database, loaded.Value.Settings.Database);
-    await TesseraService.Build(loaded.Value.Settings, database, Path.Combine(AppContext.BaseDirectory, "wwwroot")).RunAsync();
+    await app.RunAsync();
     return 0;
 }
 
-// Loads one file of places and prints how many places each layer received.
+// Loads one file of places and prints how many places each layer received. It needs no web server,
+// only the settings, so it builds a plain host to read and check them.
 static async Task<int> Import(string path)
 {
-    var loaded = SettingsLoader.Load(SettingsLoader.PublisherDatabase);
-    if (loaded.IsFailure)
-        return Fail(loaded.Error);
+    var builder = Host.CreateApplicationBuilder();
+    TesseraSettings.AddFile(builder.Configuration);
+    TesseraSettings.Register(builder.Services, builder.Configuration, TesseraSettings.PublisherDatabase);
+    using var host = builder.Build();
+    try
+    {
+        TesseraSettings.Check(host.Services);
+    }
+    catch (Exception error) when (error is OptionsValidationException or AggregateException or InvalidOperationException)
+    {
+        return Fail(TesseraSettings.Problems(error));
+    }
     if (!File.Exists(path))
         return Fail([$"No file at {path}."]);
 
-    await using var database = Database.Open(loaded.Value.Database);
-    var imported = await Importer.Run(database, await File.ReadAllTextAsync(path), loaded.Value.Settings.Area);
+    await using var database = Database.Open(host.Services.GetRequiredService<IOptions<DatabaseConnection>>().Value.Text);
+    var imported = await Importer.Run(database, await File.ReadAllTextAsync(path), host.Services.GetRequiredService<IOptions<AreaSettings>>().Value);
     if (imported.IsFailure)
         return Fail([imported.Error.Message]);
 

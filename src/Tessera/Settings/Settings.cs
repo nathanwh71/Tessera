@@ -1,27 +1,16 @@
-using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations;
-using System.Net;
 using CSharpFunctionalExtensions;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.Json;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Npgsql;
 
 // The Settings module: every setting the service and the import read, with its default and its
-// limits (US-00, ADR 0003). ASP.NET Core's configuration reads tessera.json and the environment and
-// fills these records in; SettingsLoader checks them and names every problem at once.
+// limits (US-00, ADR 0003). ASP.NET Core reads tessera.json and the environment, fills these records
+// in, and checks them all when the program starts.
 
 namespace Tessera.Settings;
-
-/// <summary>Where the service listens. Nginx, in front, reaches it on this machine alone (ADR 0008).</summary>
-public sealed record HttpSettings : IValidatableObject
-{
-    public string Host { get; init; } = "127.0.0.1";
-
-    [Range(1, 65_535)]
-    public int Port { get; init; } = 7800;
-
-    public IEnumerable<ValidationResult> Validate(ValidationContext context) =>
-        IPAddress.TryParse(Host, out _) ? [] : [new ValidationResult("Host must be an address such as 127.0.0.1.")];
-}
 
 /// <summary>
 /// The limits on the service's use of the database (N-22). A pool keeps a few connections open for
@@ -131,109 +120,93 @@ public sealed record AreaSettings : IValidatableObject
         MinLongitude < MaxLongitude && MinLatitude < MaxLatitude ? [] : [new ValidationResult("The box must run west to east and south to north.")];
 }
 
-/// <summary>Everything in tessera.json. Each section may be left out, and then takes its defaults.</summary>
-public sealed record ServiceSettings
+/// <summary>The database's connection, from the URL in <see cref="Variable"/>, checked at start-up.</summary>
+public sealed class DatabaseConnection : IValidatableObject
 {
-    public HttpSettings Http { get; init; } = new();
+    /// <summary>The environment variable that held the URL, named in any problem.</summary>
+    public string Variable { get; set; } = TesseraSettings.ReaderDatabase;
 
-    public DatabaseSettings Database { get; init; } = new();
+    public string? Url { get; set; }
 
-    public TileSettings Tiles { get; init; } = new();
+    /// <summary>Npgsql's connection string, or empty text while the URL fails the check.</summary>
+    public string Text => TesseraSettings.ConnectionString(Url).GetValueOrDefault("");
 
-    public MapSettings Map { get; init; } = new();
-
-    public CatalogueSettings Catalogue { get; init; } = new();
-
-    public AreaSettings Area { get; init; } = new();
+    public IEnumerable<ValidationResult> Validate(ValidationContext context) =>
+        TesseraSettings.ConnectionString(Url) is { IsFailure: true } refused ? [new ValidationResult($"{Variable}: {refused.Error}")] : [];
 }
 
-/// <summary>The settings and the database's connection string, both checked.</summary>
-public sealed record LoadedSettings(ServiceSettings Settings, string Database);
-
 /// <summary>
-/// Reads tessera.json and the environment, checks every value, and names every problem at once, so
-/// one failed start tells the maintainer everything to fix (US-00 c4).
+/// Reads tessera.json and the environment through ASP.NET Core's own configuration, binds each
+/// section to its record, and checks every value when the program starts (US-00 c4).
 /// </summary>
-public static class SettingsLoader
+public static class TesseraSettings
 {
-    /// <summary>The path of the settings file, when it is not tessera.json beside the program.</summary>
-    public const string ConfigVariable = "TESSERA_CONFIG";
-
-    /// <summary>
-    /// A variable that starts with this overrides one key: <c>TESSERA__TILES__CACHESECONDS=0</c> sets
-    /// <c>Tiles.CacheSeconds</c>. Each '__' steps down a level.
-    /// </summary>
-    public const string OverridePrefix = "TESSERA__";
-
     /// <summary>The database URL the service reads tiles with; pg_tileserv uses the same name.</summary>
     public const string ReaderDatabase = "DATABASE_URL";
 
     /// <summary>The database URL the import writes places with.</summary>
     public const string PublisherDatabase = "TESSERA_PUBLISHER_DATABASE_URL";
 
-    /// <summary>
-    /// Reads the real file and environment. <paramref name="databaseVariable"/> names the variable
-    /// that holds the database URL: the service's or the import's.
-    /// </summary>
-    public static Result<LoadedSettings, ImmutableArray<string>> Load(string databaseVariable)
-    {
-        var path = Environment.GetEnvironmentVariable(ConfigVariable) is { Length: > 0 } named
-            ? named
-            : Path.Combine(AppContext.BaseDirectory, "tessera.json");
-        try
-        {
-            var configuration = new ConfigurationBuilder()
-                .AddJsonFile(path, optional: true)
-                .AddEnvironmentVariables(OverridePrefix)
-                .Build();
-            return Read(configuration, databaseVariable, Environment.GetEnvironmentVariable(databaseVariable));
-        }
-        catch (Exception error) when (error is FormatException or InvalidDataException)
-        {
-            // A file that is not JSON fails as it is read.
-            return Result.Failure<LoadedSettings, ImmutableArray<string>>([$"{path}: {error.Message}"]);
-        }
-    }
+    // The sections tessera.json may hold. Urls and Logging are ASP.NET Core's own.
+    private static readonly string[] Sections = ["Database", "Tiles", "Map", "Catalogue", "Area", "Logging", "Urls"];
 
     /// <summary>
-    /// Checks the settings in <paramref name="configuration"/> and the database URL. A key the
-    /// service does not read is refused: it is most often a misspelling of one it does.
+    /// Adds tessera.json, beside the program, then the environment again, so a variable such as
+    /// <c>Tiles__CacheSeconds=0</c> wins over the file; each '__' steps down a level.
     /// </summary>
-    public static Result<LoadedSettings, ImmutableArray<string>> Read(IConfiguration configuration, string databaseVariable, string? databaseUrl)
+    public static void AddFile(IConfigurationBuilder configuration) =>
+        configuration.AddJsonFile(Path.Combine(AppContext.BaseDirectory, "tessera.json"), optional: true).AddEnvironmentVariables();
+
+    /// <summary>
+    /// Binds each section to its record, with the record's own limits, and the database URL from
+    /// <paramref name="databaseVariable"/>. A key the service does not read is refused, since it is
+    /// most often a misspelling; so is a section.
+    /// </summary>
+    public static void Register(IServiceCollection services, IConfiguration configuration, string databaseVariable)
     {
-        var problems = ImmutableArray.CreateBuilder<string>();
-        var settings = new ServiceSettings();
-        try
-        {
-            settings = configuration.Get<ServiceSettings>(binder => binder.ErrorOnUnknownConfiguration = true) ?? settings;
-        }
-        catch (InvalidOperationException error)
-        {
-            problems.Add(error.Message);
-        }
+        Section<DatabaseSettings>(services, "Database");
+        Section<TileSettings>(services, "Tiles");
+        Section<MapSettings>(services, "Map");
+        Section<CatalogueSettings>(services, "Catalogue");
+        Section<AreaSettings>(services, "Area");
+        services.AddOptions<DatabaseConnection>()
+            .Configure(connection => (connection.Variable, connection.Url) = (databaseVariable, configuration[databaseVariable]))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
 
-        problems.AddRange(Check("Http", settings.Http));
-        problems.AddRange(Check("Database", settings.Database));
-        problems.AddRange(Check("Tiles", settings.Tiles));
-        problems.AddRange(Check("Catalogue", settings.Catalogue));
-        problems.AddRange(Check("Area", settings.Area));
-
-        var database = ConnectionString(databaseUrl);
-        if (database.IsFailure)
-            problems.Add($"{databaseVariable}: {database.Error}");
-
-        return problems.Count == 0
-            ? Result.Success<LoadedSettings, ImmutableArray<string>>(new LoadedSettings(settings, database.Value))
-            : Result.Failure<LoadedSettings, ImmutableArray<string>>(problems.ToImmutable());
+        // The sections the JSON itself names; the environment holds many other names, all left alone.
+        var unknown = ((IConfigurationRoot)configuration).Providers
+            .Where(provider => provider is JsonConfigurationProvider or JsonStreamConfigurationProvider)
+            .SelectMany(provider => provider.GetChildKeys([], null))
+            .Where(name => !Sections.Contains(name, StringComparer.OrdinalIgnoreCase))
+            .Distinct()
+            .ToArray();
+        services.AddOptions<SectionCheck>()
+            .Validate(_ => unknown.Length == 0, $"tessera.json: no section is named {string.Join(", ", unknown.Select(name => $"'{name}'"))}.")
+            .ValidateOnStart();
     }
 
-    // The attributes on each record, such as [Range], and its own Validate method.
-    private static IEnumerable<string> Check(string section, object values)
+    private static void Section<T>(IServiceCollection services, string name) where T : class =>
+        services.AddOptions<T>()
+            .BindConfiguration(name, binder => binder.ErrorOnUnknownConfiguration = true)
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+    private sealed class SectionCheck;
+
+    /// <summary>Checks every section at once; throws with every problem found.</summary>
+    public static void Check(IServiceProvider services) => services.GetRequiredService<IStartupValidator>().Validate();
+
+    /// <summary>
+    /// Each problem a failed check names: a value out of its limits, from the record's checks, or a
+    /// key that will not bind, from the binder.
+    /// </summary>
+    public static IEnumerable<string> Problems(Exception error) => error switch
     {
-        var results = new List<ValidationResult>();
-        Validator.TryValidateObject(values, new ValidationContext(values), results, validateAllProperties: true);
-        return results.Select(result => $"{section}: {result.ErrorMessage}");
-    }
+        OptionsValidationException failed => failed.Failures,
+        AggregateException many => many.InnerExceptions.SelectMany(Problems),
+        _ => [error.Message],
+    };
 
     /// <summary>
     /// Turns <c>postgresql://user:password@host:port/database</c> into Npgsql's connection string;

@@ -64,7 +64,7 @@ try {
   running = $({
     nothrow: true,
     quiet: true,
-    env: { ...process.env, DATABASE_URL: url('tessera_reader', reader), TESSERA__HTTP__PORT: String(servicePort), TESSERA_CONFIG: resolve('tessera.json') },
+    env: { ...process.env, DATABASE_URL: url('tessera_reader', reader), Urls: `http://127.0.0.1:${servicePort}` },
   })`dotnet ${service}`;
   await $`docker run ${nginxArguments(nginx, String(nginxPort), String(servicePort), resolve('nginx/default.conf.template'))}`;
   const base = `http://127.0.0.1:${nginxPort}`;
