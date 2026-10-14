@@ -67,11 +67,12 @@ public sealed class PoolTests(DatabaseFixture database) : IClassFixture<Database
         var hold = reader.Single<byte[]>(TileQueries.Tile(layer.Source, new TileCell(0, x, y), new TileLimits(10000, 64)), TestContext.Current.CancellationToken);
         await Task.Delay(300, TestContext.Current.CancellationToken);
 
-        using var limit = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-        limit.CancelAfter(TimeSpan.FromSeconds(1));
-        var ping = await reader.Ping(limit.Token);
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        var ping = await reader.Watch.Check(TestContext.Current.CancellationToken);
 
-        Assert.True(ping.Match(_ => true, _ => false));
+        // The watch pings on the ping pool, so a busy tile pool never makes it slow (N-28).
+        Assert.Equal(Ping.Answered, ping);
+        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(1), $"took {clock.Elapsed}");
         Assert.False(hold.IsCompleted, "the tile query should still hold its connection");
         await hold;
     }

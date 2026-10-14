@@ -80,10 +80,18 @@ public sealed class StartTests
             Assert.False(program.HasExited);
             answer.Dispose();
 
-            // N-25 c2: /health says DOWN, and names no fault.
+            // N-25 c2: /health says DOWN, and names no fault. N-28: it reads the watch, so it
+            // answers within a second; a tile is refused within half a second.
+            var clock = Stopwatch.StartNew();
             using var health = await client.GetAsync("/health", TestContext.Current.CancellationToken);
+            Assert.True(clock.Elapsed < TimeSpan.FromSeconds(1), $"/health took {clock.Elapsed}");
             Assert.Equal(System.Net.HttpStatusCode.ServiceUnavailable, health.StatusCode);
             Assert.Equal("""{"status":"DOWN"}""", await health.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+
+            clock.Restart();
+            using var again = await client.GetAsync("/food.cafes/0/0/0.pbf", TestContext.Current.CancellationToken);
+            Assert.True(clock.Elapsed < TimeSpan.FromMilliseconds(500), $"the tile took {clock.Elapsed}");
+            Assert.Equal(System.Net.HttpStatusCode.ServiceUnavailable, again.StatusCode);
         }
         finally
         {

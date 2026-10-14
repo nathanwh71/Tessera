@@ -17,17 +17,14 @@ namespace Tessera.Service;
 /// </summary>
 /// <remarks>
 /// Two checks must both pass: the list of layers has loaded at least once (N-23), and the database
-/// answers a ping within a second. The ping uses a pool of its own, so it never waits behind
-/// tiles, and a busy service still reports UP (N-26 c3), as the Java build's does. The answer names no check and no fault, so a stranger learns
+/// watch says it is up. The watch pings each second on a pool of its own, so it never waits behind
+/// tiles, and /health answers at once whatever the database's state (N-26 c3, N-28). The answer names no check and no fault, so a stranger learns
 /// nothing of the service's insides; the log holds the detail. It lives here, in the program,
 /// because it reads both the catalogue and the database, and no module may reference both.
 /// </remarks>
 public static class Health
 {
     public const string Path = "/health";
-
-    /// <summary>The longest the ping may take; a health check that hangs tells a watcher nothing.</summary>
-    public static readonly TimeSpan PingTimeout = TimeSpan.FromSeconds(1);
 
     public static IServiceCollection AddTesseraHealth(this IServiceCollection services, Database database) =>
         services.AddHealthChecks()
@@ -74,23 +71,13 @@ public static class Health
                 () => HealthCheckResult.Unhealthy("The list of layers is not ready yet.")));
     }
 
+    // The verdict of the database watch, read at no cost, so /health answers at once and never
+    // waits on a database that hangs (N-28). The watch pings on a pool of its own (N-26 c3).
     private sealed class DatabaseAnswers(Database database) : IHealthCheck
     {
-        public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
-        {
-            using var limit = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            limit.CancelAfter(PingTimeout);
-            try
-            {
-                return (await database.Ping(limit.Token).ConfigureAwait(false)).Match(
-                    _ => HealthCheckResult.Healthy(),
-                    error => HealthCheckResult.Unhealthy($"The database did not answer ({error.SqlState}): {error.Message}"));
-            }
-            catch (OperationCanceledException) when (limit.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
-            {
-                // Npgsql reports a cancelled wait by throwing, so the ping alone sits in a try.
-                return HealthCheckResult.Unhealthy($"The database did not answer within {PingTimeout.TotalSeconds} s.");
-            }
-        }
+        public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default) =>
+            Task.FromResult(database.Watch.Up
+                ? HealthCheckResult.Healthy()
+                : HealthCheckResult.Unhealthy("The database watch says the database is down."));
     }
 }

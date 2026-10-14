@@ -78,6 +78,9 @@ public static class TesseraService
                 error => log.LogWarning("Could not read the list of layers ({SqlState}): {Message}", error.SqlState, error.Message));
         });
         builder.Services.AddHostedService(services => new CatalogueRefresh(services.GetRequiredService<LiveCatalogue>(), settings.Catalogue.Refresh));
+        // The database watch pings each second from start-up, so a database that is down, or hangs,
+        // is answered 503 at once and reported DOWN (N-28).
+        builder.Services.AddHostedService(services => new DatabaseWatching(database, services.GetRequiredService<ILoggerFactory>().CreateLogger("Tessera.Database")));
         builder.Services.AddTesseraHealth(database);
 
         var app = builder.Build();
@@ -97,6 +100,24 @@ public static class TesseraService
 /// Runs the live catalogue's refresh loop for as long as the service runs (N-23). Until the first
 /// load succeeds it tries every five seconds, the same wait a 503 asks of a browser.
 /// </summary>
+/// <summary>Runs the database watch's loop (N-28) and logs each change of its verdict.</summary>
+internal sealed class DatabaseWatching(Database database, ILogger log) : BackgroundService
+{
+    private static readonly TimeSpan Every = TimeSpan.FromSeconds(1);
+
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        database.Watch.Changed += up =>
+        {
+            if (up)
+                log.LogInformation("The database answers again.");
+            else
+                log.LogWarning("The database is down; tile requests answer 503 until it answers again.");
+        };
+        return database.Watch.Run(Every, TimeProvider.System, stoppingToken);
+    }
+}
+
 internal sealed class CatalogueRefresh(LiveCatalogue catalogue, TimeSpan every) : BackgroundService
 {
     protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
