@@ -2,18 +2,17 @@
 
 # How to read this book
 
-> **In short.** This book takes you through every story of Tessera's .NET build, in the order you build them: 26 stories over 47 working days, from an empty folder to the end of the phase. Each chapter is one day, or one story that takes several. Each day ends with work you can show: tests that pass, and commits on GitHub.
+> **In short.** This book takes you through 20 stories of Tessera's .NET build, in the order you build them: 38 working days, from an empty folder to milestone M4. Each chapter is one day, or one story that takes several. Each day ends with work you can show: tests that pass, and commits on GitHub.
 
 Every chapter opens with its answer, then gives the reasons, then the detail. You can stop reading at any level and still know the main point. This order follows Barbara Minto's *Pyramid Principle*: the one idea first, then the few ideas that hold it up, then the facts under each.
 
-The book has five parts and two appendices, in the order you use them:
+The book has four parts and an appendix, in the order you use them:
 
 - **Part I**, chapters 1 to 10, covers the first nine days: the whole plan, the machine, and the four stories that reach milestone M1.
 - **Part II**, the tile API: US-07, S-01, S-06 and US-35, and milestone M2.
 - **Part III**, the map: US-23 and the seven UI stories, with milestone M3 in the middle.
-- **Part IV**, tiles that cost less: N-18 to N-20, then N-21 and milestone M4.
-- **Part V**, the Java way: N-22 to N-28, and milestone M5 on Friday 18 December 2026.
-- Appendices A and B list the planned differences between your work and the worked answer, the changes from the Java edition, and the words this book uses.
+- **Part IV**, tiles that cost less: N-18 to N-21, and milestone M4 on Friday 4 December 2026.
+- The appendix lists the words this book uses.
 
 ## The parts of each day
 
@@ -44,7 +43,7 @@ Panels with a label sit beside the main text. Each kind does one job.
 
 ## Grey words and bold italics
 
-Words from the Oxford lists are set in grey in the main text and the tables. They are the common English words every reader knows, so the grey shows how much of the book uses them. ***Important concepts*** are set in bold italics where the book explains them, with their meaning in plain words; Appendix B lists them all. Headings, panel labels, code, commands and test names stay plain.
+Words from the Oxford lists are set in grey in the main text and the tables. They are the common English words every reader knows, so the grey shows how much of the book uses them. ***Important concepts*** are set in bold italics where the book explains them, with their meaning in plain words; the appendix lists them all. Headings, panel labels, code, commands and test names stay plain.
 
 ## What you need to know already
 
@@ -116,9 +115,9 @@ Each story has a size in ***points***, a measure of how much work it holds. The 
 
 ## 1.3 The whole phase at a glance
 
-After the first ten days, the same rules carry you through the other 22 stories, in the order of `docs/user-stories/user-stories.md`. Each point takes one building day, and a review on the last Friday of each fortnight proves a milestone. Three stories take a day less than their points, because Nginx or day 2's settings already do most of their work: N-19, N-21 and N-28.
+After the first ten days, the same rules carry you through 16 more stories, in the order of `docs/user-stories/user-stories.md`. Each point takes one building day, and a review on the last Friday of each fortnight proves a milestone. Two stories take a day less than their points, because Nginx or day 2's settings already do most of their work: N-19 and N-21.
 
-*Exhibit 5 · Twenty-six stories, forty-seven days, five milestones*
+*Exhibit 5 · Twenty stories, thirty-eight days, four milestones*
 
 | Days | Dates | Story | Points | Ends with |
 |---|---|---|---|---|
@@ -144,15 +143,8 @@ After the first ten days, the same rules carry you through the other 22 stories,
 | 36 | Wed 2 Dec | N-20 Send tiles and files packed | 1 | |
 | 37 | Thu 3 Dec | N-21 Name the settings | 2 | |
 | 38 | Fri 4 Dec | Review | — | M4: the map is whole, and its tiles cost less |
-| 39 and 40 | 7 and 9 Dec | N-22 Ask the browser to wait | 2 | |
-| 41 and 42 | 10 and 11 Dec | N-23 Serve a new grant without a restart | 2 | |
-| 43 | Mon 14 Dec | N-24 Serve a crowd from one query | 1 | |
-| 44 | Tue 15 Dec | N-25 Tell a watcher the service is well | 1 | |
-| 45 | Wed 16 Dec | N-26 Wait in the order of arrival | 1 | |
-| 46 | Thu 17 Dec | N-28 Answer at once while the database hangs | 2 | |
-| 47 | Fri 18 Dec | Review | — | M5: the service behaves as the Java build did |
 
-Macau's public holidays, Monday 19 October, Monday 2 November and Tuesday 8 December, have no work. Two stories pause for a review: US-23 on 6 November and UI-10 on 20 November.
+Macau's public holidays, Monday 19 October and Monday 2 November, have no work. Two stories pause for a review: US-23 on 6 November and UI-10 on 20 November.
 
 ## 1.4 Two folders, never mixed
 
@@ -234,7 +226,7 @@ git diff --no-index ~/src/tessera/src/Tessera/Sql/Queries.cs \
   ~/src/tessera-rebuild/src/Tessera/Sql/Queries.cs                                # one pair, line by line
 ```
 
-Expect many differences in the first weeks. The worked answer holds all 26 stories, and your copy holds only the ones you have built. Read the differences in the files you changed today. Then write a note of three lines: what matched, what was different, and why. Appendix A lists the planned differences you will meet.
+Expect many differences in the first weeks. The worked answer holds all 26 stories, and your copy holds only the ones you have built. Read the differences in the files you changed today. Then write a note of three lines: what matched, what was different, and why.
 
 ### Close
 
@@ -637,7 +629,7 @@ The day builds three parts, from the smallest up: the row, the layer the catalog
 | Story | US-03 test 2 |
 | In the worked answer | `src/Tessera/Catalogue/Catalogue.cs`, down to `Find`; the first two tests of `tests/Tessera.UnitTests/CatalogueTests.cs` |
 | Look for | Why a layer's id is `schema.table`; why every name in a `Layer` is already quoted; why a lookup must match upper and lower case |
-| Leave for later | The query that reads the rows, and `Load` (day 6); the list that refreshes itself (N-23) |
+| Leave for later | The query that reads the rows, and `Load` (day 6); the list that refreshes itself (N-23, after this book) |
 | Done when | `Turns_a_row_into_a_layer_whose_id_is_schema_dot_name` and `Finds_a_layer_exactly_and_case_sensitively` pass |
 
 ## 6.1 A row is a record that cannot change
@@ -930,7 +922,7 @@ docker exec tessera-db psql -U postgres -d tessera -c '\dp food.*'
 The last part of the review looks back at the record, then forward to the next two weeks.
 
 1. **The trace.** Each criterion of the four stories should have a test, or a line in your notes that names the later story that proves it. Git finds each story's commits: `git log --oneline --grep 'US-03'`.
-2. **The differences.** Read the week's comparison notes beside appendix A. Keep each difference that has a reason, and remove any that has none.
+2. **The differences.** Read the week's comparison notes. Keep each difference that has a reason, and remove any that has none.
 3. **The progress chart.** The plan said seven points by the end of week 2, and seven are done. Write the real figure beside the plan in your notes.
 4. **Ink for the milestone.** Tag the commit that reaches M1, and push the tag: `git tag -a m1 -m 'M1: the places are published by grant'`, then `git push origin m1`.
 5. **Plan the next two weeks.** US-07, S-01, S-06 and US-35 follow, worth 6 points. One task depends on someone else: US-35 needs the office machine's fixed address. Ask for it in week 1, check that the answer has come, and ask again today if it has not. Write Monday's first test in your notes: `US-07: accepts a tile that exists`.
@@ -959,7 +951,7 @@ US-07, worth 2 points, has three parts, each used by the next. Monday builds the
 | Story | US-07 c1 to c5; S-01 test 2 |
 | In the worked answer | `src/Tessera/Tiles/Tiles.cs`; `src/Tessera/Sql/Queries.cs`, `Tile`; `src/Tessera/Problems.cs`; `tests/Tessera.UnitTests/TileTests.cs`; `tests/Tessera.UnitTests/approved/tile-query.sql`; `tests/Tessera.IntegrationTests/ServiceTests.cs` |
 | Look for | Why level z has 2 to the power z columns; why the query's text never changes with the tile; how the test decodes a tile to check each place's position |
-| Leave for later | The headers that let a browser keep a tile (N-18, N-19); the answer while the database is down (N-22) |
+| Leave for later | The headers that let a browser keep a tile (N-18, N-19); the answer while the database is down (N-22, after this book) |
 | Done when | `Places_each_feature_where_it_lies` and `Answers_an_unknown_layer_with_a_problem_document` pass |
 
 ## 11.1 Monday: a tile's address must exist
@@ -1036,7 +1028,7 @@ S-06, worth 1 point, in the .NET build rests on ***Nginx***, a web server that s
 | Story | S-06 c1 to c3, as changed on 14 October 2026 |
 | In the worked answer | `nginx/default.conf.template`; `scripts/lib/plan.ts`, `nginxArguments`; `scripts/lib/edge.ts`; `ServiceTests.Answers_an_unknown_address_with_a_problem_document`; ADR 0008 |
 | Look for | Why the 400 page is an internal location; why the answer never repeats the address; why the checks write requests byte by byte |
-| Leave for later | The cache, gzip and the stale tiles (N-19, N-20, N-28) |
+| Leave for later | The cache and gzip (N-19, N-20); the stale tiles (N-28, after this book) |
 | Done when | The raw checks get 400 for five malformed targets, and a clean tile passes |
 
 ## 13.1 Nginx in front
@@ -1095,13 +1087,13 @@ US-23 began on Wednesday and pauses for today; its chapter follows this one. Inc
 
 1. **The clean run.** `git clean -xdf -e .env`, then `npm test`.
 2. **M2 twice.** In each folder, `npm start`, then ask for a tile through Nginx from another machine, and send one malformed request with the raw helper.
-3. **The trace and the differences.** `git log --oneline --grep 'S-01'`, and the same for each story; read the comparison notes beside appendix A.
+3. **The trace and the differences.** `git log --oneline --grep 'S-01'`, and the same for each story; read the week's comparison notes.
 4. **The progress chart.** 13 points planned by today, with US-23 under way.
 5. **Ink.** `git tag -a m2 -m 'M2: the office reaches safe tiles on port 80'`, then `git push origin m2`.
 
 # Part III · The map
 
-> **In short.** Part III builds the map the office sees: one page, one model and one pure update, then levels, a calm design, shapes, a scale, clusters and names that never overlap. Eight stories, worth 16 points, end with milestone M4.
+> **In short.** Part III builds the map the office sees: one page, one model and one pure update, then levels, a calm design, shapes, a scale, clusters and names that never overlap. Eight stories, worth 16 points, take sixteen days, with milestones M2 and M3 along the way.
 
 # 16 · Days 16, 17 and 19 · Wednesday 4 to Monday 9 November: US-23, open the map of the area
 
@@ -1327,7 +1319,7 @@ The proof: the browser tests pass at every level. UI-17 is done, and so is the m
 
 # Part IV · Tiles that cost less
 
-> **In short.** Part IV makes each tile cheaper: a browser keeps it, Nginx answers a kept tile without a query, and every answer travels packed. Three stories, worth 4 points, take three days, because Nginx does most of the work.
+> **In short.** Part IV makes each tile cheaper: a browser keeps it, Nginx answers a kept tile without a query, and every answer travels packed; then the settings take their final names. Four stories, worth 6 points, take four days, because Nginx and day 2's settings do most of the work, and end with milestone M4.
 
 # 25 · Day 34 · Monday 30 November: N-18, let a browser keep a tile
 
@@ -1386,10 +1378,6 @@ Add `gzip on`, `gzip_proxied any`, `gzip_vary on` and the content types to pack.
 
 The proof: the checks pass, and the browser tests pass unchanged. N-20 is done.
 
-# Part V · The Java way
-
-> **In short.** Part V brings the Java build's behaviour across before it was archived: settings in one form, a 503 that asks the browser to wait, a list of layers that refreshes itself, one query for a crowd, a health check, a fair queue, and answers while the database hangs. Seven stories, worth 11 points, end with milestone M5 and the end of the phase.
-
 # 28 · Day 37 · Thursday 3 December: N-21, name the settings
 
 > **In short.** Today `tessera.json` takes its final form: sections, each time with its unit in its name, and any key overridden by an environment variable. Day 2 built most of it, so the story's 2 points take one day.
@@ -1409,180 +1397,20 @@ The proof: the tests pass, and the shipped file holds no password and listens on
 
 # 29 · Day 38 · Friday 4 December: the review, and M4
 
-> **In short.** Today you prove the map and the cheaper tiles from a clean start, show milestone M4, and plan the last two weeks. M4 reads 'The map is whole, and its tiles cost less'.
+> **In short.** Today you prove the map and the cheaper tiles from a clean start, and show milestone M4, the last of this book. M4 reads 'The map is whole, and its tiles cost less'.
 
-Follow day 9's steps: a clean run; M4 in both folders, by opening the map through Nginx, then asking for one tile twice and reading `X-Cache-Status`; the trace for UI-11, UI-17, N-18 to N-21; the progress chart at 33 points; and the tag `m4`, pushed. Tuesday 8 December is a holiday, the Immaculate Conception, so N-22 spans Monday and Wednesday.
+Follow day 9's steps: a clean run; M4 in both folders, by opening the map through Nginx, then asking for one tile twice and reading `X-Cache-Status`; the trace for UI-11, UI-17, N-18 to N-21; the progress chart at 33 points; and the tag `m4`, pushed.
 
-# 30 · Days 39 and 40 · Monday 7 and Wednesday 9 December: N-22, ask the browser to wait
-
-> **In short.** These two days make a database that cannot answer give 503 with `Retry-After: 5`, rather than 500, so the browser waits and asks again.
-
-*Exhibit 33 · Days 39 and 40 end when an unreachable database and a slow query each answer 503*
-
-| | |
-|---|---|
-| Goal | `DatabaseError.IsUnavailable`; `Problems.Unavailable`; the 503 in `TileServer.Answer` |
-| Story | N-22 c1 to c4 |
-| In the worked answer | `src/Tessera/Sql/Database.cs`, `DatabaseError`; `src/Tessera/Problems.cs`; `CatalogueTests.Answers_503_when_the_database_cannot_be_reached`; `CatalogueTests.Answers_503_when_a_query_runs_past_its_time` |
-| Done when | Both integration tests pass |
-
-Write the rule first: which ***SQLSTATE*** codes, PostgreSQL's five-character names for errors, mean that waiting may cure the fault. Class `08`, a failed connection, does; so do `57014`, a query past its time, `57P01` to `57P03`, a server stopping or starting, and `53300`, no room for another connection. Then `Problems.Unavailable`, and the two integration tests: one with the database stopped, one with a view that sleeps three seconds and a query limit of one.
-
-The proof: both tests answer 503 with `Retry-After: 5` and `no-store`. N-22 is done.
-
-# 31 · Days 41 and 42 · Thursday 10 and Friday 11 December: N-23, serve a newly granted table without a restart
-
-> **In short.** These two days make the list of layers reload itself every `Catalogue.RefreshSeconds`, so a grant publishes within half a minute, and keep the last good list when a reload fails.
-
-*Exhibit 34 · Days 41 and 42 end when a grant and a revoke each take effect within one refresh*
-
-| | |
-|---|---|
-| Goal | `LiveCatalogue`, a background service |
-| Story | N-23 c1, c2, c4 and c5, as changed on 14 October 2026 |
-| In the worked answer | `src/Tessera/Catalogue/Catalogue.cs`, `LiveCatalogue`; `tests/Tessera.UnitTests/CatalogueTests.cs`; `CatalogueTests.Sees_a_grant_and_a_revoke_within_one_refresh`; `StartTests.Starts_with_the_database_down_and_answers_503`; `docs/guides/reading-the-harder-files.md` |
-| Done when | `Sees_a_grant_and_a_revoke_within_one_refresh` and `Starts_with_the_database_down_and_answers_503` pass |
-
-Write the four unit tests first: no list until the first load succeeds; the last good list through a failure; tries until the database answers; loads once when the refresh is 0. Then `LiveCatalogue`, which swaps the whole list in one step, so a request sees the old list or the new, never half of each.
-
-> **From school.** Two parts of a program that run at once and share a value can see it half changed. `Interlocked.Exchange` swaps the whole list in one step the processor cannot split.
-
-The proof: the integration tests pass. N-23 is done.
-
-# 32 · Day 43 · Monday 14 December: N-24, serve a crowd from one query
-
-> **In short.** Today many requests for one new tile cost one query: Nginx's `proxy_cache_lock` lets the first request build it while the rest wait for the kept copy.
-
-*Exhibit 35 · Day 43 ends when twenty requests for a slow tile all answer in about the time of one*
-
-| | |
-|---|---|
-| Goal | `proxy_cache_lock` in Nginx, and a check under load |
-| Story | N-24, as changed on 14 October 2026 |
-| In the worked answer | `nginx/default.conf.template`; ADR 0008 |
-| Done when | Twenty requests at once for a view that sleeps three seconds all answer 200 in about three |
-
-Add `proxy_cache_lock on` and its timeout. Then try the story's test 2 through Nginx: a granted view that sleeps three seconds, twenty requests at once, and a pool of four. Without the lock, most would fail waiting for a connection.
-
-> **Key idea.** A crowd asks for the same new tile when the office opens the map at nine. One query, shared, keeps the database calm at the busiest minute of the day.
-
-The proof: all twenty answer 200. N-24 is done.
-
-# 33 · Day 44 · Tuesday 15 December: N-25, tell a watcher the service is well
-
-> **In short.** Today `/health` answers `UP` only when the service can serve tiles, `OUT_OF_SERVICE` while the list loads, and `DOWN` when the database fails, and `npm start` says 'ready' only on `UP`.
-
-*Exhibit 36 · Day 44 ends when /health says UP on the running service and DOWN without its database*
-
-| | |
-|---|---|
-| Goal | The health check, its response writer, and `Database.Ping` |
-| Story | N-25 c1 to c4 |
-| In the worked answer | `src/Tessera/Service.cs`, `MapHealthChecks` and `DatabaseAnswers`; `src/Tessera/Sql/Database.cs`, `Ping`; `ServiceTests.Says_up_when_the_service_can_serve_tiles`; `scripts/lib/database.ts`, `waitForHealth` |
-| Done when | `Says_up_when_the_service_can_serve_tiles` passes, and `StartTests` sees `DOWN` within a second |
-
-Write `Ping`: `SELECT 1`, one second at most. Then the health check and a writer that answers in the Java build's words, with `Cache-Control: no-store` and no fault named. Last, make `npm start` wait for `UP`.
-
-The proof: the tests pass, and `curl -s http://127.0.0.1:7800/health` prints `{"status":"UP"}`. N-25 is done.
-
-# 34 · Day 45 · Wednesday 16 December: N-26, wait in the order of arrival
-
-> **In short.** Today you prove that queries wait for a connection in the order they arrive, that a cancelled request leaves the queue at once, and that the health check's ping gives up after a second in the same queue.
-
-*Exhibit 37 · Day 45 ends when five tiles on one connection finish in the order asked*
-
-| | |
-|---|---|
-| Goal | `PoolTests`, and the ping's place in the queue |
-| Story | N-26, as changed on 14 October 2026 |
-| In the worked answer | `tests/Tessera.IntegrationTests/PoolTests.cs`; `src/Tessera/Sql/Database.cs`, `Ping` |
-| Done when | `Runs_queries_in_the_order_they_arrive`, `Gives_up_the_ping_while_every_connection_is_busy` and `Lets_a_cancelled_request_leave_the_queue` pass |
-
-Npgsql's pool already lends each freed connection to the request that has waited longest, so the work is three tests that prove it, and a ping that leaves the queue when its second runs out.
-
-> **From school.** A ***queue*** is first in, first out, as in your lessons. These tests prove the pool is one, so a later version of Npgsql that changed it would fail the build.
-
-The proof: the three tests pass. N-26 is done.
-
-# 35 · Day 46 · Thursday 17 December: N-28, answer at once while the database hangs
-
-> **In short.** Today Nginx serves every tile it holds while the service or the database is down, and an expired tile while it fetches a fresh one. The story is worth 2 points but takes a day, because Nginx does the work.
-
-*Exhibit 38 · Day 46 ends when kept tiles still answer with the service stopped*
-
-| | |
-|---|---|
-| Goal | `proxy_cache_use_stale`, `proxy_cache_background_update`, and the `@unavailable` 503 |
-| Story | N-28, as changed on 14 October 2026 |
-| In the worked answer | `nginx/default.conf.template`; `scripts/lib/edge.ts`, the stale check; ADR 0008 |
-| Done when | The Nginx check 'tiles served with the service down' passes |
-
-Add `proxy_cache_use_stale error timeout updating http_500 http_502 http_503 http_504` and `proxy_cache_background_update on`. A tile Nginx has never held, asked for while the service is down, gets the `@unavailable` page: 503, `Retry-After: 5`, and a problem document. Then write the check: ask for a tile, stop the service, ask again.
-
-The proof: the check passes, with the service stopped. N-28 is done, and so is the phase's last story.
-
-# 36 · Day 47 · Friday 18 December: the review, and M5
-
-> **In short.** Today you prove the whole phase from a clean start, show milestone M5, and close the phase. M5 reads 'The service behaves as the Java build did'.
-
-The last review asks day 9's three questions of all 26 stories.
-
-1. **The clean run.** `git clean -xdf -e .env`, then `npm test`. It ends as the worked answer's did on day 1: `Nginx checks passed`.
-2. **M5 twice.** In each folder, `npm start`; ask for a tile; stop the database and ask for the same tile; start it again and watch `/health` return to `UP`.
-3. **The trace.** Every criterion of every story has a test, or a line in your notes that says why it has none, such as US-35's tests on the office machine.
-4. **The progress chart.** 44 points planned, and the real figure beside it.
-5. **Ink.** `git tag -a m5 -m 'M5: the service behaves as the Java build did'`, then `git push origin m5`.
-
-> **Key idea.** Forty-seven days of ink leave a record anyone can follow: each story's commits, each milestone's tag, and a test for each criterion. That record is the phase's real deliverable.
-# Appendix A · Planned differences
-
-> **In short.** Your copy differs from the worked answer in seven places, and none of them changes a requirement. Most last only until a later story adds the missing part. A second table lists what changed from the Java edition of this book.
-
-The worked answer holds all 26 stories, so it already has what your copy will add. The first table lists the differences in the order you meet them, by day.
-
-*Exhibit 39 · Seven differences, each with a reason and an end*
-
-| Difference | Day | Why | Until |
-|---|---|---|---|
-| `US-00 test 1` asks for `/` with no database | 2 | The worked answer's `ServiceTests` seed a database and ask for a tile; the database arrives on day 3, the tiles with US-07 | US-07 |
-| `npm test` runs no map tests and no browser tests | 2 | The map's tests and the browser tests need the map of US-23 | US-23 |
-| CI has no browser step | 2 | No browser test exists yet | US-23 |
-| A database started by hand, `rebuild-db`, on port 5434 | 3 | Kept apart from the worked answer's `tessera-db` on 5432, so both can run | Your own `scripts/start.ts`, with US-35 |
-| `Signs_in_as_the_shipped_reader_role` waits | 3 | It loads the catalogue, which comes on day 6 | Day 6 |
-| US-03 c4 and c6 have no test yet | 6 | Both serve or refuse a tile, which belongs to US-07 | US-07 |
-| The places are published by hand with `psql` | 8 | Your copy has no `scripts/publish.ts` until you copy it; the script only makes the command easier to run | The next two weeks |
-
-## A.1 What changed from the Java edition
-
-The Java edition of this book rebuilt the Java build, `nathanwh71/JTessera`, now archived. The .NET build keeps the same stories and the same milestone, and changes how each is built.
-
-*Exhibit 40 · The same ten days, built with different tools*
-
-| Part | The Java edition | This edition |
-|---|---|---|
-| Language and framework | Java 25, Spring Boot | C# 14, ASP.NET Core on .NET 10, with minimal APIs |
-| Build | Maven, `mvn verify` | `dotnet build`, with each test project run by `dotnet run` |
-| Settings | Six `TESSERA_DB_*` variables | `tessera.json`, and `DATABASE_URL` in pg_tileserv's form (ADR 0003) |
-| Exit code for a missing setting | 78 | 1 |
-| Result | A sealed interface of your own, `Result` with `Refusal` | `Result<T, E>` from CSharpFunctionalExtensions (ADR 0004) |
-| Quoting a name | A smart constructor, `Identifier.quote`, that refused names over 63 bytes | `Queries.Quote`, which quotes any name; names come from PostgreSQL's own catalogue |
-| Property tests | jqwik | FsCheck |
-| Walls | ArchUnit rules | One file for every SQL text, checked at review |
-| Test data | `30-reference-data.sql` in the image | Tables made by each test class, beside the test |
-| The places | A GeoJSON file in metres, read and checked by the importer | GDAL's converter writes SQL; DbUp runs it once (ADR 0009) |
-| Day 10 | US-05, the list of layers | US-07, the tile; US-05 left the phase |
-| The rest of the phase | 22 stories in Java | 26 stories, ending with N-28 on 17 December |
-| In front of the service | Nothing | Nginx, which keeps and packs tiles (ADR 0008) |
-
-# Appendix B · The words this book uses
+> **Key idea.** Thirty-eight days of ink leave a record anyone can follow: each story's commits, each milestone's tag, and a test for each criterion. Keep the same rules for every story after this book.
+# Appendix A · The words this book uses
 
 > **In short.** Each technical word in this book has a plain meaning, and most build on something you learnt at school. This list gives every one, with the day that first uses it.
 
 The words fall into three groups: words about the way you work, words about the code, and words about the database and the network. Each group runs in alphabetical order.
 
-## B.1 Words about the way you work
+## A.1 Words about the way you work
 
-*Exhibit 41 · Seven words describe the daily routine*
+*Exhibit 33 · Seven words describe the daily routine*
 
 | Word | Its meaning | First used |
 |---|---|---|
@@ -1594,9 +1422,9 @@ The words fall into three groups: words about the way you work, words about the 
 | Push | Copying your commits to GitHub | Chapter 1 |
 | Tag | A name fixed to one commit, such as `m1` | Day 9 |
 
-## B.2 Words about the code
+## A.2 Words about the code
 
-*Exhibit 42 · Nineteen words describe how the code is built and tested*
+*Exhibit 34 · Eighteen words describe how the code is built and tested*
 
 | Word | Its meaning | First used |
 |---|---|---|
@@ -1610,7 +1438,6 @@ The words fall into three groups: words about the way you work, words about the 
 | Property test | A test that states a rule and tries it on hundreds of random inputs | Day 4 |
 | Problem document | An error's body in the shape RFC 9457 sets: type, title, status and detail | Day 11 |
 | Pure function | A function that reads only its inputs and changes nothing outside itself | Day 2 |
-| Queue | A line in which the first to arrive is the first served | Day 45 |
 | Record | A type that holds a fixed set of values that cannot change | Day 5 |
 | Reduce motion | A visitor's system setting that asks pages to keep still | Day 22 |
 | Red, green | A test that fails (red), then the least code that makes it pass (green) | Chapter 1 |
@@ -1620,9 +1447,9 @@ The words fall into three groups: words about the way you work, words about the 
 | Unit test | A test of one small part alone | Chapter 1 |
 | Walking skeleton | The smallest program that works from end to end | Day 2 |
 
-## B.3 Words about the database and the network
+## A.3 Words about the database and the network
 
-*Exhibit 43 · Twenty-three words describe where the data lives and how it travels*
+*Exhibit 35 · Twenty-two words describe where the data lives and how it travels*
 
 | Word | Its meaning | First used |
 |---|---|---|
@@ -1643,7 +1470,6 @@ The words fall into three groups: words about the way you work, words about the 
 | Reverse proxy | A server that takes each request from the browser and passes it on | Day 14 |
 | Role | A name and password that can sign in to the database, with a list of what it may do | Day 3 |
 | Schema | A folder of tables inside a database | Day 5 |
-| SQLSTATE | PostgreSQL's five-character name for an error, such as 08006 | Day 39 |
 | SQL injection | An attack that hides a command inside data sent to a database | Day 4 |
 | SRID | The number of a coordinate system, such as 4326 for longitude and latitude | Day 6 |
 | Transaction | A group of changes the database makes all together or not at all | Day 8 |
