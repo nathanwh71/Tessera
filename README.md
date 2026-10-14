@@ -97,6 +97,7 @@ The ***service*** is ***one*** ***program*** ***cut*** into ***seven*** modules,
 - `docs/adr/0003-settings-file.md`: why ***settings*** ***live*** in `tessera.json` and the ***environment***
 - `docs/adr/0004-functional-style.md`: why the ***code*** is ***functional***, with `Option` and `Result`
 - `docs/adr/0006-one-map-for-both-builds.md`: the ***contract*** ***between*** the ***map*** and a ***service***, and why the ***map*** ***now*** ***lives*** here
+- `docs/adr/0007-resilience-library-with-the-first-limit.md`: why no ***resilience*** ***library*** yet, and when ***one*** ***arrives***
 - `docs/changes/`: what each ***day***'s ***work*** ***changed*** and why, ***newest*** ***last***
 
 The ***phase***-0 ***build*** and its ***documents*** ***stay*** in the ***archived*** ***phase***-0 repository, whose ***last*** ***commit*** is `ecb21fb`.
