@@ -33,8 +33,14 @@ jobs:
       - run: npm run typecheck
       - run: npm run test:scripts
       # The browser tests drive Chromium against the built service and a database of their own
-      # (scripts/e2e.ts). Playwright installs the browser it was built for, with the system
-      # libraries it needs.
-      - run: npx playwright install --with-deps chromium
+      # (scripts/e2e.ts). Playwright downloads the browser it was built for, then the system
+      # libraries it needs. Each step has a time limit, so a stuck download fails the build within
+      # minutes and names the step, rather than hold the runner for its whole six hours.
+      - run: npx playwright install chromium
         working-directory: web
+        timeout-minutes: 10
+      - run: sudo npx playwright install-deps chromium
+        working-directory: web
+        timeout-minutes: 10
       - run: npm run e2e
+        timeout-minutes: 20
