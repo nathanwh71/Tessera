@@ -21,6 +21,10 @@ public sealed class TargetScreenTests
     [InlineData("/food.cafes/15/1/2%2Epbf", "an encoded plain character")]
     [InlineData("/food.cafes/%31/1/2.pbf", "an encoded plain character")]
     [InlineData("/food.cafes/15/1/2.pbf%7E", "an encoded plain character")]
+    [InlineData("/?x=%2F", "an encoded slash")]
+    [InlineData("/?x=%5c", "a backslash")]
+    [InlineData("food.cafes.html", "no leading slash")]
+    [InlineData("", "no leading slash")]
     public void Refuses_a_malformed_target(string target, string problem) =>
         Assert.Equal(problem, TargetScreen.Problem(target).OrElse("clean"));
 
@@ -32,6 +36,9 @@ public sealed class TargetScreenTests
     [InlineData("/odd%20%22name%22/0/0/0.pbf")]
     [InlineData("/caf%C3%A9/0/0/0.pbf")]
     [InlineData("/food.cafes/0/0/0.pbf?x=%61")]
+    [InlineData("/x%3B%20DROP/0/0/0.pbf")]
+    [InlineData("/food...cafes.html")]
+    [InlineData("/?v=2")]
     public void Lets_a_clean_target_through(string target) =>
         Assert.Equal("clean", TargetScreen.Problem(target).OrElse("clean"));
 }

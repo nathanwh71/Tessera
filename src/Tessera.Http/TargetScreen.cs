@@ -24,11 +24,13 @@ public static class TargetScreen
     public static Option<string> Problem(string rawTarget)
     {
         var path = rawTarget.Split('?', 2)[0];
-        return rawTarget.Any(character => character < 0x20 || character == 0x7F) ? Option.Some("a control character")
+        return !rawTarget.StartsWith('/') ? Option.Some("no leading slash")
+            : rawTarget.Any(character => character < 0x20 || character == 0x7F) ? Option.Some("a control character")
             : StrayPercent(rawTarget) ? Option.Some("a '%' without two hexadecimal digits")
             : EncodesControl(rawTarget) ? Option.Some("an encoded control character")
-            : path.Contains('\\') || path.Contains("%5c", StringComparison.OrdinalIgnoreCase) ? Option.Some("a backslash")
-            : path.Contains("%2f", StringComparison.OrdinalIgnoreCase) ? Option.Some("an encoded slash")
+            // An encoded slash or backslash is refused in the query too, as the Java build refuses it (ADR 0006 rule 6).
+            : path.Contains('\\') || rawTarget.Contains("%5c", StringComparison.OrdinalIgnoreCase) ? Option.Some("a backslash")
+            : rawTarget.Contains("%2f", StringComparison.OrdinalIgnoreCase) ? Option.Some("an encoded slash")
             : path.Split('/').Any(DotSegment) ? Option.Some("a dot segment")
             : EncodesPlain(path) ? Option.Some("an encoded plain character")
             : Option.None<string>();
