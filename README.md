@@ -118,6 +118,7 @@ The ***service*** is ***one*** ***program*** in ***one*** ***project***, with a 
 - `docs/adr/0007-resilience-library-with-the-first-limit.md`: why no ***resilience*** ***library*** yet, and when ***one*** ***arrives***
 - `docs/adr/0008-nginx-in-front.md`: why Nginx ***stands*** in ***front***, and what it does in ***place*** of the ***service***
 - `docs/adr/0009-seed-with-dbup.md`: why the ***places*** ***arrive*** as SQL ***scripts*** that DbUp ***runs*** ***once***
+- `docs/guides/reading-the-code.md`: ***fifteen*** ***steps*** ***through*** the backend and the ***map***, in the ***order*** a ***tile*** ***travels***
 - `docs/guides/reading-the-harder-files.md`: the ***one*** ***idea*** ***behind*** ***each*** of `Settings.cs`, `Database.cs` and `Catalogue.cs`, for ***readers*** ***new*** to ASP.NET Core
 - `docs/changes/`: what ***each*** ***day***'s ***work*** ***changed*** and why, ***newest*** ***last***
 
