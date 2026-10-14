@@ -115,24 +115,15 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         Assert.Equal("public, max-age=60", answer.Headers.CacheControl?.ToString());
     }
 
-    // N-19 c1, c2 and test 2: a tile carries a weak tag, and a request that sends it back gets
-    // 304 with no body and the same headers.
+    // N-19 c1: a tile carries a weak tag, made from its bytes, which Nginx compares (ADR 0008).
     [Fact]
-    public async Task Answers_304_to_a_browser_that_sends_the_tag_back()
+    public async Task Tags_a_tile_by_its_bytes()
     {
         using var first = await Get($"/food.cafes/{Zoom}/{Tile.X}/{Tile.Y}.pbf");
-        var tag = first.Headers.ETag;
-        Assert.NotNull(tag);
-        Assert.True(tag.IsWeak);
+        using var second = await Get($"/food.cafes/{Zoom}/{Tile.X}/{Tile.Y}.pbf");
 
-        using var request = new HttpRequestMessage(HttpMethod.Get, $"/food.cafes/{Zoom}/{Tile.X}/{Tile.Y}.pbf");
-        request.Headers.IfNoneMatch.Add(tag);
-        using var second = await service.Client.SendAsync(request, TestContext.Current.CancellationToken);
-
-        Assert.Equal(HttpStatusCode.NotModified, second.StatusCode);
-        Assert.Equal(tag, second.Headers.ETag);
-        Assert.Equal("public, max-age=60", second.Headers.CacheControl?.ToString());
-        Assert.Empty(await second.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken));
+        Assert.True(first.Headers.ETag?.IsWeak);
+        Assert.Equal(first.Headers.ETag, second.Headers.ETag);
     }
 
     // ADR 0006 rule 7: HEAD gets a tile's headers and no body, as in the Java build.
@@ -217,57 +208,6 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         Assert.Equal("text/javascript", asset.Content.Headers.ContentType?.MediaType);
     }
 
-    private async Task<HttpResponseMessage> GetPacked(string path)
-    {
-        using var request = new HttpRequestMessage(HttpMethod.Get, path);
-        request.Headers.AcceptEncoding.ParseAdd("gzip");
-        return await service.Client.SendAsync(request, TestContext.Current.CancellationToken);
-    }
-
-    private static byte[] Unpack(byte[] packed)
-    {
-        using var unpack = new System.IO.Compression.GZipStream(new MemoryStream(packed), System.IO.Compression.CompressionMode.Decompress);
-        using var plain = new MemoryStream();
-        unpack.CopyTo(plain);
-        return plain.ToArray();
-    }
-
-    // N-20 c1 to c3 and tests 1 and 3: a tile travels packed when asked, plain when not, and
-    // unpacks to the same bytes; both forms say Vary.
-    [Fact]
-    public async Task Packs_a_tile_when_the_browser_accepts_gzip()
-    {
-        using var plain = await Get($"/food.cafes/{Zoom}/{Tile.X}/{Tile.Y}.pbf");
-        using var packed = await GetPacked($"/food.cafes/{Zoom}/{Tile.X}/{Tile.Y}.pbf");
-
-        Assert.Empty(plain.Content.Headers.ContentEncoding);
-        Assert.Equal(["gzip"], packed.Content.Headers.ContentEncoding);
-        Assert.Equal(["Accept-Encoding"], plain.Headers.Vary);
-        Assert.Equal(["Accept-Encoding"], packed.Headers.Vary);
-        Assert.Equal(
-            await plain.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken),
-            Unpack(await packed.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken)));
-        Assert.Equal(plain.Headers.ETag, packed.Headers.ETag);
-    }
-
-    // N-20 test 2: the map's main script arrives packed, at under half its plain size.
-    [Fact]
-    public async Task Packs_the_maps_script_to_under_half_its_size()
-    {
-        var html = await service.Client.GetStringAsync("/", TestContext.Current.CancellationToken);
-        var script = System.Text.RegularExpressions.Regex.Match(html, @"src=""(/assets/[^""]+\.js)""").Groups[1].Value;
-
-        using var plain = await Get(script);
-        using var packed = await GetPacked(script);
-        var plainBytes = await plain.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken);
-        var packedBytes = await packed.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken);
-
-        Assert.Equal(["gzip"], packed.Content.Headers.ContentEncoding);
-        Assert.Equal(["Accept-Encoding"], packed.Headers.Vary);
-        Assert.True(packedBytes.Length < plainBytes.Length / 2, $"{packedBytes.Length} packed against {plainBytes.Length} plain");
-        Assert.Equal(plainBytes, Unpack(packedBytes));
-    }
-
     // US-00: an address no route knows answers a 404 problem document too, and so does a page named
     // for anything but one of the nine layers.
     [Theory]
@@ -304,40 +244,6 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
 
         Assert.Equal(HttpStatusCode.NotFound, answer.StatusCode);
         Assert.Equal(100L, await service.Database.OwnerValue<long>("SELECT count(*) FROM food.cafes"));
-    }
-
-    // S-06 test 1 and 2: malformed targets get 400 before any route runs, and the answer hides the target.
-    [Theory]
-    [InlineData("/food.cafes/%2e%2e/1/2/3.pbf")]
-    [InlineData("/food.cafes%2F15/1/2.pbf")]
-    [InlineData("/food.cafes\\15/1/2.pbf")]
-    [InlineData("/food.cafes/15/1/2.pbf%zz")]
-    [InlineData("/food.cafes/15/1/2.pbf%01")]
-    [InlineData("/food.c%61fes/15/1/2.pbf")]
-    public async Task Refuses_a_malformed_target_before_any_route(string target)
-    {
-        var answer = await Http.Raw(service.Port, target);
-
-        Assert.StartsWith("HTTP/1.1 400", answer, StringComparison.Ordinal);
-        Assert.Contains("application/problem+json", answer, StringComparison.Ordinal);
-        Assert.Contains("\"title\":\"Bad Request\"", answer, StringComparison.Ordinal);
-        Assert.DoesNotContain("food.cafes", answer, StringComparison.Ordinal);
-        // ADR 0006 rule 7: no detail, as in the Java build, so the answer names no trick either.
-        Assert.DoesNotContain("\"detail\"", answer, StringComparison.Ordinal);
-    }
-
-    // Kestrel, the web server inside .NET, refuses an encoded null (%00) and a raw control character
-    // itself, before any of Tessera's code runs. The request never reaches a route, as S-06 c1 asks,
-    // but the answer has an empty body, not a problem document: S-06 c2 breaks for these two cases.
-    [Theory]
-    [InlineData("/food.cafes/15/1/2.pbf%00")]
-    [InlineData("/food.cafes/15/1/	2.pbf")]
-    public async Task Leaves_kestrel_to_refuse_a_null_or_control_character(string target)
-    {
-        var answer = await Http.Raw(service.Port, target);
-
-        Assert.StartsWith("HTTP/1.1 400", answer, StringComparison.Ordinal);
-        Assert.DoesNotContain("food.cafes", answer, StringComparison.Ordinal);
     }
 
     // US-00 c2 and test 1: the run command itself starts the service, which answers on its port.
@@ -396,9 +302,4 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         Assert.Equal("application/json", answer.Content.Headers.ContentType?.MediaType);
         Assert.True(answer.Headers.CacheControl?.NoStore);
     }
-
-    // S-06 test 3: a clean target reaches US-07's route.
-    [Fact]
-    public async Task Lets_a_clean_raw_target_reach_the_route() =>
-        Assert.StartsWith("HTTP/1.1 200", await Http.Raw(service.Port, $"/food.cafes/{Zoom}/{Tile.X}/{Tile.Y}.pbf"), StringComparison.Ordinal);
 }

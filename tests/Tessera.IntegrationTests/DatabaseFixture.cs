@@ -56,14 +56,6 @@ public sealed class DatabaseFixture : IAsyncLifetime
             await _container.DisposeAsync().ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Freezes the database, as a broken network or a stuck disk would: its connections stay open,
-    /// and nothing answers (N-28). <see cref="Thaw"/> lets it run on.
-    /// </summary>
-    public Task Freeze() => _container!.PauseAsync();
-
-    public Task Thaw() => _container!.UnpauseAsync();
-
     /// <summary>Runs SQL as the database's owner, to set the stage: make test tables, grant, revoke.</summary>
     public async Task Owner(string sql)
     {

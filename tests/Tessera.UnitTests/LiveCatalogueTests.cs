@@ -46,20 +46,6 @@ public sealed class LiveCatalogueTests
         Assert.Equal(1, failures);
     }
 
-    [Fact]
-    public async Task Reports_the_layers_that_left()
-    {
-        var answers = new Queue<LayerCatalogue>([With("cafes", "markets"), With("markets", "restaurants")]);
-        var departed = new List<string>();
-        var live = new LiveCatalogue(_ => Ok(answers.Dequeue()), (old, fresh) => departed.AddRange(LiveCatalogue.Departed(old, fresh)), _ => { });
-
-        await live.Refresh(CancellationToken.None);
-        await live.Refresh(CancellationToken.None);
-
-        Assert.Equal(["food.cafes"], departed);
-        Assert.Equal(["food.markets", "food.restaurants"], Ids(live));
-    }
-
     // N-23 c4: the loop tries again and again until the database answers, then refreshes.
     [Fact]
     public async Task Tries_until_the_database_answers()

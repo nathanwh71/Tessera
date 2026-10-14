@@ -68,13 +68,8 @@ public sealed record PoolLimits(int MaxConns, TimeSpan MaxConnLifeTime, TimeSpan
 /// one that runs against a real database, proves the pool's order.
 /// </para>
 /// <para>
-/// The ping has a pool of its own, of one connection, so it never waits behind tiles: a busy service
-/// is still a healthy one (N-26 c3).
-/// </para>
-/// <para>
-/// A <see cref="DatabaseWatch"/> pings on that pool. While it says the database is down, every query
-/// is refused at once with 08006, which the service answers with 503, 'service unavailable', rather
-/// than wait out the pool's timeout on a database that hangs (N-28).
+/// The health check's ping has a pool of its own, of one connection, so it never waits behind tiles:
+/// a busy service is still a healthy one (N-26 c3).
 /// </para>
 /// </remarks>
 public sealed class Database : IAsyncDisposable
@@ -82,19 +77,9 @@ public sealed class Database : IAsyncDisposable
     private readonly NpgsqlDataSource _source;
     private readonly NpgsqlDataSource _ping;
 
-    private Database(NpgsqlDataSource source, NpgsqlDataSource ping)
-    {
-        (_source, _ping) = (source, ping);
-        Watch = new DatabaseWatch(PingOnce);
-    }
+    private Database(NpgsqlDataSource source, NpgsqlDataSource ping) => (_source, _ping) = (source, ping);
 
-    /// <summary>
-    /// Whether the database is up (N-28). Nothing pings until the program starts the watch's loop with
-    /// <see cref="DatabaseWatch.Run"/>, so until then it says up; the import never starts the loop.
-    /// </summary>
-    public DatabaseWatch Watch { get; }
-
-    /// <summary>The longest a ping may take to connect, and again to answer.</summary>
+    /// <summary>The longest a ping may take, from connecting to the answer.</summary>
     internal static readonly TimeSpan PingLimit = TimeSpan.FromSeconds(1);
 
     /// <summary>Opens the pools with the <see cref="PoolLimits.Default"/> limits.</summary>
@@ -144,50 +129,27 @@ public sealed class Database : IAsyncDisposable
         }.ConnectionString);
 
     /// <summary>
-    /// One ping, <c>SELECT 1</c>, through the ping's own pool, so it never waits behind tile queries
-    /// (N-26 c3). A connection that will not open within a second is <see cref="Sql.Ping.Refused"/>;
-    /// an open one that does not answer within a second is <see cref="Sql.Ping.Slow"/> (N-28).
+    /// True when the database answers <c>SELECT 1</c> within a second, through the ping's own pool
+    /// (N-25, N-26 c3). The ping keeps its own clock: a frozen database may hold Npgsql's own limits
+    /// for longer, and a step it gives up on is left to finish, or fail, out of sight.
     /// </summary>
-    /// <remarks>
-    /// The ping keeps its own clock. Npgsql's limits did not always hold against a frozen database: in
-    /// a full test run, a ping took three seconds where its limits said one, and the watch then took
-    /// five seconds to say down. So the ping waits at most a second for each step, judges, and leaves
-    /// the step it gave up on to finish, or fail, on its own; the connection is then closed out of
-    /// sight. Closing a connection to a frozen database can itself hang, so the ping never waits for it.
-    /// </remarks>
-    private async Task<Ping> PingOnce(CancellationToken stop)
+    public async Task<bool> Ping(CancellationToken stop)
     {
-        var opening = _ping.OpenConnectionAsync(stop).AsTask();
-        NpgsqlConnection connection;
         try
         {
-            connection = await opening.WaitAsync(PingLimit, stop).ConfigureAwait(false);
-        }
-        catch (TimeoutException)
-        {
-            CloseLater(opening);
-            return Sql.Ping.Refused;
-        }
-        // A cancel the service asked for, because it is stopping, is no verdict on the database, so
-        // it passes on rather than count as a failed ping.
-        catch (NpgsqlException) when (!stop.IsCancellationRequested)
-        {
-            return Sql.Ping.Refused;
-        }
-
-        var asking = connection.QueryAsync<int>(Command(HealthQueries.Ping, null, stop));
-        try
-        {
-            await asking.WaitAsync(PingLimit, stop).ConfigureAwait(false);
-            await connection.DisposeAsync().ConfigureAwait(false);
-            return Sql.Ping.Answered;
+            await PingOnce(stop).WaitAsync(PingLimit, stop).ConfigureAwait(false);
+            return true;
         }
         catch (Exception error) when (error is TimeoutException or NpgsqlException && !stop.IsCancellationRequested)
         {
-            // Reading the abandoned query's error marks it seen; the verdict is already given.
-            CloseLater(asking.ContinueWith(step => { _ = step.Exception; return connection; }, TaskScheduler.Default));
-            return Sql.Ping.Slow;
+            return false;
         }
+    }
+
+    private async Task PingOnce(CancellationToken stop)
+    {
+        await using var connection = await _ping.OpenConnectionAsync(stop).ConfigureAwait(false);
+        await connection.QueryAsync<int>(Command(HealthQueries.Ping, null, stop)).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -195,18 +157,6 @@ public sealed class Database : IAsyncDisposable
     /// counts whole seconds and reads 0 as 'wait for ever'.
     /// </summary>
     internal static int WholeSeconds(TimeSpan wait) => Math.Max(1, (int)Math.Ceiling(wait.TotalSeconds));
-
-    // Closes a connection once the step it belongs to has finished, without making the ping wait.
-    private static void CloseLater(Task<NpgsqlConnection> step) =>
-        _ = step.ContinueWith(
-            async finished =>
-            {
-                if (finished.IsCompletedSuccessfully)
-                    await finished.Result.DisposeAsync().ConfigureAwait(false);
-                else
-                    _ = finished.Exception;
-            },
-            TaskScheduler.Default);
 
     /// <summary>
     /// Runs a query and turns each row into a <typeparamref name="T"/>, matching columns to fields by name.
@@ -257,18 +207,11 @@ public sealed class Database : IAsyncDisposable
         await _ping.DisposeAsync().ConfigureAwait(false);
     }
 
-    // A cancellation token is a signal a caller can fire to stop work it no longer needs. The token
-    // reaches the wait for a connection too, so a query whose token fires steps out of the pool's queue
-    // at once rather than holding a place in it (N-26 c2). A tile query passes the service's stop
-    // token, not the browser's, so it stays in the queue when the browser leaves: other people may
-    // share the tile (N-24).
-    // While the watch says down, the query is refused before it waits for a connection (N-28).
+    // A cancellation token is a signal a caller can fire to stop work it no longer needs. It reaches
+    // the wait for a connection too, so a query whose token fires leaves the pool's queue at once
+    // (N-26 c2).
     private async Task<Result<T, DatabaseError>> Run<T>(Func<NpgsqlConnection, Task<T>> work, CancellationToken cancel)
     {
-        if (!Watch.Up)
-        {
-            return Result.Refuse<T, DatabaseError>(Down);
-        }
         try
         {
             await using var connection = await _source.OpenConnectionAsync(cancel).ConfigureAwait(false);
@@ -276,25 +219,9 @@ public sealed class Database : IAsyncDisposable
         }
         catch (NpgsqlException error)
         {
-            var failure = Error(error);
-            if (LostConnection(failure))
-            {
-                Watch.LostConnection();
-            }
-            return Result.Refuse<T, DatabaseError>(failure);
+            return Result.Refuse<T, DatabaseError>(Error(error));
         }
     }
-
-    private static readonly DatabaseError Down = new(PostgresErrorCodes.ConnectionFailure, "The database is down; no query is sent until it answers again.");
-
-    /// <summary>
-    /// Whether a failed query proves the database is down: SQLSTATE class 08, a failed connection,
-    /// or 57P01 to 57P03, a server shutting down, crashing or starting. A timeout, 57014, is no
-    /// proof, since a busy database times out too; the watch's pings judge that case.
-    /// </summary>
-    internal static bool LostConnection(DatabaseError failure) =>
-        failure.SqlState.StartsWith("08", StringComparison.Ordinal)
-        || failure.SqlState is PostgresErrorCodes.AdminShutdown or PostgresErrorCodes.CrashShutdown or PostgresErrorCodes.CannotConnectNow;
 
     // A PostgresException is the database's own refusal, with its SQLSTATE. Npgsql reports a query
     // past its time, or a wait for a connection past its time, with a TimeoutException inside; 57014,

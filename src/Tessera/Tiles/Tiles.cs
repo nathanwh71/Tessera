@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -12,8 +12,8 @@ using Tessera.Sql;
 
 // This file answers the request at the heart of Tessera: 'send me this tile of this layer' (US-07).
 // A vector tile is one square of the map sent as data, the shapes of the places within it, for the
-// browser to draw itself. The file belongs to the Tiles module; TesseraService calls MapTiles to
-// add the tile addresses to the service, and each request then reaches TileServer.Answer.
+// browser to draw itself. TesseraService calls MapTiles at start-up; each request then reaches
+// TileServer.Answer.
 
 namespace Tessera.Tiles;
 
@@ -76,178 +76,61 @@ public static class TileHeaders
 }
 
 /// <summary>
-/// A tile's bytes, with its headers, ready to send (US-07, N-18, N-19, N-20). The packed form, made
-/// smaller with gzip, goes out when the browser can unpack it. <c>Vary: Accept-Encoding</c> warns any
-/// cache on the way, a store of answers between browser and service, that the two forms differ, so
-/// it hands each browser the form that browser asked for (N-20 c3).
+/// The label a browser keeps with a tile, so it can later ask 'is mine still good?' (N-19). HTTP
+/// calls it an ETag. It comes from a hash of the tile's bytes, so the same bytes always give the same
+/// tag; Nginx compares it and answers 304 (ADR 0008). It is weak, <c>W/"…"</c>, because one tag
+/// covers the plain and the gzip form.
 /// </summary>
-public sealed record TileResult(KeptTile Tile, bool Packed, string CacheControl) : IResult
+public static class TileTag
 {
-    /// <summary>
-    /// The tile's ETag, the label a browser sends back to ask whether its copy is still good.
-    /// </summary>
-    public string Tag => Tile.Tag;
-
-    /// <summary>Writes the headers, then the plain or packed bytes, to the browser.</summary>
-    public Task ExecuteAsync(HttpContext context)
-    {
-        context.Response.Headers.CacheControl = CacheControl;
-        context.Response.Headers.ETag = Tile.Tag;
-        context.Response.Headers.Vary = "Accept-Encoding";
-        if (Packed)
-            context.Response.Headers.ContentEncoding = "gzip";
-        return Results.Bytes(Packed ? Tile.Packed : Tile.Bytes, TileRoutes.ContentType).ExecuteAsync(context);
-    }
+    public static string Of(byte[] bytes) => $"W/\"{Convert.ToHexStringLower(SHA256.HashData(bytes).AsSpan(0, 16))}\"";
 }
 
 /// <summary>
-/// The answer 304 'Not Modified': the browser's copy is still good, so no body travels (N-19 c2).
-/// Every answer carries a status code, a number that says how the request went: 200 means 'here it
-/// is', 304 'use your own copy'. This one carries the same tag and cache rule a 200 would, as the
-/// HTTP standard RFC 9110 asks, so the browser restarts its copy's life.
-/// </summary>
-public sealed record NotModifiedResult(string Tag, string CacheControl) : IResult
-{
-    /// <summary>Writes the status code and headers, with no body.</summary>
-    public Task ExecuteAsync(HttpContext context)
-    {
-        context.Response.StatusCode = StatusCodes.Status304NotModified;
-        context.Response.Headers.CacheControl = CacheControl;
-        context.Response.Headers.ETag = Tag;
-        context.Response.Headers.Vary = "Accept-Encoding";
-        return Task.CompletedTask;
-    }
-}
-
-/// <summary>
-/// What the browser said about the copy it holds, if any, and whether it can unpack gzip.
-/// </summary>
-public sealed record TileRequest(Option<string> IfNoneMatch, bool AcceptsGzip)
-{
-    /// <summary>A request that holds no copy and accepts only plain bytes, for the tests.</summary>
-    public static readonly TileRequest Plain = new(Option.None<string>(), AcceptsGzip: false);
-
-    /// <summary>Reads the two headers that matter from a web request; an empty header counts as none.</summary>
-    public static TileRequest Of(HttpRequest request) => new(
-        request.Headers.IfNoneMatch.ToString() is { Length: > 0 } tag ? Option.Some(tag) : Option.None<string>(),
-        TilePack.AcceptsGzip(request.Headers.AcceptEncoding.ToString()));
-}
-
-/// <summary>
-/// Runs the tile query and gives the tile's bytes, or none for an empty tile. A
-/// delegate, as here, names the shape of a function so another function can take one as input.
+/// Runs the tile query and gives the tile's bytes, or none for an empty tile. A test passes a
+/// stand-in in place of the database.
 /// </summary>
 public delegate Task<Result<Option<byte[]>, DatabaseError>> TileReader(Query query, CancellationToken cancel);
 
 /// <summary>
-/// Answers a tile request: from a kept copy when there is one, else from the database (US-07, N-19).
+/// Answers a tile request from the database (US-07). Nginx, in front, keeps tiles, packs them and
+/// lets one query serve a crowd (ADR 0008), so this class builds each tile it is asked for.
 /// </summary>
-/// <remarks>
-/// <para>
-/// The reader is a function, not the database itself, so a test can pass a stand-in that counts
-/// the queries and prove that a second request runs none (N-19 test 3).
-/// </para>
-/// <para>
-/// When a crowd asks at once for a tile no copy holds yet, the first request starts the query and
-/// every later one waits for that same answer, so the database builds each tile once (N-24). The
-/// queries in flight sit in a table keyed by tile; each leaves the table the moment it ends.
-/// </para>
-/// </remarks>
 /// <param name="catalogue">Gives the list of layers as it stands, or none before the first load (N-23).</param>
 /// <param name="read">Runs the tile query.</param>
-/// <param name="settings">The tile's limits and how long a copy lives.</param>
-/// <param name="cache">The copies already built.</param>
-/// <param name="stopping">
-/// A cancellation token, a signal that tells work to stop. This one stops a shared query only when
-/// the service stops; one browser leaving never does.
-/// </param>
+/// <param name="settings">The tile's limits and how long a browser and Nginx may keep it.</param>
 /// <param name="layerChanged">
 /// Called when a tile query names a column the table no longer holds, so the list of layers is read
-/// again at once rather than at its next turn; none in a test that needs no list.
+/// again at once; none in a test that needs no list.
 /// </param>
-public sealed class TileServer(Func<Option<LayerCatalogue>> catalogue, TileReader read, TileSettings settings, TileCache cache, CancellationToken stopping = default, Action? layerChanged = null)
+public sealed class TileServer(Func<Option<LayerCatalogue>> catalogue, TileReader read, TileSettings settings, Action? layerChanged = null)
 {
-    // ConcurrentDictionary is a table that many threads, lines of work running side by side, may
-    // change at once in safety.
-    private readonly ConcurrentDictionary<TileKey, Lazy<Task<Result<KeptTile, DatabaseError>>>> _inFlight = new();
-
     /// <summary>
-    /// Finds the layer, checks the address, then looks for a kept copy before it asks the database.
-    /// An unknown layer is refused before any query runs (US-07 test 1), so a hostile name never
-    /// reaches the database.
+    /// Finds the layer, checks the address, then runs the query. An unknown layer is refused before
+    /// any query runs (US-07 test 1), so a hostile name never reaches the database.
     /// </summary>
-    /// <remarks>
-    /// The method is async: while it waits for the database it lets its thread serve other requests,
-    /// and resumes at each <c>await</c> once the answer comes. The <c>from … select</c> lines run
-    /// three checks in turn; the first to fail gives the answer, and the rest are skipped.
-    /// </remarks>
-    /// <returns>
-    /// The tile, a 304, or a problem document, the short error report the Http module writes:
-    /// 404, 503 or 500.
-    /// </returns>
-    public async Task<IResult> Answer(string layerId, int z, int x, int y, TileRequest request, CancellationToken cancel)
+    public async Task<IResult> Answer(string layerId, int z, int x, int y, CancellationToken cancel)
     {
         var target =
-            // Before the first list of layers loads, no layer can be found, so the service answers
-            // 503 and the browser asks again later (N-23 c4).
+            // Before the first list of layers loads, the service answers 503 (N-23 c4).
             from layers in catalogue().OrRefuse(Problems.Unavailable("The list of layers is not ready yet."))
-            // The detail never repeats the layer name from the request: an answer should not echo
-            // what a stranger sent.
+            // The detail never repeats the layer name from the request.
             from layer in layers.Find(layerId).OrRefuse(Problems.NotFound("No published layer has that name."))
             from tile in TileAddress.Of(z, x, y, settings.MinZoom, settings.MaxZoom).MapError(Problems.NotFound)
             select (Layer: layer, Tile: tile);
 
         return await target.Match(
-            found => cache.Find(new TileKey(found.Layer.Id, z, x, y)).Match(
-                kept => Task.FromResult(Reply(kept, request)),
-                () => Build(found.Layer, found.Tile, request, cancel)),
+            async found => Answer(await read(TileQuery.For(found.Layer, found.Tile, settings), cancel).ConfigureAwait(false)),
             refusal => Task.FromResult(refusal)).ConfigureAwait(false);
     }
 
-    // Joins the query in flight for this tile, or starts it. Lazy runs its work only once, so when two
-    // requests race to add the same tile, only one query starts. Each request waits on its own token,
-    // so a browser that leaves stops waiting without cancelling the query for the rest.
-    private async Task<IResult> Build(Layer layer, TileAddress tile, TileRequest request, CancellationToken cancel)
-    {
-        var key = new TileKey(layer.Id, tile.Z, tile.X, tile.Y);
-        var flight = _inFlight.GetOrAdd(key, _ => Flight(key, layer, tile));
-        return Answer(await flight.Value.WaitAsync(cancel).ConfigureAwait(false), request);
-    }
-
-    // One query for one tile. It runs on the service's own stopping token, not a browser's, and
-    // keeps the tile it builds; an empty tile is kept as zero bytes.
-    private Lazy<Task<Result<KeptTile, DatabaseError>>> Flight(TileKey key, Layer layer, TileAddress tile)
-    {
-        Lazy<Task<Result<KeptTile, DatabaseError>>>? flight = null;
-        flight = new Lazy<Task<Result<KeptTile, DatabaseError>>>(async () =>
-        {
-            try
-            {
-                return (await read(TileQuery.For(layer, tile, settings), stopping).ConfigureAwait(false)).Map(bytes =>
-                {
-                    var built = KeptTile.Of(bytes.OrElse([]), cache.Now);
-                    cache.Keep(key, built);
-                    return built;
-                });
-            }
-            finally
-            {
-                // Removes this flight only, never a newer one for the same tile.
-                _inFlight.TryRemove(KeyValuePair.Create(key, flight!));
-            }
-        });
-        return flight;
-    }
-
-    private IResult Answer(Result<KeptTile, DatabaseError> built, TileRequest request) =>
+    private IResult Answer(Result<Option<byte[]>, DatabaseError> built) =>
         built.Match(
-            tile => Reply(tile, request),
-            // A table whose grant was withdrawn since start-up fails with error 42501 ('insufficient
-            // privilege'); the layer has left, so the answer is 404 'not found' (US-03 c6). A column an
-            // import dropped since the list of layers was last read fails with 42703: the layer has
-            // changed, so the list is read again at once, and the browser asked to try again in a few
-            // seconds. A database that cannot answer now gives 503 too (N-22); anything else is the
-            // service's own fault, 500.
+            bytes => new TileResult(bytes.OrElse([]), TileHeaders.CacheControl(settings.CacheSeconds)),
+            // A table whose grant was withdrawn gives 42501: the layer has left, so 404 (US-03 c6).
+            // A column an import dropped gives 42703: the list is read again, and the browser asked
+            // to try again shortly. A database that cannot answer now gives 503 (N-22); anything
+            // else is the service's own fault, 500.
             error => error.IsMissingTable ? Problems.NotFound("No published layer has that name.")
                 : error.IsMissingColumn ? LayerChanged()
                 : error.IsUnavailable ? Problems.Unavailable("The database cannot be reached. Try again shortly.")
@@ -258,13 +141,17 @@ public sealed class TileServer(Func<Option<LayerCatalogue>> catalogue, TileReade
         layerChanged?.Invoke();
         return Problems.Unavailable("The layer has changed. Try again shortly.");
     }
+}
 
-    // A browser that already holds this tile gets 304 and no body; any other gets the bytes,
-    // packed if it can unpack them.
-    private IResult Reply(KeptTile tile, TileRequest request) =>
-        request.IfNoneMatch.Match(header => TileTag.Matches(header, tile.Tag), () => false)
-            ? new NotModifiedResult(tile.Tag, TileHeaders.CacheControl(settings.CacheSeconds))
-            : new TileResult(tile, request.AcceptsGzip, TileHeaders.CacheControl(settings.CacheSeconds));
+/// <summary>A tile's bytes with its two headers: how long it may be kept, and its tag.</summary>
+public sealed record TileResult(byte[] Bytes, string CacheControl) : IResult
+{
+    public Task ExecuteAsync(HttpContext context)
+    {
+        context.Response.Headers.CacheControl = CacheControl;
+        context.Response.Headers.ETag = TileTag.Of(Bytes);
+        return Results.Bytes(Bytes, TileRoutes.ContentType).ExecuteAsync(context);
+    }
 }
 
 /// <summary>
@@ -281,7 +168,7 @@ public static class TileRoutes
     /// <summary>
     /// Adds both tile routes to the service. TesseraService calls this once at start-up.
     /// </summary>
-    public static IEndpointRouteBuilder MapTiles(this IEndpointRouteBuilder routes, LiveCatalogue catalogue, Database database, TileSettings settings, TileCache cache)
+    public static IEndpointRouteBuilder MapTiles(this IEndpointRouteBuilder routes, LiveCatalogue catalogue, Database database, TileSettings settings)
     {
         var stopping = routes.ServiceProvider.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping;
         // A tile that meets a dropped column asks for the list of layers again. Many tiles may ask at
@@ -303,9 +190,8 @@ public static class TileRoutes
                 });
         }
 
-        var server = new TileServer(() => catalogue.Current, database.Single<byte[]>, settings, cache, stopping, Reread);
-        Task<IResult> Serve(string layer, int z, int x, int y, HttpRequest request, CancellationToken cancel) =>
-            server.Answer(layer, z, x, y, TileRequest.Of(request), cancel);
+        var server = new TileServer(() => catalogue.Current, database.Single<byte[]>, settings, Reread);
+        Task<IResult> Serve(string layer, int z, int x, int y, CancellationToken cancel) => server.Answer(layer, z, x, y, cancel);
 
         // A GET request asks for a tile; a HEAD request asks for its headers alone, and the web
         // server leaves the body out. Both builds answer both (ADR 0006 rule 7).

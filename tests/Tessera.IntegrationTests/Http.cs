@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -44,20 +43,5 @@ public static class Http
         using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         return ((IPEndPoint)listener.LocalEndpoint).Port;
-    }
-
-    /// <summary>
-    /// Sends a request byte for byte over a plain network connection, so nothing tidies the target
-    /// on the way, as a browser or HttpClient would (S-06 test 1).
-    /// </summary>
-    public static async Task<string> Raw(int port, string target)
-    {
-        using var client = new TcpClient();
-        await client.ConnectAsync(IPAddress.Loopback, port);
-        await using var stream = client.GetStream();
-        var request = Encoding.Latin1.GetBytes($"GET {target} HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n");
-        await stream.WriteAsync(request);
-        using var reader = new StreamReader(stream, Encoding.Latin1);
-        return await reader.ReadToEndAsync();
     }
 }

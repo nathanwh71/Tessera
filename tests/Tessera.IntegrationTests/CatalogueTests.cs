@@ -11,7 +11,7 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
     private static readonly TileSettings Tiles = new(10000, 64, 60, 64);
 
     private static TileServer Server(LayerCatalogue catalogue, Database reader) =>
-        new(() => Option.Some(catalogue), reader.Single<byte[]>, Tiles, new TileCache(Tiles, TimeProvider.System));
+        new(() => Option.Some(catalogue), reader.Single<byte[]>, Tiles);
 
     // The stage: one of each kind US-03 names. xUnit runs this before each test, so every step may
     // run again on a stage it has already set. The test makes its own tables, as US-03 asks;
@@ -80,7 +80,7 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
         await using var reader = Database.Open(database.Reader);
         var catalogue = await Load(reader);
 
-        var answer = await Server(catalogue, reader).Answer("stage.odd \"name\"", 0, 0, 0, TileRequest.Plain, TestContext.Current.CancellationToken);
+        var answer = await Server(catalogue, reader).Answer("stage.odd \"name\"", 0, 0, 0, TestContext.Current.CancellationToken);
 
         Assert.Equal(200, await Http.Status(answer));
     }
@@ -94,7 +94,7 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
         var catalogue = await Load(reader);
         await database.Owner("REVOKE SELECT ON stage.revoked FROM tessera_reader;");
 
-        var answer = await Server(catalogue, reader).Answer("stage.revoked", 0, 0, 0, TileRequest.Plain, TestContext.Current.CancellationToken);
+        var answer = await Server(catalogue, reader).Answer("stage.revoked", 0, 0, 0, TestContext.Current.CancellationToken);
 
         Assert.Equal((404, "application/problem+json"), await Http.StatusAndType(answer));
     }
@@ -107,7 +107,7 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
         var catalogue = await Load(reader);
         await using var gone = Database.Open(database.Reader with { Port = Http.FreePort() }, PoolLimits.Default with { ConnectionTimeout = TimeSpan.FromSeconds(1) });
 
-        var answer = await Server(catalogue, gone).Answer("stage.granted", 0, 0, 0, TileRequest.Plain, TestContext.Current.CancellationToken);
+        var answer = await Server(catalogue, gone).Answer("stage.granted", 0, 0, 0, TestContext.Current.CancellationToken);
         var (status, headers) = await Http.StatusAndHeaders(answer);
 
         Assert.Equal(503, status);
@@ -124,21 +124,20 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
         var catalogue = await Load(reader);
         var clock = System.Diagnostics.Stopwatch.StartNew();
 
-        var answer = await Server(catalogue, reader).Answer("stage.slow", 0, 0, 0, TileRequest.Plain, TestContext.Current.CancellationToken);
+        var answer = await Server(catalogue, reader).Answer("stage.slow", 0, 0, 0, TestContext.Current.CancellationToken);
 
         Assert.Equal(503, await Http.Status(answer));
         Assert.True(clock.Elapsed < TimeSpan.FromSeconds(3), $"took {clock.Elapsed}");
     }
 
-    // N-23 c1 to c3 and test 2: a table granted after start-up joins the list within one refresh,
-    // and leaves it, with its kept tiles, once revoked.
+    // N-23 c1 and c2, and test 2: a table granted after start-up joins the list within one
+    // refresh, and leaves it once revoked.
     [Fact]
     public async Task Sees_a_grant_and_a_revoke_within_one_refresh()
     {
         await database.Owner("CREATE TABLE IF NOT EXISTS stage.late (id int PRIMARY KEY, geom geometry(Point, 4326)); REVOKE SELECT ON stage.late FROM tessera_reader;");
         await using var reader = Database.Open(database.Reader);
-        var departed = new System.Collections.Concurrent.ConcurrentBag<string>();
-        var live = LiveCatalogue.From(reader, (old, fresh) => { foreach (var id in LiveCatalogue.Departed(old, fresh)) departed.Add(id); }, _ => { });
+        var live = LiveCatalogue.From(reader, (_, _) => { }, _ => { });
         using var stop = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         var loop = live.Run(TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(100), TimeProvider.System, stop.Token);
 
@@ -149,8 +148,7 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
         await Until(() => live.Current.Match(found => found.Layers.ContainsKey("stage.late"), () => false));
 
         await database.Owner("REVOKE SELECT ON stage.late FROM tessera_reader;");
-        await Until(() => departed.Contains("stage.late"));
-        Assert.False(live.Current.Match(found => found.Layers.ContainsKey("stage.late"), () => true));
+        await Until(() => !live.Current.Match(found => found.Layers.ContainsKey("stage.late"), () => true));
 
         await stop.CancelAsync();
         await loop;
@@ -161,22 +159,5 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
         for (var attempt = 0; attempt < 50 && !condition(); attempt++)
             await Task.Delay(100, TestContext.Current.CancellationToken);
         Assert.True(condition(), "the list did not change within five seconds");
-    }
-
-    // N-24 test 2: twenty requests for one tile of a view that sleeps three seconds finish in about
-    // three seconds, all 200. Twenty queries on a pool of four would take fifteen, or give up.
-    [Fact]
-    public async Task Serves_a_crowd_from_one_query()
-    {
-        await using var reader = Database.Open(database.Reader);
-        var catalogue = await Load(reader);
-        var server = Server(catalogue, reader);
-        var clock = System.Diagnostics.Stopwatch.StartNew();
-
-        var answers = await Task.WhenAll(Enumerable.Range(0, 20).Select(_ =>
-            server.Answer("stage.slow", 0, 0, 0, TileRequest.Plain, TestContext.Current.CancellationToken)));
-
-        Assert.All(answers, answer => Assert.IsType<TileResult>(answer));
-        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(6), $"took {clock.Elapsed}");
     }
 }

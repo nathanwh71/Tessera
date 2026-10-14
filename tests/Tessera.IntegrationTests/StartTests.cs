@@ -80,11 +80,11 @@ public sealed class StartTests
             Assert.False(program.HasExited);
             answer.Dispose();
 
-            // N-25 c2: /health says DOWN, and names no fault. N-28: it reads the watch, so it
-            // answers within a second; a tile is refused within half a second.
+            // N-25 c2: /health says DOWN, and names no fault. Its ping waits a second at most; a
+            // tile is refused within half a second.
             var clock = Stopwatch.StartNew();
             using var health = await client.GetAsync("/health", TestContext.Current.CancellationToken);
-            Assert.True(clock.Elapsed < TimeSpan.FromSeconds(1), $"/health took {clock.Elapsed}");
+            Assert.True(clock.Elapsed < TimeSpan.FromSeconds(2), $"/health took {clock.Elapsed}");
             Assert.Equal(System.Net.HttpStatusCode.ServiceUnavailable, health.StatusCode);
             Assert.Equal("""{"status":"DOWN"}""", await health.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
 

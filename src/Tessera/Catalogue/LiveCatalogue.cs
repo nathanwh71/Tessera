@@ -93,11 +93,4 @@ public sealed class LiveCatalogue(
             // The service is stopping; the loop ends with it.
         }
     }
-
-    /// <summary>
-    /// The ids of layers in the old list that the new list has dropped, in alphabetical order, so the
-    /// service can throw away their kept tiles (N-23 c3).
-    /// </summary>
-    public static ImmutableArray<string> Departed(LayerCatalogue old, LayerCatalogue fresh) =>
-        [.. old.Layers.Keys.Where(id => !fresh.Layers.ContainsKey(id)).Order(StringComparer.Ordinal)];
 }

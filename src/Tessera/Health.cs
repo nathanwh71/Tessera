@@ -27,9 +27,8 @@ namespace Tessera.Service;
 /// </para>
 /// <para>
 /// Two checks must both pass: the list of layers has loaded at least once (N-23), and the database
-/// watch says the database is up. The watch pings, sends the database a tiny query, each second on
-/// a pool of its own, a set of open connections kept ready, so it never waits behind tile queries;
-/// /health therefore answers at once whatever the database's state (N-26 c3, N-28).
+/// answers a ping, a tiny query, within a second. The ping has a pool of its own, a set of open
+/// connections kept ready, so it never waits behind tile queries (N-26 c3).
 /// </para>
 /// <para>
 /// The answer names no check and no fault, so a stranger learns nothing of the service's insides;
@@ -96,13 +95,12 @@ public static class Health
                 () => HealthCheckResult.Unhealthy("The list of layers is not ready yet.")));
     }
 
-    // Reads the database watch's last verdict, which costs no query, so /health answers at once
-    // and never waits on a database that hangs (N-28).
+    // Pings the database; a ping waits a second at most, so /health answers within one.
     private sealed class DatabaseAnswers(Database database) : IHealthCheck
     {
-        public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default) =>
-            Task.FromResult(database.Watch.Up
+        public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default) =>
+            await database.Ping(cancellationToken).ConfigureAwait(false)
                 ? HealthCheckResult.Healthy()
-                : HealthCheckResult.Unhealthy("The database watch says the database is down."));
+                : HealthCheckResult.Unhealthy("The database does not answer.");
     }
 }

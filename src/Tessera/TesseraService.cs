@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -29,8 +28,8 @@ public static class TesseraService
     /// <para>
     /// The order of the middleware matters. Middleware is a chain of steps every request passes
     /// through on its way in, top to bottom. The error handler comes first so it can catch a failure
-    /// in any later step; the target screen comes before any route, the code that answers one kind
-    /// of address, so a disguised address never reaches one (S-06).
+    /// in any later step. Nginx, in front, keeps tiles, packs answers with gzip and tidies malformed
+    /// addresses (ADR 0008), so none of that happens here.
     /// </para>
     /// <para>
     /// The service builds on an empty host, the frame .NET (the toolkit the service runs on) wraps
@@ -41,7 +40,6 @@ public static class TesseraService
     /// </remarks>
     public static WebApplication Build(ServiceSettings settings, Database database, string mapFolder)
     {
-        var cache = new TileCache(settings.Tiles, TimeProvider.System);
         var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions());
         // Kestrel is the web server built into .NET, the part that holds the network connections.
         // HttpMaxConnections caps the connections open at once; HttpAcceptCount is how many more may
@@ -54,15 +52,6 @@ public static class TesseraService
                 kestrel.Listen(settings.Http.Host, settings.Http.Port);
             });
         builder.Services.AddRoutingCore();
-        // The map's own files travel packed smaller with gzip when the browser can unpack it (N-20);
-        // a tile packs itself, once, in Tiles. The list names the types of file worth packing. The
-        // usual text types are on it already; the two added are the type .NET gives a script and the
-        // type of a problem document, the service's error report.
-        builder.Services.AddResponseCompression(compression =>
-        {
-            compression.Providers.Add<GzipCompressionProvider>();
-            compression.MimeTypes = [.. ResponseCompressionDefaults.MimeTypes, "text/javascript", "application/problem+json"];
-        });
         builder.Logging.AddConsole();
         // The log is the running record of events the service writes. The empty builder reads no
         // logging settings, so .NET would write four lines for every request: about 140 MB a minute
@@ -72,9 +61,7 @@ public static class TesseraService
         builder.Logging.AddFilter("Microsoft", LogLevel.Warning);
         builder.Logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.Information);
         // The list of layers loads in the background, so the service answers from its first moment,
-        // with 503, the status code for 'try again later', until the database answers (N-23 c4). A
-        // layer that leaves the list takes its cached tiles, the copies kept in memory, with it
-        // (N-23 c3). The
+        // with 503, the status code for 'try again later', until the database answers (N-23 c4). The
         // service keeps one live catalogue, which every request shares.
         builder.Services.AddSingleton(services =>
         {
@@ -83,48 +70,22 @@ public static class TesseraService
                 database,
                 (old, fresh) =>
                 {
-                    var departed = LiveCatalogue.Departed(old, fresh);
-                    cache.DropLayers(departed);
-                    if (old.Layers.Count != fresh.Layers.Count || departed.Length > 0)
+                    if (!old.Layers.Keys.ToHashSet().SetEquals(fresh.Layers.Keys))
                         log.LogInformation("The service publishes {Count} layers.", fresh.Layers.Count);
                 },
                 error => log.LogWarning("Could not read the list of layers ({SqlState}): {Message}", error.SqlState, error.Message));
         });
         builder.Services.AddHostedService(services => new CatalogueRefresh(services.GetRequiredService<LiveCatalogue>(), settings.Catalogue.Refresh));
-        // A hosted service is a loop .NET starts with the service and stops with it. The database
-        // watch pings, sends the database a tiny query, each second from start-up, so while the
-        // database is down, or hangs, tile requests get 503 at once and /health reports DOWN (N-28).
-        builder.Services.AddHostedService(services => new DatabaseWatching(database, services.GetRequiredService<ILoggerFactory>().CreateLogger("Tessera.Database")));
         builder.Services.AddTesseraHealth(database);
 
         var app = builder.Build();
         app.UseProblemDocuments();
-        app.UseTargetScreen();
-        app.UseResponseCompression();
         app.UseMapHeaders();
         app.UseRouting();
         app.MapTesseraHealth();
-        app.MapTiles(app.Services.GetRequiredService<LiveCatalogue>(), database, settings.Tiles, cache);
+        app.MapTiles(app.Services.GetRequiredService<LiveCatalogue>(), database, settings.Tiles);
         app.UseMap(settings.Area, settings.Map, mapFolder);
         return app;
-    }
-}
-
-/// <summary>Runs the database watch's loop (N-28) and logs each change of its verdict.</summary>
-internal sealed class DatabaseWatching(Database database, ILogger log) : BackgroundService
-{
-    private static readonly TimeSpan Every = TimeSpan.FromSeconds(1);
-
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        database.Watch.Changed += up =>
-        {
-            if (up)
-                log.LogInformation("The database answers again.");
-            else
-                log.LogWarning("The database is down; tile requests answer 503 until it answers again.");
-        };
-        return database.Watch.Run(Every, TimeProvider.System, stoppingToken);
     }
 }
 
