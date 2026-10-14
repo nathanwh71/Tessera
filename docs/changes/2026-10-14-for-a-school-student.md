@@ -28,14 +28,21 @@ All 27 files in `src/` ***changed*** their ***comments***, under the Java ***pas
 
 The ***freeze*** ***test*** ***failed*** in ***some*** ***full*** ***runs***, at 5.04 ***seconds***. A ***trace*** ***showed*** ***pings*** ***taking*** 3 ***seconds*** where their ***limits*** ***said*** ***one***. The ***ping*** ***now*** ***keeps*** its own ***clock***: it ***waits*** at most a ***second*** for ***each*** ***step***, ***judges***, and ***closes*** what it ***gave*** up on out of ***sight***. The ***test*** ***now*** ***starts*** its ***clock*** once Docker has ***frozen*** the ***database***, and ***runs*** ***alone***. ***Three*** ***full*** ***runs*** ***passed***, 51 of 51 ***each***.
 
-## Noticed, and left for a decision
+## Noticed, and settled or left for a decision
+
+***Three*** of the ***seven*** were ***settled*** the ***same*** ***afternoon***, ***each*** with a ***test*** that ***failed*** before its ***fix***.
+
+| Where | What ***looked*** ***wrong*** | Now |
+|---|---|---|
+| `Importer`, `ChangeColumnType` | It ***changed*** a ***column***'s ***type*** before the ***old*** ***rows*** ***went***; text such as 'closed' ***made*** ***numeric*** ***failed***, and the ***whole*** ***import*** ***rolled*** ***back*** | ***Fixed***: the ***rows*** go first |
+| `Importer`, `Shape` | A ***column*** the ***new*** ***file*** ***lacked*** ***stayed***, ***filled*** with NULL, in every tile | ***Fixed***: it is ***dropped***; a tile that ***meets*** a ***dropped*** ***column*** ***answers*** 503 and the ***list*** of ***layers*** is ***read*** again at ***once*** |
+| `Seed`, `Values` | A ***property*** with an ***empty*** ***name*** was ***dropped*** with no ***message*** | ***Fixed***: the ***file*** is ***refused***, ***naming*** the ***feature*** |
+
+The ***rest*** ***wait*** for a ***decision***.
 
 | Where | What ***looks*** ***wrong*** |
 |---|---|
-| `Importer`, `ChangeColumnType` | It ***changes*** a ***column***'s ***type*** before the ***old*** ***rows*** ***go***; text such as 'closed' ***made*** ***numeric*** ***fails***, and the ***whole*** ***import*** ***rolls*** ***back*** |
 | `Importer`, `ReadColumns` | A ***refusal*** ***becomes*** an ***empty*** ***list***, ***hiding*** its ***reason*** |
-| `Importer`, `Shape` | A ***column*** the ***new*** ***file*** ***lacks*** ***stays***, ***filled*** with NULL |
-| `Seed`, `Values` | A ***property*** with an ***empty*** ***name*** is ***dropped*** with no ***message*** |
 | `Database`, `InTransaction` | It ***neither*** ***reads*** nor ***tells*** the ***database*** ***watch***, ***unlike*** every other ***query***; ***harmless*** for the ***import***, which never ***starts*** the ***watch*** |
 | `SettingsReader`, `Known` | It ***names*** ***only*** the ***first*** ***unknown*** ***key***, though the ***reader*** ***reports*** every other ***problem*** at ***once*** |
 | `TesseraService` | `using System.Net;` ***looks*** ***unused*** |
