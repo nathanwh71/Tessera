@@ -39,3 +39,7 @@ With the ***logger*** ***quiet***, .NET ***waited*** on a ***lock*** ***less*** 
 
 - **Slow 503s.** While the ***database*** is ***down***, each ***request*** ***waits*** out `DbPoolConnectionTimeout`, 3 ***seconds***, ***sometimes*** twice: ***once*** at the `Gate`, ***once*** in Hikari. ***Requests*** ***pile*** up behind them.
 - **A silent health check.** Spring's health ***check*** ***waits*** for a Hikari ***connection*** too, so a ***watcher*** ***hears*** ***nothing*** ***rather*** than `DOWN`.
+
+## Update: the Java weak spots, fixed
+
+The ***same*** ***day***, N-27 ***gave*** the Java ***build*** a ***database*** ***watch***. ***Rerun***, its ***outage*** ***test*** ***showed*** 503s in ***milliseconds***, `DOWN` ***throughout***, and no ***dropped*** ***requests***. Its ***service*** ***still*** ***returns*** up to 5 ***seconds*** after the ***database***, ***because*** Hikari ***waits*** up to 5 ***seconds*** ***between*** ***attempts*** to ***reconnect***. JTessera's `docs/changes/2026-10-14-database-watch.md` ***holds*** the ***figures***.
