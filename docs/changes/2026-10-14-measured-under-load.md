@@ -59,3 +59,17 @@ The ***outage*** ***tests*** ***stopped*** the ***database*** ***cleanly***, so 
 **What it shows.** .NET has no ***guard*** for a ***frozen*** ***database***: each ***request*** ***waits*** out the ***pool***'s 3-***second*** ***timeout***, as Java ***did*** before N-27. Java's ***watch*** ***works***, but ***slowly***: it ***said*** `DOWN` ***about*** 4.7 ***seconds*** after the ***freeze***, after ***one*** ***slow*** ***ping***, a ***second***'s ***sleep***, and a ***second*** ***ping*** that ***hung*** on ***connecting***. ***Both*** ***recover*** at ***once***, since their ***connections*** ***survive*** the ***freeze***.
 
 **What would close the gap.** For .NET, a ***watch*** like Java's, or a Polly ***circuit*** ***breaker*** that ***opens*** on ***timeouts***. For Java, a ***watch*** that ***pings*** again at ***once*** after a ***slow*** ***ping***, ***rather*** than after a ***second***'s ***sleep***, would ***halve*** the ***time*** to `DOWN`.
+
+## Update: both builds with a database watch
+
+The ***same*** ***afternoon***, N-28 ***gave*** .NET a ***watch*** with Java's ***rules***, and Java's ***watch*** ***learned*** to ***ping*** again at ***once*** after a ***slow*** ***ping***. Both ***tests***, ***rerun***:
+
+| | .NET before | .NET after | Java after |
+|---|---|---|---|
+| ***Frozen***: ***median*** ***answer*** while ***away*** | 3,002 ms | under 1 ms | 1 ms |
+| ***Frozen***: ***requests*** k6 could not ***send*** | 3,839 | 823 | 715 |
+| ***Frozen***: `/health` | `DOWN`, with ***gaps*** | `UP` for ***about*** 3 s, then `DOWN` | `UP` for ***about*** 3.5 s, then `DOWN` |
+| ***Stopped***: ***requests*** k6 could not ***send*** | ***about*** 195 | 0 | 0 |
+| ***Stopped***: ***full*** ***service*** after the ***database*** | ***about*** 1 s | ***about*** 1 s | ***about*** 5 s |
+
+In both ***builds***, ***requests*** ***already*** ***waiting*** when the ***database*** ***freezes*** ***still*** ***wait*** out their 3 ***seconds***, so a ***freeze*** ***brings*** ***some*** ***seconds*** of ***slow*** 503s before the ***fast*** ones. Java ***still*** ***returns*** after a ***stop*** up to 5 ***seconds*** behind .NET, ***because*** of Hikari's ***reconnect*** ***wait***.

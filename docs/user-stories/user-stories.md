@@ -717,7 +717,7 @@ A ***crowd*** ***asking*** for ***one*** ***unbuilt*** tile ***shares*** ***one*
 
 ## Part D · The Java way
 
-***Five*** ***stories*** ***joined*** on 14 ***October*** 2026, and all ***five*** were ***built*** the same ***morning***. Each ***brings*** ***one*** ***behaviour*** of the Java ***build*** into this ***one***, so the ***office*** ***loses*** ***nothing*** when the Java ***build*** is ***archived*** (ADR 0006, as ***amended***). The maintainer ***decided*** ***one*** ***rule*** for all ***five***: ***follow*** the Java ***way***, so the ***service*** and the database may ***start*** in any ***order***. The ***stories*** ***take*** N-21 to N-25, after Part C. A ***sixth***, N-26, ***joined*** that ***afternoon***, when ***reading*** Npgsql's ***pool*** ***showed*** that it ***already*** ***keeps*** the Java ***build***'s ***order***.
+***Five*** ***stories*** ***joined*** on 14 ***October*** 2026, and all ***five*** were ***built*** the same ***morning***. Each ***brings*** ***one*** ***behaviour*** of the Java ***build*** into this ***one***, so the ***office*** ***loses*** ***nothing*** when the Java ***build*** is ***archived*** (ADR 0006, as ***amended***). The maintainer ***decided*** ***one*** ***rule*** for all ***five***: ***follow*** the Java ***way***, so the ***service*** and the database may ***start*** in any ***order***. The ***stories*** ***take*** N-21 to N-25, after Part C. A ***sixth***, N-26, ***joined*** that ***afternoon***, when ***reading*** Npgsql's ***pool*** ***showed*** that it ***already*** ***keeps*** the Java ***build***'s ***order***. A ***seventh***, N-28, ***joined*** after a ***test*** ***froze*** the ***database***.
 
 ### Step 20 · N-21 Name the settings as pg_tileserv names them
 
@@ -869,6 +869,32 @@ A ***crowd*** ***asking*** for ***one*** ***unbuilt*** tile ***shares*** ***one*
 
 **Known limit.** A tile query ***runs*** on the ***service***'s ***stop*** ***signal***, not the ***browser***'s, so ***several*** ***people*** can ***share*** it (N-24). When a ***person*** ***pans*** ***away*** before a tile ***arrives***, the ***map*** ***cancels*** the ***request***, but the query ***still*** ***waits*** its ***turn***, ***runs***, and ***lands*** in the ***cache***. The Java ***build*** ***does*** the ***same***. Nothing is ***lost***: a ***person*** who ***pans*** ***back*** ***gets*** the tile at no ***cost***. On a ***busy*** ***day***, though, ***abandoned*** queries ***hold*** ***connections*** that tiles ***still*** on ***screen*** ***need***. ***Cancelling*** a ***shared*** query once its ***last*** ***waiter*** has ***left*** would ***free*** them; a ***load*** ***run*** that ***cancels*** ***requests*** ***mid***-***flight*** should first ***show*** whether the ***delay*** ***matters***.
 
+### Step 26 · N-28 Answer at once while the database hangs
+
+| | |
+|---|---|
+| Size | 2 ***points*** |
+| Builds on | N-22: 503 with `Retry-After`; N-26: the ***ping***'s own ***pool*** |
+| Traces | ADR 0006 ***rule*** 6; Java's N-27; ***new*** on 14 ***October*** 2026 |
+
+**In plain words.** Npgsql ***fails*** at ***once*** when a ***connection*** is ***refused***, but a ***database*** that ***hangs***, ***behind*** a ***broken*** ***network*** or a ***stuck*** ***disk***, ***refuses*** ***nothing***. With the ***database*** ***frozen***, each ***request*** ***waited*** out the ***pool***'s 3-***second*** ***timeout***. A ***watch*** with the Java ***build***'s ***rules*** ***lets*** the ***service*** ***say*** at ***once*** what it ***knows***.
+
+> **Story.** **As** the maintainer, **I want** the ***service*** to ***answer*** 503 at ***once*** and ***say*** `DOWN` while the ***database*** ***hangs*** or is ***down***, **so that** ***browsers*** ***retry*** ***rather*** than ***hang***, and both ***builds*** ***behave*** alike.
+
+**Acceptance criteria**
+
+1. **Given** the ***database*** ***frozen***, **then** the ***watch*** ***says*** ***down*** ***within*** ***about*** ***four*** ***seconds***, and from then on a tile ***request*** ***answers*** 503 in ***milliseconds***.
+2. **Given** a ***line*** that will not ***open***, a ***lost*** ***connection*** or a ***server*** ***shutting*** ***down***, **then** the ***watch*** ***says*** ***down*** at ***once***; **given** ***one*** ***slow*** ***ping***, it ***pings*** again at ***once***, ***once*** in a ***row***.
+3. **Given** the ***database*** ***back***, **then** ***one*** ***answer*** ***says*** ***up***, and `/health` ***reads*** the ***watch***, so it ***answers*** at ***once*** ***whatever*** the ***database***'s ***state***.
+
+**Tests to write first**
+
+1. **The rules, with values alone**, and the ***watch*** with a ***fake*** ***ping***: `DatabaseWatchTests`.
+2. **A frozen database.** `FrozenDatabaseTests` ***pauses*** a ***real*** ***database***: ***down*** ***within*** 5 ***seconds*** on a ***busy*** ***test*** ***machine***, a ***query*** ***refused*** ***within*** 100 ms, ***up*** ***within*** 2.5 ***seconds*** of ***thawing***.
+3. **No database at start.** `StartTests`: `/health` ***within*** a ***second***, a tile ***within*** half a ***second***.
+
+**Known limit.** ***Requests*** ***already*** ***waiting*** for a ***connection*** when the ***database*** ***freezes*** ***still*** ***wait*** out their 3 ***seconds***, so the ***first*** ***few*** ***seconds*** ***bring*** a ***wave*** of ***slow*** 503s. Java ***shows*** the ***same*** ***wave***.
+
 ## The INVEST check
 
 A tick ***means*** the ***story*** ***meets*** the ***test*** in ***full***; 'Partly' ***names*** the ***reason***. ***Under*** 'Independent', each ***story*** ***names*** the ***stories*** ***above*** it that it ***needs***; ***none*** ***needs*** a ***story*** ***below*** it.
@@ -900,5 +926,6 @@ A tick ***means*** the ***story*** ***meets*** the ***test*** in ***full***; 'Pa
 | 23 | N-24 ***One*** query for a ***crowd*** | ✓ after N-19 | ✓ | ✓ | ✓ | ✓ 1 | ✓ |
 | 24 | N-25 `/health` | ✓ after N-22, N-23 | ✓ | ***Partly***: for the maintainer | ✓ | ✓ 1 | ✓ |
 | 25 | N-26 ***Order*** of ***arrival*** | ✓ after N-22, N-25 | ✓ | ***Partly***: for the maintainer | ✓ | ✓ 1 | ✓ |
+| 26 | N-28 503 at ***once*** when it ***hangs*** | ✓ after N-22, N-26 | ✓ | ***Partly***: for the maintainer | ✓ | ✓ 2 | ✓ |
 
-The ***twenty***-***five*** ***stories*** ***come*** to 42 ***points***: 13 for the ***service***, 16 for the ***map***, 4 for Part C and 9 for Part D. Some criteria ***name*** a ***later*** ***story***: US-03 for its ***problem*** ***documents*** (US-07), US-07 for the 400 of S-06, and UI-09 for a ***click*** on a cluster (UI-10). Each such ***criterion*** ***holds*** once that ***story*** is ***built***, and the ***later*** ***story***'s ***tests*** ***prove*** it.
+The ***twenty***-***six*** ***stories*** ***come*** to 44 ***points***: 13 for the ***service***, 16 for the ***map***, 4 for Part C and 11 for Part D. Some criteria ***name*** a ***later*** ***story***: US-03 for its ***problem*** ***documents*** (US-07), US-07 for the 400 of S-06, and UI-09 for a ***click*** on a cluster (UI-10). Each such ***criterion*** ***holds*** once that ***story*** is ***built***, and the ***later*** ***story***'s ***tests*** ***prove*** it.

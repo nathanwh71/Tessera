@@ -8,7 +8,7 @@ A **tile** is ***one*** ***square*** of a ***map*** at ***one*** zoom ***level**
 
 ## What this build holds, story by story
 
-The ***twenty***-***five*** ***stories*** in `docs/user-stories/user-stories.md` ***fix*** what Tessera must do. Their ***state*** on 14 ***October*** 2026:
+The ***twenty***-***six*** ***stories*** in `docs/user-stories/user-stories.md` ***fix*** what Tessera must do. Their ***state*** on 14 ***October*** 2026:
 
 | Story | State |
 |---|---|
@@ -22,7 +22,7 @@ The ***twenty***-***five*** ***stories*** in `docs/user-stories/user-stories.md`
 | US-35 Office on ***port*** 80 | ***Script*** ***written***; it ***needs*** a ***first*** ***run*** on the ***office*** ***machine*** |
 | US-23 and UI-09 to UI-17, the ***map*** | ***Built*** and ***tested***: the ***map*** ***copied*** from the Java ***build*** (ADR 0006), and its 20 browser ***tests*** ***pass*** ***against*** this ***service*** |
 | N-18 to N-20, tiles that ***cost*** ***less*** | ***Built*** and ***tested***: a tile ***carries*** `max-age` and a ***weak*** `ETag`, a ***kept*** ***copy*** ***answers*** without a query, and tiles and the ***map***'s ***files*** ***travel*** gzip-packed |
-| N-21 to N-26, the Java ***way*** | ***Built*** and ***tested***: pg_tileserv's ***setting*** ***names***, 503 with `Retry-After` and a `DbTimeout`, ***grants*** ***seen*** ***within*** `CatalogueRefresh` ***seconds***, ***one*** query for a ***crowd***, `/health`, and queries ***served*** in the ***order*** they ***arrive***. The ***service*** and the database ***start*** in any ***order*** |
+| N-21 to N-28, the Java ***way*** | ***Built*** and ***tested***: pg_tileserv's ***setting*** ***names***, 503 with `Retry-After` and a `DbTimeout`, ***grants*** ***seen*** ***within*** `CatalogueRefresh` ***seconds***, ***one*** query for a ***crowd***, `/health`, queries ***served*** in the ***order*** they ***arrive***, and a ***database*** ***watch*** that ***answers*** 503 at ***once*** while the ***database*** ***hangs***. The ***service*** and the database ***start*** in any ***order*** |
 
 ## What you need
 
@@ -91,7 +91,7 @@ The ***service*** is ***one*** ***program*** ***cut*** into ***seven*** modules,
 
 ## The documents
 
-- `docs/user-stories/user-stories.md`: the ***twenty***-***five*** ***stories*** of Phase Oct, in ***build*** ***order***
+- `docs/user-stories/user-stories.md`: the ***twenty***-***six*** ***stories*** of Phase Oct, in ***build*** ***order***
 - `docs/adr/0001-modular-monolith.md`: why the ***service*** is ***one*** ***program*** in ***seven*** modules
 - `docs/adr/0002-scripts-in-typescript-with-zx.md`: why the ***scripts*** are TypeScript on Node.js 26
 - `docs/adr/0003-settings-file.md`: why ***settings*** ***live*** in `tessera.json` and the ***environment***
