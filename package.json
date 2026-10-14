@@ -11,6 +11,7 @@
     "test": "node scripts/test.ts",
     "start": "node --env-file-if-exists=.env scripts/start.ts",
     "publish": "node --env-file-if-exists=.env scripts/publish.ts",
+    "e2e": "node scripts/e2e.ts",
     "office-port": "node --env-file-if-exists=.env scripts/office-port.ts",
     "test:scripts": "node --test \"scripts/**/*.test.ts\"",
     "typecheck": "tsc --noEmit"

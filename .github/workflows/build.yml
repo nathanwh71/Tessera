@@ -32,3 +32,9 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run test:scripts
+      # The browser tests drive Chromium against the built service and a database of their own
+      # (scripts/e2e.ts). Playwright installs the browser it was built for, with the system
+      # libraries it needs.
+      - run: npx playwright install --with-deps chromium
+        working-directory: web
+      - run: npm run e2e
