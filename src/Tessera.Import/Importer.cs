@@ -86,7 +86,7 @@ public static class Importer
 
     /// <summary>
     /// Every query the import runs, in order: schemas and tables; then the old rows of all nine
-    /// tables emptied; then each table's columns added or changed, its index made; then the
+    /// tables emptied; then each table's columns made to match the file, its index made; then the
     /// new rows; then fresh statistics. The queries themselves live in
     /// Sql's <see cref="ImportQueries"/>; this function decides which to run, and touches no database.
     /// </summary>
@@ -96,6 +96,7 @@ public static class Importer
     /// <para>
     /// The rows go before the columns change, so a change of type meets an empty table: no old
     /// value has to turn into the new type, which a word such as 'closed' cannot do into a number.
+    /// A column the file no longer carries goes, so no tile carries a column of nothing but NULLs.
     /// All of it runs in one transaction, so a reader sees the old table or the new, never between.
     /// </para>
     /// </remarks>
@@ -112,11 +113,14 @@ public static class Importer
             from table in TableName.Of(layer.Value, layer.Key).MapError(problem => new ImportError(problem))
             from index in Quote($"{layer.Key}_{Seed.GeometryColumn}_index")
             from columns in Columns(places.Where(place => place.Layer == layer.Key))
-            select (Layer: layer.Key, Table: new ImportTable(table, id, geometry, index, columns)))
+            let target = new ImportTable(table, id, geometry, index, columns)
+            from dead in Dead(target, existing.Of(table.Id))
+            select (Layer: layer.Key, Table: target, Dead: dead))
         select ImmutableArray.CreateRange(
             schemas
                 .Concat(tables.Select(target => ImportQueries.CreateTable(target.Table)))
                 .Concat(tables.Select(target => ImportQueries.Empty(target.Table)))
+                .Concat(tables.SelectMany(target => target.Dead.Select(column => ImportQueries.DropColumn(target.Table, column))))
                 .Concat(tables.SelectMany(target => Shape(target.Table, existing.Of(target.Table.Table.Id))))
                 .Concat(tables.SelectMany(target => places
                     .Where(place => place.Layer == target.Layer)
@@ -150,6 +154,14 @@ public static class Importer
             : present.Length > 0 && present.All(value => value is PropertyValue.Number) ? SqlType.Number
             : SqlType.Text;
     }
+
+    // The columns a table holds that the file no longer carries, beside the id and the geometry,
+    // which every table keeps. Each name came from the database itself, and is quoted all the same.
+    private static Result<ImmutableArray<QuotedName>, ImportError> Dead(ImportTable table, ImmutableDictionary<string, string> existing) =>
+        existing.Keys
+            .Where(name => name != table.Id.Raw && name != table.Geometry.Raw && !table.Columns.Any(column => column.Name.Raw == name))
+            .Order(StringComparer.Ordinal)
+            .Traverse(Quote);
 
     // A property that was text in one file and a number in the next should load rather than fail the
     // whole import, so a column the database holds with another type is changed. The table is empty

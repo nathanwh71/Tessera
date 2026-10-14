@@ -19,6 +19,12 @@ public sealed record DatabaseError(string SqlState, string Message)
     public bool IsMissingTable => SqlState is PostgresErrorCodes.InsufficientPrivilege or PostgresErrorCodes.UndefinedTable;
 
     /// <summary>
+    /// True when a query names a column the table no longer holds (42703, 'undefined column'), as
+    /// after an import drops a column the list of layers still names, until the list is read again.
+    /// </summary>
+    public bool IsMissingColumn => SqlState is PostgresErrorCodes.UndefinedColumn;
+
+    /// <summary>
     /// True when waiting may cure the failure: the connection failed (class 08), a query ran past
     /// its time (57014), the server is shutting down, crashing or starting (57P01 to 57P03), or it has
     /// no room for another connection (53300).

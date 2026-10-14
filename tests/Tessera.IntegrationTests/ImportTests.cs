@@ -137,4 +137,21 @@ public sealed class ImportTests(DatabaseFixture database) : IClassFixture<Databa
         Assert.Equal("double precision", await TypeOfCafes("seats"));
         Assert.Equal(12.0, await database.OwnerValue<double>("SELECT seats FROM food.cafes WHERE id = 'cafes-001'"));
     }
+
+    // A column the new file lacks goes, so no tile carries a column of nothing but NULLs.
+    [Fact]
+    public async Task Drops_a_column_the_new_file_lacks()
+    {
+        await Import(Samples.Sample(file =>
+        {
+            ((System.Text.Json.Nodes.JsonObject)file["features"]![2]!)["properties"]!["opening"] = "9am";
+            return file;
+        }));
+        Assert.Equal("text", await TypeOfCafes("opening"));
+
+        await Import(Samples.Sample());
+
+        Assert.Null(await TypeOfCafes("opening"));
+        Assert.Equal("text", await TypeOfCafes("name"));
+    }
 }

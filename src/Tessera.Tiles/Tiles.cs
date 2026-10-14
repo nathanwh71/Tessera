@@ -161,7 +161,11 @@ public delegate Task<Result<Option<byte[]>, DatabaseError>> TileReader(Query que
 /// A cancellation token, a signal that tells work to stop. This one stops a shared query only when
 /// the service stops; one browser leaving never does.
 /// </param>
-public sealed class TileServer(Func<Option<LayerCatalogue>> catalogue, TileReader read, TileSettings settings, TileCache cache, CancellationToken stopping = default)
+/// <param name="layerChanged">
+/// Called when a tile query names a column the table no longer holds, so the list of layers is read
+/// again at once rather than at its next turn; none in a test that needs no list.
+/// </param>
+public sealed class TileServer(Func<Option<LayerCatalogue>> catalogue, TileReader read, TileSettings settings, TileCache cache, CancellationToken stopping = default, Action? layerChanged = null)
 {
     // ConcurrentDictionary is a table that many threads, lines of work running side by side, may
     // change at once in safety.
@@ -239,12 +243,21 @@ public sealed class TileServer(Func<Option<LayerCatalogue>> catalogue, TileReade
         built.Match(
             tile => Reply(tile, request),
             // A table whose grant was withdrawn since start-up fails with error 42501 ('insufficient
-            // privilege'); the layer has left, so the answer is 404 'not found' (US-03 c6). A database
-            // that cannot answer now gives 503, asking the browser to try again (N-22); anything else
-            // is the service's own fault, 500.
+            // privilege'); the layer has left, so the answer is 404 'not found' (US-03 c6). A column an
+            // import dropped since the list of layers was last read fails with 42703: the layer has
+            // changed, so the list is read again at once, and the browser asked to try again in a few
+            // seconds. A database that cannot answer now gives 503 too (N-22); anything else is the
+            // service's own fault, 500.
             error => error.IsMissingTable ? Problems.NotFound("No published layer has that name.")
+                : error.IsMissingColumn ? LayerChanged()
                 : error.IsUnavailable ? Problems.Unavailable("The database cannot be reached. Try again shortly.")
                 : Problems.Answer(StatusCodes.Status500InternalServerError, Option.None<string>()));
+
+    private IResult LayerChanged()
+    {
+        layerChanged?.Invoke();
+        return Problems.Unavailable("The layer has changed. Try again shortly.");
+    }
 
     // A browser that already holds this tile gets 304 and no body; any other gets the bytes,
     // packed if it can unpack them.
@@ -271,7 +284,26 @@ public static class TileRoutes
     public static IEndpointRouteBuilder MapTiles(this IEndpointRouteBuilder routes, LiveCatalogue catalogue, Database database, TileSettings settings, TileCache cache)
     {
         var stopping = routes.ServiceProvider.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping;
-        var server = new TileServer(() => catalogue.Current, database.Single<byte[]>, settings, cache, stopping);
+        // A tile that meets a dropped column asks for the list of layers again. Many tiles may ask at
+        // once; the flag lets one reread run at a time, and the rest find it under way.
+        var rereading = 0;
+        void Reread()
+        {
+            if (Interlocked.Exchange(ref rereading, 1) == 0)
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await catalogue.Refresh(stopping).ConfigureAwait(false);
+                    }
+                    finally
+                    {
+                        Volatile.Write(ref rereading, 0);
+                    }
+                });
+        }
+
+        var server = new TileServer(() => catalogue.Current, database.Single<byte[]>, settings, cache, stopping, Reread);
         Task<IResult> Serve(string layer, int z, int x, int y, HttpRequest request, CancellationToken cancel) =>
             server.Answer(layer, z, x, y, TileRequest.Of(request), cancel);
 

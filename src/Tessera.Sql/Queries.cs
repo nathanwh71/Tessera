@@ -198,6 +198,15 @@ public static class ImportQueries
         Query.Of($"ALTER TABLE {table.Table} ALTER COLUMN {column.Name} TYPE {column.Type} USING {column.Name}::text::{column.Type}");
 
     /// <summary>
+    /// Removes a column the new file no longer carries, so no tile carries a column of nothing but
+    /// NULLs, the database's mark for an empty cell. IF EXISTS makes it safe to run twice. A view
+    /// built on the column makes the database refuse, and the whole import roll back, rather than
+    /// break the view.
+    /// </summary>
+    public static Query DropColumn(ImportTable table, QuotedName column) =>
+        Query.Of($"ALTER TABLE {table.Table} DROP COLUMN IF EXISTS {column}");
+
+    /// <summary>
     /// A spatial index, here of the GIST kind, sorts shapes by where they lie, so a tile finds its few
     /// places without reading the whole table (US-24 c1).
     /// </summary>

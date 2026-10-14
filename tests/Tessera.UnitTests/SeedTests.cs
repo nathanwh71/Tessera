@@ -172,4 +172,20 @@ public sealed class SeedTests
         var change = Array.FindIndex(queries.ToArray(), text => text.StartsWith("ALTER TABLE \"food\".\"cafes\" ALTER COLUMN", StringComparison.Ordinal));
         Assert.True(empty >= 0 && change > empty, $"DELETE at {empty}, ALTER at {change}");
     }
+
+    // A column the new file no longer carries goes, so no tile carries a column of nothing but NULLs.
+    // The id and the geometry stay: every table needs them.
+    [Fact]
+    public void Drops_a_column_the_new_file_lacks()
+    {
+        var queries = PlanTexts(CafesHold(("id", "text"), ("geom", "USER-DEFINED"), ("name", "text"), ("opening", "text")));
+
+        Assert.Contains("ALTER TABLE \"food\".\"cafes\" DROP COLUMN IF EXISTS \"opening\"", queries);
+        Assert.DoesNotContain(queries, text => text.Contains("DROP COLUMN IF EXISTS \"id\"", StringComparison.Ordinal)
+            || text.Contains("DROP COLUMN IF EXISTS \"geom\"", StringComparison.Ordinal)
+            || text.Contains("DROP COLUMN IF EXISTS \"name\"", StringComparison.Ordinal));
+        var empty = queries.IndexOf("DELETE FROM \"food\".\"cafes\"");
+        var drop = queries.IndexOf("ALTER TABLE \"food\".\"cafes\" DROP COLUMN IF EXISTS \"opening\"");
+        Assert.True(drop > empty, $"DELETE at {empty}, DROP at {drop}");
+    }
 }

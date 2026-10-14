@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using FsCheck.Xunit;
 using Tessera.Catalogue;
 using Tessera.Settings;
@@ -252,6 +253,30 @@ public sealed class TileCacheTests
 
         Assert.IsNotType<TileResult>(first);
         Assert.Equal(2, queries);
+    }
+
+    // An import may drop a column the list of layers still names, until the list is read again
+    // (N-23). The tile then answers 503 with Retry-After, not 500, and asks for the list at once.
+    [Fact]
+    public async Task Asks_the_browser_to_wait_and_rereads_the_list_when_a_column_has_gone()
+    {
+        var rereads = 0;
+        var settings = new TileSettings(10000, 64, 60, 64);
+        var server = new TileServer(
+            () => Option.Some(Catalogue),
+            (_, _) => Task.FromResult(Result.Refuse<Option<byte[]>, DatabaseError>(new DatabaseError("42703", "column t.opening does not exist"))),
+            settings, new TileCache(settings, new Clock()), layerChanged: () => rereads++);
+
+        var context = new Microsoft.AspNetCore.Http.DefaultHttpContext
+        {
+            RequestServices = new Microsoft.Extensions.DependencyInjection.ServiceCollection().AddLogging().BuildServiceProvider(),
+        };
+        context.Response.Body = new MemoryStream();
+        await (await server.Answer("food.cafes", 0, 0, 0, TileRequest.Plain, CancellationToken.None)).ExecuteAsync(context);
+
+        Assert.Equal(503, context.Response.StatusCode);
+        Assert.Equal("5", context.Response.Headers.RetryAfter.ToString());
+        Assert.Equal(1, rereads);
     }
 
     // N-23 c4: before the first list of layers loads, a tile answers 503 and runs no query.
