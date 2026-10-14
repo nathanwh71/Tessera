@@ -54,6 +54,12 @@ public static class TesseraService
             compression.MimeTypes = [.. ResponseCompressionDefaults.MimeTypes, "text/javascript", "application/problem+json"];
         });
         builder.Logging.AddConsole();
+        // The empty builder reads no logging settings, so .NET would write four lines for every
+        // request: about 140 MB a minute under load, enough to fill a disk in a day. Warnings and
+        // worse from the framework are kept, with its start-up lines, as Spring keeps in the Java
+        // build; Tessera's own lines stay at Information.
+        builder.Logging.AddFilter("Microsoft", LogLevel.Warning);
+        builder.Logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.Information);
         // The list of layers loads in the background, so the service answers from its first moment,
         // with 503 until the database answers (N-23 c4). A layer that leaves the list takes its kept
         // tiles with it (N-23 c3).

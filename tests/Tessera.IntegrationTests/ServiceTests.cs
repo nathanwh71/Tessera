@@ -378,6 +378,11 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
             program.Kill(entireProcessTree: true);
             await program.WaitForExitAsync(TestContext.Current.CancellationToken);
         }
+
+        // The log holds no line for each request: under load those lines filled 140 MB a minute.
+        var log = await program.StandardOutput.ReadToEndAsync(TestContext.Current.CancellationToken);
+        Assert.Contains("Now listening on", log, StringComparison.Ordinal);
+        Assert.DoesNotContain("Request starting", log, StringComparison.Ordinal);
     }
 
     // N-25 c1 and test 1: with the list loaded and the database answering, /health says UP.
