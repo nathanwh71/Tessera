@@ -1,8 +1,11 @@
-// The map module's public face: the list of what other modules may import.
+// map/index.ts: the map module's public face, the list of what other modules may import. The app
+// module draws the map's parts through it, and runs the map's model, the value that holds everything
+// the map shows, and its update, the function that makes the new model from the old and a message;
+// the module's own tests import through it too (ADR 0001).
 export { formatPosition } from "./coordinates";
 export { CLUSTER_PREFIX, PIN_PREFIX, TOOLTIP_IMAGE, pinImage, readImageName } from "./images";
 export type { ImageRequest } from "./images";
-export { clusterLabel, levelText, mergeDistanceMetres, pinLabel, zoomLabel } from "./labels";
+export { CANNOT_DRAW, clusterLabel, levelText, mergeDistanceMetres, pinLabel, zoomLabel } from "./labels";
 export type { MapZoom } from "./levels";
 export { LAST_CLUSTER_LEVEL, NAMES_FROM_LEVEL, OPEN_CLUSTER_LEVEL, levelOf, mapZoom, toLevel, toMapZoom } from "./levels";
 export type { Drop, Landing, LandingEvent, PinInView } from "./landing";

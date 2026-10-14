@@ -1,3 +1,8 @@
+// map/readouts.test.ts: what the map reads out in words and numbers (UI-09, UI-19): zoom levels and
+// the zoom of MapLibre, the library that draws the map; the scale bar; and the point under the
+// pointer. Pure functions, which read only their inputs, tested with values alone under vitest, the
+// test runner.
+
 import { describe, expect, it } from "vitest";
 import { MACAU, level } from "../shared";
 import { type MapZoom, formatPosition, levelOf, levelText, mapZoom, metresPerPixel, roundLengthBelow, scaleBar, toLevel, toMapZoom, zoomLabel } from ".";
@@ -18,6 +23,7 @@ describe("UI-09 levels", () => {
 	});
 
 	it("keeps the two scales apart, as F#'s units of measure would: the compiler refuses one for the other", () => {
+		// The two are branded types, numbers with a mark the compiler alone sees (ADR 0004).
 		// @ts-expect-error a level cannot stand where MapLibre's zoom belongs
 		const wrong: MapZoom = level(15);
 		// @ts-expect-error nor can a plain number

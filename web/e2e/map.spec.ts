@@ -1,5 +1,8 @@
 // e2e/map.spec.ts: the map in a real browser, against the running service with the 900 places of
-// data/macau-pois.geojson loaded and published (US-24).
+// data/macau-pois.geojson loaded and published (US-24). Playwright, the tool that drives the browser,
+// runs each test as playwright.config.ts sets out; map-page.ts holds the helpers. These tests prove
+// what the unit tests cannot: what MapLibre, the library that draws the map, drew, and what the page
+// asked the service for.
 
 import AxeBuilder from "@axe-core/playwright";
 import { type Page, expect, test } from "@playwright/test";
@@ -8,12 +11,13 @@ import { BUSIEST, drawn, onScreen, openMap, settle, view } from "./map-page";
 const LAYERS = ["food.cafes", "food.restaurants", "food.markets", "outdoors.parks", "outdoors.playgrounds", "culture.museums", "culture.libraries", "transport.trains", "transport.buses"];
 const TILE = /^\/(food|outdoors|culture|transport)\.[a-z]+\/\d+\/\d+\/\d+\.pbf$/;
 
+/** The faults axe, a library that checks a page against the web's accessibility rules, finds on the page. */
 async function axe(page: Page): Promise<string[]> {
 	const result = await new AxeBuilder({ page }).analyze();
 	return result.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`);
 }
 
-/** Every request the page makes, and every message the browser's console shows, while it opens. */
+/** Every request the page makes, and every error or warning the browser's console logs, while it opens. */
 function watch(page: Page): { paths: string[]; origins: Set<string>; console: string[] } {
 	const seen = { paths: [] as string[], origins: new Set<string>(), console: [] as string[] };
 	page.on("request", (r) => {
@@ -91,14 +95,14 @@ test.describe("US-23 open the map of the area", () => {
 			route.fulfill({
 				status: 503,
 				contentType: "application/problem+json",
-				body: JSON.stringify({ type: "about:blank", title: "Service Unavailable", status: 503, detail: "The list of layers is not ready yet." }),
+				body: JSON.stringify({ type: "about:blank", title: "Service Unavailable", status: 503, detail: "The list of layers has not loaded yet." }),
 			}),
 		);
 		await page.addInitScript(() => {
 			window.__tesseraTest = true;
 		});
 		await page.goto("/");
-		await expect(page.getByRole("alert")).toHaveText("The list of layers is not ready yet.");
+		await expect(page.getByRole("alert")).toHaveText("The list of layers has not loaded yet.");
 		expect(await axe(page)).toEqual([]);
 	});
 });
@@ -161,7 +165,8 @@ test.describe("UI-11 names", () => {
 
 test.describe("UI-15 calm", () => {
 	test("drops the pins in as the page opens, then hands over to the map's own", async ({ page }) => {
-		// Counts every dropping pin the page ever shows, however briefly.
+		// Counts every dropping pin the page ever shows, however briefly: a MutationObserver hears each
+		// change to the page and notes each pin as it appears.
 		await page.addInitScript(() => {
 			const seen = new Set<Element>();
 			(window as unknown as { __drops: Set<Element> }).__drops = seen;
@@ -193,7 +198,8 @@ test.describe("Keyboard and screen reader", () => {
 		const names: string[] = [];
 		for (let i = 0; i < 80 && !(names.at(-1) ?? "").startsWith("Scale bar"); i += 1) {
 			await page.keyboard.press("Tab");
-			// The ARIA snapshot's first line holds the role and the accessible name: '- button "Zoom in"'.
+			// The ARIA snapshot, what a screen reader sees of the focused control, holds its role and its
+			// name in its first line: '- button "Zoom in"'.
 			const snapshot = await page.locator(":focus").ariaSnapshot();
 			names.push(/"(.*)"/.exec(snapshot.split("\n")[0] ?? "")?.[1] ?? snapshot);
 		}

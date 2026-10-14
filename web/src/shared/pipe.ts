@@ -1,9 +1,12 @@
-// shared/pipe.ts: F#'s |> and >> for TypeScript, which has neither (ADR 0004).
+// shared/pipe.ts: `pipe` and `flow`, which stand in for two operators of F#, a functional language:
+// `|>`, which feeds a value through a chain of functions, and `>>`, which joins functions into one.
+// TypeScript has neither (ADR 0004). The shared kernel holds them, and the map's readers of the
+// area, of a failed tile and of a zoom level use them.
 //
 // JavaScript's own pipe operator is still a proposal, and TypeScript cannot read it, so these two
-// functions stand in for it. Each list of overloads, one line for each number of steps, lets the
-// compiler check that every step takes what the step before it gives. The overloads are types alone,
-// so they leave plain JavaScript behind (ADR 0002, rule 4).
+// functions stand in for it. Each list of overloads, the declared shapes of one function, one line
+// for each number of steps, lets the compiler check that every step takes what the step before it
+// gives. The overloads are types alone, so they leave plain JavaScript behind (ADR 0002, rule 4).
 
 /** Runs a value through each step in the order written, as F#'s `x |> f |> g` does. */
 export function pipe<A>(a: A): A;

@@ -1,10 +1,16 @@
-// map/labels.ts: the words screen readers say for what the canvas, the bitmap the map is drawn on, shows (UI-09, UI-10, UI-19).
+// map/labels.ts: the words a screen reader, the program that reads a page aloud to a visitor who
+// cannot see it, says for what the canvas, the bitmap the map is drawn on, shows (UI-09, UI-10,
+// UI-19). Pure functions of the map module, which read only their inputs and change nothing outside
+// themselves; targets.ts and the controls call them.
 
 import { MAX_ZOOM } from "../shared";
 import { metresPerPixel } from "./scale";
 import { CLUSTER_RADIUS_PX } from "./style";
 
-/** How many of a cluster's places its label names; the rest it counts. A cluster is one mark that stands for several places close together. */
+/**
+ * How many of a cluster's places its label names; the rest it counts. A cluster is one mark that
+ * stands for several places close together.
+ */
 export const NAMED_IN_CLUSTER = 10;
 
 /**
@@ -42,3 +48,9 @@ export function zoomLabel(direction: "in" | "out", level: number): string {
 export function mergeDistanceMetres(level: number, latitude: number): number {
 	return CLUSTER_RADIUS_PX * metresPerPixel(level, latitude);
 }
+
+/**
+ * What the page says in place of the map when the browser cannot draw it (US-23, criterion 9): what
+ * went wrong, and two things the visitor can do about it.
+ */
+export const CANNOT_DRAW = "This browser cannot draw the map. Try another browser, or turn on hardware acceleration in this browser's settings.";

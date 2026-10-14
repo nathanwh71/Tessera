@@ -1,4 +1,6 @@
-// e2e/map-page.ts: opens the map and reads it, for the browser tests.
+// e2e/map-page.ts: the helpers the browser tests in map.spec.ts share: they open the map, move it
+// and read it back. Playwright, the tool that drives a real browser, runs them against the running
+// service; `page.evaluate` runs a function inside the browser and returns its value to the test.
 
 import { type Page, expect } from "@playwright/test";
 
@@ -8,7 +10,10 @@ import { type Page, expect } from "@playwright/test";
  */
 export const BUSIEST = { lng: 113.54566, lat: 22.21188 } as const;
 
-/** Opens the page with the map reachable from the test (main.tsx), and waits until the pins have landed and the map rests. */
+/**
+ * Opens the page with the map reachable from the test (main.tsx), and waits until the pins have
+ * landed and the map rests.
+ */
 export async function openMap(page: Page, path = "/"): Promise<void> {
 	await page.addInitScript(() => {
 		window.__tesseraTest = true;
@@ -26,7 +31,10 @@ export async function landed(page: Page): Promise<void> {
 		.toBe(1);
 }
 
-/** Waits until the map has drawn every tile and finished every movement, then one more frame for the overlay. */
+/**
+ * Waits until the map has drawn every tile, each a square piece of the map, and finished every
+ * movement, then one more frame, a redraw of the screen, for the overlay.
+ */
 export async function settle(page: Page): Promise<void> {
 	await page.evaluate(
 		() =>
@@ -38,7 +46,8 @@ export async function settle(page: Page): Promise<void> {
 				else map.once("idle", done);
 			}),
 	);
-	// MapLibre fades symbols in over 300 ms after it rests (UI-15).
+	// MapLibre, the library that draws the map, fades its pins and names in over 300 ms after it rests
+	// (UI-15).
 	await page.waitForTimeout(400);
 }
 
@@ -49,7 +58,7 @@ export async function view(page: Page, level: number, center: { lng: number; lat
 	await settle(page);
 }
 
-/** The features MapLibre has drawn on the given layers of its style. */
+/** The features, points with their properties, that MapLibre has drawn on the given layers of its style. */
 export async function drawn(page: Page, layers: readonly string[]): Promise<{ id: string; layer: string; group: string }[]> {
 	return page.evaluate((ids) => {
 		const map = window.__tesseraMap;

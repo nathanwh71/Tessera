@@ -1,5 +1,8 @@
 /// <reference types="node" />
-// architecture.test.ts: the modular monolith's walls, checked on every test run.
+// architecture.test.ts: the walls of the modular monolith, checked on every test run (ADR 0001). A
+// modular monolith is one program built from modules, folders of code with a public face, that may
+// depend on each other in one direction alone. This file reads every source file under src/ as text,
+// under vitest, the test runner, and fails when a file imports what its module may not.
 //
 // Each module may import only the modules listed for it, and only through their index.ts.
 // The list is a one-way order, so no two modules can depend on each other.
@@ -55,7 +58,7 @@ describe("the modular monolith", () => {
 					.filter(([target]) => target !== module)
 					.filter(([target, ...rest]) => {
 						if (target === undefined || !isModule(target)) return true;
-						if (target === "testing") return !isTest(file); // fixtures are for tests alone
+						if (target === "testing") return !isTest(file); // testing/ serves tests alone
 						const allowed: readonly string[] = MAY_IMPORT[module];
 						const throughIndex = rest.length === 0 || (rest.length === 1 && rest[0] === "index");
 						return !allowed.includes(target) || !throughIndex;
@@ -67,7 +70,11 @@ describe("the modular monolith", () => {
 	}
 });
 
-/** Every file that defines a module's `update`: its functional core. */
+/**
+ * Every file that defines a module's `update`, the function that makes the new model, the value that
+ * holds everything the page shows, from the old one and a message that says what happened: the
+ * functional core, where every decision lives (ADR 0004).
+ */
 function updateFiles(): { file: string; text: string }[] {
 	return MODULES.flatMap((module) =>
 		readdirSync(join(SRC, module), { recursive: true, encoding: "utf8" })
@@ -78,8 +85,8 @@ function updateFiles(): { file: string; text: string }[] {
 }
 
 describe("the functional core", () => {
-	it("finds an update in every module that owns messages", () => {
-		expect(updateFiles().map((f) => f.file).toSorted()).toEqual([join("app", "app.ts"), join("map", "map.ts")]);
+	it("finds the page's one update in the map module, which owns every message", () => {
+		expect(updateFiles().map((f) => f.file)).toEqual([join("map", "map.ts")]);
 	});
 
 	it("keeps React, the DOM and MapLibre out of every update file (ADR 0004, a pure core)", () => {
@@ -99,8 +106,9 @@ function codeFiles(): { file: string; text: string }[] {
 }
 
 describe("the thin edge", () => {
-	// The code that talks to MapLibre keeps its changing state and its event wiring in two files, so
-	// a component holds no `let` and registers no listener of its own: decisions live in pure code.
+	// The code that talks to MapLibre, the library that draws the map, keeps its changing state and
+	// its event wiring in two files, so a component, a function that turns values into what you see,
+	// holds no `let` and registers no listener of its own: decisions live in pure code.
 	const MAY_HOLD_STATE = [join("map", "maplibre.ts"), join("map", "map-handle.ts")];
 	const MAY_LISTEN = [join("map", "maplibre.ts")];
 

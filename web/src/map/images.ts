@@ -1,13 +1,15 @@
-// map/images.ts: the names of the images the style asks for, and how to read them back.
+// map/images.ts: the names of the images the style asks for, and how to read them back (UI-10 to
+// UI-12). Pure functions of the map module, which read only their inputs and change nothing outside
+// themselves: style.ts writes the names, and maplibre.ts reads each one back to know what to draw.
 //
-// The style, the description of what MapLibre (the map-drawing library) draws, names an image for each
-// group's pin and each mix of groups in a cluster, one mark that stands for several places close
-// together. MapLibre asks for a name it lacks, and the map view draws it then. Drawing on demand keeps
-// the number of cluster images to the mixes that appear on screen.
+// The style, the description of what MapLibre, the library that draws the map, draws, names an image
+// for each group's pin and each mix of groups in a cluster, one mark that stands for several places
+// close together. MapLibre asks for a name it lacks, and the map view draws it then. Drawing on
+// demand keeps the number of cluster images to the mixes that appear on screen.
 
 import { GROUP_KEYS, type GroupKey } from "../design";
 
-/** What an image name asks the canvas to draw. */
+/** What an image name asks the canvas, the bitmap the page paints images on, to draw. */
 export type ImageRequest =
 	| { readonly kind: "pin"; readonly group: GroupKey }
 	| { readonly kind: "cluster"; readonly counts: Readonly<Record<GroupKey, number>> }
@@ -24,12 +26,18 @@ export function pinImage(group: GroupKey): string {
 	return `${PIN_PREFIX}${group}`;
 }
 
-/** The prefix of every cluster image; the counts of the four groups follow, in the map's order, joined by '-'. */
+/**
+ * The prefix of every cluster image; the counts of the four groups follow, in the map's order, joined
+ * by '-', such as `cluster:3-0-1-0`.
+ */
 export const CLUSTER_PREFIX = "cluster:";
 
 const isGroup = (text: string): text is GroupKey => GROUP_KEYS.some((g) => g === text);
 
-/** Reads an image name back into what to draw; null for a name this module never makes, so a stray name draws nothing. */
+/**
+ * Reads an image name back into what to draw; null for a name this module never makes, so a stray
+ * name draws nothing.
+ */
 export function readImageName(name: string): ImageRequest | null {
 	if (name === TOOLTIP_IMAGE) return { kind: "tooltip" };
 	if (name.startsWith(CLUSTER_PREFIX)) {

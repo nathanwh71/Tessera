@@ -1,4 +1,7 @@
 // map/ScaleBar.tsx: the scale bar and the coordinates under the pointer, at the bottom left (UI-19).
+// They are React components: React is the library that draws the page from values, and a component
+// is a function that turns part of the model, the one object that holds everything the page shows,
+// into what you see. App.tsx places them; scale.ts and coordinates.ts work out the words they show.
 
 import type { ReactNode } from "react";
 import type { LngLat } from "../shared";
@@ -6,7 +9,7 @@ import { formatPosition } from "./coordinates";
 import type { Units } from "./map";
 import { scaleBar } from "./scale";
 
-/** Props for the scale bar: the inputs the component, a function that turns part of the model into what you see, receives. */
+/** Props for the scale bar: the inputs the component receives. */
 export interface ScaleBarProps {
 	/** The web-map zoom level, 0 for the whole world and 22 at its closest. */
 	readonly level: number;
@@ -28,7 +31,7 @@ export function ScaleBar({ level, latitude, units, onToggleUnits }: ScaleBarProp
 			type="button"
 			aria-label={bar.label}
 			onClick={onToggleUnits}
-			className="state-layer flex min-h-11 cursor-pointer flex-col justify-center gap-[3px] rounded-medium border-0 bg-surface-low pt-2 pr-3.5 pb-1.5 pl-3 text-on-surface shadow-level-1"
+			className="state-layer card flex min-h-11 cursor-pointer flex-col justify-center gap-[3px] border-0 pt-2 pr-3.5 pb-1.5 pl-3"
 		>
 			<span
 				aria-hidden="true"
@@ -45,14 +48,14 @@ export function ScaleBar({ level, latitude, units, onToggleUnits }: ScaleBarProp
 }
 
 /**
- * The point under the mouse pointer, latitude first, beside the scale bar (UI-19, criteria 8 to 10). It
- * shows only while the pointer is over the map, and screen readers skip it, since it follows the pointer
- * alone and a screen reader has none.
+ * The point under the mouse pointer, latitude first, beside the scale bar (UI-19, criteria 8 to 10).
+ * It shows only while the pointer is over the map, and a screen reader, the program that reads a page
+ * aloud, skips it, since it follows the pointer alone and a screen reader has none.
  */
 export function Coordinates({ position }: { readonly position: LngLat | null }): ReactNode {
 	if (position === null) return null;
 	return (
-		<span aria-hidden="true" data-testid="coordinates" className="flex items-center whitespace-nowrap rounded-medium bg-surface-low px-3.5 text-label-medium text-on-surface tabular-nums shadow-level-1">
+		<span aria-hidden="true" data-testid="coordinates" className="card flex items-center whitespace-nowrap px-3.5 text-label-medium tabular-nums">
 			{formatPosition(position)}
 		</span>
 	);

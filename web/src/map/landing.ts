@@ -1,10 +1,11 @@
-// map/landing.ts: the pins' landing as the page opens (UI-15, criterion 6), as a pure state machine.
+// map/landing.ts: the pins' landing as the page opens (UI-15, criterion 6), as a pure state machine
+// of the map module. MapCanvas.tsx sends each event here and draws the stage it gets back.
 //
 // A state machine is a value that says which stage something is at, and a function that moves it on
-// when an event happens. This one reads only its inputs and changes nothing outside itself, so every
-// path through the landing is tested with values alone, including the two a browser test rarely
-// reaches: a visitor who moves the map before the first tile arrives, and a map whose places never
-// come. The component keeps the timers and the drawing; it sends each event here and shows the stage.
+// when an event happens. This one reads only its inputs and changes nothing outside itself
+// (ADR 0004), so every path through the landing is tested with values alone, including the two a
+// browser test rarely reaches: a visitor who moves the map before the first places arrive, and a
+// map whose places never come. The component keeps the timers and the drawing.
 
 import { type GroupKey, dropDelays, dropMs } from "../design";
 
@@ -21,9 +22,15 @@ export interface Drop extends PinInView {
 	readonly delay: number;
 }
 
-/** The stages of the landing. A sealed set: a `switch` must handle each, and the pins cannot be both dropping and landed. */
+/**
+ * The stages of the landing. A closed set of named cases: a `switch` must handle each, and the pins
+ * cannot be both dropping and landed (ADR 0004).
+ */
 export type Landing =
-	/** The first places have not come yet (`fed` false), or have come and the map has not yet come to rest. */
+	/**
+	 * The first places have not come yet (`fed` false), or have come and the map has not yet come to
+	 * rest.
+	 */
 	| { readonly stage: "waiting"; readonly fed: boolean }
 	/** The pins in view are dropping; `ms` is how long the whole show takes. */
 	| { readonly stage: "dropping"; readonly drops: readonly Drop[]; readonly ms: number }
@@ -32,9 +39,12 @@ export type Landing =
 
 /** What can happen during the landing. */
 export type LandingEvent =
-	/** The clustered source gained its first places. */
+	/** The clustered source, the data the map draws the places from, gained its first places. */
 	| { readonly name: "placesFed" }
-	/** The map came to rest, with these pins in view; `reduced` is the visitor's wish for less motion (criterion 8). */
+	/**
+	 * The map came to rest, with these pins in view; `reduced` is the visitor's wish for less motion
+	 * (criterion 8).
+	 */
 	| { readonly name: "mapIdle"; readonly pins: readonly PinInView[]; readonly reduced: boolean }
 	/** The visitor moved the map, so the show is not wanted. */
 	| { readonly name: "visitorMoved" }
@@ -48,7 +58,10 @@ export const START: Landing = { stage: "waiting", fed: false };
 
 const LANDED: Landing = { stage: "landed" };
 
-/** The stage after an event. An event that means nothing at the current stage returns that stage unchanged. */
+/**
+ * The stage after an event. An event that means nothing at the current stage returns that stage
+ * unchanged.
+ */
 export function step(landing: Landing, event: LandingEvent): Landing {
 	switch (event.name) {
 		case "visitorMoved":
@@ -63,7 +76,10 @@ export function step(landing: Landing, event: LandingEvent): Landing {
 	}
 }
 
-/** The drop for the pins in view: none, and so landed at once, when there is nothing to drop or the visitor asks for less motion. */
+/**
+ * The drop for the pins in view: none, and so landed at once, when there is nothing to drop or the
+ * visitor asks for less motion.
+ */
 function drop(pins: readonly PinInView[], reduced: boolean): Landing {
 	const delays = dropDelays(pins.length, reduced);
 	if (delays.length === 0) return LANDED;

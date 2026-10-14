@@ -1,3 +1,7 @@
+// map/landing.test.ts: every path through the pins' landing (UI-15, criterion 6), run as a list of
+// events through the state machine of landing.ts, a value for the stage and a function that moves it
+// on, under vitest, the test runner. No browser and no timer: values alone.
+
 import { describe, expect, it } from "vitest";
 import { type Landing, type LandingEvent, START, step } from "./landing";
 

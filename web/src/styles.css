@@ -152,6 +152,36 @@
 }
 
 @layer components {
+  /*
+    The surfaces the page repeats, each named once so they cannot drift apart. A class in the
+    component's own list, such as its padding, still wins, since Tailwind's utilities come after
+    this layer.
+  */
+  /* A card of the lowest raised surface: the scale bar, the coordinates and the error message. */
+  .card {
+    @apply rounded-medium bg-surface-low text-on-surface shadow-level-1;
+  }
+
+  /* A message in the middle of the window, in place of the map: the page cannot draw, or has failed. */
+  .message {
+    @apply absolute top-1/2 left-1/2 z-30 m-0 w-[min(480px,calc(100%-32px))] -translate-x-1/2 -translate-y-1/2 px-6 py-5 text-body-large;
+  }
+
+  /* A square map button, one finger wide (UI-09): the zoom buttons. */
+  .map-button {
+    @apply flex size-11 cursor-pointer items-center justify-center rounded-medium border-0 bg-surface-high text-on-surface-variant shadow-level-2;
+  }
+
+  /* A layer over the whole map that lets the mouse through to it: the dropping pins and the targets. */
+  .overlay {
+    @apply pointer-events-none absolute inset-0 overflow-hidden;
+  }
+
+  /* Centred on a point of the map, as a pin's target or a cluster's button is. */
+  .on-point {
+    @apply absolute -translate-x-1/2 -translate-y-1/2;
+  }
+
   /* Material Symbols, rounded, drawn by ligature: the text names the icon (UI-15, criterion 2). */
   .icon {
     font-family: var(--font-icons);

@@ -1,13 +1,16 @@
-// map/places.ts: the places MapLibre, the map-drawing library, has loaded, as one list for the clustered
-// source (UI-10, UI-17). A source is the data a map layer draws from; a cluster is one mark that stands
-// for several places close together.
+// map/places.ts: the places MapLibre, the library that draws the map, has loaded, joined into one list
+// for the clustered source (UI-10, UI-17, ADR 0005). A source is the data a map layer draws from; a
+// cluster is one mark that stands for several places close together. A pure function of the map
+// module, which reads only its inputs; maplibre.ts calls it each time the loaded tiles change.
 //
-// MapLibre clusters only a GeoJSON source (GeoJSON is the JSON form of points and shapes), and the
-// service sends vector tiles, square pieces of the map holding points rather than pictures. So the map
+// MapLibre clusters only a GeoJSON source (GeoJSON is the form of points and shapes in JSON, the text
+// form of a value that programs exchange), and the service sends vector tiles, square pieces of the
+// map holding points rather than pictures (ADR 0005). So the map
 // reads the features, the points with their properties, of the tiles it has loaded for each layer that
 // is on, and feeds them here. A point near a tile's edge arrives in each tile whose margin holds it,
 // which is why each id is kept once.
 
+import * as v from "valibot";
 import type { GroupKey } from "../design";
 import { type LayerId, layerOf } from "../layers";
 
@@ -26,7 +29,10 @@ export interface LoadedLayer {
 	readonly features: readonly SourceFeature[];
 }
 
-/** A place's properties on the clustered source: the tile's own, plus its layer, its group and its rank in the fixed order. */
+/**
+ * A place's properties on the clustered source: the tile's own, plus its layer, its group and its
+ * rank in the fixed order.
+ */
 export type PlaceProperties = Readonly<Record<string, PropertyValue>> & {
 	readonly id: string;
 	readonly name: string;
@@ -34,7 +40,10 @@ export type PlaceProperties = Readonly<Record<string, PropertyValue>> & {
 	readonly group: GroupKey;
 	/** One of the layer's places in words, such as 'Café', for the pin's label. */
 	readonly one: string;
-	/** UI-17, criterion 2: a lower number wins the space for its name; layers in the map's order first, then ids within a layer. */
+	/**
+	 * UI-17, criterion 2: a lower number wins the space for its name; layers in the map's order
+	 * first, then ids within a layer.
+	 */
 	readonly sort: number;
 };
 
@@ -51,17 +60,22 @@ export interface PlaceCollection {
 	readonly features: readonly PlaceFeature[];
 }
 
-/** The step between layers in a sort key, larger than any layer's count of places, so no two layers' keys overlap. */
+/**
+ * The step between layers in a sort key, larger than any layer's count of places, so no two layers'
+ * keys overlap.
+ */
 const LAYER_STEP = 1_000_000;
 
 const isValue = (v: unknown): v is PropertyValue =>
 	v === null || typeof v === "string" || typeof v === "number" || typeof v === "boolean";
 
-function pointOf(feature: SourceFeature): readonly [number, number] | null {
-	const c = feature.geometry.coordinates;
-	return feature.geometry.type === "Point" && Array.isArray(c) && typeof c[0] === "number" && typeof c[1] === "number"
-		? [c[0], c[1]]
-		: null;
+/** A point's shape: the type "Point" and two numbers, longitude then latitude; a third, a height, is left out. */
+const PointGeometry = v.object({ type: v.literal("Point"), coordinates: v.tuple([v.number(), v.number()]) });
+
+/** The point a feature stands at, in degrees, or null for any other shape: a line, an area, or none. */
+export function pointOf(feature: { readonly geometry: unknown }): [number, number] | null {
+	const read = v.safeParse(PointGeometry, feature.geometry);
+	return read.success ? read.output.coordinates : null;
 }
 
 const textOf = (v: unknown): string => (typeof v === "string" ? v : typeof v === "number" ? String(v) : "");
@@ -76,8 +90,7 @@ const byId = (a: { values: { id: string } }, b: { values: { id: string } }): num
 	a.values.id < b.values.id ? -1 : a.values.id > b.values.id ? 1 : 0;
 
 /**
- * Joins the loaded layers into one list for the clustered source. It is a pure function: it reads only
- * its inputs and changes nothing outside itself.
+ * Joins the loaded layers into one list for the clustered source.
  *
  * Takes the layers in the map's order. Keeps each place once, by its `id`, and drops features that are
  * not points or carry no id. Each place gains its layer, its group and a sort key that ranks layers in
@@ -88,15 +101,16 @@ export function placeCollection(loaded: readonly LoadedLayer[]): PlaceCollection
 		const layer = layerOf(layerId);
 		if (layer === undefined) return [];
 		const unique = new Map(
-			raw
-				.map((f) => ({ point: pointOf(f), values: valuesOf(f) }))
-				.filter((f) => f.point !== null && f.values.id !== "")
-				.map((f) => [f.values.id, f] as const),
+			raw.flatMap((f) => {
+				const point = pointOf(f);
+				const values = valuesOf(f);
+				return point === null || values.id === "" ? [] : [[values.id, { point, values }] as const];
+			}),
 		);
 		return [...unique.values()].toSorted(byId).map(
 			({ point, values }, rank): PlaceFeature => ({
 				type: "Feature",
-				geometry: { type: "Point", coordinates: point ?? [0, 0] },
+				geometry: { type: "Point", coordinates: point },
 				properties: { ...values, layerId, group: layer.group, one: layer.one, sort: layerIndex * LAYER_STEP + rank },
 			}),
 		);
@@ -104,7 +118,10 @@ export function placeCollection(loaded: readonly LoadedLayer[]): PlaceCollection
 	return { type: "FeatureCollection", features };
 }
 
-/** A short fingerprint, the ids joined into one string, of a list's places, so the map resets its source only when they change. */
+/**
+ * A fingerprint of a list's places, their ids joined into one string, so the map resets its source
+ * only when they change (ADR 0005, step 5).
+ */
 export function fingerprint(collection: PlaceCollection): string {
 	return collection.features.map((f) => f.properties.id).join("|");
 }

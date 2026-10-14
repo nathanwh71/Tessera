@@ -1,3 +1,7 @@
+// shared/shared.test.ts: the tests of the shared kernel, run by vitest, the test runner, with values
+// alone: the problem documents of US-07, the area of US-23, and the Result, pipe and flow of ADR 0004.
+
+import * as v from "valibot";
 import { describe, expect, it } from "vitest";
 import * as shared from ".";
 import {
@@ -14,6 +18,7 @@ import {
 	ok,
 	parseArea,
 	parseJson,
+	parseWith,
 	pipe,
 	readBounds,
 	readProblem,
@@ -114,5 +119,17 @@ describe("US-23 the area comes with the page", () => {
 	it("reads a box only as four numbers in degrees, west before east and south before north", () => {
 		expect(readBounds([1, 2, 3, 4])).toEqual([1, 2, 3, 4]);
 		for (const value of [[1, 2, 3], [1, 2, "3", 4], [1, 2, 3, 95], [3, 2, 1, 4], null]) expect(readBounds(value)).toBeNull();
+	});
+});
+
+describe("data checked by its shape", () => {
+	const Point = v.object({ lng: v.number(), lat: v.number() }, "not a point");
+
+	it("gives the value as the schema reads it, unknown members left out", () => {
+		expect(parseWith(Point)({ lng: 1, lat: 2, extra: true })).toEqual(ok({ lng: 1, lat: 2 }));
+	});
+
+	it("refuses a value of the wrong shape with the schema's own sentence", () => {
+		for (const value of [null, [], "1,2", { lng: 1 }]) expect(parseWith(Point)(value)).toEqual(err("not a point"));
 	});
 });

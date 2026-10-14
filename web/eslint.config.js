@@ -1,4 +1,6 @@
-// eslint.config.js: the static checks beside the compiler (ADR 0004, the functional style).
+// eslint.config.js: the settings of ESLint, the tool that reads the code for mistakes and broken
+// rules without running it, beside the compiler's own checks (ADR 0004, the functional style).
+// `npm test` runs it over every file of the map.
 //
 // typescript-eslint reads types through the TypeScript compiler itself, 6.0.3, the version the
 // scripts use too (ADR 0002).
@@ -22,7 +24,8 @@ export default tseslint.config(
 			...reactHooks.configs.recommended.rules,
 			// ADR 0004, immutability: values never change once made.
 			"prefer-const": "error",
-			// A canvas context is drawn on by setting its properties, so it alone may change (design/canvas.ts).
+			// A canvas, a bitmap the page paints on, is drawn on by setting its context's properties, so
+			// it alone may change (design/canvas.ts).
 			"no-param-reassign": ["error", { props: true, ignorePropertyModificationsFor: ["context"] }],
 			// ADR 0002, rule 4: TypeScript's own syntax that compiles to code stays out.
 			"no-restricted-syntax": [
@@ -38,7 +41,8 @@ export default tseslint.config(
 	{
 		files: ["**/*.test.ts", "**/*.test.tsx", "e2e/**", "*.config.ts", "eslint.config.js"],
 		languageOptions: { globals: { ...globals.node } },
-		// Fake ports are async functions that resolve at once, as the real ones would after a fetch.
+		// Fake ports, the functions a test gives the update in place of the map, are async functions
+		// that resolve at once, as the real ones would after a request to the service.
 		rules: { "@typescript-eslint/require-await": "off" },
 	},
 );

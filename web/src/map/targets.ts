@@ -1,13 +1,16 @@
-// map/targets.ts: what MapLibre, the map-drawing library, has drawn in view, read back for the page's
-// invisible overlay (UI-10, UI-11). MapLibre draws on a canvas, a bitmap that screen readers and the
-// keyboard cannot reach, so the page lays a picture with its name over each pin and a button over
-// each cluster. These functions ask MapLibre where each one is; they change nothing.
+// map/targets.ts: what MapLibre, the library that draws the map, has drawn in view, read back for the
+// page's invisible overlay (UI-10, UI-11). MapLibre draws on a canvas, a bitmap that the keyboard and
+// a screen reader, the program that reads a page aloud, cannot reach; so the page lays a picture with
+// its name over each pin and a button over each cluster, one mark for several places close together.
+// MapCanvas.tsx calls these functions each time the map moves or rests; they ask MapLibre where each
+// one is, and change nothing.
 
-import type { GeoJSONSource, Map as MapLibreMap, MapGeoJSONFeature } from "maplibre-gl";
+import type { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 import { type GroupKey, GROUP_KEYS } from "../design";
 import type { Level, LngLat } from "../shared";
 import { clusterLabel, pinLabel } from "./labels";
 import { levelOf } from "./levels";
+import { pointOf } from "./places";
 import { LAYER, SOURCE } from "./style";
 
 /** A pin or cluster in view: where it sits on screen and what a screen reader says for it. */
@@ -22,14 +25,11 @@ export interface Target {
 	readonly group: GroupKey | null;
 }
 
-/** The names a cluster's label speaks, by the cluster's id, fetched once for each cluster (UI-10, criterion 4). */
+/**
+ * The names a cluster's label speaks, by the cluster's id, fetched once for each cluster (UI-10,
+ * criterion 4).
+ */
 export type ClusterNames = Map<number, readonly string[]>;
-
-/** A feature's point, when it is one: its longitude and latitude. */
-export function pointOf(feature: Pick<MapGeoJSONFeature, "geometry">): [number, number] | null {
-	const g = feature.geometry;
-	return g.type === "Point" ? [g.coordinates[0] ?? 0, g.coordinates[1] ?? 0] : null;
-}
 
 const textOf = (v: unknown): string | null => (typeof v === "string" && v !== "" ? v : null);
 const groupOf = (v: unknown): GroupKey | null => GROUP_KEYS.find((g) => g === v) ?? null;
@@ -60,13 +60,19 @@ export function targetsInView(map: MapLibreMap, clusterNames: ReadonlyMap<number
 		.toSorted((a, b) => a.y - b.y || a.x - b.x);
 }
 
-/** Asks MapLibre the level at which a cluster breaks apart, then reports it, for a click on the canvas and a press of its button alike. */
+/**
+ * Asks MapLibre the level at which a cluster breaks apart, then reports it, for a click on the canvas
+ * and a press of its button alike.
+ */
 export function openCluster(map: MapLibreMap, clusterId: number, point: readonly [number, number], open: (center: LngLat, level: Level) => void): void {
 	const source = map.getSource<GeoJSONSource>(SOURCE.places);
 	void source?.getClusterExpansionZoom(clusterId).then((zoom) => open({ lng: point[0], lat: point[1] }, levelOf(zoom)));
 }
 
-/** Fetches the first ten names in each cluster in view for its label (UI-10, criterion 4), once per cluster. */
+/**
+ * Fetches the first ten names in each cluster in view for its label (UI-10, criterion 4), once for
+ * each cluster.
+ */
 export function nameClusters(map: MapLibreMap, names: ClusterNames, done: () => void): void {
 	const source = map.getSource<GeoJSONSource>(SOURCE.places);
 	if (source === undefined || map.getLayer(LAYER.clusters) === undefined) return;

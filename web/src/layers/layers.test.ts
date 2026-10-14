@@ -1,3 +1,6 @@
+// layers/layers.test.ts: the nine layers, their tile addresses and the layer a page's address names
+// (US-23, US-24), checked with values alone under vitest, the test runner.
+
 import { describe, expect, it } from "vitest";
 import { LAYERS, LAYER_IDS, groupOf, layerFromPath, tileUrl } from ".";
 

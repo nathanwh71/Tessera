@@ -1,10 +1,16 @@
+// map/style.test.ts: the style, the description of what MapLibre, the library that draws the map,
+// draws, checked as a value (US-23, UI-11, UI-12, UI-15, UI-17). `buildStyle` is pure, reading only
+// its input, so each test builds a style and reads its sources, the data to draw from, and its
+// layers, which say how to draw it. It runs under vitest, the test runner, with no browser.
+
 import type { LayerSpecification, SymbolLayerSpecification } from "maplibre-gl";
 import { describe, expect, it } from "vitest";
 import { themeFrom } from "../design";
 import { LAYER_IDS } from "../layers";
 import { LAYER, NAMES_FROM_LEVEL, SOURCE, type SourceFeature, type StyleInput, TILE_MAX_LEVEL, buildStyle, placeCollection, readImageName, toMapZoom } from ".";
 
-// The theme's colours as the names of their variables: the tests check where colours go, not what they are.
+// The theme's colours as the names of their CSS variables, the named values the page's styles hold:
+// the tests check where colours go, not what they are.
 const THEME = themeFrom((variable) => `var(${variable})`);
 
 function style(changes: Partial<StyleInput> = {}) {
@@ -108,7 +114,8 @@ describe("UI-17 names that never overlap", () => {
 		const pins = symbol(LAYER.pins);
 		expect(pins.layout).toMatchObject({ "icon-allow-overlap": true });
 		expect(pins.layout?.["text-field"]).toBeUndefined();
-		// The name gives way alone: its own layer, never allowed to overlap, so it is optional while its pin stays.
+		// The name gives way alone: its own layer, never allowed to overlap, so it is optional while
+		// its pin stays.
 		expect(symbol(LAYER.names).layout?.["text-allow-overlap"]).toBeUndefined();
 		expect(symbol(LAYER.names).layout).toMatchObject({ "icon-ignore-placement": true, "text-padding": 9 });
 	});

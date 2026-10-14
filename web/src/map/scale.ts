@@ -1,8 +1,13 @@
-// map/scale.ts: the scale bar's length and figures (UI-19, criteria 1, 2 and 4).
+// map/scale.ts: the scale bar's length and figures (UI-19, criteria 1, 2 and 4). Pure functions of
+// the map module, which read only their inputs; ScaleBar.tsx draws what they return, and labels.ts
+// uses the metres a pixel spans to say when two pins merge.
 
 import type { Units } from "./map";
 
-/** The equator's length in metres on the sphere of Web Mercator, the flat projection every web map uses (EPSG:3857, radius 6,378,137 m). */
+/**
+ * The equator's length in metres on the sphere of Web Mercator, the flat projection every web map
+ * uses (EPSG:3857, radius 6,378,137 m).
+ */
 const EQUATOR_METRES = 2 * Math.PI * 6378137;
 const FEET_PER_METRE = 1 / 0.3048;
 const FEET_PER_MILE = 5280;
@@ -20,7 +25,10 @@ export function metresPerPixel(level: number, latitude: number): number {
 	return (EQUATOR_METRES * Math.cos((latitude * Math.PI) / 180)) / (256 * 2 ** level);
 }
 
-/** The largest 1, 2 or 5 times a power of ten (1, 2, 5, 10, 20, 50 and so on) that is at most the value given. */
+/**
+ * The largest 1, 2 or 5 times a power of ten (1, 2, 5, 10, 20, 50 and so on) that is at most the
+ * value given.
+ */
 export function roundLengthBelow(value: number): number {
 	const power = 10 ** Math.floor(Math.log10(value));
 	const leading = value / power;
@@ -35,7 +43,10 @@ export interface ScaleReading {
 	readonly half: string;
 	/** The figure at the end, with its unit, such as '500 m'. */
 	readonly full: string;
-	/** The button's label for screen readers: the length in words, and the units a click switches to. */
+	/**
+	 * The button's label for a screen reader, the program that reads a page aloud: the length in
+	 * words, and the units a click switches to.
+	 */
 	readonly label: string;
 }
 

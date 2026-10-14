@@ -1,3 +1,9 @@
+// map/map.test.ts: the map's model and update (US-23, UI-09, UI-15, UI-19), tested with values
+// alone under vitest, the test runner. The update is the function that makes the new model, the
+// value that holds everything the page shows, from the old one and a message that says what
+// happened. The ports, the functions through which it moves the map, are fakes made by `vi.fn()`,
+// so each test reads what the update asked of the map.
+
 import { createUpdateArgsFactory, execCmd, getUpdateFn, initAndExecCmd } from "react-elmish/testing";
 import { describe, expect, it, vi } from "vitest";
 import { LAYER_IDS } from "../layers";
@@ -37,9 +43,9 @@ describe("US-23 open the map of the area", () => {
 	});
 
 	it("leaves a failed tile's detail in the model, read from the answer's body", () => {
-		const body = JSON.stringify({ type: "about:blank", title: "Service Unavailable", status: 503, detail: "The list of layers is not ready yet." });
+		const body = JSON.stringify({ type: "about:blank", title: "Service Unavailable", status: 503, detail: "The list of layers has not loaded yet." });
 		const [model] = updateFn(...args(Msg.tileFailed(tileProblem(503, "Service Unavailable", body))));
-		expect(model.notice).toBe("The list of layers is not ready yet.");
+		expect(model.notice).toBe("The list of layers has not loaded yet.");
 	});
 
 	it("makes words from the status alone when the body is no problem document", () => {
@@ -82,5 +88,13 @@ describe("UI-15 the pins drop in once", () => {
 	it("opens with the pins still to land, and records their landing", () => {
 		expect(init(props())[0].landed).toBe(false);
 		expect(updateFn(...args(Msg.pinsLanded()))[0]).toEqual({ landed: true });
+	});
+});
+
+describe("US-23 criterion 9: a browser that cannot draw the map", () => {
+	it("opens able to draw, records that it cannot, and records that it can again", () => {
+		expect(init(props())[0].drawable).toBe(true);
+		expect(updateFn(...args(Msg.cannotDraw()))[0]).toEqual({ drawable: false });
+		expect(updateFn(...args(Msg.canDrawAgain()))[0]).toEqual({ drawable: true });
 	});
 });

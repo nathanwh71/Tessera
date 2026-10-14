@@ -1,13 +1,21 @@
 /// <reference types="node" />
+// design/design.test.ts: the design module's rules, checked with values alone under vitest, the test
+// runner (UI-12, UI-15): each group has its own shape, every pair of text and background the page
+// draws meets the contrast WCAG, the web's accessibility standard, asks for, and nothing moves for
+// too long. The theme's colours come from styles.css, read as text.
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { DROP_SPREAD_MS, GROUP_KEYS, GROUP_LOOKS, MOTION, SHAPE_PATHS, contrastRatio, dropDelays, dropMs, emphasised, movementMs, themeFrom } from ".";
+import { contrastRatio } from "../testing/contrast";
+import { DROP_SPREAD_MS, GROUP_KEYS, GROUP_LOOKS, MOTION, SHAPE_PATHS, dropDelays, dropMs, emphasised, movementMs, themeFrom } from ".";
 
 const STYLES = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "styles.css"), "utf8");
 
-/** The theme's colours, as styles.css sets them. */
+/**
+ * The theme's colours, as styles.css sets them, by the name of each CSS variable, a named value of
+ * the styles.
+ */
 const TOKENS: ReadonlyMap<string, string> = new Map(
 	[...STYLES.matchAll(/(--color-[a-z-]+):\s*(#[0-9a-fA-F]{6})\s*;/g)].map((m) => [m[1] ?? "", m[2] ?? ""]),
 );
@@ -64,7 +72,7 @@ describe("UI-15 and UI-12 contrast", () => {
 		expect(contrastRatio(token(text), token(background))).toBeGreaterThanOrEqual(4.5);
 	});
 
-	// A pair listed twice runs twice and hides a pair left out; the list once held a duplicate.
+	// A pair listed twice runs twice and hides a pair left out, so the list must hold each pair once.
 	it("lists each text pair once", () => {
 		expect(new Set(PAIRS.map((pair) => pair.join(" on "))).size).toBe(PAIRS.length);
 	});

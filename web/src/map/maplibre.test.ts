@@ -1,10 +1,16 @@
 // @vitest-environment jsdom
+// map/maplibre.test.ts: the wiring of the events of MapLibre, the library that draws the map, to the
+// page's handlers, checked at the edge with the fake map of testing/fake-maplibre.ts. It runs in
+// jsdom, a pretend browser inside the test runner with no screen.
 import type { Map as MapLibreMap } from "maplibre-gl";
 import { describe, expect, it, vi } from "vitest";
 import { FakeMap } from "../testing/fake-maplibre";
 import { type MapEvents, attachEvents } from "./maplibre";
 
-/** A fake map with every handler recorded, so a test fires MapLibre's events and reads what the page heard. */
+/**
+ * A fake map with every handler recorded, so a test fires MapLibre's events and reads what the page
+ * heard.
+ */
 function wired() {
 	const map = new FakeMap({});
 	const events: MapEvents = {
@@ -15,6 +21,8 @@ function wired() {
 		onPointer: vi.fn(),
 		onClusterClick: vi.fn(),
 		onLoad: vi.fn(),
+		onDrawingLost: vi.fn(),
+		onDrawingRestored: vi.fn(),
 	};
 	const stop = attachEvents(map as unknown as MapLibreMap, events);
 	return { map, events, stop };

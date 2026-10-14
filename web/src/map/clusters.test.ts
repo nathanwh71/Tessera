@@ -1,3 +1,9 @@
+// map/clusters.test.ts: the clusters of UI-10, each one mark for several places close together,
+// checked with values alone under vitest, the test runner. Supercluster, the library MapLibre
+// clusters with, shows which pins merge at each level (ADR 0005); the map's update, the function that
+// makes the new model, the value that holds everything the map shows, from the old one and a message
+// that says what happened, shows where a click on a cluster takes the map.
+
 import { Supercluster } from "@maplibre/geojson-vt";
 import { createUpdateArgsFactory, execCmd, getUpdateFn } from "react-elmish/testing";
 import { describe, expect, it, vi } from "vitest";
@@ -17,7 +23,8 @@ import {
 } from ".";
 
 const LAT = MACAU.home.center.lat;
-const METRES_PER_DEGREE = (2 * Math.PI * 6378137) / 360; // along the equator, in Web Mercator's sphere
+// Along the equator, on the sphere of Web Mercator, the flat projection every web map uses.
+const METRES_PER_DEGREE = (2 * Math.PI * 6378137) / 360;
 
 type Points = Parameters<Supercluster["load"]>[0];
 
@@ -29,8 +36,9 @@ function pair(metres: number): Points {
 }
 
 /**
- * Clusters as MapLibre does for the places source: the same library, radius and last level. MapLibre
- * measures the radius against 512-pixel tiles, so the test does too.
+ * Clusters as MapLibre does for the places source, the data it draws the places from: the same
+ * library, radius and last level. MapLibre measures the radius against tiles, square pieces of the
+ * map, 512 pixels wide, so the test does too.
  */
 function clustersAt(at: Level, features: Points): number {
 	const index = new Supercluster({ radius: CLUSTER_RADIUS_PX, extent: 512, maxZoom: toMapZoom(LAST_CLUSTER_LEVEL) });

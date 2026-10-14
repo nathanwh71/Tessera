@@ -1,4 +1,7 @@
-// design/shapes.ts: the four group shapes and the pin, as SVG path data, a string of drawing moves that both SVG and a canvas can draw.
+// design/shapes.ts: the four group shapes and the pin (UI-12), as SVG path data: a string of drawing
+// moves that both SVG, the text form of a drawing a web page can show, and a canvas, a bitmap the
+// page paints on, can draw. The design module holds them; canvas.ts paints them for the map, and
+// components.tsx draws them for the pins that drop in.
 
 /** The shape each group carries beside its colour (UI-12). */
 export type Shape = "circle" | "triangle" | "square" | "diamond";
@@ -14,5 +17,8 @@ export const SHAPE_PATHS: Readonly<Record<Shape, string>> = {
 	diamond: "M12 6.2l5.8 5.8-5.8 5.8-5.8-5.8z",
 };
 
-/** The pin's outline in a 24 by 32 box; its tip at (12, 32) marks the place, and its round head centres on (12, 12). */
+/**
+ * The pin's outline in a 24 by 32 box; its tip at (12, 32) marks the place, and its round head
+ * centres on (12, 12).
+ */
 export const PIN_PATH = "M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20C24 5.4 18.6 0 12 0z";

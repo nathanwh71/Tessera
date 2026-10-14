@@ -1,8 +1,13 @@
 // @vitest-environment jsdom
+// app/App.test.tsx: the whole page drawn in jsdom, a pretend browser that runs inside the test runner
+// with no screen, so the tests check what the page says to a screen reader, the program that reads a
+// page aloud, and what it asks of the map (US-23). MapLibre, the library that draws the map, needs
+// WebGL, the browser's 3D drawing, which jsdom lacks; so the tests swap in the fake map of
+// testing/fake-maplibre.ts.
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { LAYER_IDS, type LayerId } from "../layers";
-import { createMapHandle } from "../map";
+import { CANNOT_DRAW, createMapHandle } from "../map";
 import { MACAU } from "../shared";
 import { violations } from "../testing/axe";
 import { FakeMap } from "../testing/fake-maplibre";
@@ -16,7 +21,7 @@ function page(openLayer?: LayerId) {
 	return { ...view, handle, map: () => FakeMap.made.at(-1) };
 }
 
-/** What sequential focus visits, in order: every control not disabled or hidden. */
+/** What the Tab key visits, in order: every control not disabled or hidden. */
 function tabOrder(root: HTMLElement): string[] {
 	return [...root.querySelectorAll<HTMLElement>("button, a[href], input, [tabindex]")]
 		.filter((e) => e.tabIndex >= 0 && !e.hasAttribute("disabled"))
@@ -32,7 +37,7 @@ describe("US-23 open the map of the area", () => {
 	it("fills the window and opens on the area's home view, with the nine layers' tiles on the page's own origin", () => {
 		const { map } = page();
 		expect(map()?.options["center"]).toEqual([113.55, 22.19]);
-		// Level 15 is MapLibre's zoom 14 (map/levels.ts).
+		// Level 15 is MapLibre's zoom 14: its zoom runs one below the web-map level (map/levels.ts).
 		expect(map()?.options["zoom"]).toBe(14);
 		const style = map()?.options["style"] as { sources: Record<string, { tiles?: string[] }> };
 		const tiles = Object.values(style.sources).flatMap((s) => s.tiles ?? []);
@@ -79,5 +84,23 @@ describe("Keyboard and screen reader", () => {
 	it("passes an accessibility scan of the whole page", async () => {
 		const { container } = page();
 		expect(await violations(container, { region: true })).toEqual([]);
+	});
+});
+
+describe("US-23 criterion 9: a browser that cannot draw the map", () => {
+	it("says so in words, in place of the controls, when MapLibre cannot start", () => {
+		FakeMap.failNext = true;
+		page();
+		expect(screen.getByRole("alert").textContent).toBe(CANNOT_DRAW);
+		expect(screen.queryByRole("button", { name: /Zoom in/ })).toBeNull();
+	});
+
+	it("says so when the browser takes the map's drawing away, and draws again once it gives it back", () => {
+		const { map } = page();
+		act(() => map()?.fire("webglcontextlost"));
+		expect(screen.getByRole("alert").textContent).toBe(CANNOT_DRAW);
+		act(() => map()?.fire("webglcontextrestored"));
+		expect(screen.queryByRole("alert")).toBeNull();
+		expect(screen.getByRole("button", { name: /Zoom in/ })).toBeTruthy();
 	});
 });

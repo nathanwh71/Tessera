@@ -1,25 +1,30 @@
-// map/maplibre.ts: what every map drawn by MapLibre, the map-drawing library, shares: its start-up
-// options, its images and the feed of loaded places into the clustered source (a source is the data a
-// map layer draws from). This is the shell of side effects around the pure functions of style.ts and
-// places.ts; it holds no rule of its own.
+// map/maplibre.ts: the map module's shell around MapLibre, the library that draws the map, and the
+// one file that wires its events (ADR 0005).
+// It holds what every map MapLibre draws shares: its start-up options, its images, the wiring of its
+// events, and the feed of loaded places into the clustered source (a source is the data a map layer
+// draws from; a cluster is one mark for several places close together). MapCanvas.tsx calls each
+// function once as the map starts. This is the shell of side effects, work that reaches outside the
+// program, around the pure functions of style.ts and places.ts; it holds no rule of its own, and it
+// is one of the two files the architecture test lets hold changing state.
 
 import latinFont from "@fontsource/roboto/files/roboto-latin-400-normal.woff2?url";
 import latinExtFont from "@fontsource/roboto/files/roboto-latin-ext-400-normal.woff2?url";
 import { type GeoJSONSource, type MapOptions, type Map as MapLibreMap, setWorkerUrl } from "maplibre-gl";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
+import * as v from "valibot";
 import { GROUP_LOOKS, IMAGE_PIXEL_RATIO, type Theme, drawCluster, drawPin, drawTooltip, movementMs } from "../design";
 import type { LayerId } from "../layers";
 import { type LngLat, MAX_ZOOM, MIN_ZOOM, type Problem } from "../shared";
 import { readImageName } from "./images";
 import { toMapZoom } from "./levels";
-import { type LoadedLayer, fingerprint, placeCollection } from "./places";
+import { type LoadedLayer, fingerprint, placeCollection, pointOf } from "./places";
 import { type FontFiles, LAYER, SOURCE } from "./style";
-import { pointOf } from "./targets";
 import { tileProblem } from "./tiles";
 
-// MapLibre runs its heavy work in a worker, a script on a second thread, and looks for it beside its own
-// module, which a bundle moves; the build ships the worker as an asset of its own under /assets/, and
-// this tells MapLibre where.
+// MapLibre runs its heavy work in a worker, a script on a second thread, a line of work the browser
+// runs beside the page's own. It looks for the worker beside its own module, which the build moves
+// when it bundles the code into one file; so the build ships the worker as a file of its own under
+// /assets/, and this tells MapLibre where.
 setWorkerUrl(workerUrl);
 
 /** The Roboto font files the names draw with, served from the page's own site. */
@@ -66,7 +71,10 @@ export function baseOptions(reducedMotion: boolean): Partial<MapOptions> {
 	};
 }
 
-/** Draws each image the style, MapLibre's description of what to draw, names when MapLibre first needs it (see images.ts). */
+/**
+ * Draws each image the style, MapLibre's description of what to draw, names, at the moment MapLibre
+ * first needs it (see images.ts).
+ */
 export function provideImages(map: MapLibreMap, theme: Theme): void {
 	map.setMissingStyleImageResolver((name) => {
 		const request = readImageName(name);
@@ -96,10 +104,11 @@ export interface FeedState {
 
 /**
  * Keeps the clustered source in step with the tiles, the square pieces of the map, that MapLibre has
- * loaded for the layers that are on (see places.ts). Runs when a tile source finishes loading, when the
- * map comes to rest, and when the caller calls the returned `refresh`. Sets the source's data only when
- * its places change, since each new set makes MapLibre cluster again; `refresh` sets it regardless,
- * since a new style empties it. `onFed` hears each time the source gains places.
+ * loaded for the layers that are on (ADR 0005; see places.ts). Runs when a tile source finishes
+ * loading, when the map comes to rest, and when the caller calls the returned `refresh`. Sets the
+ * source's data only when its places change, since each new set makes MapLibre cluster again;
+ * `refresh` sets it regardless, since a new style empties it. `onFed` hears each time the source
+ * is set with places.
  */
 export function feedPlaces(map: MapLibreMap, state: () => FeedState, onFed: () => void = () => undefined): { refresh(): void; stop(): void } {
 	let last = "";
@@ -121,7 +130,7 @@ export function feedPlaces(map: MapLibreMap, state: () => FeedState, onFed: () =
 		void source.setData({ type: "FeatureCollection", features: collection.features.map((f) => ({ ...f, geometry: { ...f.geometry, coordinates: [...f.geometry.coordinates] } })) });
 	};
 
-	// One run per frame, the browser's next redraw of the screen, however many tiles arrive in it.
+	// One run for each frame, the browser's next redraw of the screen, however many tiles arrive in it.
 	const schedule = (): void => {
 		if (frame === 0) frame = requestAnimationFrame(run);
 	};
@@ -129,43 +138,35 @@ export function feedPlaces(map: MapLibreMap, state: () => FeedState, onFed: () =
 		if (e.sourceId?.startsWith("tiles:") === true && e.isSourceLoaded === true) schedule();
 	};
 
-	map.on("sourcedata", onData);
-	map.on("idle", schedule);
+	const subscriptions = [map.on("sourcedata", onData), map.on("idle", schedule)];
 	return {
 		refresh() {
 			last = "";
 			schedule();
 		},
 		stop() {
-			map.off("sourcedata", onData);
-			map.off("idle", schedule);
+			subscriptions.forEach((subscription) => subscription.unsubscribe());
 			if (frame !== 0) cancelAnimationFrame(frame);
 		},
 	};
 }
 
-/** A failed request as MapLibre reports it: an AJAXError, which carries the answer's status and body. */
-interface FailedRequest {
-	readonly status: number;
-	readonly statusText: string;
-	readonly body: Blob;
-}
-
-function isFailedRequest(error: unknown): error is FailedRequest {
-	if (typeof error !== "object" || error === null) return false;
-	const e = error as Record<string, unknown>;
-	return typeof e["status"] === "number" && typeof e["statusText"] === "string" && e["body"] instanceof Blob;
-}
+/**
+ * A failed request as MapLibre reports it: an AJAXError, which carries the answer's status, its
+ * three-digit result, and its body.
+ */
+const FailedRequest = v.object({ status: v.number(), statusText: v.string(), body: v.instance(Blob) });
 
 /**
- * Reports each tile request that the service answers with an error, as the problem document its body
- * holds (US-23, criterion 8). Errors of anything but a tile source, such as a missing image, are not
- * the service's and are left to MapLibre.
+ * Reports each tile request that the service answers with an error, as the problem document that its
+ * body holds: the service's form of an error in JSON, the text form of a value that programs exchange
+ * (US-23, criterion 8). Errors of anything but a tile source, such as a missing image, are not the
+ * service's and are left to MapLibre.
  */
 export function watchTileErrors(map: MapLibreMap, report: (problem: Problem) => void): void {
 	map.on("error", (event: { error?: unknown; sourceId?: string }) => {
 		const { error, sourceId } = event;
-		if (sourceId?.startsWith("tiles:") !== true || !isFailedRequest(error)) return;
+		if (sourceId?.startsWith("tiles:") !== true || !v.is(FailedRequest, error)) return;
 		void error.body.text().then(
 			(text) => report(tileProblem(error.status, error.statusText, text)),
 			() => report(tileProblem(error.status, error.statusText, "")),
@@ -173,9 +174,9 @@ export function watchTileErrors(map: MapLibreMap, report: (problem: Problem) => 
 	});
 }
 
-/** What the page wants to hear from the map. Each is called with values; none sees MapLibre. */
+/** What the page wants to hear from the map. Each is called with plain values; none sees MapLibre. */
 export interface MapEvents {
-	/** The map moved, by the visitor or by a port. */
+	/** The map moved, by the visitor or by a port, a function the update moves the map through. */
 	readonly onMove: () => void;
 	/** The map came to rest. */
 	readonly onIdle: () => void;
@@ -189,6 +190,10 @@ export interface MapEvents {
 	readonly onClusterClick: (clusterId: number, point: readonly [number, number]) => void;
 	/** MapLibre has loaded its first style. */
 	readonly onLoad: () => void;
+	/** The browser took WebGL away from the map, as it may when the graphics card resets. */
+	readonly onDrawingLost: () => void;
+	/** The browser gave WebGL back, and MapLibre draws again by itself. */
+	readonly onDrawingRestored: () => void;
 }
 
 /**
@@ -210,7 +215,7 @@ export function attachEvents(map: MapLibreMap, events: MapEvents): () => void {
 	// A pin is a sign, not a button: a click opens nothing (US-23, criterion 6). Only a cluster answers.
 	const onClusterClick = (e: { features?: readonly { geometry: { type: string; coordinates?: unknown }; properties: Record<string, unknown> }[] }): void => {
 		const feature = e.features?.[0];
-		const point = feature === undefined ? null : pointOf(feature as Parameters<typeof pointOf>[0]);
+		const point = feature === undefined ? null : pointOf(feature);
 		const id: unknown = feature?.properties["cluster_id"];
 		if (point !== null && typeof id === "number") events.onClusterClick(id, point);
 	};
@@ -221,25 +226,20 @@ export function attachEvents(map: MapLibreMap, events: MapEvents): () => void {
 	const pointer = cursor("pointer");
 	const plain = cursor("");
 
-	map.on("move", events.onMove);
-	map.on("idle", events.onIdle);
-	map.on("movestart", onMoveStart);
-	map.on("sourcedata", onSourceData);
-	map.on("mousemove", onMouseMove);
-	map.on("mouseout", onMouseOut);
-	map.on("click", LAYER.clusters, onClusterClick);
-	map.on("mouseenter", LAYER.clusters, pointer);
-	map.on("mouseleave", LAYER.clusters, plain);
+	// MapLibre hands back a subscription for each listener, so taking them all off is one line.
+	const subscriptions = [
+		map.on("move", events.onMove),
+		map.on("idle", events.onIdle),
+		map.on("movestart", onMoveStart),
+		map.on("sourcedata", onSourceData),
+		map.on("mousemove", onMouseMove),
+		map.on("mouseout", onMouseOut),
+		map.on("click", LAYER.clusters, onClusterClick),
+		map.on("mouseenter", LAYER.clusters, pointer),
+		map.on("mouseleave", LAYER.clusters, plain),
+		map.on("webglcontextlost", events.onDrawingLost),
+		map.on("webglcontextrestored", events.onDrawingRestored),
+	];
 	map.once("load", events.onLoad);
-	return () => {
-		map.off("move", events.onMove);
-		map.off("idle", events.onIdle);
-		map.off("movestart", onMoveStart);
-		map.off("sourcedata", onSourceData);
-		map.off("mousemove", onMouseMove);
-		map.off("mouseout", onMouseOut);
-		map.off("click", LAYER.clusters, onClusterClick);
-		map.off("mouseenter", LAYER.clusters, pointer);
-		map.off("mouseleave", LAYER.clusters, plain);
-	};
+	return () => subscriptions.forEach((subscription) => subscription.unsubscribe());
 }

@@ -1,4 +1,8 @@
 // @vitest-environment jsdom
+// map/controls.test.tsx: the zoom buttons, the compass, the scale bar and the coordinates, drawn in
+// jsdom, a pretend browser that runs inside the test runner with no screen (UI-09, UI-19). The tests
+// check what each control says to a screen reader, the program that reads a page aloud, what a click
+// sends, and that an accessibility scan finds no fault.
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";

@@ -1,8 +1,12 @@
-// map/coordinates.ts: the point under the pointer, in words (UI-19, criterion 8).
+// map/coordinates.ts: the point under the pointer, in words (UI-19, criterion 8). A pure function of
+// the map module, which reads only its input; ScaleBar.tsx shows what it writes.
 
 import type { LngLat } from "../shared";
 
-/** One coordinate to two decimal places with its hemisphere, N or S, E or W; a value that rounds to zero takes the positive letter. */
+/**
+ * One coordinate to two decimal places with its hemisphere, N or S, E or W; a value that rounds to
+ * zero takes the positive letter.
+ */
 function coordinate(value: number, positive: string, negative: string): string {
 	const rounded = Math.abs(value).toFixed(2);
 	return `${rounded}° ${value < 0 && rounded !== "0.00" ? negative : positive}`;

@@ -1,15 +1,21 @@
-// design/canvas.ts: pins and cluster rings drawn on a canvas, a bitmap the page can paint on, for the
-// symbol layers of MapLibre, the library that draws the map. A symbol layer draws an icon or a name at
-// each point.
+// design/canvas.ts: pins, tooltips and clusters, each one mark for several places close together,
+// drawn on a canvas, a bitmap the page can paint on, for the symbol layers of MapLibre, the library
+// that draws the map (UI-10 to UI-12). A symbol layer draws an icon or a name at each point. The
+// design module holds these drawings, and map/maplibre.ts calls each one the first time MapLibre asks
+// for its image.
 //
-// MapLibre draws images, not SVG, so the shapes in shapes.ts are painted here at twice the size and
-// handed over with a pixel ratio of 2, which keeps them sharp on screens that pack two device pixels
-// into each CSS pixel.
+// MapLibre draws images, not SVG, the text form of a drawing that a web page can show. So the shapes
+// in shapes.ts are painted here at twice the size and handed over with a pixel ratio of 2, which
+// keeps them sharp on screens that pack two device pixels into each CSS pixel, the unit the page's
+// styles measure in.
 
 import { PIN_PATH, SHAPE_PATHS, type Shape } from "./shapes";
 import { GROUP_KEYS, type GroupKey, type Theme } from "./theme";
 
-/** An image as `map.addImage` takes it: its size and its pixels, four bytes each (red, green, blue, alpha). */
+/**
+ * An image as `map.addImage` takes it: its size and its pixels, four bytes each (red, green, blue,
+ * alpha, the last being how opaque the pixel is).
+ */
 export interface MapImage {
 	readonly width: number;
 	readonly height: number;
@@ -45,9 +51,9 @@ function imageOf(context: CanvasRenderingContext2D): MapImage {
 }
 
 /**
- * Paints a soft shadow under a path, an outline to fill: the path filled in the theme's shadow colour,
- * blurred and faded. A blur filter stands in for the two-part shadow of Material, Google's design
- * system, which a canvas cannot draw.
+ * Paints a soft shadow under a path, an outline to fill: the path filled in the theme's shadow
+ * colour, blurred and faded. A blur filter stands in for the two-part shadow of Material, Google's
+ * design system, which a canvas cannot draw.
  */
 function shadow(context: CanvasRenderingContext2D, path: Path2D, theme: Theme, lift: 1 | 2 | 3): void {
 	context.save();
@@ -104,9 +110,8 @@ export function drawTooltip(theme: Theme): { image: MapImage; stretch: StretchMe
 }
 
 /**
- * A cluster (UI-10), one mark that stands for several places close together: its number on a white
- * disc, ringed in the colours of its groups in proportion to their places, in the map's order, with
- * Material's level-2 shadow. It draws once and never moves.
+ * A cluster (UI-10): its number on a white disc, ringed in the colours of its groups in proportion to
+ * their places, in the map's order, with Material's level-2 shadow. It draws once and never moves.
  */
 export function drawCluster(theme: Theme, counts: Readonly<Record<GroupKey, number>>): MapImage {
 	const size = CLUSTER.outer + 2 * MARGIN;
@@ -117,7 +122,9 @@ export function drawCluster(theme: Theme, counts: Readonly<Record<GroupKey, numb
 	disc.arc(centre, centre, CLUSTER.outer / 2, 0, 2 * Math.PI);
 	shadow(context, disc, theme, 2);
 
-	const start = -Math.PI / 2; // angles are in radians; the ring starts at twelve o'clock and runs clockwise, as the prototype's conic gradient does
+	// Angles are in radians; the ring starts at twelve o'clock and runs clockwise, as the prototype's
+	// conic gradient, a sweep of colour around a centre, does.
+	const start = -Math.PI / 2;
 	GROUP_KEYS.filter((g) => counts[g] > 0).reduce((from, g) => {
 		const to = from + (2 * Math.PI * counts[g]) / Math.max(total, 1);
 		context.beginPath();

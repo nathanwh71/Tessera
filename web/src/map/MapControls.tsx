@@ -1,12 +1,18 @@
-// map/MapControls.tsx: the compass and the zoom buttons at the top right (UI-09, UI-19).
+// map/MapControls.tsx: the compass and the zoom buttons at the top right (UI-09, UI-19). They are
+// React components: React is the library that draws the page from values, and a component is a
+// function that turns part of the model, the one object that holds everything the page shows, into
+// what you see. App.tsx places them and turns each press into a message for the update function.
 
 import type { ReactNode } from "react";
 import { Icon } from "../design";
 import { zoomLabel } from "./labels";
 
-/** Props for the controls: the inputs the component, a function that turns part of the model into what you see, receives. */
+/** Props for the controls: the inputs the component receives. */
 export interface MapControlsProps {
-	/** The current web-map zoom level, 0 for the whole world and 22 at its closest, which only the buttons' labels say (UI-09, criterion 3). */
+	/**
+	 * The current web-map zoom level, 0 for the whole world and 22 at its closest, which only the
+	 * buttons' labels say (UI-09, criterion 3).
+	 */
 	readonly level: number;
 	readonly canZoomIn: boolean;
 	readonly canZoomOut: boolean;
@@ -40,10 +46,12 @@ function ZoomButton({ direction, level, enabled, onPress }: { direction: "in" | 
 		<button
 			type="button"
 			aria-label={zoomLabel(direction, level)}
-			// UI-09, criterion 2: grey at the end of the range, yet still in the Tab order, so a screen reader still says its label.
+			// UI-09, criterion 2: grey at the end of the range, yet still in the Tab order, the order the
+			// Tab key visits controls in, so a screen reader, the program that reads a page aloud, still
+			// says its label.
 			aria-disabled={!enabled}
 			onClick={() => enabled && onPress()}
-			className="state-layer flex size-11 cursor-pointer items-center justify-center rounded-medium border-0 bg-surface-high text-on-surface-variant shadow-level-2"
+			className="state-layer map-button"
 		>
 			<Icon name={direction === "in" ? "add" : "remove"} />
 		</button>

@@ -1,12 +1,16 @@
-// testing/fake-maplibre.ts: a stand-in for MapLibre in jsdom, which has no WebGL. Page tests mock
-// "maplibre-gl" with it; it records what the page asks of the map, lets a test fire the map's events,
-// and draws nothing.
+// testing/fake-maplibre.ts: a stand-in for MapLibre, the library that draws the map, in jsdom, the
+// pretend browser the tests run in, which has no WebGL, the browser's 3D drawing. The page tests mock
+// the "maplibre-gl" module with it, that is, swap it in for the real one. It records what the page
+// asks of the map, lets a test fire the map's events, and draws nothing. The testing module holds
+// such fakes for tests alone.
 
 type Listener = (...args: unknown[]) => void;
 
 /** The fake map: every method the page calls, each doing as little as keeps the page running. */
 export class FakeMap {
 	static readonly made: FakeMap[] = [];
+	/** True makes the next map fail to start, as MapLibre does in a browser with no WebGL; it resets itself. */
+	static failNext = false;
 	readonly options: Record<string, unknown>;
 	readonly calls: { readonly name: string; readonly args: readonly unknown[] }[] = [];
 	readonly touchZoomRotate = { disableRotation: (): void => undefined };
@@ -15,6 +19,10 @@ export class FakeMap {
 	readonly #canvas = document.createElement("canvas");
 
 	constructor(options: Record<string, unknown>) {
+		if (FakeMap.failNext) {
+			FakeMap.failNext = false;
+			throw new Error("Failed to initialize WebGL");
+		}
 		this.options = options;
 		const container = options["container"];
 		this.#container = container instanceof HTMLElement ? container : document.createElement("div");
@@ -28,11 +36,13 @@ export class FakeMap {
 
 	readonly #listeners = new Map<string, Listener[]>();
 
-	on(event: string, ...rest: unknown[]): this {
+	/** Answers as MapLibre does: a subscription whose `unsubscribe` takes the listener back off. */
+	on(event: string, ...rest: unknown[]): { unsubscribe(): void } {
 		const listener = rest.at(-1);
-		// A listener for a layer, such as a click on the clusters, takes the layer's id before it; the fake keeps it under the event alone.
+		// A listener for one layer of the style, such as a click on the clusters layer, takes the
+		// layer's id before it; the fake keeps it under the event alone.
 		if (typeof listener === "function") this.#listeners.set(event, [...(this.#listeners.get(event) ?? []), listener as Listener]);
-		return this;
+		return { unsubscribe: () => this.off(event, listener) };
 	}
 
 	/** Calls every listener of an event, as MapLibre would when it happens. */

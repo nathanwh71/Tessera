@@ -1,5 +1,8 @@
-// map/map-handle.ts: the map's ports, the functions that move the map, as MapLibre, the map-drawing
-// library, carries them out (US-23, UI-09, UI-10).
+// map/map-handle.ts: the map's ports, the functions through which the update function moves the map,
+// as MapLibre, the library that draws the map, carries them out (US-23, UI-09, UI-10). main.tsx makes
+// one handle and hands it to the page; the update calls its ports, and MapCanvas.tsx attaches the map
+// to it once MapLibre has started. It is one of the two files the architecture test lets hold
+// changing state.
 //
 // The ports exist before the map does: /food.cafes.html asks to frame the area before MapLibre has
 // started. So the handle keeps the latest request and carries it out once a map attaches.
@@ -10,7 +13,10 @@ import type { Bounds, Level, View } from "../shared";
 import { toMapZoom } from "./levels";
 import type { Ports } from "./map";
 
-/** Space kept around a framed set of places, in pixels, so pins at the edge stay clear of the screen's edge. */
+/**
+ * Space kept around a framed set of places, in pixels, so pins at the edge stay clear of the
+ * screen's edge.
+ */
 const FRAME_PADDING = 64;
 
 /** The ports for the app, and the two calls the map view makes as MapLibre starts and stops. */
@@ -22,7 +28,10 @@ export interface MapHandle {
 
 type Move = (map: MapLibreMap) => void;
 
-/** A handle with no map yet; `attach` gives it one, and any move asked for before then runs at that moment. */
+/**
+ * A handle with no map yet; `attach` gives it one, and any move asked for before then runs at that
+ * moment.
+ */
 export function createMapHandle(): MapHandle {
 	let current: MapLibreMap | null = null;
 	let waiting: Move | null = null;

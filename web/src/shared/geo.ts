@@ -1,6 +1,8 @@
-// shared/geo.ts: positions, views and boxes on the map, in degrees of WGS 84, the longitude and latitude system GPS uses.
+// shared/geo.ts: positions, views and boxes on the map, in degrees of WGS 84, the longitude and
+// latitude system GPS uses. The shared kernel holds them, and the area, the map's model and its
+// controls all speak in them (UI-09, US-23).
 
-import { isFiniteNumber, isRecord } from "./json";
+import * as v from "valibot";
 
 /** A position in WGS 84 degrees: longitude east of Greenwich, then latitude north of the equator. */
 export interface LngLat {
@@ -9,15 +11,17 @@ export interface LngLat {
 }
 
 /**
- * A web-map zoom level (UI-09). It is a number with a brand, a mark that exists for the compiler alone,
- * as F#'s units of measure are: a plain number, or MapLibre's zoom, cannot stand where a level belongs.
+ * A web-map zoom level (UI-09): level 0 shows the world in 256 pixels, and each level up doubles the
+ * scale. It is a branded type: a number with a brand, a mark that exists for the compiler alone, as
+ * the units of measure of F#, a functional language, are. A plain number, or the zoom of MapLibre,
+ * the library that draws the map, cannot stand where a level belongs (ADR 0004).
  */
 export type Level = number & { readonly unit: "level" };
 
 /** Marks a number as a level, as F#'s `15<level>` would. */
 export const level = (n: number): Level => n as Level;
 
-/** Where the map looks: a centre and a web-map zoom level (UI-09), where level 0 shows the world in 256 pixels and each level up doubles the scale. */
+/** Where the map looks: a centre and a web-map zoom level (UI-09). */
 export interface View {
 	readonly center: LngLat;
 	readonly zoom: Level;
@@ -36,17 +40,20 @@ export function clampZoom(zoom: number): Level {
 	return level(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom)));
 }
 
-/** Reads `[west, south, east, north]` in degrees; null for anything else, or for a box turned inside out (west past east, or south past north). */
-export function readBounds(value: unknown): Bounds | null {
-	if (!Array.isArray(value) || value.length !== 4 || !value.every(isFiniteNumber)) return null;
-	const [west, south, east, north] = value as [number, number, number, number];
-	const inRange = Math.abs(west) <= 180 && Math.abs(east) <= 180 && Math.abs(south) <= 90 && Math.abs(north) <= 90;
-	return inRange && west < east && south < north ? [west, south, east, north] : null;
-}
+/** A number of degrees from `-most` to `most`, such as a longitude, from -180 to 180. */
+const degrees = (most: number) => v.pipe(v.number(), v.finite(), v.minValue(-most), v.maxValue(most));
 
-/** Reads `{lng, lat}` in degrees; null for anything else. */
-export function readLngLat(value: unknown): LngLat | null {
-	if (!isRecord(value)) return null;
-	const { lng, lat } = value;
-	return isFiniteNumber(lng) && isFiniteNumber(lat) && Math.abs(lng) <= 180 && Math.abs(lat) <= 90 ? { lng, lat } : null;
-}
+/** A position in degrees: a longitude from -180 to 180 and a latitude from -90 to 90. */
+export const LngLatSchema = v.object({ lng: degrees(180), lat: degrees(90) });
+
+/**
+ * A box: exactly four numbers, `[west, south, east, north]`, in degrees, west before east and south
+ * before north, so a box turned inside out is refused.
+ */
+export const BoundsSchema = v.pipe(
+	v.strictTuple([degrees(180), degrees(90), degrees(180), degrees(90)]),
+	v.check(([west, south, east, north]) => west < east && south < north),
+);
+
+/** Reads a box; null for anything else. */
+export const readBounds = (value: unknown): Bounds | null => (v.is(BoundsSchema, value) ? value : null);

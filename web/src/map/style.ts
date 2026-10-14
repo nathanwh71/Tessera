@@ -1,11 +1,14 @@
-// map/style.ts: the map's style, the description of what MapLibre (the map-drawing library) draws, built
-// from the model by one pure function: it reads only its inputs and changes nothing outside itself. A
-// style holds sources, the data to draw from, and layers, which say how to draw it; a symbol layer
-// draws an icon or a name at each point.
+// map/style.ts: the map's style, the description of what MapLibre, the library that draws the map,
+// draws (US-23, UI-10, UI-11, UI-15, UI-17). One pure function of the map module builds it from the
+// model, the one object that holds everything the page shows: it reads only its inputs and changes
+// nothing outside itself (ADR 0004). MapCanvas.tsx builds a style each time the layers that are on
+// change, and hands it to MapLibre. A style holds sources, the data to draw from, and layers, which
+// say how to draw it; a symbol layer draws an icon or a name at each point.
 //
 // The stack, from the bottom: a plain background, with nothing drawn beneath the places (UI-15,
-// criterion 9); one invisible layer for each layer that is on, which only makes MapLibre load its tiles
-// for places.ts; the names; the pins; and the clusters.
+// criterion 9); one invisible layer for each layer that is on, which only makes MapLibre load its
+// tiles, the square pieces of the map, for places.ts; the names; the pins; and the clusters, each one
+// mark for several places close together.
 //
 // MapLibre places symbols from the top layer down, and each placed icon or name claims its space. So
 // clusters and pins claim theirs first, always shown; and the names come last, each taking a side only
@@ -34,10 +37,16 @@ export interface FontFiles {
 
 /** Everything the style depends on. */
 export interface StyleInput {
-	/** The page's own origin, such as `http://tessera.office.lan`, on which the tile addresses are built (US-23, criterion 7). */
+	/**
+	 * The page's own origin, the scheme, host and port it came from, such as
+	 * `http://tessera.office.lan`, on which the tile addresses are built (US-23, criterion 7).
+	 */
 	readonly origin: string;
 	readonly visible: readonly LayerId[];
-	/** False while the pins drop in as the page opens: the map's own pins and names wait unseen until they land (UI-15, criterion 6). */
+	/**
+	 * False while the pins drop in as the page opens: the map's own pins and names wait unseen until
+	 * they land (UI-15, criterion 6).
+	 */
 	readonly landed: boolean;
 	readonly theme: Theme;
 	readonly fonts: FontFiles;
@@ -70,10 +79,16 @@ export const TILE_MAX_LEVEL = level(16);
 /** The font name the names use; `font-faces` in the style maps it to the files above. */
 export const NAME_FONT = "Roboto Regular";
 
-/** The size of a name, in pixels: Material's label medium, as the prototype's tooltips. */
+/**
+ * The size of a name, in pixels: the label medium of Material, Google's design system, as the
+ * prototype's tooltips.
+ */
 const NAME_SIZE = 12;
 
-/** The tooltip's padding around a name, in pixels, as the prototype's 4 by 8 (top and bottom, then sides). */
+/**
+ * The tooltip's padding around a name, in pixels, as the prototype's 4 by 8 (top and bottom, then
+ * sides). A tooltip is the small dark box that holds a name (UI-11).
+ */
 const TOOLTIP_PADDING = { block: 4, inline: 8 } as const;
 
 /**
@@ -105,16 +120,29 @@ function nameAnchors(): VariableAnchorOffsetCollectionSpecification {
 	];
 }
 
-/** The pixels between a pin image's bottom edge and its tip, which `icon-offset` takes back (design/canvas.ts). */
+/**
+ * The pixels between a pin image's bottom edge and its tip, which `icon-offset` takes back
+ * (design/canvas.ts).
+ */
 const PIN_TIP_GAP = IMAGE_MARGIN;
 
-/** The cluster's pixel radius: two places closer than this on screen merge into one cluster (UI-10, criterion 1). */
+/**
+ * The cluster's radius in pixels: two places closer than this on screen merge into one cluster
+ * (UI-10, criterion 1).
+ */
 export const CLUSTER_RADIUS_PX = 48;
 
-/** MapLibre counts each group's places in a cluster through these properties: for each group, add 1 for a place in it, else 0. */
+/**
+ * MapLibre counts each group's places in a cluster through these properties: for each group, add 1
+ * for a place in it, else 0.
+ */
 const CLUSTER_PROPERTIES = Object.fromEntries(GROUP_KEYS.map((g) => [g, ["+", ["case", ["==", ["get", "group"], g], 1, 0]]]));
 
-/** A source with no places, made afresh each time, since GeoJSON's types allow a caller to change the object. */
+/**
+ * A source with no places, made afresh each time, since the types of GeoJSON, the form of points and
+ * shapes in JSON, the text form of a value that programs exchange, allow a caller to change the
+ * object.
+ */
 const empty = (): GeoJSON.FeatureCollection => ({ type: "FeatureCollection", features: [] });
 
 function sources(input: StyleInput): Record<string, SourceSpecification> {
@@ -149,7 +177,10 @@ function feedLayer(id: LayerId): LayerSpecification {
 const notCluster: ExpressionSpecification = ["!", ["has", "point_count"]];
 const sortKey: ExpressionSpecification = ["get", "sort"];
 
-/** The cluster's image name as a style expression, a small formula MapLibre works out per cluster: `cluster:` and its four groups' counts, such as `cluster:3-0-1-0`. */
+/**
+ * The cluster's image name as a style expression, a small formula MapLibre works out for each
+ * cluster: `cluster:` and its four groups' counts, such as `cluster:3-0-1-0`.
+ */
 function clusterImage(): ExpressionSpecification {
 	const count = (g: GroupKey): ExpressionSpecification => ["to-string", ["get", g]];
 	const [food, outdoors, culture, transport] = GROUP_KEYS.map(count);
@@ -172,11 +203,13 @@ function nameLayout(): NonNullable<SymbolLayerSpecification["layout"]> {
 		"icon-image": TOOLTIP_IMAGE,
 		"icon-text-fit": "both",
 		"icon-text-fit-padding": [TOOLTIP_PADDING.block, TOOLTIP_PADDING.inline, TOOLTIP_PADDING.block, TOOLTIP_PADDING.inline],
-		// The box always draws with its text and claims no space; the padded text claims it (see NAME_PADDING).
+		// The box always draws with its text and claims no space; the padded text claims it (see
+		// NAME_PADDING).
 		"icon-allow-overlap": true,
 		"icon-ignore-placement": true,
 		"text-padding": NAME_PADDING,
-		// UI-17, criterion 2: the fixed order, kept across tiles by sorting on the sort key, not on screen position.
+		// UI-17, criterion 2: the fixed order, kept across tiles by sorting on the sort key, not on
+		// screen position.
 		"symbol-sort-key": sortKey,
 		"symbol-z-order": "source",
 	};

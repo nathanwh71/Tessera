@@ -1,5 +1,8 @@
 /// <reference types="node" />
-// rules.test.ts: the page-wide rules of UI-15 that no single module owns, checked over the source.
+// rules.test.ts: the page-wide rules of UI-15 that no single module owns, checked over the source
+// text of every file under src/: one theme of colours, calm motion, and icons from one font. It runs
+// under vitest, the test runner, beside the module tests, and reads the files rather than running
+// them.
 
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -32,7 +35,8 @@ const NAMED_COLOURS = ["white", "black", "red", "green", "blue", "grey", "gray",
 describe("UI-15 one theme of colours", () => {
 	it("keeps the theme in styles.css", () => {
 		expect(THEME).toContain("--color-primary: #1F5FA8");
-		// Tailwind's own palette is gone, so no class can bring a colour from outside the theme.
+		// Tailwind, the library whose class names set the styles, has lost its own palette, so no class
+		// can bring a colour from outside the theme.
 		expect(THEME).toContain("--color-*: initial;");
 	});
 
@@ -49,7 +53,10 @@ describe("UI-15 one theme of colours", () => {
 });
 
 describe("UI-15 calm motion", () => {
-	/** Every duration written in the source: CSS times and Tailwind's duration and delay classes. */
+	/**
+	 * Every duration written in the source: times in CSS, the page's styles, and Tailwind's duration
+	 * and delay classes.
+	 */
 	const durations = LINES.flatMap(({ where, line }) => [
 		...[...line.matchAll(/(?<![\w.-])(\d+(?:\.\d+)?)(ms|s)\b/g)].map((m) => ({ where, ms: Number(m[1]) * (m[2] === "s" ? 1000 : 1) })),
 		...[...line.matchAll(/\b(?:duration|delay)-(\d+)\b/g)].map((m) => ({ where, ms: Number(m[1]) })),
@@ -93,5 +100,28 @@ describe("UI-15 icons", () => {
 		const withSvg = tsx.filter(({ text }) => text.includes("<svg")).map(({ file }) => relative(".", file));
 		expect(withSvg.toSorted()).toEqual([join("design", "components.tsx"), join("map", "MapControls.tsx")]);
 		expect(FILES.filter(({ text }) => /<img\b|font-awesome|material-icons(?!-)/.test(text)).map((f) => f.file)).toEqual([]);
+	});
+});
+
+describe("UI-15 named surfaces", () => {
+	/**
+	 * The class lists the page repeats, each named once in styles.css. A component that spells one out
+	 * by hand would drift from the others the day someone changes one.
+	 */
+	const SHARED = {
+		card: "rounded-medium bg-surface-low",
+		"map-button": "rounded-medium border-0 bg-surface-high",
+		overlay: "pointer-events-none absolute inset-0 overflow-hidden",
+		"on-point": "-translate-x-1/2 -translate-y-1/2",
+		message: "top-1/2 left-1/2",
+	};
+
+	it("names each shared surface once, in styles.css", () => {
+		for (const name of Object.keys(SHARED)) expect(STYLES).toMatch(new RegExp(String.raw`\.${name} \{\s*@apply `));
+	});
+
+	it("finds no component that spells a shared surface out by hand", () => {
+		const tsx = LINES.filter(({ where }) => where.includes(".tsx:"));
+		expect(tsx.filter(({ line }) => Object.values(SHARED).some((classes) => line.includes(classes))).map((l) => l.where)).toEqual([]);
 	});
 });

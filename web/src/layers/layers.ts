@@ -1,8 +1,12 @@
-// layers/layers.ts: the nine layers of places, named in the map's own code (US-23, criterion 7).
+// layers/layers.ts: the nine layers of places, named in the map's own code (US-23, criterion 7). A
+// layer is one kind of place, such as cafés, served as tiles, square pieces of the map. The layers
+// module holds this one list; the map builds its style from it, and main.tsx asks it which layer a
+// page's address names.
 //
 // The map loads no list of layers from the service. It knows the nine layers of US-24 from this file,
 // and builds each tile's address, `/{layer}/{z}/{x}/{y}.pbf`, on the page's own origin: the scheme,
-// host and port the page itself came from. So the page needs only the tile API.
+// host and port the page itself came from. So the page needs only the tile API, the one address at
+// which the service answers requests.
 
 import type { GroupKey } from "../design";
 
@@ -16,7 +20,10 @@ export interface PlaceLayer {
 	readonly one: string;
 }
 
-/** The nine layers, in the map's order: the order in which names win the space between layers (UI-17, criterion 2). */
+/**
+ * The nine layers, in the map's order: the order in which names win the space between layers (UI-17,
+ * criterion 2).
+ */
 export const LAYERS = [
 	{ id: "food.cafes", group: "food", title: "Cafés", one: "Café" },
 	{ id: "food.restaurants", group: "food", title: "Restaurants", one: "Restaurant" },
@@ -45,14 +52,18 @@ export function layerOf(id: string): PlaceLayer | undefined {
 	return LAYERS.find((l) => l.id === id);
 }
 
-/** The group of a layer, such as `food` for `food.cafes`, or undefined for text that names none of the nine. */
+/**
+ * The group of a layer, such as `food` for `food.cafes`, or undefined for text that names none of
+ * the nine.
+ */
 export function groupOf(id: string): GroupKey | undefined {
 	return layerOf(id)?.group;
 }
 
 /**
- * The address MapLibre fetches a layer's tiles from: `/{layer}/{z}/{x}/{y}.pbf` on the page's own
- * origin. MapLibre fills in `{z}`, `{x}` and `{y}` for each tile, so they stay as written.
+ * The address MapLibre, the library that draws the map, fetches a layer's tiles from:
+ * `/{layer}/{z}/{x}/{y}.pbf` on the page's own origin. MapLibre fills in `{z}`, `{x}` and `{y}`, the
+ * level, column and row, for each tile, so they stay as written.
  */
 export function tileUrl(origin: string, id: LayerId): string {
 	return `${origin.replace(/\/+$/, "")}/${id}/{z}/{x}/{y}.pbf`;

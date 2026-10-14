@@ -1,7 +1,12 @@
-// shared/result.ts: the outcome of a step that may fail, as a value rather than a thrown error, with
-// the functions F#'s Result module has (ADR 0004).
+// shared/result.ts: a Result, the outcome of a step that may fail, carried as a value rather than as
+// a thrown error. It lives in the shared kernel, the module every other module may use, and the
+// readers of the area and of a failed tile build their chains on it. Its functions follow those of
+// F#, a functional language, whose Result module has the same ones (ADR 0004).
 
-/** A value, or the reason there is none. The `ok` flag says which, so a caller must check before it reads. */
+/**
+ * A value, or the reason there is none. The `ok` flag says which, so a caller must check before it
+ * reads.
+ */
 export type Result<T, E = string> =
 	| { readonly ok: true; readonly value: T }
 	| { readonly ok: false; readonly error: E };
@@ -12,7 +17,8 @@ export const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
 export const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
 
 // Each function below takes its step first and the result last, as F#'s do, so it can stand in a
-// pipe: `pipe(result, flatMap(next), defaultWith(fallback))` reads in the order the steps run.
+// pipe, a chain of steps that runs in the order written (pipe.ts):
+// `pipe(result, flatMap(next), defaultWith(fallback))` reads in the order the steps run.
 
 /** Runs the next step only on success; the first failure skips every later step. F#'s `Result.bind`. */
 export const flatMap =
