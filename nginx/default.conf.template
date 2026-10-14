@@ -50,6 +50,16 @@ server {
         proxy_pass http://tessera;
     }
 
+    # Nginx refuses a malformed address itself, such as one that climbs above the root or holds a
+    # stray '%' (S-06); the answer is a problem document that never repeats the address.
+    error_page 400 /malformed;
+    location = /malformed {
+        internal;
+        default_type application/problem+json;
+        add_header Cache-Control no-store always;
+        return 400 '{"type":"about:blank","title":"Bad Request","status":400}';
+    }
+
     # With the service down and no copy held, the browser gets the service's own kind of answer:
     # a problem document that asks it to try again in five seconds (N-22).
     error_page 502 504 = @unavailable;

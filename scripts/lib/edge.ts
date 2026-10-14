@@ -2,6 +2,7 @@
 // served while the service is down. scripts/e2e.ts runs these after the browser tests.
 import assert from 'node:assert/strict';
 import { request } from 'node:http';
+import { connect } from 'node:net';
 import { gunzipSync } from 'node:zlib';
 
 type Answer = { readonly status: number; readonly headers: Record<string, string | string[] | undefined>; readonly body: Buffer };
@@ -16,6 +17,18 @@ function ask(url: string, headers: Record<string, string> = {}, method = 'GET'):
     });
     sent.on('error', fail);
     sent.end();
+  });
+}
+
+// A request written byte for byte, so nothing tidies the address on the way, as fetch would.
+function raw(base: string, target: string): Promise<string> {
+  const { hostname, port } = new URL(base);
+  return new Promise((done, fail) => {
+    const socket = connect(Number(port), hostname, () => socket.end(`GET ${target} HTTP/1.1\r\nHost: ${hostname}\r\nConnection: close\r\n\r\n`));
+    const parts: Buffer[] = [];
+    socket.on('data', (part: Buffer) => parts.push(part));
+    socket.on('end', () => done(Buffer.concat(parts).toString('latin1')));
+    socket.on('error', fail);
   });
 }
 
@@ -58,6 +71,15 @@ export async function checkEdge(base: string, stopService: () => Promise<void>):
   assert.ok(packedScript.body.length < plainScript.body.length / 2, `${packedScript.body.length} packed against ${plainScript.body.length} plain`);
   assert.deepEqual(gunzipSync(packedScript.body), plainScript.body);
 
+  // S-06: a malformed address reaches no route. Nginx refuses one it cannot read, and the service
+  // finds no route for the rest; either way the answer is a problem document that hides the address.
+  for (const target of ['/food.cafes/%2e%2e/1/2/3.pbf', '/food.cafes/../../1/2/3.pbf', '/food.cafes%2F15/1/2.pbf', '/food.cafes/15/1/2.pbf%zz', '/food.cafes/15/1/2.pbf%00']) {
+    const answer = await raw(base, target);
+    assert.match(answer, /^HTTP\/1\.1 40[04] /, target);
+    assert.match(answer, /application\/problem\+json/, target);
+    assert.doesNotMatch(answer.split('\r\n\r\n')[1] ?? '', /food\.cafes/, target);
+  }
+
   // With the service down, a kept tile still arrives, and a tile never kept asks the browser to
   // try again shortly, as a problem document.
   await stopService();
@@ -68,5 +90,5 @@ export async function checkEdge(base: string, stopService: () => Promise<void>):
   assert.equal(never.status, 503);
   assert.equal(never.headers['content-type'], 'application/problem+json');
   assert.equal(never.headers['retry-after'], '5');
-  console.log('Nginx checks passed: kept tiles, 304, gzip, HEAD, and tiles served with the service down.');
+  console.log('Nginx checks passed: kept tiles, 304, gzip, HEAD, malformed addresses, and tiles served with the service down.');
 }
