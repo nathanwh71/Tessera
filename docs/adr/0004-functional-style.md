@@ -10,10 +10,22 @@
 | Matches | ADR 0004 of `nathanwh71/JTessera`, the Java ***build's*** ***record*** of the ***same*** ***style***, which ***takes*** these ***types*** from Vavr where this ***build*** ***writes*** its ***own*** |
 | Carried out | The ***three*** ***habits***, `Option` and `Result`, ***since*** the ***first*** ***build***. The ***types*** that ***say*** what a ***value*** is, and the ***map's*** `pipe` and `flow`: ***decided*** on 13 ***October*** 2026, and not ***yet*** in this ***build's*** ***code*** |
 | Replaces | The ***commit*** `ecb21fb` of 12 ***October*** 2026, which ***dropped*** `Option<T>` for ***nullable*** ***types***; it ***stays*** in the ***archived*** ***phase***-0 repository |
+| Amended | On 14 ***October*** 2026, in the ***change*** that ***halved*** the ***code***: `Result<T, E>` ***now*** ***comes*** from CSharpFunctionalExtensions, and a ***value*** that may be ***missing*** is a ***nullable*** ***type***; ***see*** ***below*** |
 
 ## Decision
 
 Tessera's ***code*** is ***written*** in a ***functional*** ***style***: immutable ***values***, ***pure*** ***functions*** and ***referential*** transparency. ***Absence*** is an `Option<T>` and ***refusal*** a `Result<T, E>`, ***two*** ***small*** ***types*** of Tessera's own, each with `Map`, `Bind`, `Match`, `Select` and `SelectMany`, so the ***code*** ***reads*** ***like*** F#. ***Nullable*** ***types*** ***appear*** only at the ***edge*** of a module, where a ***library*** ***hands*** them in.
+
+
+## Amended on 14 October 2026
+
+The ***maintainer*** ***asked*** to ***halve*** the ***code*** with ***libraries***, and ***chose*** CSharpFunctionalExtensions for `Result`: its ***latest*** ***release*** ***came*** in March 2026, and it has 38.9 million ***downloads***. ***Three*** ***things*** ***changed***.
+
+- **Refusal is the library's `Result<T, E>`.** It ***keeps*** `Map`, `Bind`, `MapError`, `Match` and `Ensure`, and `from … in … select` ***still*** ***chains*** ***steps***. `Combine` ***joins*** a ***list*** of ***results*** and ***keeps*** the ***first*** ***refusal***.
+- **Absence is a nullable type, `T?`.** C# ***checks*** every `T?` with `Nullable` on and every ***warning*** an ***error***, so the ***compiler*** ***still*** ***makes*** ***each*** ***caller*** ***decide*** what ***happens*** when a ***value*** is ***missing***. `Option` and `ToOption` have ***gone***, and so has the ***rule*** that ***kept*** `T?` at a ***module***'s ***edge***.
+- **Early returns where they read better.** The ***seed***'s ***checks*** and the ***tile*** ***route*** ***now*** ***read*** ***top*** to ***bottom***, ***one*** `if` and ***one*** `return` for ***each*** ***refusal***.
+
+The ***habits*** ***stand***: immutable ***records*** and ***collections***, ***pure*** ***functions*** for every ***decision***, and an ***expected*** ***failure*** ***returned*** as a `Result`, ***never*** thrown. The ***closed*** ***record*** ***sets***, `Page` and `ProblemStatus`, were ***never*** ***built***, and the ***architecture*** ***test*** that ***guarded*** `Match` ***went*** with the merge of the ***projects*** (ADR 0001).
 
 ## Why
 

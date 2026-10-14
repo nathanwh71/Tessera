@@ -7,12 +7,20 @@
 | Decider | The maintainer |
 | Covers | The Phase Oct back ***end***, in C# 14 on .NET 10, in `nathanwh71/Tessera` |
 | Stories | US-00, US-01, US-03, US-24, US-07, S-01, S-06, US-35, US-23 (`docs/user-stories/user-stories.md`) |
+| Amended | On 14 ***October*** 2026, in the ***change*** that ***halved*** the ***code***, the ***nine*** ***projects*** merged into ***one***, `src/Tessera`, with a ***folder*** for ***each*** ***module***; ***see*** ***below*** |
 
 ## Decision
 
 Tessera's back ***end*** is ***one*** ***service***, ***built*** and ***shipped*** as ***one*** ***unit***, and ***divided*** ***inside*** into modules with ***fixed*** ***borders***. Each module ***owns*** ***one*** ***part*** of the ***work*** the ***stories*** ***describe***, ***shows*** other modules a ***small*** ***public*** ***face***, and ***hides*** the ***rest***. Each module is a ***project*** of its own, so the compiler ***guards*** the ***borders***, and ***architecture*** ***tests*** ***guard*** the ***rules*** it ***cannot*** ***see***; a ***break*** ***fails*** the ***build***.
 
 This ***record*** ***covers*** the back ***end*** ***alone***. The ***map***'s ***front*** ***end***, in TypeScript, ***keeps*** its own ***design***.
+
+
+## Amended on 14 October 2026
+
+The ***service*** is ***now*** ***one*** ***project***, `src/Tessera`, with a ***folder*** for ***each*** ***module***: ***Settings***, Sql, Catalogue, ***Import***, ***Tiles*** and ***Map***. The ***maintainer*** ***found*** ***nine*** ***projects*** ***too*** ***many*** to ***follow***. Kernel and Http have ***gone***: CSharpFunctionalExtensions ***gives*** `Result` (ADR 0004), and ASP.NET Core ***writes*** every ***problem*** ***document***, ***shaped*** by `Problems.cs`. Nginx, in ***front***, ***now*** does the ***work*** of the ***tile*** ***cache*** and the ***address*** ***screen*** (ADR 0008).
+
+With ***one*** ***project***, the ***compiler*** no ***longer*** ***guards*** the ***borders***, and the ***architecture*** ***tests*** have ***gone***. The ***rules*** ***below*** ***stand*** as a ***guide*** for ***review***: Sql ***alone*** ***talks*** to the ***database***, and every SQL ***text*** ***lives*** in `Queries.cs`; ***modules*** ***pass*** immutable ***values*** and ***report*** a ***refusal*** as a `Result`.
 
 ## Context
 

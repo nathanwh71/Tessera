@@ -1,33 +1,33 @@
 # Tessera
 
-> **The live build, since 14 October 2026.** The maintainer ***chose*** this .NET ***build*** as the ***one*** to ***carry*** on; the Java ***build***, `nathanwh71/JTessera`, is ***archived*** and ***kept*** to ***read***. The ***map*** in `web/` ***now*** ***lives*** here (ADR 0006, as ***amended***).
+> **The live build, since 14 October 2026.** The ***maintainer*** ***chose*** this .NET ***build*** as the ***one*** to ***carry*** on; the Java ***build***, `nathanwh71/JTessera`, is ***archived*** and ***kept*** to ***read***. The ***map*** in `web/` ***now*** ***lives*** here (ADR 0006, as ***amended***).
 
-Tessera is a ***small*** ***web*** ***service*** that ***serves*** a ***map*** of ***places*** as tiles. It ***reads*** ***tables*** from a database, ***cuts*** them into ***map*** tiles on ***request***, and ***answers*** every ***machine*** in the ***office*** on ***port*** 80. This ***build***, Phase Oct, ***serves*** the 900 ***places*** of Macau in ***nine*** ***layers***, and ***shows*** them on a ***map*** at `/`.
+***Tessera*** is a ***small*** ***web*** ***service*** that ***serves*** a ***map*** of ***places*** as ***tiles***. It ***reads*** ***tables*** from a ***database***, ***cuts*** them into ***map*** ***tiles*** on ***request***, and ***answers*** every ***machine*** in the ***office*** on ***port*** 80, ***through*** Nginx. This ***build***, ***Phase*** Oct, ***serves*** the 900 ***places*** of Macau in ***nine*** ***layers***, and ***shows*** them on a ***map*** at `/`.
 
-A **tile** is ***one*** ***square*** of a ***map*** at ***one*** zoom ***level***. A ***web*** ***map*** is ***made*** of ***thousands*** of them, and the browser ***asks*** for only the ***ones*** on the ***screen***. Tessera ***makes*** each tile from the database the ***moment*** a ***map*** ***asks*** for it, so a ***change*** in the ***data*** ***shows*** on the ***map*** at once.
+A **tile** is ***one*** ***square*** of a ***map*** at ***one*** ***zoom*** ***level***. A ***web*** ***map*** is ***made*** of ***thousands*** of them, and the ***browser*** ***asks*** for ***only*** the ***ones*** on the ***screen***. ***Tessera*** ***makes*** ***each*** ***tile*** from the ***database*** the ***first*** ***time*** a ***map*** ***asks*** for it; Nginx ***keeps*** it for a ***minute*** and ***hands*** the ***same*** ***copy*** to everyone who ***asks*** in that ***time***.
 
 ## What this build holds, story by story
 
-The ***twenty***-***six*** ***stories*** in `docs/user-stories/user-stories.md` ***fix*** what Tessera must do. Their ***state*** on 14 ***October*** 2026:
+The twenty-six ***stories*** in `docs/user-stories/user-stories.md` ***fix*** what ***Tessera*** must do. Their ***state*** on 14 ***October*** 2026:
 
 | Story | State |
 |---|---|
 | US-00 Walking skeleton | ***Built*** and ***tested*** |
 | US-01 One database | ***Built*** and ***tested*** |
-| US-03 Publish by ***grant*** | ***Built*** and ***tested*** |
-| US-24 Places in ***nine*** ***layers*** | ***Built*** and ***tested*** |
+| US-03 Publish by grant | ***Built*** and ***tested*** |
+| US-24 Places in nine layers | ***Built*** and ***tested*** |
 | US-07 Serve a tile | ***Built*** and ***tested*** |
 | S-01 SQL injection | ***Built*** and ***tested*** |
-| S-06 Malformed URLs | ***Built*** and ***tested***, with ***one*** ***gap***: the ***web*** server ***refuses*** `%00` and a ***raw*** ***control*** ***character*** ***itself***, with an ***empty*** 400 in ***place*** of a ***problem*** ***document*** |
-| US-35 Office on ***port*** 80 | ***Script*** ***written***; it ***needs*** a ***first*** ***run*** on the ***office*** ***machine*** |
-| US-23 and UI-09 to UI-17, the ***map*** | ***Built*** and ***tested***: the ***map*** ***copied*** from the Java ***build*** (ADR 0006), and its 20 browser ***tests*** ***pass*** ***against*** this ***service*** |
-| N-18 to N-20, tiles that ***cost*** ***less*** | ***Built*** and ***tested***: a tile ***carries*** `max-age` and a ***weak*** `ETag`, a ***kept*** ***copy*** ***answers*** without a query, and tiles and the ***map***'s ***files*** ***travel*** gzip-packed |
-| N-21 to N-28, the Java ***way*** | ***Built*** and ***tested***: pg_tileserv's ***setting*** ***names***, 503 with `Retry-After` and a `DbTimeout`, ***grants*** ***seen*** ***within*** `CatalogueRefresh` ***seconds***, ***one*** query for a ***crowd***, `/health`, queries ***served*** in the ***order*** they ***arrive***, and a ***database*** ***watch*** that ***answers*** 503 at ***once*** while the ***database*** ***hangs***. The ***service*** and the database ***start*** in any ***order*** |
+| S-06 Malformed URLs | ***Built*** and ***tested***: Nginx ***refuses*** an ***address*** it ***cannot*** ***read***, and a disguised ***one*** ***matches*** no ***route***; ***each*** ***answer*** is a ***problem*** ***document*** |
+| US-35 Office on port 80 | ***Script*** ***written***: Nginx ***answers*** on ***port*** 80. It ***needs*** a ***first*** ***run*** on the ***office*** ***machine*** |
+| US-23 and UI-09 to UI-17, the map | ***Built*** and ***tested***: the ***map*** ***copied*** from the Java ***build*** (ADR 0006), and its ***browser*** ***tests*** ***pass*** ***through*** Nginx |
+| N-18 to N-20, tiles that cost less | ***Built*** and ***tested***: a ***tile*** ***carries*** `max-age` and a ***weak*** `ETag`, and Nginx ***keeps*** it, ***answers*** 304, and ***packs*** it with gzip (ADR 0008) |
+| N-21 to N-28, the Java way | ***Built*** and ***tested***, as ***amended*** on 14 ***October*** 2026: 503 with `Retry-After`, ***grants*** ***seen*** ***within*** `Catalogue.RefreshSeconds`, ***one*** ***query*** for a ***crowd***, `/health`, and ***queries*** ***served*** in the ***order*** they ***arrive***. ***While*** the ***database*** is ***down***, Nginx ***serves*** every ***tile*** it ***holds***. The ***service*** and the ***database*** ***start*** in ***any*** ***order*** |
 
 ## What you need
 
 - The .NET 10 SDK, 10.0.100 or ***later***: the ***tools*** that ***build*** and ***run*** C# 14
-- Docker Engine, which ***runs*** the database in a ***container***: a ***sealed*** ***box*** with its own ***files***
+- Docker Engine, which ***runs*** the ***database*** and Nginx in ***containers***: ***sealed*** ***boxes*** with their ***own*** ***files***
 - Node.js 26, which ***runs*** the ***scripts*** and ***builds*** the ***map*** (ADR 0002)
 
 ## The commands
@@ -35,73 +35,73 @@ The ***twenty***-***six*** ***stories*** in `docs/user-stories/user-stories.md` 
 | Command | What it does |
 |---|---|
 | `npm run build` | ***Builds*** the ***map***, then the ***service*** with the ***map*** ***inside*** it (US-00 c1) |
-| `npm test` | ***Runs*** every ***test***: the ***scripts***', the ***map***'s, and the ***service***'s ***three*** ***suites*** (US-00 c3) |
-| `dotnet build` | ***Builds*** the ***service*** and every ***test*** ***alone***; ***needs*** `web/dist` from a ***map*** ***build*** |
-| `dotnet run --project tests/Tessera.UnitTests` | ***Runs*** the ***unit*** and ***property*** ***tests***: no database, a ***second*** or ***two*** |
-| `dotnet run --project tests/Tessera.ArchitectureTests` | ***Checks*** the ***rules*** at the module ***borders*** (ADR 0001) |
-| `dotnet run --project tests/Tessera.IntegrationTests` | ***Starts*** the ***packaged*** database in Docker and ***tests*** through it and through ***real*** HTTP (US-00 c3) |
+| `npm test` | ***Runs*** every ***test***: the ***scripts***', the ***map***'s, the ***service***'s ***two*** ***suites***, and the ***browser*** ***tests*** ***through*** Nginx (US-00 c3) |
+| `dotnet build` | ***Builds*** the ***service*** and both ***test*** ***suites*** ***alone***; ***needs*** `web/dist` from a ***map*** ***build*** |
+| `dotnet run --project tests/Tessera.UnitTests` | ***Runs*** the ***unit*** and ***property*** ***tests***: no ***database***, a ***second*** or ***two*** |
+| `dotnet run --project tests/Tessera.IntegrationTests` | ***Starts*** the ***packaged*** ***database*** in Docker and ***tests*** ***through*** it and ***through*** ***real*** HTTP (US-00 c3) |
 | `npm install` | ***Installs*** the ***scripts***' ***tools***: zx and TypeScript |
-| `npm start` | ***Starts*** the database, ***imports*** the ***places*** if the ***tables*** are ***empty***, then ***starts*** the ***service*** and ***waits*** for `/health` to ***say*** `UP` (US-00 c2, N-25) |
-| `npm run publish` | ***Grants*** the ***nine*** ***layers*** to the ***service***, which ***serves*** them ***within*** `CatalogueRefresh` ***seconds***, 30 by ***default*** (US-24 c5, N-23) |
+| `npm start` | ***Starts*** the ***database***, ***imports*** the ***places*** if the ***tables*** are ***empty***, ***starts*** the ***service*** and Nginx in ***front*** of it, then ***waits*** for `/health` to ***say*** `UP` (US-00 c2, N-25) |
+| `npm run publish` | ***Grants*** the ***nine*** ***layers*** to the ***service***, which ***serves*** them ***within*** `Catalogue.RefreshSeconds`, 30 by ***default*** (US-24 c5, N-23) |
 | `npm run office-port` | ***Prints*** the ***steps*** that ***open*** ***port*** 80 to the ***office*** (US-35) |
-| `cd web && TESSERA_BASE_URL=http://localhost:8080 npx playwright test` | ***Runs*** the ***map***'s browser ***tests*** ***against*** a ***running*** ***service*** |
+| `npm run e2e` | ***Runs*** the ***map***'s ***browser*** ***tests***, then the Nginx ***checks***, ***against*** a ***database*** and an Nginx of their ***own*** |
 
-***Copy*** `.env.example` to `.env` and ***give*** each ***password*** a ***value*** before `npm start`. Git ***ignores*** `.env`, so no ***password*** ***reaches*** the repository.
+***Copy*** `.env.example` to `.env` and ***give*** ***each*** ***password*** a ***value*** ***before*** `npm start`. Git ***ignores*** `.env`, so no ***password*** ***reaches*** the repository.
 
 ## Where the settings live
 
-***Machines***, ***ports*** and ***passwords*** ***come*** from ***environment*** variables: ***values*** the ***operating*** ***system*** ***hands*** a ***program*** when it ***starts***. The ***service*** ***refuses*** to ***start*** without them and ***names*** each ***one*** it ***lacks*** (US-00 c4); it ***starts*** ***whether*** or not the database ***answers*** yet, and ***answers*** 503 until it does (N-23). Every other ***setting*** ***lives*** in `tessera.json`: the ***area***'s ***name***, ***box*** and ***home*** ***view***, the ***map*** preview, the tile's ***cap*** on ***features*** and buffer, how ***long*** and how ***much*** the ***service*** and the browsers ***keep*** tiles, the database ***pool***'s ***limits***, and how ***often*** the ***list*** of ***layers*** is ***reread***. The ***file*** ***uses*** pg_tileserv's ***own*** ***key*** ***names***, such as `CacheTTL` and `DbPoolMaxConns`, and any ***key*** ***yields*** to `TESSERA_` and its ***name***, such as `TESSERA_CACHETTL` (ADR 0003).
+***Machines***, ***ports*** and ***passwords*** ***come*** from ***environment*** variables: ***values*** the ***operating*** ***system*** ***hands*** a ***program*** when it ***starts***. The ***service*** ***refuses*** to ***start*** ***without*** its ***database***'s ***address*** and ***names*** every ***problem*** it ***finds*** (US-00 c4); it ***starts*** ***whether*** or not the ***database*** ***answers*** yet, and ***answers*** 503 until it does (N-23). Every ***other*** ***setting*** ***lives*** in `tessera.json`, in ***sections***, with ***each*** ***time***'s ***unit*** in its ***name***: the ***area***'s ***name***, ***box*** and ***home*** ***view***, the ***map*** ***preview***, ***each*** ***tile***'s ***limits*** and `Tiles.CacheSeconds`, the ***database*** ***pool***'s ***limits***, and how ***often*** the ***list*** of ***layers*** is ***reread***. `TESSERA__` and a ***key***'s ***path*** ***override*** it, such as `TESSERA__TILES__CACHESECONDS` (ADR 0003).
 
 | Variable | Read by | Holds |
 |---|---|---|
-| `TESSERA_HTTPPORT` | The ***service*** | The ***port*** it ***answers*** on: 80 in the ***office***; it ***overrides*** `HttpPort`, as pg_tileserv's `TS_HTTPPORT` does |
+| `TESSERA_HTTPPORT` | `npm start`, for Nginx | The ***port*** the ***office*** ***reaches***: 80 in the ***office*** |
+| `TESSERA_SERVICE_PORT` | `npm start` | ***Optional***: the ***port*** the ***service*** ***answers*** Nginx on, 7800 by ***default*** |
 | `DATABASE_URL` | The ***service*** | `postgresql://tessera_reader:<password>@<host>:<port>/tessera` |
 | `TESSERA_PUBLISHER_DATABASE_URL` | `import` | `postgresql://tessera_publisher:<password>@<host>:<port>/tessera` |
 | `TESSERA_CONFIG` | The ***service*** | ***Optional***: a ***path*** to `tessera.json` ***elsewhere*** |
 | `TESSERA_DB_PASSWORD`, `TESSERA_READER_PASSWORD`, `TESSERA_PUBLISHER_PASSWORD` | `npm start`, which ***writes*** the ***two*** URLs ***above*** from them | The ***three*** ***roles***' ***passwords*** |
-| `TESSERA_DB_HOST`, `TESSERA_DB_PORT`, `TESSERA_DB_NAME` | `npm start`, `npm run publish` | ***Optional***: where the database ***answers***, 127.0.0.1, 5432 and `tessera` by ***default*** |
+| `TESSERA_DB_HOST`, `TESSERA_DB_PORT`, `TESSERA_DB_NAME` | `npm start`, `npm run publish` | ***Optional***: where the ***database*** ***answers***, 127.0.0.1, 5432 and `tessera` by ***default*** |
 
 ## How the database keeps the service safe
 
-Tessera ***follows*** pg_tileserv's ***rule***: the database ***decides*** what the ***map*** ***shows***. The ***service*** ***signs*** in as `tessera_reader`, a ***role*** that may only ***read***, and a ***table*** ***becomes*** a ***layer*** only when that ***role*** is ***granted*** it. The ***import*** ***signs*** in as `tessera_publisher`, which ***owns*** the ***tables*** but ***never*** ***grants*** them on its own; ***publishing*** is the publisher's own ***act***.
+***Tessera*** ***follows*** pg_tileserv's ***rule***: the ***database*** ***decides*** what the ***map*** ***shows***. The ***service*** ***signs*** in as `tessera_reader`, a ***role*** that may ***only*** ***read***, and a ***table*** ***becomes*** a ***layer*** ***only*** when that ***role*** is ***granted*** it. The ***import*** ***signs*** in as `tessera_publisher`, which ***owns*** the ***tables*** but ***never*** ***grants*** them on its ***own***; ***publishing*** is the ***publisher***'s ***own*** ***act***.
 
-***Two*** ***attacks*** are ***closed*** by ***design***. Every ***value*** from a ***request*** ***travels*** beside the query as a parameter, ***never*** ***inside*** its ***text***, and every ***name*** ***enters*** the ***text*** ***quoted***, through ***one*** ***function***; so no ***request*** can smuggle in a ***command*** (SQL injection, S-01). A ***request*** with a disguised ***address***, such as `%2e%2e` for `..`, is ***refused*** before any ***route*** ***reads*** it (a malformed URL, S-06).
+***Two*** ***attacks*** are ***closed*** by ***design***. Every ***value*** from a ***request*** ***travels*** ***beside*** the ***query*** as a ***parameter***, ***never*** ***inside*** its ***text***, and every ***name*** ***enters*** the ***text*** ***quoted***, ***through*** ***one*** ***function***, `Queries.Quote`; so no ***request*** can smuggle in a ***command*** (SQL injection, S-01). Nginx ***refuses*** an ***address*** it ***cannot*** ***read***, and the ***service*** ***matches*** ***routes*** on the ***address*** as ***sent***, so a disguised ***address*** ***reaches*** no ***route*** (a ***malformed*** URL, S-06).
 
 ## What is where
 
-The ***service*** is ***one*** ***program*** ***cut*** into ***seven*** modules, each a ***project*** of its own, so the compiler ***guards*** the ***walls*** ***between*** them (ADR 0001).
+The ***service*** is ***one*** ***program*** in ***one*** ***project***, with a ***folder*** for ***each*** ***module*** (ADR 0001). It ***borrows*** what ***libraries*** do ***well***: ASP.NET Core ***reads*** its ***settings***, ***writes*** its ***problem*** ***documents*** and ***answers*** `/health`; Dapper and Npgsql ***talk*** to the ***database***; CSharpFunctionalExtensions ***gives*** `Result` (ADR 0004); Nginx ***keeps***, ***packs*** and ***guards*** (ADR 0008).
 
 | Folder | What it holds |
 |---|---|
-| `src/Tessera.Kernel` | `Option` and `Result`, the ***two*** ***types*** every module ***uses*** for ***missing*** ***values*** and ***refusals*** (ADR 0004) |
-| `src/Tessera.Settings` | ***Reading*** `tessera.json` and the ***environment*** |
-| `src/Tessera.Sql` | Every query's ***text***, the ***one*** query builder ***behind*** it, and the ***only*** ***code*** that ***talks*** to the database |
-| `src/Tessera.Catalogue` | The ***list*** of ***layers***: every ***table*** ***granted*** to the ***service***, ***reread*** every `CatalogueRefresh` ***seconds*** |
-| `src/Tessera.Import` | The `import` ***command***: ***checks*** the GeoJSON ***seed*** and ***loads*** the ***nine*** ***tables*** |
-| `src/Tessera.Tiles` | The tile ***route***, the tile query, and the ***kept*** ***copies*** with their ***tags*** |
-| `src/Tessera.Http` | The ***screen*** for disguised ***addresses***, and every ***problem*** ***document*** |
-| `src/Tessera.Map` | ***Serving*** the ***map***'s ***page***, with the ***area*** ***written*** in, and its ***files*** |
+| `src/Tessera/Settings` | Every ***setting***, its ***default*** and its ***limits*** |
+| `src/Tessera/Sql` | Every SQL ***text***, in `Queries.cs`, and the ***only*** ***code*** that ***talks*** to the ***database*** |
+| `src/Tessera/Catalogue` | The ***list*** of ***layers***: every ***table*** ***granted*** to the ***service***, ***reread*** every `Catalogue.RefreshSeconds` |
+| `src/Tessera/Import` | The `import` ***command***: ***checks*** the GeoJSON ***seed*** and ***loads*** the ***nine*** ***tables*** |
+| `src/Tessera/Tiles` | The ***tile*** ***route*** and its ***answers*** |
+| `src/Tessera/Map` | ***Serving*** the ***map***'s ***page***, with the ***area*** ***written*** in, and its ***files*** |
+| `src/Tessera` | `Program.cs`, the ***two*** ***commands***; `Service.cs`, the ***service*** ***put*** ***together*** and `/health`; `Problems.cs` |
+| `nginx/` | Nginx's ***file***, which `npm start` and the ***browser*** ***tests*** ***run*** (ADR 0008) |
 | `web/` | The ***map***: TypeScript, React, MapLibre GL JS, react-elmish and Tailwind CSS, ***copied*** from the Java ***build*** (ADR 0006) |
-| `src/Tessera.Service` | The ***program***, which ***puts*** the modules ***together***, and `/health` |
-| `tests/` | ***Unit***, ***property***, ***architecture*** and integration ***tests*** |
-| `db/` | The ***packaged*** database: PostgreSQL 18 with PostGIS 3.6, and the ***role*** ***script*** |
+| `tests/` | ***Unit***, ***property*** and ***integration*** ***tests*** |
+| `db/` | The ***packaged*** ***database***: PostgreSQL 18 with PostGIS 3.6, and the ***role*** ***script*** |
 | `data/` | The ***seed***: 900 ***places*** in longitude and latitude, as `nathanwh71/JTessera` ***holds*** them |
-| `scripts/` | The ***scripts***, in TypeScript with zx (ADR 0002) |
+| `scripts/` | The ***scripts***, in TypeScript with zx (ADR 0002), and the Nginx ***checks*** in `scripts/lib/edge.ts` |
 | `docs/` | The ***stories*** and the ***architecture*** ***decision*** ***records*** |
 
 ## The documents
 
-- `docs/user-stories/user-stories.md`: the ***twenty***-***six*** ***stories*** of Phase Oct, in ***build*** ***order***
-- `docs/adr/0001-modular-monolith.md`: why the ***service*** is ***one*** ***program*** in ***seven*** modules
+- `docs/user-stories/user-stories.md`: the twenty-six ***stories*** of ***Phase*** Oct, in ***build*** ***order***
+- `docs/adr/0001-modular-monolith.md`: why the ***service*** is ***one*** ***program*** with ***modules***
 - `docs/adr/0002-scripts-in-typescript-with-zx.md`: why the ***scripts*** are TypeScript on Node.js 26
-- `docs/adr/0003-settings-file.md`: why ***settings*** ***live*** in `tessera.json` and the ***environment***
-- `docs/adr/0004-functional-style.md`: why the ***code*** is ***functional***, with `Option` and `Result`
+- `docs/adr/0003-settings-file.md`: why ***settings*** ***live*** in `tessera.json` and the ***environment***, and every ***key***
+- `docs/adr/0004-functional-style.md`: why the ***code*** is ***functional***, with `Result` and ***nullable*** ***types***
 - `docs/adr/0006-one-map-for-both-builds.md`: the ***contract*** ***between*** the ***map*** and a ***service***, and why the ***map*** ***now*** ***lives*** here
 - `docs/adr/0007-resilience-library-with-the-first-limit.md`: why no ***resilience*** ***library*** yet, and when ***one*** ***arrives***
-- `docs/changes/`: what each ***day***'s ***work*** ***changed*** and why, ***newest*** ***last***
+- `docs/adr/0008-nginx-in-front.md`: why Nginx ***stands*** in ***front***, and what it does in ***place*** of the ***service***
+- `docs/changes/`: what ***each*** ***day***'s ***work*** ***changed*** and why, ***newest*** ***last***
 
-The ***phase***-0 ***build*** and its ***documents*** ***stay*** in the ***archived*** ***phase***-0 repository, whose ***last*** ***commit*** is `ecb21fb`.
+The phase-0 ***build*** and its ***documents*** ***stay*** in the ***archived*** phase-0 repository, whose ***last*** ***commit*** is `ecb21fb`.
 
 ## Comments in the code
 
-Every ***comment*** is ***written*** for a ***school*** ***student*** of ***computer*** ***science***. It ***explains*** each ***technical*** ***word*** the ***first*** ***time*** a ***file*** ***uses*** it, and it ***says*** why the ***code*** is as it is: the ***reason***, the ***rule***, the ***limit*** and the ***story*** ***behind*** it, such as `US-24 c6`.
+Every ***comment*** is ***written*** for a ***school*** ***student*** of ***computer*** ***science***. It ***says*** why the ***code*** is as it is: the ***reason***, the ***rule***, the ***limit*** and the ***story*** ***behind*** it, such as `US-24 c6`. A ***type*** or ***method*** ***carries*** ***one*** ***short*** ***comment***; the ***long*** ***story*** ***lives*** in `docs/`.

@@ -10,6 +10,8 @@ The ***stories*** ***name*** **the area**, the ***place*** the tiles ***cover***
 
 On 12 ***October*** 2026 Phase Oct ***narrowed*** to the tile API. The ***map*** and its ***stories***, US-23 and every UI ***story***, ***left***, and so did US-05, the ***list*** of ***layers*** a ***client*** would ***load***. US-00, US-24 and US-35 ***lost*** the criteria that ***served*** them. ***Later*** that ***night*** SQL injection and malformed URLs ***became*** ***stories*** of their ***own***, S-01 and S-06, and US-07 ***handed*** them its criteria. After ***midnight*** on 13 ***October*** the ***map*** ***came*** ***back***: US-23 and ***seven*** UI ***stories*** ***returned*** as they ***stood*** before the ***cut***, and US-23 ***now*** ***names*** the ***nine*** ***layers*** in its own ***code***. On 14 ***October*** 2026 ***three*** ***stories*** ***joined*** as Part C, N-18 to N-20: a browser ***keeps*** a tile, a ***kept*** tile ***costs*** no query, and tiles ***travel*** packed. ***Later*** that ***morning*** ***five*** more ***joined*** as Part D, N-21 to N-25, each ***bringing*** ***one*** ***behaviour*** of the Java ***build*** ***across*** before it was ***archived***.
 
+On 14 ***October*** 2026, in the ***change*** that ***halved*** the ***code***, Nginx ***came*** to ***stand*** in ***front*** of the ***service*** (ADR 0008). That ***ends*** the ***first*** ***decision*** of 11 ***October***: a proxy ***now*** ***stands*** ***between*** the ***office*** and the ***service***. Nginx ***keeps***, ***packs*** and ***guards***, so N-18 to N-20, N-23, N-24, N-28, S-06 and US-35 ***carry*** a ***note*** of what ***changed***, and N-21's ***settings*** ***took*** ***one*** ***form*** for ***each*** ***unit*** (ADR 0003).
+
 ## INVEST in plain words
 
 Every ***story*** ***meets*** ***six*** ***tests***, which ***together*** ***spell*** INVEST.
@@ -294,6 +296,8 @@ The ***places*** ***arrive*** as ***one*** **GeoJSON** ***file***, the ***seed**
 | Builds on | US-07: the ***routes*** and the ***problem*** ***documents*** |
 | Traces | S-06 |
 
+**Changed on 14 October 2026.** The ***service***'s ***own*** ***screen*** has ***gone*** (ADR 0008). Nginx ***refuses*** an ***address*** it ***cannot*** ***read***, such as ***one*** that climbs ***above*** the ***root***, ***holds*** a stray '%' or an ***encoded*** ***null***, with a 400 ***problem*** ***document***; the ***service*** ***matches*** ***routes*** on the ***address*** as ***sent***, so a disguised ***one***, such as `%2e%2e` or `%2F`, ***finds*** no ***route*** and ***answers*** 404, ***also*** a ***problem*** ***document***. `%61` ***now*** ***reads*** as the ***letter*** a. The ***gap*** for `%00` has ***closed***. The Nginx ***checks*** in `scripts/lib/edge.ts` ***send*** ***five*** ***malformed*** ***addresses*** ***byte*** for ***byte***.
+
 **In plain words.** A **malformed URL** is an ***address*** disguised so that it ***looks*** ***clean*** only after the ***web*** server ***tidies*** it, such as a ***path*** with an encoded slash, or a `..` ***hidden*** as `%2e%2e`. If the ***service*** ***tidies*** a ***path*** before ***checking*** it, a ***request*** can ***reach*** a ***route*** its ***true*** ***address*** would ***never*** ***match***.
 
 > **Story.** **As** the maintainer, **I want** every malformed ***request*** ***refused*** before any ***route*** ***runs***, **so that** no ***request*** ***reaches*** a ***route*** in disguise.
@@ -323,6 +327,8 @@ The ***places*** ***arrive*** as ***one*** **GeoJSON** ***file***, the ***seed**
 | Size | 1 ***point*** |
 | Builds on | US-07: tiles to ***serve*** |
 | Traces | ***none*** |
+
+**Changed on 14 October 2026.** Nginx ***now*** ***answers*** the ***office*** on ***port*** 80 and ***passes*** ***each*** ***request*** to the ***service*** on 127.0.0.1, ***port*** 7800 (ADR 0008). It ***runs*** as ***root*** ***inside*** its ***container***, so Ubuntu's ***limit*** on ***low*** ***ports*** no ***longer*** ***applies***, and `npm run office-port` no ***longer*** ***prints*** that ***step***.
 
 **In plain words.** The ***service*** ***runs*** in Ubuntu 24.04, ***inside*** WSL2, on ***one*** Windows 11 ***machine*** in the ***office***. WSL2 is a ***light*** ***virtual*** ***machine*** with a ***private*** ***network*** of its ***own***, so the ***office*** ***network*** ***sees*** only the Windows ***machine***, not Ubuntu. Each ***office*** ***machine*** ***reaches*** the ***service*** on ***port*** 80, in ***plain*** **HTTP**, by the Windows ***machine***'s ***office*** ***name***, and Windows ***passes*** the ***request*** on to Ubuntu. The Windows ***machine*** ***keeps*** a ***fixed*** ***address***, so the ***name*** ***always*** ***points*** at it.
 
@@ -615,6 +621,8 @@ The ***places*** ***arrive*** as ***one*** **GeoJSON** ***file***, the ***seed**
 | Builds on | US-07: the tile |
 | Traces | ***none***; ***new*** on 14 ***October*** 2026 |
 
+**Changed on 14 October 2026.** `CacheTTL` is ***now*** `Tiles.CacheSeconds` (ADR 0003), and Nginx ***keeps*** ***each*** ***tile*** for the ***same*** `max-age` (ADR 0008).
+
 **In plain words.** A browser ***asks*** for the same tile every ***time*** the ***visitor*** pans ***back*** over it, and every ***request*** ***costs*** the ***service*** a query. HTTP ***lets*** the ***service*** ***say*** how ***long*** an ***answer*** ***stays*** ***good***: a `Cache-Control` header with `max-age`, in ***seconds***. For that ***long*** the browser ***keeps*** its ***copy*** and ***asks*** ***nothing***. The ***places*** ***change*** only when the ***data*** publisher ***imports*** a ***file***, so a ***minute*** is ***safe***: a ***new*** ***file*** ***shows*** on every ***screen*** ***within*** a ***minute***.
 
 > **Story.** **As** the maintainer, **I want** every tile to ***tell*** the browser how ***long*** to ***keep*** it, **so that** a ***visitor*** who pans ***back*** and forth ***costs*** the ***service*** ***one*** query a tile a ***minute***, not ***one*** a pan.
@@ -648,6 +656,8 @@ The ***places*** ***arrive*** as ***one*** **GeoJSON** ***file***, the ***seed**
 | Size | 2 ***points*** |
 | Builds on | N-18: `max-age`; US-07: the tile |
 | Traces | ***none***; ***new*** on 14 ***October*** 2026 |
+
+**Changed on 14 October 2026.** Nginx ***now*** ***keeps*** ***each*** ***tile*** and ***answers*** 304 (ADR 0008); the ***service*** ***only*** ***makes*** the ***tag***. The ***room*** for ***kept*** ***copies*** is Nginx's `max_size`, 64 MB, in ***place*** of `TileCacheMegabytes`. The Nginx ***checks*** ***prove*** ***criteria*** 2 and 3.
 
 **In plain words.** When `max-age` ***passes***, the browser ***asks*** ***again***, but it ***still*** ***holds*** its ***copy***. HTTP ***lets*** it ***say*** so: it ***sends*** the ***copy***'s ***label***, an **ETag**, in an `If-None-Match` header, and the ***service*** may ***answer*** 304 ('Not Modified') with no ***body***, which ***means*** 'yours is ***still*** ***good***'. An ETag is a ***short*** ***text*** the ***service*** ***makes*** from the tile's bytes, so the same bytes ***always*** ***give*** the same ETag. To ***answer*** 304 without a query, the ***service*** ***keeps*** each tile it ***builds***, with its ETag, for `max-age` ***seconds***. A ***second*** ***request*** for that tile, from any browser, then ***costs*** no query: either the ETag ***matches*** and the ***answer*** is 304, or the ***kept*** ***copy*** ***serves***. A ***thousand*** ***visitors*** who ***open*** the ***map*** at ***nine*** o'clock ***ask*** for the same ***few*** ***hundred*** tiles, and the database ***builds*** each ***once***.
 
@@ -688,6 +698,8 @@ A ***crowd*** ***asking*** for ***one*** ***unbuilt*** tile ***shares*** ***one*
 
 **Decided on 14 October 2026.** A ***kept*** tile (N-19) ***holds*** its packed ***form*** ***beside*** the ***plain*** ***one***, ***made*** ***once*** when the tile is ***built***, and both ***count*** ***towards*** `TileCacheMegabytes`. The ***map***'s ***files***, the ***page*** and ***problem*** ***documents*** ***travel*** ***through*** .NET's ***own*** ***response*** compression.
 
+**Changed on 14 October 2026.** Nginx ***now*** ***packs*** ***tiles*** and the ***map***'s ***files*** with gzip, and ***says*** `Vary: Accept-Encoding` (ADR 0008). The Nginx ***checks*** ***prove*** the ***criteria***, and that the ***map***'s ***script*** ***travels*** at ***under*** ***half*** its ***size***.
+
 **In plain words.** The ***map***'s ***own*** ***code*** is ***about*** a megabyte of JavaScript, and a tile is some kilobytes. Both shrink when **gzip** packs them: a tile by ***about*** ***half***, ***text*** by ***two*** ***thirds*** or more. A browser ***says*** `Accept-Encoding: gzip` in every ***request***; the ***service*** may then ***answer*** with the packed ***body*** and `Content-Encoding: gzip`, and the browser unpacks it before it ***reads*** it. The ***office*** ***network*** is ***fast***, but each ***visitor***'s ***first*** ***open*** ***loads*** the ***whole*** ***map***, so the ***saving*** ***shows*** there most.
 
 > **Story.** **As** a ***visitor***, **I want** the ***map*** and its tiles to ***arrive*** packed, **so that** the ***map*** ***opens*** ***sooner*** and each pan ***costs*** the ***network*** ***less***.
@@ -726,6 +738,8 @@ A ***crowd*** ***asking*** for ***one*** ***unbuilt*** tile ***shares*** ***one*
 | Size | 2 ***points*** |
 | Builds on | US-00: the ***settings***; N-18 and N-19: the cache ***keys*** |
 | Traces | ADR 0003, as ***amended*** |
+
+**Changed on 14 October 2026.** The ***maintainer*** ***chose*** ***one*** ***form*** for ***each*** ***unit***: `tessera.json` ***now*** ***groups*** its ***keys*** in ***sections***, ***each*** ***time*** ***carries*** its ***unit*** in its ***name***, and `TESSERA__` and a ***key***'s ***path*** ***override*** it (ADR 0003). The ***criteria*** ***below*** ***describe*** the earlier, ***flat*** ***file***.
 
 **In plain words.** pg_tileserv, the ***tool*** Tessera ***copies***, ***names*** its ***settings*** `HttpPort`, `DbPoolMaxConns`, `CacheTTL` and so on, in ***one*** ***flat*** ***list***. A maintainer who ***knows*** pg_tileserv should ***read*** `tessera.json` without a ***guide***.
 
@@ -777,6 +791,8 @@ A ***crowd*** ***asking*** for ***one*** ***unbuilt*** tile ***shares*** ***one*
 | Builds on | US-03: the catalogue; N-22: 503 |
 | Traces | US-24 c5 |
 
+**Changed on 14 October 2026.** A withdrawn ***layer***'s ***tiles*** ***now*** ***stay*** in Nginx for ***up*** to `Tiles.CacheSeconds`, as they ***stay*** in ***browsers*** (ADR 0008), so ***criterion*** 3 and ***test*** 3 no ***longer*** ***hold***. `CatalogueRefresh` is ***now*** `Catalogue.RefreshSeconds`.
+
 **In plain words.** The ***service*** ***rereads*** its ***list*** of ***layers*** every `CatalogueRefresh` ***seconds***, 30 by ***default***, so a ***grant*** ***shows*** ***within*** ***half*** a ***minute***. It ***also*** ***starts*** before the database ***answers***, and ***asks*** each browser to ***wait*** until the ***list*** ***loads***, so the ***two*** may ***start*** in any ***order***.
 
 > **Story.** **As** a ***data*** publisher, **I want** a ***table*** I ***grant*** to be ***served*** ***within*** ***half*** a ***minute***, and the ***service*** to ***start*** ***whether*** or not the database is up, **so that** I ***never*** ***restart*** it by ***hand***.
@@ -803,6 +819,8 @@ A ***crowd*** ***asking*** for ***one*** ***unbuilt*** tile ***shares*** ***one*
 | Size | 1 ***point*** |
 | Builds on | N-19: ***kept*** ***copies*** |
 | Traces | N-19, '***Open*** to ***talk***' |
+
+**Changed on 14 October 2026.** Nginx's `proxy_cache_lock` ***now*** ***lets*** ***one*** ***request*** ***build*** a ***new*** ***tile*** ***while*** the ***rest*** ***wait*** for it (ADR 0008); the ***service***'s ***table*** of ***queries*** in ***flight*** has ***gone***.
 
 **In plain words.** At ***nine*** o'clock a ***crowd*** ***opens*** the ***map***, and ***hundreds*** of ***requests*** for the same tile ***arrive*** before ***any*** ***copy*** is ***kept***. The ***first*** ***starts*** the query; the ***rest*** ***wait*** for its ***answer***.
 
@@ -876,6 +894,8 @@ A ***crowd*** ***asking*** for ***one*** ***unbuilt*** tile ***shares*** ***one*
 | Size | 2 ***points*** |
 | Builds on | N-22: 503 with `Retry-After`; N-26: the ***ping***'s own ***pool*** |
 | Traces | ADR 0006 ***rule*** 6; Java's N-27; ***new*** on 14 ***October*** 2026 |
+
+**Changed on 14 October 2026.** The ***watch*** has ***gone*** (ADR 0008). ***While*** the ***database*** is ***down*** or ***hangs***, Nginx ***serves*** every ***tile*** it ***holds***, and an ***expired*** ***tile*** ***while*** it fetches a ***fresh*** ***one***. A ***tile*** Nginx ***never*** ***held*** ***waits*** ***up*** to the ***database***'s ***own*** ***limits***, `Database.ConnectionWaitSeconds` or `Database.QueryTimeoutSeconds`, then ***answers*** 503. `/health` ***pings*** the ***database*** on its ***own*** ***pool*** and ***answers*** ***within*** a ***second***.
 
 **In plain words.** Npgsql ***fails*** at ***once*** when a ***connection*** is ***refused***, but a ***database*** that ***hangs***, ***behind*** a ***broken*** ***network*** or a ***stuck*** ***disk***, ***refuses*** ***nothing***. With the ***database*** ***frozen***, each ***request*** ***waited*** out the ***pool***'s 3-***second*** ***timeout***. A ***watch*** with the Java ***build***'s ***rules*** ***lets*** the ***service*** ***say*** at ***once*** what it ***knows***.
 

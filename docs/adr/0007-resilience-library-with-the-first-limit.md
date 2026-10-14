@@ -8,6 +8,7 @@
 | Covers | Both ***services***: Java in `nathanwh71/JTessera`, C# in `nathanwh71/Tessera` |
 | Related | ADR 0006 ***rules*** 6 and 7; N-24, N-26, N-27, N-28; S-07 and S-30, ***set*** aside on 11 ***October*** 2026 |
 | Matches | ADR 0007 of the other ***build***, ***word*** for ***word*** |
+| Amended | On 14 ***October*** 2026 Nginx ***came*** to ***stand*** in ***front*** of the .NET ***build*** (ADR 0008). Its passive ***health*** ***check*** ***rests*** a ***copy*** of the ***service*** that ***crashes*** or ***hangs***, ***once*** a ***second*** ***copy*** ***runs***. The ***decision*** ***stands***: no ***resilience*** ***library*** in the ***service*** until the ***first*** ***limit*** on ***rate*** or ***concurrency***, which Nginx's `limit_req` and `limit_conn` may then ***serve*** |
 
 ## Decision
 
