@@ -8,7 +8,9 @@ export default defineConfig({
 	workers: 1,
 	timeout: 60_000,
 	expect: { timeout: 15_000, toHaveScreenshot: { maxDiffPixelRatio: 0.01 } },
-	reporter: [["list"]],
+	// In the automatic build, the github reporter also writes each failure as an annotation, which
+	// shows on the run's page and through GitHub's API without the full log.
+	reporter: process.env["CI"] === undefined ? [["list"]] : [["list"], ["github"]],
 	// Approved images live beside the tests, named after their story (UI-17, test 3).
 	snapshotPathTemplate: "{testDir}/__screenshots__/{arg}{ext}",
 	use: {
