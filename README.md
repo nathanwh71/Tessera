@@ -100,7 +100,7 @@ The ***service*** is ***one*** ***program*** in ***one*** ***project***, with a 
 | `src/Tessera/Map` | ***Serving*** the ***map***'s ***page***, with the ***area*** ***written*** in, and its ***files*** |
 | `src/Tessera` | `Program.cs`, the ***two*** ***commands***; `Service.cs`, the ***service*** ***put*** ***together*** and `/health`; `Problems.cs` |
 | `nginx/` | Nginx's ***file***, which `npm start` and the ***browser*** ***tests*** ***run*** (ADR 0008) |
-| `web/` | The ***map***: TypeScript, React, MapLibre GL JS, react-elmish and Tailwind CSS, ***copied*** from the Java ***build*** (ADR 0006) |
+| `web/` | The ***map***: TypeScript, React, MapLibre GL JS, react-elmish, Valibot and Tailwind CSS, ***copied*** from the Java ***build*** at `106c086` (ADR 0006) |
 | `tests/` | ***Unit***, ***property*** and ***integration*** ***tests*** |
 | `db/` | The ***packaged*** ***database***: PostgreSQL 18 with PostGIS 3.6, the ***role*** ***script***, and the ***seed*** ***scripts*** in `db/seed` |
 | `data/` | The ***seed***'s ***source***: 900 ***places*** in longitude and latitude, as `nathanwh71/JTessera` ***holds*** them |

@@ -371,6 +371,8 @@ The ***places*** ***arrive*** as ***files*** the ***data*** ***publisher*** ***o
 | Builds on | US-07: the tiles; US-35: an ***office*** that can ***reach*** the ***map*** |
 | Traces | F-08 |
 
+**Changed on 14 October 2026, late evening.** ***Criterion*** 9 ***joined*** the ***story*** when `web/` was ***replaced*** with `nathanwh71/JTessera`'s, which ***holds*** it (`docs/changes/2026-10-14-map-from-jtessera.md`).
+
 **In plain words.** The ***service*** ***learns*** to ***show*** a ***map***. The ***page*** is a ***fixed*** ***frame***, and the tiles ***arrive*** ***later***, ***like*** ***photographs*** slid into it. The ***map*** ***knows*** the ***nine*** ***layers*** from its own ***code***, so it ***loads*** no ***list*** of ***layers***. The ***front*** ***end*** ***keeps*** all it ***knows*** in ***one*** **model**, a ***single*** ***value*** that only a ***pure*** **`update`** ***function*** may ***replace***, so a ***test*** can ***check*** every ***change*** without a browser.
 
 > **Story.** **As** a stakeholder, **I want** ***one*** 2D ***map*** of the ***area*** at `/` and the same ***map*** ***opened*** on ***one*** ***layer*** at `/{layer}.html`, **so that** I can ***look*** at the ***data*** without ***installing*** ***anything***.
@@ -385,12 +387,14 @@ The ***places*** ***arrive*** as ***files*** the ***data*** ***publisher*** ***o
 6. **Given** a ***pin***, **then** it is a ***sign***, not a ***button***: a ***click*** on it ***opens*** ***nothing***.
 7. **Given** the ***map***, **then** it ***names*** the ***nine*** ***layers*** in its own ***code*** and ***builds*** each tile's ***address***, `/{layer}/{z}/{x}/{y}.pbf`, on the ***page***'s own ***origin***; it ***loads*** no ***list*** of ***layers***.
 8. **Given** a tile ***request*** ***answers*** with a ***problem*** ***document***, **then** the ***page*** ***shows*** its `detail`, or its `title` where it has ***none***, as ***text*** over the ***map***.
+9. **Given** a ***browser*** that ***cannot*** ***draw*** the ***map***, ***because*** it has no WebGL or has ***taken*** it ***away***, **then** the ***page*** ***says*** so in ***words*** in ***place*** of the ***controls***, and ***shows*** them ***again*** ***once*** the ***browser*** can ***draw***; **and given** an ***error*** no ***part*** of the ***page*** ***catches***, **then** the ***page*** ***says*** so in ***words*** ***rather*** than ***going*** blank.
 
 **Tests to write first**
 
 1. **A build that fails first.** CI ***runs*** the ***front*** ***end***'s ***build***, static ***checks*** and ***tests***, and ***fails*** until the ***front*** ***end*** ***exists***.
 2. **One model, one pure `update`.** The ***page*** ***opens*** on the ***area*** with the ***nine*** ***layers*** on, and ***sends*** no ***request*** for a ***list*** of ***layers***. ***Effects*** ***leave*** ***through*** ***ports***, such as fetching a tile or ***moving*** the ***map***, which the ***tests*** fake.
 3. **A problem shows.** A fake ***port*** that ***fails*** with a ***problem*** ***document*** ***leaves*** its `detail` in the ***model***.
+4. **A page that cannot draw says so.** A ***fake*** ***map*** that ***fails*** to ***start***, and a ***browser*** ***started*** with WebGL ***turned*** ***off***, ***each*** ***leave*** the ***words*** of ***criterion*** 9 on the ***page*** and no ***zoom*** ***buttons***.
 
 **Open to talk**
 
