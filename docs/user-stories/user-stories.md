@@ -872,20 +872,22 @@ A ***crowd*** ***asking*** for ***one*** ***unbuilt*** tile ***shares*** ***one*
 | Builds on | N-22: the ***pool***'s ***limits***; N-25: `/health` |
 | Traces | ADR 0006 ***rule*** 7; ***new*** on 14 ***October*** 2026 |
 
+**Changed on 14 October 2026, evening.** The ***ping***'s ***own*** ***pool*** has ***gone***: the ***service*** ***keeps*** ***one*** ***pool***, and the ***ping*** ***waits*** in its ***queue*** for a ***second*** at ***most***. A ***pool*** ***busy*** for ***longer*** ***makes*** `/health` ***say*** `DOWN`, which N-25 ***allows***, ***since*** such a ***service*** ***cannot*** ***serve*** a ***new*** ***tile*** ***within*** a ***second***. ***Nothing*** ***restarts*** the ***service*** on `DOWN`; a ***watcher*** that does would ***need*** to ***allow*** for ***busy*** ***hours***.
+
 **In plain words.** When ***many*** ***people*** ***pan*** the ***map*** at ***once***, ***requests*** for ***different*** tiles ***wait*** for a ***free*** database ***connection***. The ***first*** to ***arrive*** should be the ***first*** ***served***, or an ***unlucky*** ***request*** ***loses*** its ***turn*** ***again*** and ***again*** and ***runs*** out of ***time***. The Java ***build*** ***keeps*** this ***order*** with a ***gate*** in ***front*** of its ***pool***; Npgsql's ***pool*** ***keeps*** it ***itself***, so the .NET ***build*** ***needs*** only ***tests*** that ***prove*** it.
 
-> **Story.** **As** the maintainer, **I want** queries to ***wait*** for a ***connection*** in the ***order*** they ***arrive***, and the health ***check*** to ***wait*** ***behind*** none of them, **so that** no ***request*** ***waits*** far ***longer*** than the ***rest***, and a ***busy*** ***service*** ***still*** ***reports*** `UP`.
+> **Story.** **As** the ***maintainer***, **I want** ***queries*** to ***wait*** for a ***connection*** in the ***order*** they ***arrive***, and the ***health*** ***check*** to ***give*** ***up*** ***after*** a ***second*** in the ***same*** ***queue***, **so that** no ***request*** ***waits*** ***far*** ***longer*** than the ***rest***, and `/health` ***says*** `DOWN` when no ***tile*** could be ***served*** promptly.
 
 **Acceptance criteria**
 
 1. **Given** every ***connection*** ***busy***, **then** the ***pool*** ***lends*** the next ***free*** one to the ***request*** that has ***waited*** ***longest***.
 2. **Given** a query ***sent*** with its ***request***'s own ***cancel*** ***signal***, and that ***request*** ***cancelled*** while the query ***waits***, **then** the query ***leaves*** the ***queue*** at ***once***. A tile query is not such a query: see ***Known*** ***limit***.
-3. **Given** every tile ***connection*** ***busy***, **then** `/health` ***still*** ***pings*** the database ***within*** a ***second***, through a ***pool*** of its ***own*** with ***one*** ***connection***.
+3. **Given** every ***connection*** ***busy*** for more than a ***second***, **then** the ***ping*** ***gives*** ***up*** ***within*** ***about*** a ***second***, `/health` ***says*** `DOWN`, and the ***ping*** ***leaves*** the ***queue***, so it ***never*** ***takes*** a ***connection*** a ***tile*** is ***waiting*** for.
 
 **Tests to write first**
 
 1. **Five tiles, one connection.** ***Five*** ***different*** tiles of a ***view*** that ***sleeps*** 0.4 ***seconds***, ***asked*** for 50 ms ***apart***, ***finish*** in the ***order*** ***asked***.
-2. **The ping beside a busy pool.** With the ***only*** tile ***connection*** ***held*** for ***three*** ***seconds***, the ***ping*** ***answers*** ***within*** ***one***. ***Pointed*** at the ***shared*** ***pool***, the same ***test*** ***fails***.
+2. **The ping behind a busy pool.** With the ***only*** ***connection*** ***held*** for ***three*** ***seconds***, the ***ping*** ***gives*** ***up*** ***within*** a ***second*** and a ***half***; ***once*** the ***hold*** ***ends***, the ***next*** ***ping*** ***answers***.
 3. **A cancelled wait.** A query ***cancelled*** after 200 ms ***leaves*** ***within*** a ***second***, not after the ***pool***'s 30.
 
 **Known limit.** A tile query ***runs*** on the ***service***'s ***stop*** ***signal***, not the ***browser***'s, so ***several*** ***people*** can ***share*** it (N-24). When a ***person*** ***pans*** ***away*** before a tile ***arrives***, the ***map*** ***cancels*** the ***request***, but the query ***still*** ***waits*** its ***turn***, ***runs***, and ***lands*** in the ***cache***. The Java ***build*** ***does*** the ***same***. Nothing is ***lost***: a ***person*** who ***pans*** ***back*** ***gets*** the tile at no ***cost***. On a ***busy*** ***day***, though, ***abandoned*** queries ***hold*** ***connections*** that tiles ***still*** on ***screen*** ***need***. ***Cancelling*** a ***shared*** query once its ***last*** ***waiter*** has ***left*** would ***free*** them. A ***load*** ***run*** on 14 ***October*** 2026 ***showed*** it is not ***worth*** ***building***. At 700 tiles a ***second***, ***about*** a ***third*** of ***capacity***, every tile ***came*** ***back*** in ***about*** a ***millisecond***, so no ***request*** was ***given*** up at all. ***Only*** ***under*** ***overload***, at 2,200 a ***second***, did ***requests*** ***wait*** ***long*** ***enough*** to be ***given*** up, and there the ***cure*** is a ***limit*** on ***load*** (ADR 0007), not a ***cancel***.
@@ -895,7 +897,7 @@ A ***crowd*** ***asking*** for ***one*** ***unbuilt*** tile ***shares*** ***one*
 | | |
 |---|---|
 | Size | 2 ***points*** |
-| Builds on | N-22: 503 with `Retry-After`; N-26: the ***ping***'s own ***pool*** |
+| Builds on | N-22: 503 with `Retry-After`; N-26: the ***ping*** |
 | Traces | ADR 0006 ***rule*** 6; Java's N-27; ***new*** on 14 ***October*** 2026 |
 
 **Changed on 14 October 2026.** The ***watch*** has ***gone*** (ADR 0008). ***While*** the ***database*** is ***down*** or ***hangs***, Nginx ***serves*** every ***tile*** it ***holds***, and an ***expired*** ***tile*** ***while*** it fetches a ***fresh*** ***one***. A ***tile*** Nginx ***never*** ***held*** ***waits*** ***up*** to the ***database***'s ***own*** ***limits***, `Database.ConnectionWaitSeconds` or `Database.QueryTimeoutSeconds`, then ***answers*** 503. `/health` ***pings*** the ***database*** on its ***own*** ***pool*** and ***answers*** ***within*** a ***second***.
