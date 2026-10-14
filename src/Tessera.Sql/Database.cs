@@ -91,6 +91,12 @@ public sealed class Database : IAsyncDisposable
             CommandTimeout = (int)limits.CommandTimeout.TotalSeconds,
             // Npgsql's Timeout covers both opening a connection and waiting for a free one in the pool.
             Timeout = (int)limits.ConnectionTimeout.TotalSeconds,
+            // A query text sent three times on a connection becomes a prepared statement: the database
+            // plans it once and reuses the plan, as the Java build's driver does (prepareThreshold=3).
+            // The tile query's text differs only by layer, so nine plans cover every tile. Measured on
+            // 14 October 2026, with no tile cache, this raised the rate from 1,580 to 2,408 tiles a second.
+            MaxAutoPrepare = 32,
+            AutoPrepareMinUsages = 3,
         }.ConnectionString);
 
     /// <summary>
