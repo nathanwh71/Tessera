@@ -8,7 +8,7 @@ namespace Tessera.UnitTests;
 public sealed class TileTests
 {
     private static readonly Layer Cafes = LayerCatalogue
-        .ToLayer(new CatalogueRow("food", "cafes", "geom", 4326, "POINT", """["group","layer","name"]"""))
+        .ToLayer(new CatalogueRow("food", "cafes", "geom", 4326, "POINT", """["group","layer","name"]""", """["id"]"""))
         .Match(layer => layer, error => throw new InvalidOperationException(error));
 
     [Theory]

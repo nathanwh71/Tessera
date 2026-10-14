@@ -61,6 +61,18 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
         Assert.Equal((3857, "Point"), catalogue.Find("stage.mercator").Match(layer => (layer.Srid, layer.GeometryType), () => (0, "")));
     }
 
+    // ADR 0006 rule 6: a table's primary key fixes the order of its features; a view has no key,
+    // so no order. Both builds read the same key, so both send the same tile.
+    [Fact]
+    public async Task Gives_each_table_its_key_and_each_view_none()
+    {
+        await using var reader = Database.Open(database.Reader);
+        var catalogue = await Load(reader);
+
+        Assert.Equal(["\"id\""], catalogue.Find("stage.granted").Match(layer => layer.Order.Select(name => name.Text).ToArray(), () => []));
+        Assert.Equal(0, catalogue.Find("stage.granted_view").Match(layer => layer.Order.Length, () => -1));
+    }
+
     // c4: the awkward name is published and served.
     [Fact]
     public async Task Serves_the_awkward_name()

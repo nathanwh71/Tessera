@@ -27,6 +27,8 @@ public static class CatalogueQueries
     /// leaves both out (US-24: an untyped column is not published).
     /// DISTINCT ON keeps one geometry column for each table: the first, by column number. The
     /// column names travel as JSON text, since Dapper cannot fill a list from a database array.
+    /// keycolumns lists the primary key's columns, those that name each row, in the key's own
+    /// order; a view has none, so its list is empty (ADR 0006 rule 6).
     /// </remarks>
     public static readonly Query List = Query.Of($"""
         SELECT DISTINCT ON (n.nspname, c.relname)
@@ -40,7 +42,12 @@ public static class CatalogueQueries
                      JOIN pg_type pt ON pt.oid = p.atttypid
                      WHERE p.attrelid = c.oid AND p.attnum > 0 AND NOT p.attisdropped AND p.attnum <> a.attnum
                        AND pt.typname IN ('text', 'varchar', 'bpchar', 'int2', 'int4', 'int8', 'float4', 'float8', 'numeric', 'bool')
-                     ORDER BY p.attnum))::text AS columns
+                     ORDER BY p.attnum))::text AS columns,
+               to_json(ARRAY(SELECT k.attname::text
+                     FROM pg_index i
+                     JOIN pg_attribute k ON k.attrelid = i.indrelid AND k.attnum = ANY (i.indkey)
+                     WHERE i.indrelid = c.oid AND i.indisprimary
+                     ORDER BY array_position(i.indkey::int2[], k.attnum)))::text AS keycolumns
         FROM pg_class c
         JOIN pg_namespace n ON n.oid = c.relnamespace
         JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
@@ -55,7 +62,11 @@ public static class CatalogueQueries
 }
 
 /// <summary>The table, geometry column and property columns of a layer, as the catalogue quoted them.</summary>
-public sealed record LayerSource(TableName Table, QuotedName Geometry, int Srid, ImmutableArray<QuotedName> Properties, string LayerId);
+/// <remarks>
+/// <paramref name="Order"/> holds the primary key's columns, which fix the order of features in a
+/// tile; it is empty for a view.
+/// </remarks>
+public sealed record LayerSource(TableName Table, QuotedName Geometry, int Srid, ImmutableArray<QuotedName> Properties, string LayerId, ImmutableArray<QuotedName> Order);
 
 /// <summary>One tile's address on the web map's grid: zoom level z, column x, row y.</summary>
 public sealed record TileCell(int Z, int X, int Y);
@@ -84,13 +95,16 @@ public static class TileQueries
     /// point). ST_AsMVTGeom then moves each shape into the tile's 4096 grid, and ST_AsMVT packs the
     /// rows into one Mapbox vector tile. The margin widens the search square by the buffer, so a
     /// symbol near an edge still appears on both tiles.
+    /// Features come out in the order of the table's key, as in the Java build, so where two names
+    /// clash on the map the same one wins every time, and both builds send the same bytes for the
+    /// same tile (ADR 0006 rule 6).
     /// </remarks>
     public static Query Tile(LayerSource layer, TileCell tile, TileLimits limits) =>
         Query.Of($"""
             SELECT ST_AsMVT(tile.*, {layer.LayerId}, {limits.Resolution}, 'tessera_shape') FROM (
               SELECT ST_AsMVTGeom(ST_Transform(t.{layer.Geometry}, 3857), ST_TileEnvelope({tile.Z}, {tile.X}, {tile.Y}), {limits.Resolution}, {limits.Buffer}, true) AS tessera_shape{new NameList(layer.Properties, LeadingComma: true)}
               FROM {layer.Table} AS t
-              WHERE t.{layer.Geometry} && ST_Transform(ST_TileEnvelope({tile.Z}, {tile.X}, {tile.Y}, margin => {(double)limits.Buffer / limits.Resolution}), {layer.Srid})
+              WHERE t.{layer.Geometry} && ST_Transform(ST_TileEnvelope({tile.Z}, {tile.X}, {tile.Y}, margin => {(double)limits.Buffer / limits.Resolution}), {layer.Srid}){new OrderBy(layer.Order)}
               LIMIT {limits.MaxFeatures}
             ) AS tile
             """);

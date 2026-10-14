@@ -15,12 +15,13 @@ namespace Tessera.Catalogue;
 /// </param>
 /// <param name="GeometryType">The kind of shape, such as POINT.</param>
 /// <param name="Properties">The other columns, which each tile carries beside the shape (US-07).</param>
-public sealed record Layer(TableName Table, QuotedName Geometry, int Srid, string GeometryType, ImmutableArray<QuotedName> Properties)
+/// <param name="Order">The primary key's columns, which fix the order of features in a tile; empty for a view.</param>
+public sealed record Layer(TableName Table, QuotedName Geometry, int Srid, string GeometryType, ImmutableArray<QuotedName> Properties, ImmutableArray<QuotedName> Order)
 {
     public string Id => Table.Id;
 
     /// <summary>The layer as the tile query needs it.</summary>
-    public LayerSource Source => new(Table, Geometry, Srid, Properties, Id);
+    public LayerSource Source => new(Table, Geometry, Srid, Properties, Id, Order);
 }
 
 /// <summary>
@@ -29,9 +30,10 @@ public sealed record Layer(TableName Table, QuotedName Geometry, int Srid, strin
 /// </summary>
 /// <remarks>
 /// Columns arrives as a JSON list of names, such as <c>["layer","name"]</c>: Dapper cannot fill a
-/// list from a database array, but it can fill text, and JSON keeps any name intact.
+/// list from a database array, but it can fill text, and JSON keeps any name intact. KeyColumns
+/// arrives the same way.
 /// </remarks>
-public sealed record CatalogueRow(string Schema, string Name, string GeometryColumn, int Srid, string GeometryType, string Columns);
+public sealed record CatalogueRow(string Schema, string Name, string GeometryColumn, int Srid, string GeometryType, string Columns, string KeyColumns = "[]");
 
 /// <summary>
 /// The list of layers the service builds at start-up: every table and view granted to its role
@@ -51,7 +53,9 @@ public sealed record LayerCatalogue(ImmutableDictionary<string, Layer> Layers)
         from geometry in QuotedName.Quote(row.GeometryColumn)
         from names in ColumnNames(row.Columns)
         from properties in names.Traverse(QuotedName.Quote)
-        select new Layer(table, geometry, row.Srid, row.GeometryType, properties);
+        from keys in ColumnNames(row.KeyColumns)
+        from order in keys.Traverse(QuotedName.Quote)
+        select new Layer(table, geometry, row.Srid, row.GeometryType, properties, order);
 
     private static Result<ImmutableArray<string>, string> ColumnNames(string json)
     {

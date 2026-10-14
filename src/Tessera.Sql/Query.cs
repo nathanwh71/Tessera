@@ -58,6 +58,8 @@ public sealed record Query
 
         public readonly void AppendFormatted(NameList names) => _text.Append(names.ToString());
 
+        public readonly void AppendFormatted(OrderBy order) => _text.Append(order.ToString());
+
         public readonly void AppendFormatted(SqlType type) => _text.Append(type.Keyword);
 
         public readonly void AppendFormatted(ValueList values)
@@ -90,6 +92,16 @@ public sealed record NameList(ImmutableArray<QuotedName> Names, bool LeadingComm
         LeadingComma
             ? string.Concat(Names.Select(name => $", {name.Text}"))
             : string.Join(", ", Names.Select(name => name.Text));
+}
+
+/// <summary>
+/// An ORDER BY clause on the table aliased <c>t</c>, on a line of its own: <c>ORDER BY t."id"</c>.
+/// With no names it writes nothing, since a view has no key to sort by.
+/// </summary>
+public sealed record OrderBy(ImmutableArray<QuotedName> Names)
+{
+    public override string ToString() =>
+        Names.IsDefaultOrEmpty ? "" : "\n  ORDER BY " + string.Join(", ", Names.Select(name => $"t.{name.Text}"));
 }
 
 /// <summary>
