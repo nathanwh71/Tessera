@@ -57,7 +57,6 @@ The twenty-six ***stories*** in `docs/user-stories/user-stories.md` ***fix*** wh
 | `TESSERA_SERVICE_PORT` | `npm start` | ***Optional***: the ***port*** the ***service*** ***answers*** Nginx on, 7800 by ***default*** |
 | `DATABASE_URL` | The ***service*** | `postgresql://tessera_reader:<password>@<host>:<port>/tessera` |
 | `TESSERA_PUBLISHER_DATABASE_URL` | `import` | `postgresql://tessera_publisher:<password>@<host>:<port>/tessera` |
-| `TESSERA_CONFIG` | The ***service*** | ***Optional***: a ***path*** to `tessera.json` ***elsewhere*** |
 | `TESSERA_DB_PASSWORD`, `TESSERA_READER_PASSWORD`, `TESSERA_PUBLISHER_PASSWORD` | `npm start`, which ***writes*** the ***two*** URLs ***above*** from them | The ***three*** ***roles***' ***passwords*** |
 | `TESSERA_DB_HOST`, `TESSERA_DB_PORT`, `TESSERA_DB_NAME` | `npm start`, `npm run publish` | ***Optional***: where the ***database*** ***answers***, 127.0.0.1, 5432 and `tessera` by ***default*** |
 
