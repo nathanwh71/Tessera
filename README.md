@@ -121,6 +121,7 @@ The ***service*** is ***one*** ***program*** in ***one*** ***project***, with a 
 - `docs/guides/reading-the-code.md`: ***fifteen*** ***steps*** ***through*** the backend and the ***map***, in the ***order*** a ***tile*** ***travels***
 - `docs/guides/reading-the-harder-files.md`: the ***one*** ***idea*** ***behind*** ***each*** of `Settings.cs`, `Database.cs` and `Catalogue.cs`, for ***readers*** ***new*** to ASP.NET Core
 - `docs/guides/study-resources.md`: ***books***, ***documents***, videos and repositories for ***building*** the backend and the ***map***, ***step*** by ***step***
+- `docs/guides/ten-days-in-ink.md`: your ***first*** ***ten*** ***days*** on the .NET ***build***, from an ***empty*** ***folder*** to milestone M1
 - `docs/changes/`: what ***each*** ***day***'s ***work*** ***changed*** and why, ***newest*** ***last***
 
 The phase-0 ***build*** and its ***documents*** ***stay*** in the ***archived*** phase-0 repository, whose ***last*** ***commit*** is `ecb21fb`.
