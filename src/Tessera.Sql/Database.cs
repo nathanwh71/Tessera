@@ -141,35 +141,59 @@ public sealed class Database : IAsyncDisposable
     /// (N-26 c3). A connection that will not open within a second is <see cref="Sql.Ping.Refused"/>;
     /// an open one that does not answer within a second is <see cref="Sql.Ping.Slow"/> (N-28).
     /// </summary>
+    /// <remarks>
+    /// The ping keeps its own clock. Npgsql's limits did not always hold against a frozen database: in
+    /// a full test run, a ping took three seconds where its limits said one, and the watch then took
+    /// five seconds to say down. So the ping waits at most a second for each step, judges, and leaves
+    /// the step it gave up on to finish, or fail, on its own; the connection is then closed out of
+    /// sight. Closing a connection to a frozen database can itself hang, so the ping never waits for it.
+    /// </remarks>
     private async Task<Ping> PingOnce(CancellationToken stop)
     {
-        // A backstop half a second beyond Npgsql's own limits, in case either waits longer than it says.
-        using var limit = CancellationTokenSource.CreateLinkedTokenSource(stop);
-        limit.CancelAfter(PingLimit + TimeSpan.FromMilliseconds(500));
+        var opening = _ping.OpenConnectionAsync(stop).AsTask();
         NpgsqlConnection connection;
         try
         {
-            connection = await _ping.OpenConnectionAsync(limit.Token).ConfigureAwait(false);
+            connection = await opening.WaitAsync(PingLimit, stop).ConfigureAwait(false);
+        }
+        catch (TimeoutException)
+        {
+            CloseLater(opening);
+            return Sql.Ping.Refused;
         }
         // A cancel the service asked for, because it is stopping, is no verdict on the database, so
         // it passes on rather than count as a failed ping.
-        catch (Exception error) when (error is NpgsqlException or OperationCanceledException && !stop.IsCancellationRequested)
+        catch (NpgsqlException) when (!stop.IsCancellationRequested)
         {
             return Sql.Ping.Refused;
         }
-        await using (connection.ConfigureAwait(false))
+
+        var asking = connection.QueryAsync<int>(Command(HealthQueries.Ping, null, stop));
+        try
         {
-            try
-            {
-                await connection.QueryAsync<int>(Command(HealthQueries.Ping, null, limit.Token)).ConfigureAwait(false);
-                return Sql.Ping.Answered;
-            }
-            catch (Exception error) when (error is NpgsqlException or OperationCanceledException && !stop.IsCancellationRequested)
-            {
-                return Sql.Ping.Slow;
-            }
+            await asking.WaitAsync(PingLimit, stop).ConfigureAwait(false);
+            await connection.DisposeAsync().ConfigureAwait(false);
+            return Sql.Ping.Answered;
+        }
+        catch (Exception error) when (error is TimeoutException or NpgsqlException && !stop.IsCancellationRequested)
+        {
+            // Reading the abandoned query's error marks it seen; the verdict is already given.
+            CloseLater(asking.ContinueWith(step => { _ = step.Exception; return connection; }, TaskScheduler.Default));
+            return Sql.Ping.Slow;
         }
     }
+
+    // Closes a connection once the step it belongs to has finished, without making the ping wait.
+    private static void CloseLater(Task<NpgsqlConnection> step) =>
+        _ = step.ContinueWith(
+            async finished =>
+            {
+                if (finished.IsCompletedSuccessfully)
+                    await finished.Result.DisposeAsync().ConfigureAwait(false);
+                else
+                    _ = finished.Exception;
+            },
+            TaskScheduler.Default);
 
     /// <summary>
     /// Runs a query and turns each row into a <typeparamref name="T"/>, matching columns to fields by name.

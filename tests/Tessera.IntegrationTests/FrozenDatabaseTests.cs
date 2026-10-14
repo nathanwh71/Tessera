@@ -6,6 +6,11 @@ namespace Tessera.IntegrationTests;
 /// N-28: a database that hangs refuses nothing, so the service must notice on its own. These tests
 /// freeze a database of their own, so no other test waits on it.
 /// </summary>
+/// <remarks>
+/// The test times the watch to the second, so it runs alone, after every other test class, and
+/// shares the machine with no other test.
+/// </remarks>
+[Collection(RunsAlone.Name)]
 public sealed class FrozenDatabaseTests(DatabaseFixture database) : IClassFixture<DatabaseFixture>
 {
     // N-28 c1 and test 3: frozen, the watch says down within about four seconds: up to one asleep,
@@ -19,9 +24,10 @@ public sealed class FrozenDatabaseTests(DatabaseFixture database) : IClassFixtur
         using var stop = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         var loop = reader.Watch.Run(TimeSpan.FromSeconds(1), TimeProvider.System, stop.Token);
         await Until(() => reader.Watch.Up, TimeSpan.FromSeconds(2));
-        var clock = System.Diagnostics.Stopwatch.StartNew();
-
+        // The clock starts once Docker has frozen the database: the claim is the watch's speed, and
+        // with a dozen test databases running, Docker itself may take a second to pause one.
         await database.Freeze();
+        var clock = System.Diagnostics.Stopwatch.StartNew();
         try
         {
             await Until(() => !reader.Watch.Up, TimeSpan.FromSeconds(8));
@@ -53,4 +59,11 @@ public sealed class FrozenDatabaseTests(DatabaseFixture database) : IClassFixtur
             await Task.Delay(50, TestContext.Current.CancellationToken);
         Assert.True(condition(), $"the condition did not hold within {within}");
     }
+}
+
+/// <summary>Test classes that time things to the second, and so share the machine with no other test.</summary>
+[CollectionDefinition(Name, DisableParallelization = true)]
+public sealed class RunsAlone
+{
+    public const string Name = "Runs alone";
 }
