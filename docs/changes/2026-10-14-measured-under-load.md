@@ -43,3 +43,19 @@ With the ***logger*** ***quiet***, .NET ***waited*** on a ***lock*** ***less*** 
 ## Update: the Java weak spots, fixed
 
 The ***same*** ***day***, N-27 ***gave*** the Java ***build*** a ***database*** ***watch***. ***Rerun***, its ***outage*** ***test*** ***showed*** 503s in ***milliseconds***, `DOWN` ***throughout***, and no ***dropped*** ***requests***. Its ***service*** ***still*** ***returns*** up to 5 ***seconds*** after the ***database***, ***because*** Hikari ***waits*** up to 5 ***seconds*** ***between*** ***attempts*** to ***reconnect***. JTessera's `docs/changes/2026-10-14-database-watch.md` ***holds*** the ***figures***.
+
+## Update: a frozen database
+
+The ***outage*** ***tests*** ***stopped*** the ***database*** ***cleanly***, so every ***connection*** was ***refused*** at ***once***. A ***second*** ***test*** ***froze*** it ***instead***, with `docker pause`, for 15 ***seconds***: ***connections*** ***stay*** ***open***, and nothing ***answers***, as ***behind*** a ***broken*** ***network*** or a ***stuck*** ***disk***. 500 tiles a ***second***, no tile ***cache***, ***one*** ***run*** ***each***.
+
+| | .NET | Java, with its ***watch*** (N-27) |
+|---|---|---|
+| 503 while ***frozen*** | after 3 ***seconds***, ***throughout*** | after 3 to 6 ***seconds*** at ***first***, then in ***milliseconds*** from ***about*** 9 ***seconds*** in |
+| ***Requests*** ***past*** k6's 10-***second*** ***limit*** | 6 | 2 |
+| ***Requests*** k6 could not ***send*** | 3,839 | 852 |
+| `/health` while ***frozen*** | `DOWN`, with ***gaps*** of no ***answer*** | `UP` for ***about*** 5 ***seconds***, then `DOWN` |
+| ***Service*** ***returns*** | at ***once*** | at ***once*** |
+
+**What it shows.** .NET has no ***guard*** for a ***frozen*** ***database***: each ***request*** ***waits*** out the ***pool***'s 3-***second*** ***timeout***, as Java ***did*** before N-27. Java's ***watch*** ***works***, but ***slowly***: it ***said*** `DOWN` ***about*** 4.7 ***seconds*** after the ***freeze***, after ***one*** ***slow*** ***ping***, a ***second***'s ***sleep***, and a ***second*** ***ping*** that ***hung*** on ***connecting***. ***Both*** ***recover*** at ***once***, since their ***connections*** ***survive*** the ***freeze***.
+
+**What would close the gap.** For .NET, a ***watch*** like Java's, or a Polly ***circuit*** ***breaker*** that ***opens*** on ***timeouts***. For Java, a ***watch*** that ***pings*** again at ***once*** after a ***slow*** ***ping***, ***rather*** than after a ***second***'s ***sleep***, would ***halve*** the ***time*** to `DOWN`.
