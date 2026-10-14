@@ -1,5 +1,6 @@
 using Tessera.Catalogue;
 using Tessera.Settings;
+using Tessera.Sql;
 using Tessera.Tiles;
 
 namespace Tessera.UnitTests;
@@ -7,16 +8,18 @@ namespace Tessera.UnitTests;
 /// <summary>US-07 and S-01 test 2: the tile query's text, and the tile addresses the service accepts.</summary>
 public sealed class TileTests
 {
-    private static readonly Layer Cafes = LayerCatalogue
-        .ToLayer(new CatalogueRow("food", "cafes", "geom", 4326, "POINT", """["group","layer","name"]""", """["id"]"""))
-        .Match(layer => layer, error => throw new InvalidOperationException(error));
+    private static readonly Layer Cafes = LayerCatalogue.ToLayer(new CatalogueRow("food", "cafes", "geom", 4326, "POINT", """["group","layer","name"]""", """["id"]"""));
+
+    private static readonly TileSettings Limits = new() { Buffer = 64 };
+
+    private static string Approved => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "approved", "tile-query.sql")).ReplaceLineEndings().TrimEnd();
 
     [Theory]
     [InlineData(0, 0, 0)]
     [InlineData(15, 27154, 14280)]
     [InlineData(22, 4194303, 0)]
     public void Accepts_a_tile_that_exists(int z, int x, int y) =>
-        Assert.True(TileAddress.Of(z, x, y).Match(_ => true, _ => false));
+        Assert.NotNull(TileAddress.Of(z, x, y));
 
     [Theory]
     [InlineData(-1, 0, 0)]
@@ -24,48 +27,47 @@ public sealed class TileTests
     [InlineData(1, 2, 0)]
     [InlineData(1, 0, -1)]
     public void Refuses_a_tile_outside_the_grid(int z, int x, int y) =>
-        Assert.False(TileAddress.Of(z, x, y).Match(_ => true, _ => false));
+        Assert.Null(TileAddress.Of(z, x, y));
 
-    // S-01 test 2: the tile query's text matches an approved snapshot, kept in
-    // approved/tile-query.sql. A change to the query fails this test until someone reads the new
-    // text and approves it by copying it over the old file: a person checks every change to the SQL.
+    // S-01 test 2: the tile query's text matches an approved snapshot, approved/tile-query.sql. A change
+    // to the query fails this test until someone reads the new text and copies it over the old file.
     [Fact]
-    public void Matches_the_approved_tile_query()
-    {
-        var query = TileQuery.For(Cafes, new TileAddress(15, 27154, 14280), new TileSettings { Buffer = 64 });
-        var approved = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "approved", "tile-query.sql"));
+    public void Matches_the_approved_tile_query() =>
+        Assert.Equal(Approved, Queries.Tile(Cafes, new TileAddress(15, 27154, 14280), Limits).Text.ReplaceLineEndings().TrimEnd());
 
-        Assert.Equal(approved.ReplaceLineEndings().TrimEnd(), query.Text.ReplaceLineEndings().TrimEnd());
-        Assert.Equal(["food.cafes", "4096", "15", "27154", "14280", "4096", "64", "15", "27154", "14280", "0.015625", "4326", "10000"],
-            query.Parameters.Select(value => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture)));
-    }
-
-    // S-01 c1: whatever tile a request names, the query's text stays the approved text; the numbers
-    // travel as bound parameters alone.
+    // S-01 c1: whatever tile a request names, the text stays the approved text; the numbers travel as
+    // parameters alone.
     [FsCheck.Xunit.Property]
     public bool Keeps_every_tile_address_out_of_the_text(byte level, uint column, uint row)
     {
-        var z = level % (TileAddress.MaxZoom + 1);
+        var z = level % 23;
         var size = 1L << z;
         var tile = new TileAddress(z, (int)(column % size), (int)(row % size));
-        var approved = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "approved", "tile-query.sql")).ReplaceLineEndings().TrimEnd();
-        return TileQuery.For(Cafes, tile, new TileSettings { Buffer = 64 }).Text.ReplaceLineEndings().TrimEnd() == approved;
+        return Queries.Tile(Cafes, tile, Limits).Text.ReplaceLineEndings().TrimEnd() == Approved;
     }
 
     [Fact]
-    public void Keeps_the_tile_numbers_out_of_the_text()
+    public void Sends_the_layer_and_the_tile_as_parameters()
     {
-        var text = TileQuery.For(Cafes, new TileAddress(15, 27154, 14280), new TileSettings { Buffer = 64 }).Text;
+        var query = Queries.Tile(Cafes, new TileAddress(15, 27154, 14280), Limits);
 
-        Assert.DoesNotContain("27154", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("14280", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("food.cafes", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("food.cafes", query.Text, StringComparison.Ordinal);
+        Assert.Equal(new { layer = "food.cafes", resolution = 4096, z = 15, x = 27154, y = 14280, buffer = 64, margin = 0.015625, srid = 4326, limit = 10000 }.ToString(), query.Parameters?.ToString());
     }
 
     // N-18 test 1: the header follows the setting.
     [Theory]
     [InlineData(60, "public, max-age=60")]
     [InlineData(0, "no-cache")]
-    public void Tells_the_browser_how_long_to_keep_a_tile(int cacheSeconds, string header) =>
-        Assert.Equal(header, TileHeaders.CacheControl(cacheSeconds));
+    public void Tells_the_browser_and_nginx_how_long_to_keep_a_tile(int seconds, string header) =>
+        Assert.Equal(header, TileServer.CacheControl(seconds));
+
+    // N-19 c1: equal bytes give an equal tag, and the tag is weak.
+    [Fact]
+    public void Tags_a_tile_by_its_bytes()
+    {
+        Assert.Equal(TileServer.Tag([1, 2, 3]), TileServer.Tag([1, 2, 3]));
+        Assert.NotEqual(TileServer.Tag([1, 2, 3]), TileServer.Tag([1, 2, 4]));
+        Assert.StartsWith("W/\"", TileServer.Tag([]), StringComparison.Ordinal);
+    }
 }

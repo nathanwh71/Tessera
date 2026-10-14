@@ -7,6 +7,7 @@
   <ItemGroup>
     <PackageReference Include="Npgsql" />
     <PackageReference Include="Dapper" />
+    <PackageReference Include="CSharpFunctionalExtensions" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Tessera.UnitTests" />

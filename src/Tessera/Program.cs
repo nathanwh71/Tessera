@@ -1,72 +1,59 @@
-using System.Collections.Immutable;
+using Tessera;
 using Tessera.Import;
-using Tessera.Service;
 using Tessera.Settings;
 using Tessera.Sql;
 
-// The program's starting point: the first lines that run. It sits in the Service project, the one
-// part that joins every module, and one program does both jobs (ADR 0001). The operator, or the
-// start-up script, runs it in one of two ways:
-//   Tessera                         serves tiles and the map
-//   Tessera import <file>           loads the places from a GeoJSON file, a text file that
-//                                   describes places on a map, then stops (US-24)
-// The program ends with an exit code, a number it hands back to whatever started it: 0 means
-// success, 1 a failure, and 2 a command it did not understand.
+// The program's starting point. One program does both jobs (ADR 0001):
+//   Tessera                  serves tiles and the map, behind Nginx (ADR 0008)
+//   Tessera import <file>    loads the places from a GeoJSON file, then stops (US-24)
+// It ends with an exit code: 0 for success, 1 for a failure, 2 for a command it did not understand.
 
-return args is ["import", var path]
-    ? await Import(path)
-    : args.Length == 0
-        ? await Serve()
-        : Usage();
-
-// Serves until the service is told to stop. The service starts whether or not the database answers
-// yet, so the two may start in either order; until the list of layers loads, tile requests get 503,
-// the status code, or number in the answer, that means 'try again later' (N-23 c4). The map's built
-// files sit in wwwroot, a folder beside the program.
-static async Task<int> Serve() =>
-    await SettingsLoader.Load(SettingsLoader.ReaderDatabase).Match(
-        async loaded =>
-        {
-            await using var database = Database.Open(loaded.Database, loaded.Settings.Database);
-            var mapFolder = Path.Combine(AppContext.BaseDirectory, "wwwroot");
-            await TesseraService.Build(loaded.Settings, database, mapFolder).RunAsync();
-            return 0;
-        },
-        errors => Task.FromResult(Fail(errors)));
-
-// Loads one file of places into the database and prints how many places each layer received.
-static async Task<int> Import(string path) =>
-    await SettingsLoader.Load(SettingsLoader.PublisherDatabase).Match(
-        async loaded =>
-        {
-            if (!File.Exists(path))
-                return FailWith($"No file at {path}.");
-            await using var database = Database.Open(loaded.Database);
-            return (await Importer.Run(database, await File.ReadAllTextAsync(path), loaded.Settings.Area)).Match(
-                summary =>
-                {
-                    Console.WriteLine(summary);
-                    return 0;
-                },
-                error => FailWith(error.Message));
-        },
-        errors => Task.FromResult(Fail(errors)));
-
-// The service refuses to start and names each setting it lacks or cannot read (US-00 c4).
-static int Fail(ImmutableArray<string> errors)
+return args switch
 {
-    foreach (var error in errors)
-        Console.Error.WriteLine(error);
+    [] => await Serve(),
+    ["import", var path] => await Import(path),
+    _ => Usage(),
+};
+
+// Serves until told to stop. The service starts whether or not the database answers yet, so the two
+// may start in either order; until the list of layers loads, tiles answer 503 (N-23 c4).
+static async Task<int> Serve()
+{
+    var loaded = SettingsLoader.Load(SettingsLoader.ReaderDatabase);
+    if (loaded.IsFailure)
+        return Fail(loaded.Error);
+
+    await using var database = Database.Open(loaded.Value.Database, loaded.Value.Settings.Database);
+    await TesseraService.Build(loaded.Value.Settings, database, Path.Combine(AppContext.BaseDirectory, "wwwroot")).RunAsync();
+    return 0;
+}
+
+// Loads one file of places and prints how many places each layer received.
+static async Task<int> Import(string path)
+{
+    var loaded = SettingsLoader.Load(SettingsLoader.PublisherDatabase);
+    if (loaded.IsFailure)
+        return Fail(loaded.Error);
+    if (!File.Exists(path))
+        return Fail([$"No file at {path}."]);
+
+    await using var database = Database.Open(loaded.Value.Database);
+    var imported = await Importer.Run(database, await File.ReadAllTextAsync(path), loaded.Value.Settings.Area);
+    if (imported.IsFailure)
+        return Fail([imported.Error.Message]);
+
+    Console.WriteLine(imported.Value);
+    return 0;
+}
+
+// The program names every problem it found, so one failed start shows everything to fix (US-00 c4).
+static int Fail(IEnumerable<string> problems)
+{
+    foreach (var problem in problems)
+        Console.Error.WriteLine(problem);
     return 1;
 }
 
-static int FailWith(string problem)
-{
-    Console.Error.WriteLine(problem);
-    return 1;
-}
-
-// The command was neither of the two the program knows; exit code 2 tells the two cases apart.
 static int Usage()
 {
     Console.Error.WriteLine("Usage: Tessera                   serve tiles and the map");

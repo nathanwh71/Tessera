@@ -5,7 +5,6 @@ using NetTopologySuite.Geometries;
 using NetTopologySuite.IO.VectorTiles.Mapbox;
 using Tessera.Catalogue;
 using Tessera.Import;
-using Tessera.Service;
 using Tessera.Settings;
 using Tessera.Sql;
 

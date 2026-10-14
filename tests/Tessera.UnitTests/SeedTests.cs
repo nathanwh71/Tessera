@@ -1,7 +1,6 @@
 using System.Text.Json.Nodes;
 using Tessera.Import;
 using Tessera.Settings;
-using Tessera.Sql;
 
 namespace Tessera.UnitTests;
 
@@ -122,7 +121,7 @@ public sealed class SeedTests
     [Fact]
     public void Plans_nine_tables_in_four_schemas_with_points_in_4326()
     {
-        var queries = Seed.Read(Sample(), Macau).Bind(places => Importer.Plan(places, Importer.ExistingColumns.None))
+        var queries = Seed.Read(Sample(), Macau).Map(places => Importer.Plan(places, Importer.ExistingColumns.None))
             .Match(found => found.Select(query => query.Text).ToArray(), error => throw new Xunit.Sdk.XunitException(error.Message));
 
         Assert.Equal(4, queries.Count(text => text.StartsWith("CREATE SCHEMA", StringComparison.Ordinal)));
@@ -138,8 +137,8 @@ public sealed class SeedTests
     [Fact]
     public void Gives_each_column_the_type_its_values_share() =>
         Assert.Contains(
-            Seed.Read(Sample(), Macau).Bind(places => Importer.Plan(places, Importer.ExistingColumns.None)).Match(found => found.Select(query => query.Text), _ => []),
-            text => text.EndsWith($"ADD COLUMN IF NOT EXISTS \"sample\" {SqlType.Boolean.Keyword}", StringComparison.Ordinal));
+            Seed.Read(Sample(), Macau).Map(places => Importer.Plan(places, Importer.ExistingColumns.None)).Match(found => found.Select(query => query.Text), _ => []),
+            text => text.EndsWith($"ADD COLUMN IF NOT EXISTS \"sample\" boolean", StringComparison.Ordinal));
 
     // A column the database already holds with another type is changed, not added again.
     [Fact]
@@ -148,10 +147,10 @@ public sealed class SeedTests
         var existing = new Importer.ExistingColumns(
             ImmutableDictionary<string, ImmutableDictionary<string, string>>.Empty.Add(
                 "food.cafes", ImmutableDictionary<string, string>.Empty.Add("sample", "text")));
-        var queries = Seed.Read(Sample(), Macau).Bind(places => Importer.Plan(places, existing)).Match(found => found.Select(query => query.Text), _ => []);
+        var queries = Seed.Read(Sample(), Macau).Map(places => Importer.Plan(places, existing)).Match(found => found.Select(query => query.Text), _ => []);
 
-        Assert.Contains(queries, text => text == $"ALTER TABLE \"food\".\"cafes\" ALTER COLUMN \"sample\" TYPE {SqlType.Boolean.Keyword} USING \"sample\"::text::{SqlType.Boolean.Keyword}");
-        Assert.Equal(8, queries.Count(text => text.EndsWith($"ADD COLUMN IF NOT EXISTS \"sample\" {SqlType.Boolean.Keyword}", StringComparison.Ordinal)));
+        Assert.Contains(queries, text => text == $"ALTER TABLE \"food\".\"cafes\" ALTER COLUMN \"sample\" TYPE boolean USING \"sample\"::text::boolean");
+        Assert.Equal(8, queries.Count(text => text.EndsWith($"ADD COLUMN IF NOT EXISTS \"sample\" boolean", StringComparison.Ordinal)));
     }
 
     // A property with no name can have no column, so the file is refused, and the message names the
@@ -170,7 +169,7 @@ public sealed class SeedTests
     }
 
     private static ImmutableArray<string> PlanTexts(Importer.ExistingColumns existing) =>
-        Seed.Read(Sample(), Macau).Bind(places => Importer.Plan(places, existing)).Match(found => found.Select(query => query.Text).ToImmutableArray(), _ => []);
+        Seed.Read(Sample(), Macau).Map(places => Importer.Plan(places, existing)).Match(found => found.Select(query => query.Text).ToImmutableArray(), _ => []);
 
     private static Importer.ExistingColumns CafesHold(params (string Name, string Type)[] columns) =>
         new(ImmutableDictionary<string, ImmutableDictionary<string, string>>.Empty.Add(

@@ -14,7 +14,7 @@
   <ItemGroup>
     <Using Include="Xunit" />
     <Using Include="System.Collections.Immutable" />
-    <Using Include="Tessera.Kernel" />
+    <Using Include="CSharpFunctionalExtensions" />
   </ItemGroup>
   <ItemGroup>
     <!-- Approved snapshots: the text a test compares its output with (S-01 test 2). -->

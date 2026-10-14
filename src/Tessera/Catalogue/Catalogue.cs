@@ -1,109 +1,115 @@
 using System.Collections.Immutable;
-using Tessera.Kernel;
+using System.Text.Json;
+using CSharpFunctionalExtensions;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Tessera.Sql;
 
-// The Catalogue module's list of layers: the tables and views the service may publish as map tiles
-// (US-03). LayerCatalogue builds the list from the database's own records; LiveCatalogue, in this
-// module, rereads it now and then, and the Tiles module looks up each requested layer in it.
+// The Catalogue module: the tables and views the service may publish as map tiles (US-03). The
+// database keeps the guest list; the service reads it at start-up and every RefreshSeconds after.
 
 namespace Tessera.Catalogue;
 
 /// <summary>
-/// One table or view (a saved query that reads like a table) the service may serve as map tiles: a
-/// layer (US-03).
+/// One table or view the service may serve as map tiles: a layer (US-03). Every name here, but the
+/// id, is already quoted for SQL, so it can go into a query's text as it is.
 /// </summary>
-/// <param name="Table">
-/// The schema, a named folder of tables, and the table, quoted for SQL; its <c>Id</c> is the layer's
-/// id, such as <c>food.cafes</c>.
-/// </param>
-/// <param name="Geometry">The column that holds each place's shape.</param>
-/// <param name="Srid">
-/// The number that names the layer's coordinate system: 4326 for longitude and latitude in
-/// degrees (WGS 84), 3857 for metres on the web map's flat square (Web Mercator).
-/// </param>
+/// <param name="Id">The layer's id, schema and name, such as <c>food.cafes</c>.</param>
+/// <param name="Table">The quoted table, such as <c>"food"."cafes"</c>.</param>
+/// <param name="Geometry">The quoted column that holds each place's shape.</param>
+/// <param name="Srid">The number of the layer's coordinate system: 4326 for degrees, 3857 for web-map metres.</param>
 /// <param name="GeometryType">The kind of shape, such as POINT.</param>
-/// <param name="Properties">The other columns, which each tile carries beside the shape (US-07).</param>
-/// <param name="Order">
-/// The primary key's columns, those whose values name each row, which fix the order of features in a
-/// tile; empty for a view.
-/// </param>
-public sealed record Layer(TableName Table, QuotedName Geometry, int Srid, string GeometryType, ImmutableArray<QuotedName> Properties, ImmutableArray<QuotedName> Order)
-{
-    public string Id => Table.Id;
+/// <param name="Properties">The quoted columns each tile carries beside the shape (US-07).</param>
+/// <param name="Order">The quoted primary key, which fixes the order of features; empty for a view.</param>
+public sealed record Layer(string Id, string Table, string Geometry, int Srid, string GeometryType, ImmutableArray<string> Properties, ImmutableArray<string> Order);
 
-    /// <summary>The layer as the tile query in the Sql module needs it.</summary>
-    public LayerSource Source => new(Table, Geometry, Srid, Properties, Id, Order);
+/// <summary>One row of <see cref="Queries.Layers"/>; Dapper fills it by matching column names.</summary>
+public sealed record CatalogueRow(string Schema, string Name, string GeometryColumn, int Srid, string GeometryType, string Columns, string KeyColumns = "[]");
+
+/// <summary>The list of layers at one moment. Once built it never changes; a refresh builds a new one.</summary>
+public sealed record LayerCatalogue(ImmutableDictionary<string, Layer> Layers)
+{
+    /// <summary>Turns a row into a layer, quoting every name on the way in (S-02).</summary>
+    public static Layer ToLayer(CatalogueRow row) => new(
+        $"{row.Schema}.{row.Name}",
+        $"{Queries.Quote(row.Schema)}.{Queries.Quote(row.Name)}",
+        Queries.Quote(row.GeometryColumn),
+        row.Srid,
+        row.GeometryType,
+        Names(row.Columns),
+        Names(row.KeyColumns));
+
+    // The query writes each list of names as JSON, so this reads its own output.
+    private static ImmutableArray<string> Names(string json) =>
+        [.. (JsonSerializer.Deserialize<string[]>(json) ?? []).Select(Queries.Quote)];
+
+    public static LayerCatalogue FromRows(IEnumerable<CatalogueRow> rows) =>
+        new(rows.Select(ToLayer).ToImmutableDictionary(layer => layer.Id, StringComparer.Ordinal));
+
+    /// <summary>
+    /// The layer with this id, or null. The match is exact and case-sensitive, as the database treats
+    /// quoted names: <c>food.cafes</c> is a layer, <c>Food.Cafes</c> is not.
+    /// </summary>
+    public Layer? Find(string id) => Layers.GetValueOrDefault(id);
+
+    /// <summary>Reads the list as the service's role, the user name it signs in as.</summary>
+    public static async Task<Result<LayerCatalogue, DatabaseError>> Load(Database database, CancellationToken cancel = default) =>
+        (await database.Rows<CatalogueRow>(Queries.Layers, cancel).ConfigureAwait(false)).Map(rows => FromRows(rows));
 }
 
 /// <summary>
-/// One row of the database's own list of tables, before its names are quoted. Dapper, the library
-/// that turns rows into C# values, fills it by matching each column's name to a parameter's name.
+/// The list of layers as it stands now, reread every <paramref name="every"/> so a table granted after
+/// start-up is served without a restart (N-23). .NET runs it as a background service, a loop that
+/// starts and stops with the program.
 /// </summary>
 /// <remarks>
-/// Columns arrives as a JSON list of names, such as <c>["layer","name"]</c>: Dapper cannot fill a
-/// list from a database array, but it can fill text, and JSON keeps any name intact. KeyColumns
-/// arrives the same way.
+/// A request must read one whole list, never half of two, so the class swaps the whole list in one
+/// step. Until the first load succeeds there is no list, and tiles answer 503 (N-23 c4); it then tries
+/// every <paramref name="retry"/>. A failed refresh keeps the last good list, so a database that
+/// blinks does not unpublish every layer.
 /// </remarks>
-public sealed record CatalogueRow(string Schema, string Name, string GeometryColumn, int Srid, string GeometryType, string Columns, string KeyColumns = "[]");
-
-/// <summary>
-/// The list of layers: every table and view granted to the service's role, the user name it signs in
-/// as (US-03). The database keeps the guest list; the service only reads it.
-/// </summary>
-/// <remarks>
-/// Each list, once built, never changes; <see cref="LiveCatalogue"/> builds a new one to take in a
-/// change.
-/// </remarks>
-public sealed record LayerCatalogue(ImmutableDictionary<string, Layer> Layers)
+/// <param name="load">Reads the list; a test passes a stand-in.</param>
+/// <param name="every">The wait between refreshes; zero reads the list once.</param>
+/// <param name="retry">The wait between tries before the first load succeeds.</param>
+/// <param name="log">Where the class reports a new list or a failed read.</param>
+public sealed class LiveCatalogue(
+    Func<CancellationToken, Task<Result<LayerCatalogue, DatabaseError>>> load, TimeSpan every, TimeSpan retry, ILogger log) : BackgroundService
 {
-    /// <summary>The query that lists the layers: <see cref="CatalogueQueries.List"/>, in Sql.</summary>
-    public static Query ListQuery => CatalogueQueries.List;
+    private LayerCatalogue? _current;
 
-    /// <summary>
-    /// Turns one row into a layer, quoting every name on the way in, so each name that later
-    /// reaches SQL has passed through <see cref="QuotedName.Quote"/> (US-03, S-02). Gives the reason
-    /// when a name will not quote or a list of names is not JSON.
-    /// </summary>
-    public static Result<Layer, string> ToLayer(CatalogueRow row) =>
-        from table in TableName.Of(row.Schema, row.Name)
-        from geometry in QuotedName.Quote(row.GeometryColumn)
-        from names in ColumnNames(row.Columns)
-        from properties in names.Traverse(QuotedName.Quote)
-        from keys in ColumnNames(row.KeyColumns)
-        from order in keys.Traverse(QuotedName.Quote)
-        select new Layer(table, geometry, row.Srid, row.GeometryType, properties, order);
+    /// <summary>The list as it stands, or null before the first load.</summary>
+    public LayerCatalogue? Current => Volatile.Read(ref _current);
 
-    private static Result<ImmutableArray<string>, string> ColumnNames(string json)
+    /// <summary>Reads the list once; on success it becomes the current list.</summary>
+    public async Task Refresh(CancellationToken cancel)
+    {
+        var loaded = await load(cancel).ConfigureAwait(false);
+        if (loaded.IsFailure)
+        {
+            log.LogWarning("Could not read the list of layers ({SqlState}): {Message}", loaded.Error.SqlState, loaded.Error.Message);
+            return;
+        }
+
+        var old = Interlocked.Exchange(ref _current, loaded.Value);
+        if (old is null || !old.Layers.Keys.ToHashSet().SetEquals(loaded.Value.Layers.Keys))
+            log.LogInformation("The service publishes {Count} layers.", loaded.Value.Layers.Count);
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         try
         {
-            return System.Text.Json.JsonSerializer.Deserialize<ImmutableArray<string>>(json) is { IsDefault: false } names
-                ? Result.Ok<ImmutableArray<string>, string>(names)
-                : Result.Refuse<ImmutableArray<string>, string>("expected a list of column names");
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                await Refresh(stoppingToken).ConfigureAwait(false);
+                if (Current is not null && every <= TimeSpan.Zero)
+                    return;
+                await Task.Delay(Current is null ? retry : every, stoppingToken).ConfigureAwait(false);
+            }
         }
-        catch (System.Text.Json.JsonException error)
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
-            // System.Text.Json reports text that is not JSON by throwing an exception, an error that
-            // jumps out of the normal flow, so the parse alone sits in a try.
-            return Result.Refuse<ImmutableArray<string>, string>(error.Message);
+            // The service is stopping; the loop ends with it.
         }
     }
-
-    /// <summary>Builds the catalogue from rows; a row whose names will not quote is left out.</summary>
-    public static LayerCatalogue FromRows(IEnumerable<CatalogueRow> rows) =>
-        new(rows
-            .SelectMany(row => ToLayer(row).Match(layer => new[] { layer }, _ => []))
-            .ToImmutableDictionary(layer => layer.Id, StringComparer.Ordinal));
-
-    /// <summary>
-    /// Finds a layer by id. The match is exact and case-sensitive, as the database itself treats
-    /// quoted names: <c>food.cafes</c> is a layer, <c>Food.Cafes</c> is not.
-    /// </summary>
-    public Option<Layer> Find(string id) => Layers.GetValueOrDefault(id).ToOption();
-
-    /// <summary>
-    /// Reads the database's list of tables as the service's role, and builds the catalogue from it.
-    /// </summary>
-    public static async Task<Result<LayerCatalogue, DatabaseError>> Load(Database database, CancellationToken cancel = default) =>
-        (await database.Rows<CatalogueRow>(ListQuery, cancel).ConfigureAwait(false)).Map(rows => FromRows(rows));
 }

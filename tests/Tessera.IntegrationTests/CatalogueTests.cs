@@ -11,7 +11,7 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
     private static readonly TileSettings Tiles = new() { Buffer = 64 };
 
     private static TileServer Server(LayerCatalogue catalogue, Database reader) =>
-        new(() => Option.Some(catalogue), reader.Single<byte[]>, Tiles);
+        new(() => catalogue, reader.Single<byte[]>, Tiles);
 
     // The stage: one of each kind US-03 names. xUnit runs this before each test, so every step may
     // run again on a stage it has already set. The test makes its own tables, as US-03 asks;
@@ -57,8 +57,8 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
         await using var reader = Database.Open(database.Reader);
         var catalogue = await Load(reader);
 
-        Assert.Equal((4326, "Point"), catalogue.Find("stage.granted").Match(layer => (layer.Srid, layer.GeometryType), () => (0, "")));
-        Assert.Equal((3857, "Point"), catalogue.Find("stage.mercator").Match(layer => (layer.Srid, layer.GeometryType), () => (0, "")));
+        Assert.Equal((4326, "Point"), (catalogue.Find("stage.granted")?.Srid, catalogue.Find("stage.granted")?.GeometryType));
+        Assert.Equal((3857, "Point"), (catalogue.Find("stage.mercator")?.Srid, catalogue.Find("stage.mercator")?.GeometryType));
     }
 
     // ADR 0006 rule 7: a table's primary key fixes the order of its features; a view has no key,
@@ -69,8 +69,8 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
         await using var reader = Database.Open(database.Reader);
         var catalogue = await Load(reader);
 
-        Assert.Equal(["\"id\""], catalogue.Find("stage.granted").Match(layer => layer.Order.Select(name => name.Text).ToArray(), () => []));
-        Assert.Equal(0, catalogue.Find("stage.granted_view").Match(layer => layer.Order.Length, () => -1));
+        Assert.Equal(["\"id\""], catalogue.Find("stage.granted")?.Order);
+        Assert.Empty(catalogue.Find("stage.granted_view")!.Order);
     }
 
     // c4: the awkward name is published and served.
@@ -137,21 +137,19 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
     {
         await database.Owner("CREATE TABLE IF NOT EXISTS stage.late (id int PRIMARY KEY, geom geometry(Point, 4326)); REVOKE SELECT ON stage.late FROM tessera_reader;");
         await using var reader = Database.Open(database.Reader);
-        var live = LiveCatalogue.From(reader, (_, _) => { }, _ => { });
-        using var stop = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-        var loop = live.Run(TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(100), TimeProvider.System, stop.Token);
+        var live = new LiveCatalogue(cancel => LayerCatalogue.Load(reader, cancel), TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(100), Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance);
+        await live.StartAsync(TestContext.Current.CancellationToken);
 
-        await Until(() => live.Current.Match(found => found.Layers.ContainsKey("stage.granted"), () => false));
-        Assert.False(live.Current.Match(found => found.Layers.ContainsKey("stage.late"), () => true));
+        await Until(() => live.Current?.Layers.ContainsKey("stage.granted") == true);
+        Assert.False(live.Current!.Layers.ContainsKey("stage.late"));
 
         await database.Owner("GRANT SELECT ON stage.late TO tessera_reader;");
-        await Until(() => live.Current.Match(found => found.Layers.ContainsKey("stage.late"), () => false));
+        await Until(() => live.Current?.Layers.ContainsKey("stage.late") == true);
 
         await database.Owner("REVOKE SELECT ON stage.late FROM tessera_reader;");
-        await Until(() => !live.Current.Match(found => found.Layers.ContainsKey("stage.late"), () => true));
+        await Until(() => live.Current?.Layers.ContainsKey("stage.late") == false);
 
-        await stop.CancelAsync();
-        await loop;
+        await live.StopAsync(TestContext.Current.CancellationToken);
     }
 
     private static async Task Until(Func<bool> condition)

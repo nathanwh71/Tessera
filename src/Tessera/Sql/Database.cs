@@ -1,34 +1,30 @@
 using System.Collections.Immutable;
+using CSharpFunctionalExtensions;
 using Dapper;
 using Npgsql;
-using Tessera.Kernel;
 using Tessera.Settings;
 
 namespace Tessera.Sql;
 
-/// <summary>Why the database refused a query: its SQLSTATE code and its message.</summary>
-/// <remarks>
-/// PostgreSQL, the database, labels each failure with a SQLSTATE code: five characters, of which the
-/// first two name its class, such as 08 for a failed connection. Two codes mean a table has left the
-/// list: 42501, 'insufficient privilege', when the table's grant (its permission to read) has gone
-/// (US-03 c6), and 42P01, 'undefined table'. The codes in <see cref="IsUnavailable"/> mean the
-/// database cannot answer now but may soon, so the service says 'try again' rather than 'fault' (N-22).
-/// </remarks>
+/// <summary>
+/// A query ready to send: the SQL text, and the values that travel beside it as bound parameters
+/// (S-01). The database never reads a parameter as SQL, so no value from a request can change what
+/// a query does. Every text lives in Queries.cs.
+/// </summary>
+public sealed record Query(string Text, object? Parameters = null);
+
+/// <summary>Why the database refused a query: its SQLSTATE code, five characters, and its message.</summary>
 public sealed record DatabaseError(string SqlState, string Message)
 {
-    /// <summary>True when the table has gone, or its grant has: 42501 or 42P01 (US-03 c6).</summary>
+    /// <summary>The table, or its grant, has gone: 42501 or 42P01 (US-03 c6).</summary>
     public bool IsMissingTable => SqlState is PostgresErrorCodes.InsufficientPrivilege or PostgresErrorCodes.UndefinedTable;
 
-    /// <summary>
-    /// True when a query names a column the table no longer holds (42703, 'undefined column'), as
-    /// after an import drops a column the list of layers still names, until the list is read again.
-    /// </summary>
+    /// <summary>The query names a column an import has dropped since the list of layers was read: 42703.</summary>
     public bool IsMissingColumn => SqlState is PostgresErrorCodes.UndefinedColumn;
 
     /// <summary>
-    /// True when waiting may cure the failure: the connection failed (class 08), a query ran past
-    /// its time (57014), the server is shutting down, crashing or starting (57P01 to 57P03), or it has
-    /// no room for another connection (53300).
+    /// Waiting may cure it (N-22): a failed connection (class 08), a query past its time (57014), a
+    /// server stopping or starting (57P01 to 57P03), or no room for another connection (53300).
     /// </summary>
     public bool IsUnavailable =>
         SqlState.StartsWith("08", StringComparison.Ordinal)
@@ -37,26 +33,14 @@ public sealed record DatabaseError(string SqlState, string Message)
 }
 
 /// <summary>
-/// The one gate between Tessera and PostgreSQL (S-01 c2, ADR 0001 rule 3). It belongs to the Sql
-/// module: the Catalogue, Tiles and Import modules and the health check send every query through it
-/// as a <see cref="Query"/>, and Program.cs opens it at start-up. No other project references Npgsql
-/// or Dapper, the two libraries that talk to PostgreSQL.
+/// The one door to PostgreSQL. A database can fail at any moment, so this class turns each failure
+/// into a <see cref="Result{T, E}"/>, a value that holds the answer or the reason, rather than letting
+/// an exception escape (ADR 0004).
 /// </summary>
 /// <remarks>
-/// A database can fail at any moment, so this class, at the edge of the Sql module, turns each
-/// failure into a <see cref="Result{T, TError}"/>, a value that holds either the answer or the reason
-/// for a refusal, rather than letting an error escape. A connection pool keeps a few connections open
-/// between requests, so a tile need not pay to open a new one each time.
-/// <para>
-/// Queries must run in the order they arrive (N-26, ADR 0006 rule 7). When every connection is busy,
-/// Npgsql's pool lends the next free one to the request that has waited longest, so it keeps that
-/// order itself. The Java build needs a gate in front of its pool for this; here an integration test,
-/// one that runs against a real database, proves the pool's order.
-/// </para>
-/// <para>
-/// The health check's ping has a pool of its own, of one connection, so it never waits behind tiles:
-/// a busy service is still a healthy one (N-26 c3).
-/// </para>
+/// A pool keeps a few connections open for requests to share. When every one is busy, Npgsql lends
+/// the next free one to the request that has waited longest (N-26). The health check's ping has a
+/// pool of its own, so it never waits behind tiles (N-26 c3).
 /// </remarks>
 public sealed class Database : IAsyncDisposable
 {
@@ -66,51 +50,47 @@ public sealed class Database : IAsyncDisposable
     private Database(NpgsqlDataSource source, NpgsqlDataSource ping) => (_source, _ping) = (source, ping);
 
     /// <summary>The longest a ping may take, from connecting to the answer.</summary>
-    internal static readonly TimeSpan PingLimit = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan PingLimit = TimeSpan.FromSeconds(1);
 
-    /// <summary>
-    /// Opens a pool of connections within the given limits, or the defaults, and a second pool of one
-    /// for the ping. A query past its time is cancelled on the server too, so it frees its connection.
-    /// </summary>
-    /// <param name="connection">Npgsql's connection string, from the database URL.</param>
+    /// <summary>Opens the pool within the given limits, or the defaults, and the ping's pool of one.</summary>
+    /// <param name="connection">Npgsql's connection string, made from the database URL.</param>
     /// <param name="limits">The pool's limits (N-22).</param>
     public static Database Open(string connection, DatabaseSettings? limits = null)
     {
         var pool = limits ?? new DatabaseSettings();
         return new(
             Source(connection, pool.PoolSize, pool.ConnectionLifetimeSeconds, pool.QueryTimeoutSeconds, pool.ConnectionWaitSeconds, "tessera"),
-            // One connection is enough for the ping; it gets a second to connect and a second to answer.
-            Source(connection, 1, pool.ConnectionLifetimeSeconds, 1, 1, "tessera-health", ping: true));
+            Source(connection, 1, pool.ConnectionLifetimeSeconds, 1, 1, "tessera-health"));
     }
 
-    private static NpgsqlDataSource Source(string connection, int size, int lifetime, int queryTimeout, int wait, string name, bool ping = false) =>
+    private static NpgsqlDataSource Source(string connection, int size, int lifetime, int queryTimeout, int wait, string name) =>
         NpgsqlDataSource.Create(new NpgsqlConnectionStringBuilder(connection)
         {
-            // The name shows in pg_stat_activity, the database's list of open connections, so the
-            // maintainer can tell Tessera's connections apart.
+            // The name shows in pg_stat_activity, so the maintainer can tell Tessera's connections apart.
             ApplicationName = name,
             MaxPoolSize = size,
             ConnectionLifetime = lifetime,
             CommandTimeout = queryTimeout,
-            // Npgsql's Timeout covers both opening a connection and waiting for a free one in the pool.
+            // Covers both opening a connection and waiting for a free one in the pool.
             Timeout = wait,
-            // Planning a query costs time, so a query text sent three times on a connection becomes a
-            // prepared statement: the database plans it once and reuses the plan, as the Java build's
-            // driver does (prepareThreshold=3). The tile query's text differs only by layer, so nine
-            // plans cover every tile. Measured on 14 October 2026, with no tile cache, this raised the
-            // rate from 1,580 to 2,408 tiles a second.
+            // A query text sent three times on a connection becomes a prepared statement, planned once.
+            // Measured on 14 October 2026, this raised the rate from 1,580 to 2,408 tiles a second.
             MaxAutoPrepare = 32,
             AutoPrepareMinUsages = 3,
-            // After a timeout Npgsql asks the server to cancel the query and, by default, waits 2,000
-            // milliseconds for its reply; a frozen server never replies. The ping waits for none (-1),
-            // so a slow ping lasts one second, not three.
-            CancellationTimeout = ping ? -1 : 2000,
         }.ConnectionString);
 
+    /// <summary>Runs a query and turns each row into a <typeparamref name="T"/>, matching columns to fields by name.</summary>
+    public Task<Result<ImmutableArray<T>, DatabaseError>> Rows<T>(Query query, CancellationToken cancel = default) =>
+        Run(async connection => (await connection.QueryAsync<T>(Command(query, null, cancel)).ConfigureAwait(false)).ToImmutableArray(), cancel);
+
+    /// <summary>Runs a query that returns one value, or null for none.</summary>
+    public Task<Result<T?, DatabaseError>> Single<T>(Query query, CancellationToken cancel = default) where T : class =>
+        Run(connection => connection.QuerySingleOrDefaultAsync<T>(Command(query, null, cancel)), cancel);
+
     /// <summary>
-    /// True when the database answers <c>SELECT 1</c> within a second, through the ping's own pool
-    /// (N-25, N-26 c3). The ping keeps its own clock: a frozen database may hold Npgsql's own limits
-    /// for longer, and a step it gives up on is left to finish, or fail, out of sight.
+    /// True when the database answers <c>SELECT 1</c> within a second (N-25). The ping keeps its own
+    /// clock, since a frozen database can hold Npgsql's limits for longer; a step it gives up on
+    /// finishes, or fails, out of sight.
     /// </summary>
     public async Task<bool> Ping(CancellationToken stop)
     {
@@ -128,32 +108,16 @@ public sealed class Database : IAsyncDisposable
     private async Task PingOnce(CancellationToken stop)
     {
         await using var connection = await _ping.OpenConnectionAsync(stop).ConfigureAwait(false);
-        await connection.QueryAsync<int>(Command(HealthQueries.Ping, null, stop)).ConfigureAwait(false);
+        await connection.ExecuteScalarAsync<int>(Command(Queries.Ping, null, stop)).ConfigureAwait(false);
     }
 
     /// <summary>
-    /// Runs a query and turns each row into a <typeparamref name="T"/>, matching columns to fields by name.
+    /// Runs every step in one transaction: all of them take effect, or none does (US-24 c6). A step
+    /// that refuses, or a database failure, rolls the whole group back, so no reader sees half of it.
     /// </summary>
-    public Task<Result<ImmutableArray<T>, DatabaseError>> Rows<T>(Query query, CancellationToken cancel = default) =>
-        Run(async connection => (await connection.QueryAsync<T>(Command(query, null, cancel)).ConfigureAwait(false)).ToImmutableArray(), cancel);
-
-    /// <summary>Runs a query that returns one value, or none.</summary>
-    public Task<Result<Option<T>, DatabaseError>> Single<T>(Query query, CancellationToken cancel = default) where T : class =>
-        Run(async connection => (await connection.QuerySingleOrDefaultAsync<T>(Command(query, null, cancel)).ConfigureAwait(false)).ToOption(), cancel);
-
-    /// <summary>
-    /// Runs every step in one transaction: all of them take effect, or none does (US-24 c6).
-    /// </summary>
-    /// <remarks>
-    /// A transaction is a group of changes the database makes all together or not at all. If any
-    /// step refuses, or the database fails, the whole group rolls back (is undone), and no reader ever
-    /// sees half of it.
-    /// <para>
-    /// The steps refuse with the caller's own error type, so a step that refuses for a reason of its
-    /// own, such as an odd column name, needs no database error to carry it; <paramref name="refused"/>
-    /// turns a database failure into that same type.
-    /// </para>
-    /// </remarks>
+    /// <param name="steps">The work, which may refuse with the caller's own error type.</param>
+    /// <param name="refused">Turns a database failure into that same type.</param>
+    /// <param name="cancel">Stops the work if fired.</param>
     public async Task<Result<T, TError>> InTransaction<T, TError>(
         Func<Session, Task<Result<T, TError>>> steps, Func<DatabaseError, TError> refused, CancellationToken cancel = default)
     {
@@ -162,15 +126,14 @@ public sealed class Database : IAsyncDisposable
             await using var connection = await _source.OpenConnectionAsync(cancel).ConfigureAwait(false);
             await using var transaction = await connection.BeginTransactionAsync(cancel).ConfigureAwait(false);
             var result = await steps(new Session(connection, transaction, cancel)).ConfigureAwait(false);
-            await result.Match(
-                _ => transaction.CommitAsync(cancel),
-                _ => transaction.RollbackAsync(cancel)).ConfigureAwait(false);
+            // A transaction closed without a commit rolls back.
+            if (result.IsSuccess)
+                await transaction.CommitAsync(cancel).ConfigureAwait(false);
             return result;
         }
-        // A failure inside a step lands here too, and the transaction, closed unfinished, rolls back.
         catch (NpgsqlException error)
         {
-            return Result.Refuse<T, TError>(refused(Error(error)));
+            return Result.Failure<T, TError>(refused(Error(error)));
         }
     }
 
@@ -180,26 +143,24 @@ public sealed class Database : IAsyncDisposable
         await _ping.DisposeAsync().ConfigureAwait(false);
     }
 
-    // A cancellation token is a signal a caller can fire to stop work it no longer needs. It reaches
-    // the wait for a connection too, so a query whose token fires leaves the pool's queue at once
-    // (N-26 c2).
+    // The cancellation token reaches the wait for a connection too, so a request that gives up leaves
+    // the pool's queue at once (N-26 c2).
     private async Task<Result<T, DatabaseError>> Run<T>(Func<NpgsqlConnection, Task<T>> work, CancellationToken cancel)
     {
         try
         {
             await using var connection = await _source.OpenConnectionAsync(cancel).ConfigureAwait(false);
-            return Result.Ok<T, DatabaseError>(await work(connection).ConfigureAwait(false));
+            return Result.Success<T, DatabaseError>(await work(connection).ConfigureAwait(false));
         }
         catch (NpgsqlException error)
         {
-            return Result.Refuse<T, DatabaseError>(Error(error));
+            return Result.Failure<T, DatabaseError>(Error(error));
         }
     }
 
-    // A PostgresException is the database's own refusal, with its SQLSTATE. Npgsql reports a query
-    // past its time, or a wait for a connection past its time, with a TimeoutException inside; 57014,
-    // 'query cancelled', names both. Any other NpgsqlException means the database never answered,
-    // such as when it is down; 08006, 'connection failure', names that case.
+    // A PostgresException is the database's own refusal, with its SQLSTATE. A query, or a wait for a
+    // connection, past its time carries a TimeoutException inside: 57014. Any other failure means the
+    // database never answered: 08006, 'connection failure'.
     private static DatabaseError Error(NpgsqlException error) => error switch
     {
         PostgresException refusal => new DatabaseError(refusal.SqlState, refusal.MessageText),
@@ -207,37 +168,18 @@ public sealed class Database : IAsyncDisposable
         _ => new DatabaseError(PostgresErrorCodes.ConnectionFailure, error.Message),
     };
 
-    internal static CommandDefinition Command(Query query, NpgsqlTransaction? transaction, CancellationToken cancel)
+    private static CommandDefinition Command(Query query, NpgsqlTransaction? transaction, CancellationToken cancel) =>
+        new(query.Text, query.Parameters, transaction, cancellationToken: cancel);
+
+    /// <summary>
+    /// The steps of one transaction, on the transaction's own connection. A failure throws, which
+    /// ends every step at once and reaches <see cref="InTransaction{T, TError}"/>, which rolls back.
+    /// </summary>
+    public sealed class Session(NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancel)
     {
-        var parameters = new DynamicParameters();
-        for (var index = 0; index < query.Parameters.Length; index++)
-            // Dapper turns a parameter of null into the database's NULL, so SqlNull becomes null here.
-            parameters.Add($"p{index}", query.Parameters[index] is SqlNull ? null : query.Parameters[index]);
-        return new CommandDefinition(query.Text, parameters, transaction, cancellationToken: cancel);
-    }
+        public Task<int> Execute(Query query) => connection.ExecuteAsync(Command(query, transaction, cancel));
 
-    /// <summary>The steps of one transaction. It runs queries on the transaction's own connection.</summary>
-    /// <remarks>
-    /// Its methods always return Ok: a database failure throws instead, so it ends every step at once
-    /// and reaches <see cref="Database.InTransaction{T, TError}"/>, which rolls the whole group back.
-    /// </remarks>
-    public sealed class Session
-    {
-        private readonly NpgsqlConnection _connection;
-        private readonly NpgsqlTransaction _transaction;
-        private readonly CancellationToken _cancel;
-
-        internal Session(NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancel) =>
-            (_connection, _transaction, _cancel) = (connection, transaction, cancel);
-
-        /// <summary>
-        /// Runs a query that changes the database, and returns the number of rows it changed.
-        /// </summary>
-        public async Task<Result<int, DatabaseError>> Execute(Query query) =>
-            Result.Ok<int, DatabaseError>(await _connection.ExecuteAsync(Command(query, _transaction, _cancel)).ConfigureAwait(false));
-
-        public async Task<Result<ImmutableArray<T>, DatabaseError>> Rows<T>(Query query) =>
-            Result.Ok<ImmutableArray<T>, DatabaseError>(
-                (await _connection.QueryAsync<T>(Command(query, _transaction, _cancel)).ConfigureAwait(false)).ToImmutableArray());
+        public async Task<ImmutableArray<T>> Rows<T>(Query query) =>
+            (await connection.QueryAsync<T>(Command(query, transaction, cancel)).ConfigureAwait(false)).ToImmutableArray();
     }
 }

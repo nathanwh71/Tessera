@@ -24,6 +24,6 @@
   <ItemGroup>
     <Using Include="Xunit" />
     <Using Include="System.Collections.Immutable" />
-    <Using Include="Tessera.Kernel" />
+    <Using Include="CSharpFunctionalExtensions" />
   </ItemGroup>
 </Project>

@@ -1,9 +1,9 @@
 using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations;
 using System.Net;
+using CSharpFunctionalExtensions;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
-using Tessera.Kernel;
 
 // The Settings module: every setting the service and the import read, with its default and its
 // limits (US-00, ADR 0003). ASP.NET Core's configuration reads tessera.json and the environment and
@@ -191,7 +191,7 @@ public static class SettingsLoader
         catch (Exception error) when (error is FormatException or InvalidDataException)
         {
             // A file that is not JSON fails as it is read.
-            return Result.Refuse<LoadedSettings, ImmutableArray<string>>([$"{path}: {error.Message}"]);
+            return Result.Failure<LoadedSettings, ImmutableArray<string>>([$"{path}: {error.Message}"]);
         }
     }
 
@@ -219,11 +219,12 @@ public static class SettingsLoader
         problems.AddRange(Check("Area", settings.Area));
 
         var database = ConnectionString(databaseUrl);
-        database.Match(_ => 0, problem => { problems.Add($"{databaseVariable}: {problem}"); return 0; });
+        if (database.IsFailure)
+            problems.Add($"{databaseVariable}: {database.Error}");
 
         return problems.Count == 0
-            ? Result.Ok<LoadedSettings, ImmutableArray<string>>(new LoadedSettings(settings, database.Match(text => text, _ => "")))
-            : Result.Refuse<LoadedSettings, ImmutableArray<string>>(problems.ToImmutable());
+            ? Result.Success<LoadedSettings, ImmutableArray<string>>(new LoadedSettings(settings, database.Value))
+            : Result.Failure<LoadedSettings, ImmutableArray<string>>(problems.ToImmutable());
     }
 
     // The attributes on each record, such as [Range], and its own Validate method.
@@ -242,11 +243,11 @@ public static class SettingsLoader
     public static Result<string, string> ConnectionString(string? url)
     {
         if (string.IsNullOrEmpty(url))
-            return Result.Refuse<string, string>("missing or empty");
+            return Result.Failure<string, string>("missing or empty");
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme is not ("postgresql" or "postgres")
             || uri.UserInfo.Split(':', 2) is not [{ Length: > 0 } user, var password] || uri.AbsolutePath.Length < 2)
-            return Result.Refuse<string, string>("expected postgresql://user:password@host:port/database");
-        return Result.Ok<string, string>(new NpgsqlConnectionStringBuilder
+            return Result.Failure<string, string>("expected postgresql://user:password@host:port/database");
+        return Result.Success<string, string>(new NpgsqlConnectionStringBuilder
         {
             Host = uri.Host,
             Port = uri.IsDefaultPort || uri.Port < 0 ? 5432 : uri.Port,
