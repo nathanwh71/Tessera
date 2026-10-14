@@ -8,6 +8,7 @@
 | Covers | The Phase Oct back ***end***, in C# 14 on .NET 10, in `nathanwh71/Tessera` |
 | Stories | US-00, US-01, US-03, US-24, US-07, S-01, S-06, US-35, US-23 (`docs/user-stories/user-stories.md`) |
 | Amended | On 14 ***October*** 2026, in the ***change*** that ***halved*** the ***code***, the ***nine*** ***projects*** merged into ***one***, `src/Tessera`, with a ***folder*** for ***each*** ***module***; ***see*** ***below*** |
+| Amended again | The ***same*** ***evening*** the `import` ***command*** ***gave*** ***way*** to `seed`, which ***runs*** SQL ***scripts*** with DbUp (ADR 0009). The ***Import*** ***module*** ***became*** ***Seeding***, and the ***seed*** is a ***second*** ***door*** to the ***database*** ***beside*** Sql. The paragraphs ***below*** on the ***import***, and the start-up ***script***'s ***rule*** for ***empty*** ***tables***, ***record*** the ***design*** it ***replaced*** |
 
 ## Decision
 
@@ -47,7 +48,7 @@ With ***one*** ***project***, the ***compiler*** no ***longer*** ***guards*** th
 | Settings | ***Reading*** every ***machine***'s ***name***, ***address*** and ***port*** from ***environment*** variables; ***refusing*** to ***start*** when ***one*** is ***missing*** | US-00 |
 | Sql | Every query's ***text***, as ***named*** ***functions***; the ***one*** query builder ***behind*** them; the ***one*** ***function*** that ***quotes*** ***names***; and the ***only*** ***use*** of the database ***client***, Npgsql with Dapper | S-01, US-03 (S-02) |
 | Catalogue | The ***list*** of ***granted*** ***tables*** and ***views***, ***built*** at ***start***-up | US-03 |
-| Import | The `import` ***command***: ***reading*** and ***checking*** the GeoJSON ***seed***, and ***replacing*** the ***rows*** of the ***nine*** ***tables*** in ***one*** transaction | US-24 |
+| Seeding | The `seed` ***command***: DbUp ***runs*** ***each*** ***new*** ***script*** in `db/seed` ***once***, as `tessera_publisher` (ADR 0009) | US-24 |
 | Tiles | The tile ***route***, the tile query, and the ***kept*** ***copies*** with their ***tags*** | US-07, N-18 to N-20 |
 | Http | ***Screening*** ***raw*** ***request*** ***targets***, and ***writing*** every ***problem*** ***document*** | S-06, US-07 |
 | Map | ***Serving*** the ***front*** ***end***'s ***built*** ***files*** | US-23 |
@@ -68,7 +69,7 @@ The ***list*** is a ***first*** ***cut***. A module ***joins*** it when a ***sto
 | Variable | Read by | Holds |
 |---|---|---|
 | `DATABASE_URL` | The ***service***, at every ***start*** | `postgresql://tessera_reader:<password>@<host>:<port>/<database>` |
-| `TESSERA_PUBLISHER_DATABASE_URL` | `import`, only when it ***runs*** | `postgresql://tessera_publisher:<password>@<host>:<port>/<database>` |
+| `TESSERA_PUBLISHER_DATABASE_URL` | `seed`, ***only*** when it ***runs*** | `postgresql://tessera_publisher:<password>@<host>:<port>/<database>` |
 | `TESSERA_READER_PASSWORD` | The ***role*** ***script***, on the database's ***first*** ***start*** | `tessera_reader`'s ***password*** |
 | `TESSERA_PUBLISHER_PASSWORD` | The ***role*** ***script***, on the database's ***first*** ***start*** | `tessera_publisher`'s ***password*** |
 

@@ -29,6 +29,7 @@ The twenty-six ***stories*** in `docs/user-stories/user-stories.md` ***fix*** wh
 - The .NET 10 SDK, 10.0.100 or ***later***: the ***tools*** that ***build*** and ***run*** C# 14
 - Docker Engine, which ***runs*** the ***database*** and Nginx in ***containers***: ***sealed*** ***boxes*** with their ***own*** ***files***
 - Node.js 26, which ***runs*** the ***scripts*** and ***builds*** the ***map*** (ADR 0002)
+- GDAL's `ogr2ogr`, for `npm run convert` ***alone***; ***without*** it, the converter ***runs*** GDAL's Docker ***image***
 
 ## The commands
 
@@ -40,7 +41,8 @@ The twenty-six ***stories*** in `docs/user-stories/user-stories.md` ***fix*** wh
 | `dotnet run --project tests/Tessera.UnitTests` | ***Runs*** the ***unit*** and ***property*** ***tests***: no ***database***, a ***second*** or ***two*** |
 | `dotnet run --project tests/Tessera.IntegrationTests` | ***Starts*** the ***packaged*** ***database*** in Docker and ***tests*** ***through*** it and ***through*** ***real*** HTTP (US-00 c3) |
 | `npm install` | ***Installs*** the ***scripts***' ***tools***: zx and TypeScript |
-| `npm start` | ***Starts*** the ***database***, ***imports*** the ***places*** if the ***tables*** are ***empty***, ***starts*** the ***service*** and Nginx in ***front*** of it, then ***waits*** for `/health` to ***say*** `UP` (US-00 c2, N-25) |
+| `npm start` | ***Starts*** the ***database***, ***runs*** ***any*** ***new*** ***seed*** ***script***, ***starts*** the ***service*** and Nginx in ***front*** of it, then ***waits*** for `/health` to ***say*** `UP` (US-00 c2, N-25, ADR 0009) |
+| `npm run convert -- SOURCE OUTPUT schema.table[:WHERE] ...` | ***Turns*** a ***file*** of ***places*** into a ***seed*** ***script*** in `db/seed`, with ***one*** ***table*** for ***each*** `schema.table` (US-24, ADR 0009) |
 | `npm run publish` | ***Grants*** the ***nine*** ***layers*** to the ***service***, which ***serves*** them ***within*** `Catalogue.RefreshSeconds`, 30 by ***default*** (US-24 c5, N-23) |
 | `npm run office-port` | ***Prints*** the ***steps*** that ***open*** ***port*** 80 to the ***office*** (US-35) |
 | `npm run e2e` | ***Runs*** the ***map***'s ***browser*** ***tests***, then the Nginx ***checks***, ***against*** a ***database*** and an Nginx of their ***own*** |
@@ -56,9 +58,27 @@ The twenty-six ***stories*** in `docs/user-stories/user-stories.md` ***fix*** wh
 | `TESSERA_HTTPPORT` | `npm start`, for Nginx | The ***port*** the ***office*** ***reaches***: 80 in the ***office*** |
 | `TESSERA_SERVICE_PORT` | `npm start` | ***Optional***: the ***port*** the ***service*** ***answers*** Nginx on, 7800 by ***default*** |
 | `DATABASE_URL` | The ***service*** | `postgresql://tessera_reader:<password>@<host>:<port>/tessera` |
-| `TESSERA_PUBLISHER_DATABASE_URL` | `import` | `postgresql://tessera_publisher:<password>@<host>:<port>/tessera` |
+| `TESSERA_PUBLISHER_DATABASE_URL` | `seed` | `postgresql://tessera_publisher:<password>@<host>:<port>/tessera` |
 | `TESSERA_DB_PASSWORD`, `TESSERA_READER_PASSWORD`, `TESSERA_PUBLISHER_PASSWORD` | `npm start`, which ***writes*** the ***two*** URLs ***above*** from them | The ***three*** ***roles***' ***passwords*** |
 | `TESSERA_DB_HOST`, `TESSERA_DB_PORT`, `TESSERA_DB_NAME` | `npm start`, `npm run publish` | ***Optional***: where the ***database*** ***answers***, 127.0.0.1, 5432 and `tessera` by ***default*** |
+
+## Adding places
+
+The ***places*** ***reach*** the ***database*** as SQL ***scripts*** in `db/seed`, which DbUp ***runs*** ***once*** ***each***, in the ***order*** of their ***names*** (ADR 0009). To ***add*** a ***file*** of ***places***:
+
+1. ***Convert*** it: `npm run convert -- data/parks.shp db/seed/0002-parks.sql outdoors.parks`. GDAL ***reads*** GeoJSON, shapefiles, GeoPackages, CSV and more, and ***stores*** every ***shape*** in longitude and latitude.
+2. ***Read*** the ***script***, then ***commit*** it. ***Never*** ***change*** a ***script*** ***once*** it has ***run***: DbUp would not ***run*** it ***again***. ***Put*** ***new*** or ***corrected*** ***data*** in a ***new*** ***script***, with the ***next*** ***number***.
+3. ***Run*** `npm start`, or `Tessera seed` as `tessera_publisher`, then `npm run publish`. A ***script*** that ***replaces*** a ***table*** ***takes*** its ***grant*** with it, so the ***table*** ***waits*** for the ***publish***.
+
+A filter ***after*** a colon ***splits*** ***one*** ***file*** into ***several*** ***tables***. The Macau ***seed*** ***came*** from ***one*** ***command***:
+
+```
+npm run convert -- data/macau-pois.geojson db/seed/0001-macau-places.sql \
+  "food.cafes:layer = 'cafes'" "food.restaurants:layer = 'restaurants'" "food.markets:layer = 'markets'" \
+  "outdoors.parks:layer = 'parks'" "outdoors.playgrounds:layer = 'playgrounds'" \
+  "culture.museums:layer = 'museums'" "culture.libraries:layer = 'libraries'" \
+  "transport.trains:layer = 'trains'" "transport.buses:layer = 'buses'"
+```
 
 ## How the database keeps the service safe
 
@@ -68,22 +88,22 @@ The twenty-six ***stories*** in `docs/user-stories/user-stories.md` ***fix*** wh
 
 ## What is where
 
-The ***service*** is ***one*** ***program*** in ***one*** ***project***, with a ***folder*** for ***each*** ***module*** (ADR 0001). It ***borrows*** what ***libraries*** do ***well***: ASP.NET Core ***reads*** its ***settings***, ***writes*** its ***problem*** ***documents*** and ***answers*** `/health`; Dapper and Npgsql ***talk*** to the ***database***; CSharpFunctionalExtensions ***gives*** `Result` (ADR 0004); Nginx ***keeps***, ***packs*** and ***guards*** (ADR 0008).
+The ***service*** is ***one*** ***program*** in ***one*** ***project***, with a ***folder*** for ***each*** ***module*** (ADR 0001). It ***borrows*** what ***libraries*** do ***well***: ASP.NET Core ***reads*** its ***settings***, ***writes*** its ***problem*** ***documents*** and ***answers*** `/health`; Dapper and Npgsql ***talk*** to the ***database***; CSharpFunctionalExtensions ***gives*** `Result` (ADR 0004); DbUp ***runs*** the ***seed*** ***scripts*** (ADR 0009); Nginx ***keeps***, ***packs*** and ***guards*** (ADR 0008).
 
 | Folder | What it holds |
 |---|---|
 | `src/Tessera/Settings` | Every ***setting***, its ***default*** and its ***limits*** |
 | `src/Tessera/Sql` | Every SQL ***text***, in `Queries.cs`, and the ***only*** ***code*** that ***talks*** to the ***database*** |
 | `src/Tessera/Catalogue` | The ***list*** of ***layers***: every ***table*** ***granted*** to the ***service***, ***reread*** every `Catalogue.RefreshSeconds` |
-| `src/Tessera/Import` | The `import` ***command***: ***checks*** the GeoJSON ***seed*** and ***loads*** the ***nine*** ***tables*** |
+| `src/Tessera/Seeding` | The `seed` ***command***: DbUp ***runs*** ***each*** ***new*** ***script*** in `db/seed` ***once*** |
 | `src/Tessera/Tiles` | The ***tile*** ***route*** and its ***answers*** |
 | `src/Tessera/Map` | ***Serving*** the ***map***'s ***page***, with the ***area*** ***written*** in, and its ***files*** |
 | `src/Tessera` | `Program.cs`, the ***two*** ***commands***; `Service.cs`, the ***service*** ***put*** ***together*** and `/health`; `Problems.cs` |
 | `nginx/` | Nginx's ***file***, which `npm start` and the ***browser*** ***tests*** ***run*** (ADR 0008) |
 | `web/` | The ***map***: TypeScript, React, MapLibre GL JS, react-elmish and Tailwind CSS, ***copied*** from the Java ***build*** (ADR 0006) |
 | `tests/` | ***Unit***, ***property*** and ***integration*** ***tests*** |
-| `db/` | The ***packaged*** ***database***: PostgreSQL 18 with PostGIS 3.6, and the ***role*** ***script*** |
-| `data/` | The ***seed***: 900 ***places*** in longitude and latitude, as `nathanwh71/JTessera` ***holds*** them |
+| `db/` | The ***packaged*** ***database***: PostgreSQL 18 with PostGIS 3.6, the ***role*** ***script***, and the ***seed*** ***scripts*** in `db/seed` |
+| `data/` | The ***seed***'s ***source***: 900 ***places*** in longitude and latitude, as `nathanwh71/JTessera` ***holds*** them |
 | `scripts/` | The ***scripts***, in TypeScript with zx (ADR 0002), and the Nginx ***checks*** in `scripts/lib/edge.ts` |
 | `docs/` | The ***stories*** and the ***architecture*** ***decision*** ***records*** |
 
@@ -97,6 +117,7 @@ The ***service*** is ***one*** ***program*** in ***one*** ***project***, with a 
 - `docs/adr/0006-one-map-for-both-builds.md`: the ***contract*** ***between*** the ***map*** and a ***service***, and why the ***map*** ***now*** ***lives*** here
 - `docs/adr/0007-resilience-library-with-the-first-limit.md`: why no ***resilience*** ***library*** yet, and when ***one*** ***arrives***
 - `docs/adr/0008-nginx-in-front.md`: why Nginx ***stands*** in ***front***, and what it does in ***place*** of the ***service***
+- `docs/adr/0009-seed-with-dbup.md`: why the ***places*** ***arrive*** as SQL ***scripts*** that DbUp ***runs*** ***once***
 - `docs/changes/`: what ***each*** ***day***'s ***work*** ***changed*** and why, ***newest*** ***last***
 
 The phase-0 ***build*** and its ***documents*** ***stay*** in the ***archived*** phase-0 repository, whose ***last*** ***commit*** is `ecb21fb`.

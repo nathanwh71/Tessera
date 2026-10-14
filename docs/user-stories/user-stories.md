@@ -10,7 +10,7 @@ The ***stories*** ***name*** **the area**, the ***place*** the tiles ***cover***
 
 On 12 ***October*** 2026 Phase Oct ***narrowed*** to the tile API. The ***map*** and its ***stories***, US-23 and every UI ***story***, ***left***, and so did US-05, the ***list*** of ***layers*** a ***client*** would ***load***. US-00, US-24 and US-35 ***lost*** the criteria that ***served*** them. ***Later*** that ***night*** SQL injection and malformed URLs ***became*** ***stories*** of their ***own***, S-01 and S-06, and US-07 ***handed*** them its criteria. After ***midnight*** on 13 ***October*** the ***map*** ***came*** ***back***: US-23 and ***seven*** UI ***stories*** ***returned*** as they ***stood*** before the ***cut***, and US-23 ***now*** ***names*** the ***nine*** ***layers*** in its own ***code***. On 14 ***October*** 2026 ***three*** ***stories*** ***joined*** as Part C, N-18 to N-20: a browser ***keeps*** a tile, a ***kept*** tile ***costs*** no query, and tiles ***travel*** packed. ***Later*** that ***morning*** ***five*** more ***joined*** as Part D, N-21 to N-25, each ***bringing*** ***one*** ***behaviour*** of the Java ***build*** ***across*** before it was ***archived***.
 
-On 14 ***October*** 2026, in the ***change*** that ***halved*** the ***code***, Nginx ***came*** to ***stand*** in ***front*** of the ***service*** (ADR 0008). That ***ends*** the ***first*** ***decision*** of 11 ***October***: a proxy ***now*** ***stands*** ***between*** the ***office*** and the ***service***. Nginx ***keeps***, ***packs*** and ***guards***, so N-18 to N-20, N-23, N-24, N-28, S-06 and US-35 ***carry*** a ***note*** of what ***changed***, and N-21's ***settings*** ***took*** ***one*** ***form*** for ***each*** ***unit*** (ADR 0003).
+On 14 ***October*** 2026, in the ***change*** that ***halved*** the ***code***, Nginx ***came*** to ***stand*** in ***front*** of the ***service*** (ADR 0008). That ***ends*** the ***first*** ***decision*** of 11 ***October***: a proxy ***now*** ***stands*** ***between*** the ***office*** and the ***service***. Nginx ***keeps***, ***packs*** and ***guards***, so N-18 to N-20, N-23, N-24, N-28, S-06 and US-35 ***carry*** a ***note*** of what ***changed***, and N-21's ***settings*** ***took*** ***one*** ***form*** for ***each*** ***unit*** (ADR 0003). That ***evening*** the ***import*** ***gave*** ***way*** to SQL ***scripts*** that DbUp ***runs*** ***once*** ***each***, and US-01 and US-24 ***changed*** to ***match*** (ADR 0009).
 
 ## INVEST in plain words
 
@@ -103,20 +103,22 @@ The ***service*** ***builds*** from the database up: the database, then the ***l
 | Builds on | US-00: the codebase and its ***tests*** |
 | Traces | F-01, in ***part***: the database that ***publishing*** ***rests*** on |
 
-**In plain words.** Every ***layer*** ***lives*** in a database, and the ***service*** and its ***tests*** should ***meet*** the same ***one***. This ***story*** ***packages*** ***one*** spatial database, with the ***service***'s own ***sign***-in, and the ***places*** of the ***area*** as ***reference*** ***data***: for Macau, `data/macau-pois.geojson` from the GitHub repository `nathanwh71/JTessera`. US-24's ***import*** ***later*** ***loads*** them into the database. The ***service*** ***signs*** in as a **role**, a database ***user***, and ***sees*** only the ***tables*** ***granted*** to that ***role*** (US-03).
+**Changed on 14 October 2026.** The ***package*** ***carries*** the ***places*** as a SQL ***script***, ***made*** from the GeoJSON ***file***, ***rather*** than the ***file*** ***itself*** (ADR 0009).
+
+**In plain words.** Every ***layer*** ***lives*** in a ***database***, and the ***service*** and its ***tests*** should ***meet*** the ***same*** ***one***. This ***story*** ***packages*** ***one*** spatial ***database***, with the ***service***'s ***own*** sign-in, and the ***places*** of the ***area*** as ***reference*** ***data***: for Macau, the ***seed*** ***script*** ***made*** from `data/macau-pois.geojson` in the GitHub repository `nathanwh71/JTessera`. US-24's ***seed*** ***later*** ***loads*** them into the ***database***. The ***service*** ***signs*** in as a **role**, a ***database*** ***user***, and ***sees*** ***only*** the ***tables*** ***granted*** to that ***role*** (US-03).
 
 > **Story.** **As** the maintainer, **I want** ***one*** ***packaged*** spatial database with the ***service***'s ***role*** and the ***reference*** ***data***, **so that** the ***service*** and its ***tests*** ***meet*** the same database and the same ***places***.
 
 **Acceptance criteria**
 
 1. **Given** the ***packaged*** database, **when** it ***starts***, **then** the ***role*** ***script*** has ***made*** the ***service***'s ***role***.
-2. **Given** the ***package***, **then** it ***carries*** the ***seed***, `data/macau-pois.geojson`, as `nathanwh71/JTessera` ***holds*** it, ***ready*** for US-24's ***import***.
+2. **Given** the ***package***, **then** it ***carries*** the ***seed*** ***script***, `db/seed/0001-macau-places.sql`, ***made*** from `data/macau-pois.geojson` as `nathanwh71/JTessera` ***holds*** it, ***ready*** for US-24's ***seed***.
 3. **Given** the integration ***tests***, **when** they ***run***, **then** they ***start*** the same ***packaged*** database, ***run*** the same ***role*** ***script*** and ***read*** the same ***seed***.
 
 **Tests to write first**
 
 1. **The role, from the script you ship.** The ***tests*** ***make*** the ***role*** by ***running*** the ***shipped*** ***role*** ***script***, then ***sign*** in as it.
-2. **The seed, as the repository holds it.** The ***package***'s `data/macau-pois.geojson` ***matches*** the ***copy*** in `nathanwh71/JTessera` byte for byte: 900 ***points*** in longitude and latitude, 100 for each of the ***nine*** ***layers***.
+2. **The seed, as the repository holds it.** `data/macau-pois.geojson` ***matches*** the ***copy*** in `nathanwh71/JTessera` ***byte*** for ***byte***, and the ***package*** ***carries*** the ***script*** ***made*** from it: 900 ***points*** in longitude and latitude, 100 for ***each*** of the ***nine*** ***layers***.
 
 **Open to talk**
 
@@ -171,8 +173,10 @@ The ***service*** ***builds*** from the database up: the database, then the ***l
 | | |
 |---|---|
 | Size | 2 ***points*** |
-| Builds on | US-03: ***publishing*** by ***grant***; US-01: the ***seed*** to ***import*** |
+| Builds on | US-03: ***publishing*** by ***grant***; US-01: the ***seed*** to ***load*** |
 | Traces | F-01 |
+
+**Changed on 14 October 2026.** The ***import***, which ***read*** ***one*** GeoJSON ***file*** in C# and ***checked*** it, ***gave*** ***way*** to SQL ***scripts*** that DbUp ***runs*** ***once*** ***each*** (ADR 0009). The ***checks*** of the ***box***, the ***layer*** and the ***shape*** have ***gone***, and GDAL reprojects a ***file*** in another ***system*** ***rather*** than ***refusing*** it. The ***criteria*** and ***tests*** ***below*** are ***new***.
 
 **In plain words.** Tessera ***serves*** the ***places*** of the ***area*** in ***nine*** ***layers***, ***gathered*** in ***four*** ***groups***:
 
@@ -183,40 +187,39 @@ The ***service*** ***builds*** from the database up: the database, then the ***l
 | ***Culture*** | `culture` | `museums`, `libraries` |
 | ***Transport*** | `transport` | `trains`, `buses` |
 
-The ***places*** ***arrive*** as ***one*** **GeoJSON** ***file***, the ***seed*** US-01 ***packages***; for Macau, `data/macau-pois.geojson` from `nathanwh71/JTessera`: a JSON ***file*** of ***points***, each with its ***properties***. Its ***positions*** are longitude and latitude in **WGS 84**, in ***degrees***, as RFC 7946 ***sets*** for every GeoJSON ***file***. The ***tables*** ***store*** each ***point*** as it ***arrives***, in ***degrees*** (SRID 4326). The tiles ***use*** **Web Mercator** (EPSG:3857), which ***measures*** in ***metres*** ***east*** and ***north***: a vector tile ***stores*** each ***point*** as a ***position*** ***inside*** a Web Mercator ***square***, so the tile query ***converts*** the ***places*** it ***returns*** (US-07). No ***client*** ***sees*** that ***conversion***; it ***turns*** the tile ***back*** into longitude and latitude on its ***own***. Each ***group*** ***becomes*** a **schema**, a ***named*** folder of ***tables***, and each ***layer*** a ***table*** in it, so the ***layer*** `food.cafes` ***carries*** its ***group*** in its ***name***. You ***publish*** the ***tables*** by a **grant**, the database's ***word*** for a ***permission***. A ***library*** ***buys*** a ***book*** (the ***import***), but the ***book*** ***reaches*** the ***open*** ***shelf*** only when the librarian ***says*** so (the ***grant***).
+The ***places*** ***arrive*** as ***files*** the ***data*** ***publisher*** ***owns***, ***each*** with ***columns*** of its ***own***; for Macau, `data/macau-pois.geojson` from `nathanwh71/JTessera`, a **GeoJSON** ***file*** of ***points*** with their ***properties***. GDAL's `ogr2ogr` ***turns*** ***each*** ***file*** into a SQL ***script***, and DbUp ***runs*** ***each*** ***script*** ***once*** (ADR 0009). The ***tables*** ***store*** ***each*** ***shape*** in longitude and latitude in **WGS 84** (SRID 4326), ***whatever*** ***system*** the ***file*** ***uses***. The ***tiles*** ***use*** **Web Mercator** (EPSG:3857), which ***measures*** in ***metres*** ***east*** and ***north***: a vector ***tile*** ***stores*** ***each*** ***point*** as a ***position*** ***inside*** a Web Mercator ***square***, so the ***tile*** ***query*** ***converts*** the ***places*** it ***returns*** (US-07). No ***client*** ***sees*** that ***conversion***; it ***turns*** the ***tile*** ***back*** into longitude and latitude on its ***own***. ***Each*** ***group*** ***becomes*** a **schema**, a ***named*** ***folder*** of ***tables***, and ***each*** ***layer*** a ***table*** in it, so the ***layer*** `food.cafes` ***carries*** its ***group*** in its ***name***. You ***publish*** the ***tables*** by a **grant**, the ***database***'s ***word*** for a ***permission***. A ***library*** ***buys*** a ***book*** (the ***seed***), but the ***book*** ***reaches*** the ***open*** ***shelf*** ***only*** when the librarian ***says*** so (the ***grant***).
 
-> **Story.** **As** a ***data*** publisher, **I want** my GeoJSON ***file*** of ***places***, in longitude and latitude, ***loaded*** into ***nine*** ***tables*** of ***points***, ***one*** for each ***layer***, and ***published*** by ***grant***, **so that** ***office*** ***machines*** can ***load*** the ***places*** as tiles, ***layer*** by ***layer***.
+> **Story.** **As** a ***data*** ***publisher***, **I want** ***each*** ***file*** of ***places*** I ***own*** ***turned*** into a SQL ***script***, ***each*** ***new*** ***script*** ***loaded*** ***once***, and the ***tables*** ***published*** by ***grant***, **so that** ***office*** ***machines*** can ***load*** the ***places*** as ***tiles***, ***layer*** by ***layer***.
 
 **Acceptance criteria**
 
-1. **Given** the GeoJSON ***file***, **when** the ***import*** ***runs***, **then** each of the ***nine*** ***tables*** ***holds*** ***one*** ***row*** for each ***feature*** whose `layer` ***names*** it. Each ***table*** has a ***point*** geometry ***typed*** in WGS 84 (SRID 4326), `id` as its ***primary*** ***key***, ***one*** ***column*** for each other ***property***, a spatial index and ***fresh*** ***statistics***.
-2. **Given** a ***file*** whose `crs` ***member*** ***names*** a coordinate ***system*** other than WGS 84, such as EPSG:3857, **then** the ***import*** ***refuses*** it. RFC 7946 ***takes*** every GeoJSON ***file*** to be in longitude and latitude, so the ***import*** ***reads*** ***degrees*** ***alone***.
-3. **Given** a ***feature*** that is not a ***point***, whose `layer` ***names*** ***none*** of the ***nine***, or whose `group` differs from its ***layer***'s ***group***, **then** the ***import*** ***refuses*** the ***file*** and ***names*** the ***feature*** by its `id` and its ***place*** in the ***file***.
-4. **Given** a ***position*** ***outside*** the ***area***'s ***box***, which for Macau ***runs*** from longitude 113.52 to 113.61 and latitude 22.10 to 22.22, **then** the ***import*** ***refuses*** the ***file*** and ***names*** the ***feature***. The ***check*** ***catches*** a ***file*** whose longitude and latitude are swapped, and a ***file*** in ***metres***.
-5. **Given** no ***grant***, **then** no ***table*** is ***published***; after the ***grant*** of each schema and each ***table***, all ***nine*** are.
-6. **Given** a newer ***file***, **when** the ***import*** ***runs*** ***again***, **then** it ***replaces*** the ***rows*** of all ***nine*** ***tables*** in ***one*** transaction, so no tile ***ever*** ***carries*** ***half*** a ***file***.
+1. **Given** a ***file*** of ***places*** and a ***list*** of ***tables***, ***each*** with an ***optional*** filter, **when** `npm run convert` ***runs***, **then** it ***writes*** ***one*** SQL ***script*** that ***makes*** ***each*** ***table***, with a ***numbered*** `fid` as its ***primary*** ***key***, ***one*** ***column*** for ***each*** ***property***, a spatial index and ***fresh*** ***statistics***.
+2. **Given** a ***file*** in another coordinate ***system***, such as EPSG:3857, **then** the ***script*** ***stores*** its ***shapes*** in longitude and latitude, SRID 4326.
+3. **Given** a ***script*** ***name*** ***already*** ***used***, or a filter that ***picks*** no ***rows***, **then** the converter ***refuses***, and ***names*** the ***fault***.
+4. **Given** the ***scripts*** in `db/seed`, **when** `Tessera seed` ***runs***, **then** it ***runs*** ***each*** ***script*** it has not ***run*** ***before***, ***once***, in the ***order*** of their ***names***, and ***records*** it; ***run*** ***again***, it ***runs*** ***nothing***.
+5. **Given** no ***grant***, **then** no ***table*** is ***published***; ***after*** the ***grant*** of ***each*** schema and ***each*** ***table***, all ***nine*** are.
+6. **Given** a ***script*** that ***fails***, **then** the ***database*** ***keeps*** what it ***held*** ***before***, and the ***script*** ***runs*** ***again*** ***once*** ***fixed***. A ***script*** that ***replaces*** ***tables*** ***replaces*** them in ***one*** ***transaction***, so no ***tile*** ***ever*** ***carries*** ***half*** a ***script***.
 
 **Tests to write first**
 
-1. **Nine typed tables from a small sample.** ***Loading*** a ***sample*** ***file*** with ***two*** ***features*** for each ***layer*** ***gives*** the ***nine*** ***tables*** in their ***four*** schemas, each with ***point*** geometry in SRID 4326, ***one*** spatial index and ***fresh*** ***statistics***.
-2. **Degrees stay degrees.** A ***feature*** at `[113.54, 22.19]` is ***stored*** at longitude 113.54 and latitude 22.19, ***unchanged***.
-3. **Another projection is refused.** The ***sample*** with a `crs` ***member*** ***naming*** EPSG:3857 ***fails*** the ***import***, and the ***message*** ***asks*** for longitude and latitude in WGS 84.
-4. **Swapped or projected numbers are refused.** A ***feature*** at `[22.19, 113.54]`, latitude and longitude swapped, and ***one*** at `[12639215, 2534352]`, ***metres*** in ***place*** of ***degrees***, each ***fail*** the ***import***, and the ***message*** ***names*** them; the same ***feature*** at `[113.54, 22.19]` ***passes***.
-5. **Publish by grant, and only then.** With no ***grant***, the catalogue ***lists*** no ***layer*** from the ***four*** schemas; after the ***grant***, all ***nine*** ***appear***.
-6. **A new file replaces the old whole.** A ***second***, smaller ***sample*** ***leaves*** its own ***rows*** in all ***nine*** ***tables*** and ***none*** of the ***first***.
+1. **Nine tables from the shipped script.** `Tessera seed` on a ***fresh*** ***database*** ***gives*** the ***nine*** ***tables*** in their ***four*** schemas, 100 ***rows*** in ***each***, ***each*** with a spatial index; the journal ***records*** `0001-macau-places.sql`, and a ***second*** ***run*** ***runs*** ***nothing***.
+2. **Publish by grant, and only then.** With no ***grant***, the catalogue ***lists*** no ***layer*** from the ***four*** schemas; ***after*** the ***grant***, all ***nine*** ***appear***, in SRID 4326, in the ***order*** of `fid`.
+3. **A failed script changes nothing.** A ***script*** that ***drops*** a ***table***, then ***fails***, ***leaves*** the ***table*** ***whole***, and ***stays*** out of the journal.
+4. **A replaced table waits for its grant.** A ***new*** ***script*** that ***replaces*** a ***granted*** ***table*** ***leaves*** it unpublished until the ***next*** ***grant***.
+5. **The converter's own rules.** ***Unit*** ***tests*** of `scripts/lib/convert.ts`: INSERT ***statements***, a ***numbered*** ***key***, EPSG:4326, GDAL's ***own*** ***transaction*** ***taken*** out, and an ***empty*** ***table*** ***refused***.
 
 **Open to talk**
 
-- Which ***properties*** each ***place*** ***carries***. The tiles ***carry*** them all (US-07). ***Places*** ***carry*** no ***rank***.
-- The ***edges*** of the ***area***'s ***box***.
+- Which ***properties*** ***each*** ***place*** ***carries***. The ***tiles*** ***carry*** them all (US-07), `fid` ***among*** them. ***Places*** ***carry*** no ***rank***.
+- ***Whether*** the converter should ***check*** ***positions*** ***against*** the ***area***'s ***box***, as the ***import*** did.
 
 **Critical to success**
 
-- **A grant is a publication.** The ***import*** ***creates*** the ***tables***; the ***data*** publisher ***alone*** ***publishes*** them.
-- **Degrees in, degrees stored.** The ***file*** ***follows*** RFC 7946, so any GeoJSON ***tool*** ***reads*** it ***correctly***; the ***import*** ***checks*** the ***box*** in ***degrees*** and ***stores*** each ***point*** as it ***arrives***.
-- **The tile format converts, not the table.** A vector tile can ***hold*** ***positions*** only ***inside*** its Web Mercator ***square***, so the ***conversion*** ***belongs*** to the tile ***format*** (US-07). Each tile query ***finds*** its ***places*** by the tile's ***box***, ***converted*** to ***degrees***, so the spatial index ***applies***.
+- **A grant is a publication.** The ***seed*** ***creates*** the ***tables***; the ***data*** ***publisher*** ***alone*** ***publishes*** them.
+- **A script is the record.** A ***committed*** ***script*** ***never*** ***changes***; ***new*** ***data*** ***goes*** in a ***new*** ***script***, so the journal and the repository agree.
+- **The tile format converts, not the table.** A vector ***tile*** can ***hold*** ***positions*** ***only*** ***inside*** its Web Mercator ***square***, so the ***conversion*** ***belongs*** to the ***tile*** ***format*** (US-07). ***Each*** ***tile*** ***query*** ***finds*** its ***places*** by the ***tile***'s ***box***, ***converted*** to ***degrees***, so the spatial index ***applies***.
 - **The schema is the group.** A ***layer***'s id, such as `food.cafes`, ***names*** its ***group***, so a ***client*** ***knows*** a ***layer***'s ***group*** from its ***name*** ***alone***.
-- **Typed, indexed, analysed.** An untyped ***column*** is not ***published*** (US-03), and without an index and ***fresh*** ***statistics*** every tile ***reads*** the ***whole*** ***table***.
+- **Typed, indexed, analysed.** An untyped ***column*** is not ***published*** (US-03), and ***without*** an index and ***fresh*** ***statistics*** every ***tile*** ***reads*** the ***whole*** ***table***.
 
 ### Step 5 · US-07 Serve a tile
 

@@ -6,7 +6,7 @@
 | Date | 13 ***October*** 2026 |
 | Decider | The maintainer |
 | Covers | Every ***script*** that ***builds***, ***tests***, ***starts*** or ***deploys*** Tessera, in `nathanwh71/Tessera` |
-| Related | ADR 0001, whose ***start***-up ***script*** ***runs*** `import` when the ***nine*** ***tables*** are ***empty*** |
+| Related | ADR 0001, whose start-up ***script*** ***once*** ***ran*** `import` when the ***nine*** ***tables*** were ***empty***; ***since*** ADR 0009 it ***runs*** `seed` at every ***start*** |
 
 ## Decision
 
