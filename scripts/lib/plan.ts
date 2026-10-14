@@ -2,14 +2,6 @@
 // returns a value, so node --test can check it without Docker, a database or a shell.
 import { err, ok, type Result } from '../../web/src/shared/result.ts';
 
-/** The nine layers' tables, as schema.table: the ids the stories use (US-24). */
-export const placeTables: readonly string[] = [
-  'food.cafes', 'food.restaurants', 'food.markets',
-  'outdoors.parks', 'outdoors.playgrounds',
-  'culture.museums', 'culture.libraries',
-  'transport.trains', 'transport.buses',
-];
-
 /** The settings the start-up script needs, all from the environment (US-00 c4). */
 export type StartSettings = {
   readonly ownerPassword: string;
@@ -104,42 +96,3 @@ export function nginxArguments(container: string, httpPort: string, servicePort:
 
 /** The Nginx image both the start-up script and the browser tests run. */
 export const nginxImage = 'nginx:1.29-alpine';
-
-/** What to do with the places: load them, leave them, or stop because the tables disagree. */
-export type ImportDecision =
-  | { readonly kind: 'import' }
-  | { readonly kind: 'skip' }
-  | { readonly kind: 'refuse'; readonly reason: string };
-
-/**
- * The start-up script imports only when the nine tables are empty: missing, or holding no rows
- * (ADR 0001). A count of -1 marks a missing table. Some full and some empty means a load went
- * wrong, and loading again by itself would hide it, so the script stops and says so.
- */
-export function decideImport(rowsInTable: ReadonlyMap<string, number>): ImportDecision {
-  const counts = placeTables.map(table => rowsInTable.get(table) ?? -1);
-  const empty = counts.filter(count => count <= 0).length;
-  return empty === placeTables.length ? { kind: 'import' }
-    : empty === 0 ? { kind: 'skip' }
-    : { kind: 'refuse', reason: `${empty} of the nine tables are empty and the rest are not; run the import by hand to replace them all.` };
-}
-
-/** Reads psql's "table|count" lines into a map; psql prints one line for each table. */
-export function parseCounts(output: string): ReadonlyMap<string, number> {
-  return new Map(output
-    .split('\n')
-    .map(line => line.trim().split('|'))
-    .filter((parts): parts is [string, string] => parts.length === 2 && parts[0] !== '')
-    .map(([table, count]) => [table, Number.parseInt(count, 10)] as const));
-}
-
-/**
- * The SQL that counts each table's rows, or gives -1 for a table that does not exist yet.
- * query_to_xml runs a query whose text is built at run time, and xpath reads the count out of it.
- */
-export function countQuery(): string {
-  const rows = placeTables.map(table =>
-    `SELECT '${table}', CASE WHEN to_regclass('${table}') IS NULL THEN -1 ELSE ` +
-    `(xpath('/row/c/text()', query_to_xml('SELECT count(*) AS c FROM ${table}', false, true, '')))[1]::text::int END`);
-  return rows.join(' UNION ALL ');
-}

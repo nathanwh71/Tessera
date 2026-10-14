@@ -4,14 +4,14 @@ using Microsoft.AspNetCore.Builder;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO.VectorTiles.Mapbox;
 using Tessera.Catalogue;
-using Tessera.Import;
+using Tessera.Seeding;
 using Tessera.Settings;
 using Tessera.Sql;
 
 namespace Tessera.IntegrationTests;
 
 /// <summary>
-/// The whole service over real HTTP: the seed imported and granted, the catalogue loaded, the
+/// The whole service over real HTTP: the seed loaded and granted, the catalogue loaded, the
 /// service listening on a port of its own (US-00, US-07, S-01, S-06, US-23 c5).
 /// </summary>
 public sealed class ServiceFixture : IAsyncLifetime
@@ -27,10 +27,7 @@ public sealed class ServiceFixture : IAsyncLifetime
     public async ValueTask InitializeAsync()
     {
         await Database.InitializeAsync();
-        var box = new AreaSettings();
-        var seed = await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "data", "macau-pois.geojson"));
-        await using (var publisher = Sql.Database.Open(Database.Publisher))
-            (await Importer.Run(publisher, seed, box)).Match(_ => 0, error => throw new InvalidOperationException(error.Message));
+        SeedScripts.Run(Database.Publisher, SeedScripts.Folder).Match(_ => 0, error => throw new InvalidOperationException(error));
         await Database.GrantPlaces();
 
         // The same cafés in Web Mercator, for US-07 c3: a layer in each coordinate system.

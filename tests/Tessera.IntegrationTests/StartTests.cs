@@ -101,9 +101,9 @@ public sealed class StartTests
     }
 
     [Fact]
-    public async Task Refuses_to_import_and_names_the_publishers_variable()
+    public async Task Refuses_to_seed_and_names_the_publishers_variable()
     {
-        var (code, errors) = await Run("import", "data/macau-pois.geojson");
+        var (code, errors) = await Run("seed");
 
         Assert.Equal(1, code);
         Assert.Contains("TESSERA_PUBLISHER_DATABASE_URL", errors, StringComparison.Ordinal);

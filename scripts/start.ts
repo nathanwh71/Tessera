@@ -1,12 +1,12 @@
-// Starts Tessera on one machine: the database in Docker, the places loaded once, the service, and
-// Nginx in front of it (ADR 0008).
+// Starts Tessera on one machine: the database in Docker, any new seed scripts, the service, and
+// Nginx in front of it (ADR 0008, ADR 0009).
 //
 //   npm start
 //
 // Settings come from the environment, or from a file named .env beside package.json:
 //   TESSERA_DB_PASSWORD          the database owner's password, for this script alone
 //   TESSERA_READER_PASSWORD      tessera_reader's password, which the service signs in with
-//   TESSERA_PUBLISHER_PASSWORD   tessera_publisher's password, which the import signs in with
+//   TESSERA_PUBLISHER_PASSWORD   tessera_publisher's password, which the seed signs in with
 //   TESSERA_HTTPPORT             the port Nginx answers the office on: 80 in the office (US-35)
 //   TESSERA_SERVICE_PORT         optional; the port the service answers Nginx on, 7800 by default
 //   TESSERA_DB_HOST              optional; where the service finds the database, 127.0.0.1 by default
@@ -17,7 +17,7 @@
 import { resolve } from 'node:path';
 import { $ } from 'zx';
 import { waitForDatabase, waitForHealth } from './lib/database.ts';
-import { countQuery, databaseUrl, decideImport, nginxArguments, parseCounts, readStartSettings, runArguments } from './lib/plan.ts';
+import { databaseUrl, nginxArguments, readStartSettings, runArguments } from './lib/plan.ts';
 
 const container = 'tessera-db';
 const volume = 'tessera-data';
@@ -52,18 +52,8 @@ if (notReady !== undefined) {
   process.exit(1);
 }
 
-const counts = parseCounts((await $`docker exec ${container} psql --username postgres --dbname ${settings.database.name} --tuples-only --no-align --command ${countQuery()}`).stdout);
-const decision = decideImport(counts);
-if (decision.kind === 'refuse') {
-  console.error(decision.reason);
-  process.exit(1);
-}
-if (decision.kind === 'import') {
-  console.log('The nine tables are empty: importing the places.');
-  // dotnet run starts the program in the project's own folder, so the seed's path must be whole.
-  await $({ env: { ...process.env, TESSERA_PUBLISHER_DATABASE_URL: databaseUrl('tessera_publisher', settings.publisherPassword, settings.database) } })`dotnet run --project src/Tessera --configuration Release -- import ${resolve('data/macau-pois.geojson')}`;
-  console.log('Imported. The service shows the places once the publisher grants them: npm run publish.');
-}
+// DbUp runs each seed script it has not run before, and none twice, so this runs at every start.
+await $({ env: { ...process.env, TESSERA_PUBLISHER_DATABASE_URL: databaseUrl('tessera_publisher', settings.publisherPassword, settings.database) } })`dotnet run --project src/Tessera --configuration Release -- seed`;
 
 console.log(`Starting the service on port ${settings.servicePort}, behind Nginx on port ${settings.httpPort}.`);
 const service = $({ env: { ...process.env, DATABASE_URL: databaseUrl('tessera_reader', settings.readerPassword, settings.database), Urls: `http://127.0.0.1:${settings.servicePort}` }, stdio: 'inherit' })`dotnet run --project src/Tessera --configuration Release`;

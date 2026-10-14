@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Npgsql;
 
-// The Settings module: every setting the service and the import read, with its default and its
+// The Settings module: every setting the service and the seed read, with its default and its
 // limits (US-00, ADR 0003). ASP.NET Core reads tessera.json and the environment, fills these records
 // in, and checks them all when the program starts.
 
@@ -112,10 +112,6 @@ public sealed record AreaSettings : IValidatableObject
     [Range(0, 22)]
     public double HomeLevel { get; init; } = 15;
 
-    /// <summary>True when a point lies inside the box, edges included; the import refuses any other.</summary>
-    public bool Contains(double longitude, double latitude) =>
-        longitude >= MinLongitude && longitude <= MaxLongitude && latitude >= MinLatitude && latitude <= MaxLatitude;
-
     public IEnumerable<ValidationResult> Validate(ValidationContext context) =>
         MinLongitude < MaxLongitude && MinLatitude < MaxLatitude ? [] : [new ValidationResult("The box must run west to east and south to north.")];
 }
@@ -144,7 +140,7 @@ public static class TesseraSettings
     /// <summary>The database URL the service reads tiles with; pg_tileserv uses the same name.</summary>
     public const string ReaderDatabase = "DATABASE_URL";
 
-    /// <summary>The database URL the import writes places with.</summary>
+    /// <summary>The database URL the seed writes places with.</summary>
     public const string PublisherDatabase = "TESSERA_PUBLISHER_DATABASE_URL";
 
     // The sections tessera.json may hold. Urls and Logging are ASP.NET Core's own.

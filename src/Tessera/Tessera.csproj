@@ -8,6 +8,7 @@
     <PackageReference Include="Npgsql" />
     <PackageReference Include="Dapper" />
     <PackageReference Include="CSharpFunctionalExtensions" />
+    <PackageReference Include="dbup-postgresql" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Tessera.UnitTests" />
@@ -18,7 +19,7 @@
     <None Include="../../tessera.json" Link="tessera.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <!-- The built map ships inside the release (US-23 c4). `npm run build` makes web/dist first. -->
     <Content Include="../../web/dist/**" Link="wwwroot/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <!-- The seed ships with the release, ready for the import (US-01 c2). -->
-    <None Include="../../data/macau-pois.geojson" Link="data/macau-pois.geojson" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- The seed scripts ship with the release, ready for 'Tessera seed' (US-01 c2, ADR 0009). -->
+    <None Include="../../db/seed/*.sql" Link="seed/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

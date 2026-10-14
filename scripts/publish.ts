@@ -1,5 +1,5 @@
 // Publishes the places: grants the four schemas and their nine tables to the service's role, as
-// tessera_publisher (US-24 c5). The import never grants; publishing is the publisher's own act.
+// tessera_publisher (US-24 c5). The seed never grants; publishing is the publisher's own act.
 //
 //   npm run publish
 //

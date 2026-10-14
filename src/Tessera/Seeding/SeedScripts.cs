@@ -1,0 +1,62 @@
+using CSharpFunctionalExtensions;
+using DbUp;
+using Npgsql;
+using Tessera.Sql;
+
+namespace Tessera.Seeding;
+
+/// <summary>
+/// Loads the places with DbUp: it runs each new SQL script in the seed folder once, in the order of
+/// the scripts' names, and records each one in a journal table, so it never runs twice (ADR 0009).
+/// The command <c>Tessera seed</c> runs it, signed in as tessera_publisher (US-24).
+/// </summary>
+/// <remarks>
+/// <c>npm run convert</c> writes the scripts from the places' own files. A script that replaces a
+/// table drops it first, and its grants go with it, so the new table waits for the publisher's
+/// grant, as every table does (US-24 c5).
+/// </remarks>
+public static class SeedScripts
+{
+    /// <summary>Where DbUp records each script it has run: tessera.schemaversions.</summary>
+    public const string JournalSchema = "tessera";
+
+    public const string JournalTable = "schemaversions";
+
+    /// <summary>The scripts the release carries, beside the program.</summary>
+    public static string Folder => Path.Combine(AppContext.BaseDirectory, "seed");
+
+    /// <summary>
+    /// Runs each script DbUp has not run before, each in a transaction of its own: a script takes
+    /// effect whole, or not at all, and its record in the journal goes with it. Returns the names
+    /// of the scripts it ran, or the name of the script that failed, and why.
+    /// </summary>
+    public static Result<IReadOnlyList<string>, string> Run(string connection, string folder)
+    {
+        // DbUp makes its journal table but not the schema that holds it.
+        try
+        {
+            using var session = new NpgsqlConnection(connection);
+            session.Open();
+            using var command = new NpgsqlCommand(Queries.JournalSchema(Queries.Quote(JournalSchema)).Text, session);
+            command.ExecuteNonQuery();
+        }
+        catch (NpgsqlException error)
+        {
+            return Result.Failure<IReadOnlyList<string>, string>($"The database refused the seed: {error.Message}");
+        }
+
+        var upgrade = DeployChanges.To.PostgresqlDatabase(connection)
+            .WithScriptsFromFileSystem(folder)
+            .WithTransactionPerScript()
+            // DbUp would otherwise read $name$ in a script as a value to fill in, and could change a place's text.
+            .WithVariablesDisabled()
+            .JournalToPostgresqlTable(JournalSchema, JournalTable)
+            // The program prints its own short report, so DbUp's step-by-step log goes nowhere.
+            .LogToNowhere()
+            .Build();
+        var result = upgrade.PerformUpgrade();
+        return result.Successful
+            ? Result.Success<IReadOnlyList<string>, string>([.. result.Scripts.Select(script => script.Name)])
+            : Result.Failure<IReadOnlyList<string>, string>($"{result.ErrorScript?.Name ?? "The seed"} failed: {result.Error.Message}");
+    }
+}

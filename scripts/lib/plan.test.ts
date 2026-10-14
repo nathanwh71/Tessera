@@ -1,28 +1,7 @@
 // Tests of the scripts' pure decisions; node --test runs them, with no Docker and no database.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { databaseUrl, decideImport, nginxArguments, parseCounts, placeTables, readDatabasePlace, readStartSettings } from './plan.ts';
-
-test('imports when all nine tables are missing', () => {
-  assert.deepEqual(decideImport(new Map()), { kind: 'import' });
-});
-
-test('imports when all nine tables are empty', () => {
-  assert.deepEqual(decideImport(new Map(placeTables.map(table => [table, 0]))), { kind: 'import' });
-});
-
-test('leaves the places alone when all nine tables hold rows', () => {
-  assert.deepEqual(decideImport(new Map(placeTables.map(table => [table, 100]))), { kind: 'skip' });
-});
-
-test('stops when some tables are full and some are empty', () => {
-  const counts = new Map(placeTables.map((table, index) => [table, index === 0 ? 0 : 100]));
-  assert.equal(decideImport(counts).kind, 'refuse');
-});
-
-test('reads psql output into counts', () => {
-  assert.deepEqual(parseCounts('food.cafes|100\nfood.markets|-1\n'), new Map([['food.cafes', 100], ['food.markets', -1]]));
-});
+import { databaseUrl, nginxArguments, readDatabasePlace, readStartSettings } from './plan.ts';
 
 test('names every missing variable at once', () => {
   const result = readStartSettings({});

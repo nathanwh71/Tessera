@@ -1,5 +1,3 @@
-using System.Collections.Immutable;
-using Dapper;
 using Tessera.Catalogue;
 using Tessera.Settings;
 using Tessera.Tiles;
@@ -86,52 +84,6 @@ public static class Queries
                 margin = (double)limits.Buffer / limits.Resolution, srid = layer.Srid, limit = limits.MaxFeatures,
             });
 
-    // The import's queries (US-24). Each that makes something says IF NOT EXISTS, so the import may
-    // run again on a database it has filled before. 'table' is the quoted "schema"."name".
-
-    public static Query CreateSchema(string schema) => new($"CREATE SCHEMA IF NOT EXISTS {schema}");
-
-    /// <summary>A layer's table: the id, its primary key, and a point in longitude and latitude (SRID 4326).</summary>
-    public static Query CreateTable(string table) =>
-        new($"CREATE TABLE IF NOT EXISTS {table} (\"id\" text PRIMARY KEY, \"geom\" geometry(Point, 4326) NOT NULL)");
-
-    public static Query AddColumn(string table, string column, string type) =>
-        new($"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {type}");
-
-    /// <summary>
-    /// A new type for a column whose values changed kind between two files. The import runs it after
-    /// it empties the table, so no old value, such as the word 'closed', has to become a number.
-    /// </summary>
-    public static Query ChangeColumnType(string table, string column, string type) =>
-        new($"ALTER TABLE {table} ALTER COLUMN {column} TYPE {type} USING {column}::text::{type}");
-
-    /// <summary>Removes a column the new file no longer carries, so no tile carries a column of nothing.</summary>
-    public static Query DropColumn(string table, string column) => new($"ALTER TABLE {table} DROP COLUMN IF EXISTS {column}");
-
-    /// <summary>A spatial index sorts shapes by where they lie, so a tile finds its places without reading the table (US-24 c1).</summary>
-    public static Query CreateIndex(string table, string index) => new($"CREATE INDEX IF NOT EXISTS {index} ON {table} USING GIST (\"geom\")");
-
-    /// <summary>
-    /// Empties the table with DELETE, inside the import's transaction, so readers see the old rows
-    /// until the new ones are in (US-24 c6). TRUNCATE would lock out every reader until the end.
-    /// </summary>
-    public static Query Empty(string table) => new($"DELETE FROM {table}");
-
-    /// <summary>One row; the id, the position and each value travel as parameters, in the columns' order.</summary>
-    public static Query Insert(string table, ImmutableArray<string> columns, string id, double longitude, double latitude, ImmutableArray<object?> values)
-    {
-        var parameters = new DynamicParameters(new { id, longitude, latitude });
-        for (var index = 0; index < values.Length; index++)
-            parameters.Add($"p{index}", values[index]);
-        return new(
-            $"INSERT INTO {table} (\"id\", \"geom\"{string.Concat(columns.Select(name => $", {name}"))}) VALUES (@id, ST_SetSRID(ST_MakePoint(@longitude, @latitude), 4326){string.Concat(columns.Select((_, index) => $", @p{index}"))})",
-            parameters);
-    }
-
-    /// <summary>Fresh statistics, which the database reads to decide when the spatial index pays.</summary>
-    public static Query Analyse(string table) => new($"ANALYZE {table}");
-
-    /// <summary>A table's column types, by name; the names here are values to compare, so they travel as parameters.</summary>
-    public static Query ColumnTypes(string schema, string table) =>
-        new("SELECT column_name AS name, data_type AS type FROM information_schema.columns WHERE table_schema = @schema AND table_name = @table", new { schema, table });
+    /// <summary>The schema of the seed's journal, the table where DbUp records each script it has run (ADR 0009).</summary>
+    public static Query JournalSchema(string schema) => new($"CREATE SCHEMA IF NOT EXISTS {schema}");
 }

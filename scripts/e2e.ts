@@ -55,8 +55,8 @@ try {
   const notReady = await waitForDatabase(container, name);
   if (notReady !== undefined) throw new Error(notReady);
 
-  // The import and the grant, as tessera_publisher (US-24): the service's role only ever reads.
-  await $({ env: { ...process.env, TESSERA_PUBLISHER_DATABASE_URL: url('tessera_publisher', publisher) } })`dotnet ${service} import ${resolve('data/macau-pois.geojson')}`;
+  // The seed and the grant, as tessera_publisher (US-24, ADR 0009): the service's role only ever reads.
+  await $({ env: { ...process.env, TESSERA_PUBLISHER_DATABASE_URL: url('tessera_publisher', publisher) } })`dotnet ${service} seed`;
   const grant = 'GRANT USAGE ON SCHEMA food, outdoors, culture, transport TO tessera_reader; GRANT SELECT ON ALL TABLES IN SCHEMA food, outdoors, culture, transport TO tessera_reader;';
   await $({ env: { ...process.env, PGPASSWORD: publisher } })`docker exec --env PGPASSWORD ${container} psql --quiet --host 127.0.0.1 --username tessera_publisher --dbname ${name} --command ${grant}`;
 

@@ -4,7 +4,7 @@
 -- A role is a database user. tessera_reader is the service's role: it may read, and it sees only the
 -- tables granted to it, so a grant publishes a table and a revoke withdraws it (US-03).
 -- tessera_publisher is the data publisher's role: it owns the places' schemas and tables, so it
--- alone loads them (the import) and grants them (US-24).
+-- alone loads them (the seed, ADR 0009) and grants them (US-24).
 --
 -- Each password comes from the environment, never from this file. psql's \getenv reads it; the
 -- image runs this file with ON_ERROR_STOP, so a missing password stops the first start.

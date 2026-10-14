@@ -19,7 +19,7 @@ public sealed record DatabaseError(string SqlState, string Message)
     /// <summary>The table, or its grant, has gone: 42501 or 42P01 (US-03 c6).</summary>
     public bool IsMissingTable => SqlState is PostgresErrorCodes.InsufficientPrivilege or PostgresErrorCodes.UndefinedTable;
 
-    /// <summary>The query names a column an import has dropped since the list of layers was read: 42703.</summary>
+    /// <summary>The query names a column a seed script has dropped since the list of layers was read: 42703.</summary>
     public bool IsMissingColumn => SqlState is PostgresErrorCodes.UndefinedColumn;
 
     /// <summary>
@@ -81,11 +81,11 @@ public sealed class Database : IAsyncDisposable
 
     /// <summary>Runs a query and turns each row into a <typeparamref name="T"/>, matching columns to fields by name.</summary>
     public Task<Result<ImmutableArray<T>, DatabaseError>> Rows<T>(Query query, CancellationToken cancel = default) =>
-        Run(async connection => (await connection.QueryAsync<T>(Command(query, null, cancel)).ConfigureAwait(false)).ToImmutableArray(), cancel);
+        Run(async connection => (await connection.QueryAsync<T>(Command(query, cancel)).ConfigureAwait(false)).ToImmutableArray(), cancel);
 
     /// <summary>Runs a query that returns one value, or null for none.</summary>
     public Task<Result<T?, DatabaseError>> Single<T>(Query query, CancellationToken cancel = default) where T : class =>
-        Run(connection => connection.QuerySingleOrDefaultAsync<T>(Command(query, null, cancel)), cancel);
+        Run(connection => connection.QuerySingleOrDefaultAsync<T>(Command(query, cancel)), cancel);
 
     /// <summary>
     /// True when the database answers <c>SELECT 1</c> within a second (N-25). The ping keeps its own
@@ -108,33 +108,7 @@ public sealed class Database : IAsyncDisposable
     private async Task PingOnce(CancellationToken stop)
     {
         await using var connection = await _ping.OpenConnectionAsync(stop).ConfigureAwait(false);
-        await connection.ExecuteScalarAsync<int>(Command(Queries.Ping, null, stop)).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Runs every step in one transaction: all of them take effect, or none does (US-24 c6). A step
-    /// that refuses, or a database failure, rolls the whole group back, so no reader sees half of it.
-    /// </summary>
-    /// <param name="steps">The work, which may refuse with the caller's own error type.</param>
-    /// <param name="refused">Turns a database failure into that same type.</param>
-    /// <param name="cancel">Stops the work if fired.</param>
-    public async Task<Result<T, TError>> InTransaction<T, TError>(
-        Func<Session, Task<Result<T, TError>>> steps, Func<DatabaseError, TError> refused, CancellationToken cancel = default)
-    {
-        try
-        {
-            await using var connection = await _source.OpenConnectionAsync(cancel).ConfigureAwait(false);
-            await using var transaction = await connection.BeginTransactionAsync(cancel).ConfigureAwait(false);
-            var result = await steps(new Session(connection, transaction, cancel)).ConfigureAwait(false);
-            // A transaction closed without a commit rolls back.
-            if (result.IsSuccess)
-                await transaction.CommitAsync(cancel).ConfigureAwait(false);
-            return result;
-        }
-        catch (NpgsqlException error)
-        {
-            return Result.Failure<T, TError>(refused(Error(error)));
-        }
+        await connection.ExecuteScalarAsync<int>(Command(Queries.Ping, stop)).ConfigureAwait(false);
     }
 
     public async ValueTask DisposeAsync()
@@ -168,18 +142,6 @@ public sealed class Database : IAsyncDisposable
         _ => new DatabaseError(PostgresErrorCodes.ConnectionFailure, error.Message),
     };
 
-    private static CommandDefinition Command(Query query, NpgsqlTransaction? transaction, CancellationToken cancel) =>
-        new(query.Text, query.Parameters, transaction, cancellationToken: cancel);
-
-    /// <summary>
-    /// The steps of one transaction, on the transaction's own connection. A failure throws, which
-    /// ends every step at once and reaches <see cref="InTransaction{T, TError}"/>, which rolls back.
-    /// </summary>
-    public sealed class Session(NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancel)
-    {
-        public Task<int> Execute(Query query) => connection.ExecuteAsync(Command(query, transaction, cancel));
-
-        public async Task<ImmutableArray<T>> Rows<T>(Query query) =>
-            (await connection.QueryAsync<T>(Command(query, transaction, cancel)).ConfigureAwait(false)).ToImmutableArray();
-    }
+    private static CommandDefinition Command(Query query, CancellationToken cancel) =>
+        new(query.Text, query.Parameters, cancellationToken: cancel);
 }

@@ -71,7 +71,7 @@ public sealed class TileServer(Func<LayerCatalogue?> catalogue, TileReader read,
         var built = await read(Queries.Tile(found, tile, settings), cancel).ConfigureAwait(false);
         return built.Match(
             bytes => new TileResult(bytes ?? [], CacheControl(settings.CacheSeconds)),
-            // A withdrawn grant gives 42501: the layer has left, so 404 (US-03 c6). A column an import
+            // A withdrawn grant gives 42501: the layer has left, so 404 (US-03 c6). A column a seed script
             // dropped gives 42703: the list is read again, and the browser asked to try again shortly.
             // A database that cannot answer now gives 503 (N-22); anything else is the service's fault.
             error => error.IsMissingTable ? Problems.NotFound("No published layer has that name.")

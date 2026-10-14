@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
+using DotNet.Testcontainers.Builders;
 using Tessera.Catalogue;
-using Tessera.Settings;
+using Tessera.Seeding;
 using Tessera.Sql;
 
 namespace Tessera.IntegrationTests;
@@ -26,18 +27,20 @@ public sealed class DatabaseTests(DatabaseFixture database) : IClassFixture<Data
             await database.OwnerValue<string[]>(
                 "SELECT setconfig FROM pg_db_role_setting s JOIN pg_roles r ON r.oid = s.setrole WHERE r.rolname = 'tessera_reader'"));
 
-    // US-01 test 2: the release carries the seed byte for byte as nathanwh71/JTessera holds it.
+    // US-01 test 2: the places' source matches nathanwh71/JTessera byte for byte, and the release
+    // carries the script the converter made from it (ADR 0009).
     [Fact]
-    public void Ships_the_seed_from_jtessera()
+    public void Ships_the_seed_made_from_jtessera()
     {
-        var seed = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "data", "macau-pois.geojson"));
+        var root = CommonDirectoryPath.GetGitDirectory().DirectoryPath;
+        var source = File.ReadAllBytes(Path.Combine(root, "data", "macau-pois.geojson"));
 
         // SHA-256 turns a file into a 64-digit fingerprint; one changed byte changes the fingerprint.
         // This one is the fingerprint of data/macau-pois.geojson in nathanwh71/JTessera on 13 October 2026.
-        Assert.Equal("d9319335cc40dd25ecc8782c4cf9041cf2be53bdebd0aaa8637991b5e050e2f3", Convert.ToHexStringLower(SHA256.HashData(seed)));
-        var places = Tessera.Import.Seed.Read(System.Text.Encoding.UTF8.GetString(seed), new AreaSettings())
-            .Match(found => found, error => throw new Xunit.Sdk.XunitException(error.Message));
-        Assert.Equal(900, places.Length);
-        Assert.All(places.GroupBy(place => place.Layer), layer => Assert.Equal(100, layer.Count()));
+        Assert.Equal("d9319335cc40dd25ecc8782c4cf9041cf2be53bdebd0aaa8637991b5e050e2f3", Convert.ToHexStringLower(SHA256.HashData(source)));
+        Assert.StartsWith(
+            "-- Made by 'npm run convert' from data/macau-pois.geojson.",
+            File.ReadAllText(Path.Combine(SeedScripts.Folder, "0001-macau-places.sql")),
+            StringComparison.Ordinal);
     }
 }
