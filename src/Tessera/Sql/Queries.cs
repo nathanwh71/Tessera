@@ -17,7 +17,9 @@ public static class Queries
     /// </summary>
     public static string Quote(string name) => $"\"{name.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
 
-    /// <summary>The smallest question: an answer proves the database is up and lets the service sign in (N-25).</summary>
+    /// <summary>
+    /// The smallest question: an answer proves the database is up and lets the service sign in (N-25).
+    /// </summary>
     public static readonly Query Ping = new("SELECT 1");
 
     /// <summary>
@@ -42,7 +44,8 @@ public static class Queries
                      FROM pg_attribute p
                      JOIN pg_type pt ON pt.oid = p.atttypid
                      WHERE p.attrelid = c.oid AND p.attnum > 0 AND NOT p.attisdropped AND p.attnum <> a.attnum
-                       AND pt.typname IN ('text', 'varchar', 'bpchar', 'int2', 'int4', 'int8', 'float4', 'float8', 'numeric', 'bool')
+                       AND pt.typname IN ('text', 'varchar', 'bpchar', 'int2', 'int4', 'int8',
+                                          'float4', 'float8', 'numeric', 'bool')
                      ORDER BY p.attnum))::text AS columns,
                to_json(ARRAY(SELECT k.attname::text
                      FROM pg_index i
@@ -69,21 +72,34 @@ public static class Queries
     /// tiles. ST_AsMVTGeom moves each shape into the tile's grid; ST_AsMVT packs the rows into one
     /// vector tile. Features come out in key order, so the same name wins a clash every time.
     /// </remarks>
-    public static Query Tile(Layer layer, TileAddress tile, TileSettings limits) =>
-        new($"""
+    public static Query Tile(Layer layer, TileAddress tile, TileSettings limits)
+    {
+        // Each property the tile carries, after its shape, such as ', "name", "type"'.
+        var properties = string.Concat(layer.Properties.Select(name => $", {name}"));
+        // A table's key fixes the order of features (ADR 0006 rule 7); a view has no key, so no order.
+        var order = layer.Order.IsDefaultOrEmpty
+            ? ""
+            : "\n  ORDER BY " + string.Join(", ", layer.Order.Select(name => $"t.{name}"));
+        return new(
+            $"""
             SELECT ST_AsMVT(tile.*, @layer, @resolution, 'tessera_shape') FROM (
-              SELECT ST_AsMVTGeom(ST_Transform(t.{layer.Geometry}, 3857), ST_TileEnvelope(@z, @x, @y), @resolution, @buffer, true) AS tessera_shape{string.Concat(layer.Properties.Select(name => $", {name}"))}
+              SELECT ST_AsMVTGeom(ST_Transform(t.{layer.Geometry}, 3857), ST_TileEnvelope(@z, @x, @y),
+                                  @resolution, @buffer, true) AS tessera_shape{properties}
               FROM {layer.Table} AS t
-              WHERE t.{layer.Geometry} && ST_Transform(ST_TileEnvelope(@z, @x, @y, margin => @margin), @srid){(layer.Order.IsDefaultOrEmpty ? "" : "\n  ORDER BY " + string.Join(", ", layer.Order.Select(name => $"t.{name}")))}
+              WHERE t.{layer.Geometry} && ST_Transform(ST_TileEnvelope(@z, @x, @y, margin => @margin), @srid){order}
               LIMIT @limit
             ) AS tile
             """,
             new
             {
-                layer = layer.Id, resolution = limits.Resolution, z = tile.Z, x = tile.X, y = tile.Y, buffer = limits.Buffer,
-                margin = (double)limits.Buffer / limits.Resolution, srid = layer.Srid, limit = limits.MaxFeatures,
+                layer = layer.Id, resolution = limits.Resolution, z = tile.Z, x = tile.X, y = tile.Y,
+                buffer = limits.Buffer, margin = (double)limits.Buffer / limits.Resolution, srid = layer.Srid,
+                limit = limits.MaxFeatures,
             });
+    }
 
-    /// <summary>The schema of the seed's journal, the table where DbUp records each script it has run (ADR 0009).</summary>
+    /// <summary>
+    /// The schema of the seed's journal, the table where DbUp records each script it has run (ADR 0009).
+    /// </summary>
     public static Query JournalSchema(string schema) => new($"CREATE SCHEMA IF NOT EXISTS {schema}");
 }

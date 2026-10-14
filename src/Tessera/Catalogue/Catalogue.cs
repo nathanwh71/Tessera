@@ -21,10 +21,14 @@ namespace Tessera.Catalogue;
 /// <param name="GeometryType">The kind of shape, such as POINT.</param>
 /// <param name="Properties">The quoted columns each tile carries beside the shape (US-07).</param>
 /// <param name="Order">The quoted primary key, which fixes the order of features; empty for a view.</param>
-public sealed record Layer(string Id, string Table, string Geometry, int Srid, string GeometryType, ImmutableArray<string> Properties, ImmutableArray<string> Order);
+public sealed record Layer(
+    string Id, string Table, string Geometry, int Srid, string GeometryType,
+    ImmutableArray<string> Properties, ImmutableArray<string> Order);
 
 /// <summary>One row of <see cref="Queries.Layers"/>; Dapper fills it by matching column names.</summary>
-public sealed record CatalogueRow(string Schema, string Name, string GeometryColumn, int Srid, string GeometryType, string Columns, string KeyColumns = "[]");
+public sealed record CatalogueRow(
+    string Schema, string Name, string GeometryColumn, int Srid, string GeometryType,
+    string Columns, string KeyColumns = "[]");
 
 /// <summary>The list of layers at one moment. Once built it never changes; a refresh builds a new one.</summary>
 public sealed record LayerCatalogue(ImmutableDictionary<string, Layer> Layers)
@@ -53,7 +57,8 @@ public sealed record LayerCatalogue(ImmutableDictionary<string, Layer> Layers)
     public Layer? Find(string id) => Layers.GetValueOrDefault(id);
 
     /// <summary>Reads the list as the service's role, the user name it signs in as.</summary>
-    public static async Task<Result<LayerCatalogue, DatabaseError>> Load(Database database, CancellationToken cancel = default) =>
+    public static async Task<Result<LayerCatalogue, DatabaseError>> Load(
+        Database database, CancellationToken cancel = default) =>
         (await database.Rows<CatalogueRow>(Queries.Layers, cancel).ConfigureAwait(false)).Map(rows => FromRows(rows));
 }
 
@@ -73,7 +78,10 @@ public sealed record LayerCatalogue(ImmutableDictionary<string, Layer> Layers)
 /// <param name="retry">The wait between tries before the first load succeeds.</param>
 /// <param name="log">Where the class reports a new list or a failed read.</param>
 public sealed class LiveCatalogue(
-    Func<CancellationToken, Task<Result<LayerCatalogue, DatabaseError>>> load, TimeSpan every, TimeSpan retry, ILogger log) : BackgroundService
+    Func<CancellationToken, Task<Result<LayerCatalogue, DatabaseError>>> load,
+    TimeSpan every,
+    TimeSpan retry,
+    ILogger log) : BackgroundService
 {
     private LayerCatalogue? _current;
 
@@ -86,7 +94,10 @@ public sealed class LiveCatalogue(
         var loaded = await load(cancel).ConfigureAwait(false);
         if (loaded.IsFailure)
         {
-            log.LogWarning("Could not read the list of layers ({SqlState}): {Message}", loaded.Error.SqlState, loaded.Error.Message);
+            log.LogWarning(
+                "Could not read the list of layers ({SqlState}): {Message}",
+                loaded.Error.SqlState,
+                loaded.Error.Message);
             return;
         }
 

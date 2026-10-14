@@ -57,6 +57,7 @@ public static class SeedScripts
         var result = upgrade.PerformUpgrade();
         return result.Successful
             ? Result.Success<IReadOnlyList<string>, string>([.. result.Scripts.Select(script => script.Name)])
-            : Result.Failure<IReadOnlyList<string>, string>($"{result.ErrorScript?.Name ?? "The seed"} failed: {result.Error.Message}");
+            : Result.Failure<IReadOnlyList<string>, string>(
+                $"{result.ErrorScript?.Name ?? "The seed"} failed: {result.Error.Message}");
     }
 }

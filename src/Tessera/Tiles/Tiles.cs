@@ -29,7 +29,9 @@ public sealed record TileAddress(int Z, int X, int Y)
         z < minZoom || z > maxZoom || z > 30 || x < 0 || y < 0 || x >= 1 << z || y >= 1 << z ? null : new(z, x, y);
 }
 
-/// <summary>Runs the tile query and gives the tile's bytes, or null for an empty tile. A test passes a stand-in.</summary>
+/// <summary>
+/// Runs the tile query and gives the tile's bytes, or null for an empty tile. A test passes a stand-in.
+/// </summary>
 public delegate Task<Result<byte[]?, DatabaseError>> TileReader(Query query, CancellationToken cancel);
 
 /// <summary>Answers a tile request from the database (US-07).</summary>
@@ -37,7 +39,8 @@ public delegate Task<Result<byte[]?, DatabaseError>> TileReader(Query query, Can
 /// <param name="read">Runs the tile query.</param>
 /// <param name="settings">The tile's limits and how long a browser and Nginx may keep it.</param>
 /// <param name="layerChanged">Asks for the list of layers again; null in a test that needs no list.</param>
-public sealed class TileServer(Func<LayerCatalogue?> catalogue, TileReader read, TileSettings settings, Action? layerChanged = null)
+public sealed class TileServer(
+    Func<LayerCatalogue?> catalogue, TileReader read, TileSettings settings, Action? layerChanged = null)
 {
     public const string ContentType = "application/vnd.mapbox-vector-tile";
 
@@ -103,7 +106,8 @@ public static class TileRoutes
     /// <summary>
     /// Adds <c>/{layer}/{z}/{x}/{y}.pbf</c>, and the same with <c>.mvt</c>, for GET and HEAD (US-07).
     /// </summary>
-    public static IEndpointRouteBuilder MapTiles(this IEndpointRouteBuilder routes, LiveCatalogue catalogue, Database database, TileSettings settings)
+    public static IEndpointRouteBuilder MapTiles(
+        this IEndpointRouteBuilder routes, LiveCatalogue catalogue, Database database, TileSettings settings)
     {
         // Many tiles may meet a dropped column at once; the flag lets one reread run at a time.
         var rereading = 0;

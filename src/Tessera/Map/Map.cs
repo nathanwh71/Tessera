@@ -47,14 +47,16 @@ public static class MapRoutes
             {
                 FileProvider = new PhysicalFileProvider(assets),
                 RequestPath = "/assets",
-                OnPrepareResponse = context => context.Context.Response.Headers.CacheControl = "public, max-age=31536000, immutable",
+                OnPrepareResponse = context =>
+                    context.Context.Response.Headers.CacheControl = "public, max-age=31536000, immutable",
             });
         }
 
         string[] read = [HttpMethods.Get, HttpMethods.Head];
         app.MapMethods("/", read, () => Answer(page, settings));
         // Any other single name, such as /index.html, is not found.
-        app.MapMethods("/{file}", read, (string file) => LayerOf(file) is null ? Problems.NotFound() : Answer(page, settings));
+        app.MapMethods("/{file}", read, (string file) =>
+            LayerOf(file) is null ? Problems.NotFound() : Answer(page, settings));
         return app;
     }
 
@@ -78,12 +80,15 @@ public static class MapRoutes
             home = new { center = new { lng = area.HomeLongitude, lat = area.HomeLatitude }, zoom = area.HomeLevel },
         });
         var head = html.IndexOf("</head>", StringComparison.OrdinalIgnoreCase);
-        return head < 0 ? html : html[..head] + $"""<script id="tessera-area" type="application/json">{json}</script>""" + html[head..];
+        var script = $"""<script id="tessera-area" type="application/json">{json}</script>""";
+        return head < 0 ? html : html[..head] + script + html[head..];
     }
 
     /// <summary>The layer a page's name opens, such as <c>food.cafes</c> for <c>food.cafes.html</c>, or null.</summary>
     public static string? LayerOf(string file) =>
-        file.EndsWith(".html", StringComparison.Ordinal) && LayerIds.Contains(file[..^".html".Length]) ? file[..^".html".Length] : null;
+        file.EndsWith(".html", StringComparison.Ordinal) && LayerIds.Contains(file[..^".html".Length])
+            ? file[..^".html".Length]
+            : null;
 
     /// <summary>
     /// Adds the page's headers to every HTML answer, at the last moment, once its type is known:

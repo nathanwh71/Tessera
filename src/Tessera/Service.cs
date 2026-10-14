@@ -63,13 +63,17 @@ public static class TesseraService
                 var status = report.Status != HealthStatus.Healthy ? "DOWN"
                     : catalogue.Current is null ? "OUT_OF_SERVICE"
                     : "UP";
-                context.Response.StatusCode = status == "UP" ? StatusCodes.Status200OK : StatusCodes.Status503ServiceUnavailable;
+                context.Response.StatusCode =
+                    status == "UP" ? StatusCodes.Status200OK : StatusCodes.Status503ServiceUnavailable;
                 context.Response.Headers.CacheControl = "no-store";
                 context.Response.ContentType = "application/json";
                 return context.Response.WriteAsync($$"""{"status":"{{status}}"}""");
             },
         });
-        app.MapTiles(catalogue, app.Services.GetRequiredService<Database>(), app.Services.GetRequiredService<IOptions<TileSettings>>().Value);
+        app.MapTiles(
+            catalogue,
+            app.Services.GetRequiredService<Database>(),
+            app.Services.GetRequiredService<IOptions<TileSettings>>().Value);
         app.UseMap(
             app.Services.GetRequiredService<IOptions<AreaSettings>>().Value,
             app.Services.GetRequiredService<IOptions<MapSettings>>().Value,
@@ -80,7 +84,10 @@ public static class TesseraService
     // Pings the database; the ping waits a second at most, so /health answers within one.
     private sealed class DatabaseAnswers(Database database) : IHealthCheck
     {
-        public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default) =>
-            await database.Ping(cancellationToken).ConfigureAwait(false) ? HealthCheckResult.Healthy() : HealthCheckResult.Unhealthy();
+        public async Task<HealthCheckResult> CheckHealthAsync(
+            HealthCheckContext context, CancellationToken cancellationToken = default) =>
+            await database.Ping(cancellationToken).ConfigureAwait(false)
+                ? HealthCheckResult.Healthy()
+                : HealthCheckResult.Unhealthy();
     }
 }

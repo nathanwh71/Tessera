@@ -17,7 +17,8 @@ public sealed record Query(string Text, object? Parameters = null);
 public sealed record DatabaseError(string SqlState, string Message)
 {
     /// <summary>The table, or its grant, has gone: 42501 or 42P01 (US-03 c6).</summary>
-    public bool IsMissingTable => SqlState is PostgresErrorCodes.InsufficientPrivilege or PostgresErrorCodes.UndefinedTable;
+    public bool IsMissingTable =>
+        SqlState is PostgresErrorCodes.InsufficientPrivilege or PostgresErrorCodes.UndefinedTable;
 
     /// <summary>The query names a column a seed script has dropped since the list of layers was read: 42703.</summary>
     public bool IsMissingColumn => SqlState is PostgresErrorCodes.UndefinedColumn;
@@ -28,7 +29,8 @@ public sealed record DatabaseError(string SqlState, string Message)
     /// </summary>
     public bool IsUnavailable =>
         SqlState.StartsWith("08", StringComparison.Ordinal)
-        || SqlState is PostgresErrorCodes.QueryCanceled or PostgresErrorCodes.AdminShutdown or PostgresErrorCodes.CrashShutdown
+        || SqlState is PostgresErrorCodes.QueryCanceled
+            or PostgresErrorCodes.AdminShutdown or PostgresErrorCodes.CrashShutdown
             or PostgresErrorCodes.CannotConnectNow or PostgresErrorCodes.TooManyConnections;
 }
 
@@ -73,9 +75,12 @@ public sealed class Database : IAsyncDisposable
         }.ConnectionString));
     }
 
-    /// <summary>Runs a query and turns each row into a <typeparamref name="T"/>, matching columns to fields by name.</summary>
+    /// <summary>
+    /// Runs a query and turns each row into a <typeparamref name="T"/>, matching columns to fields by name.
+    /// </summary>
     public Task<Result<ImmutableArray<T>, DatabaseError>> Rows<T>(Query query, CancellationToken cancel = default) =>
-        Run(async connection => (await connection.QueryAsync<T>(Command(query, cancel)).ConfigureAwait(false)).ToImmutableArray(), cancel);
+        Run(async connection =>
+            (await connection.QueryAsync<T>(Command(query, cancel)).ConfigureAwait(false)).ToImmutableArray(), cancel);
 
     /// <summary>Runs a query that returns one value, or null for none.</summary>
     public Task<Result<T?, DatabaseError>> Single<T>(Query query, CancellationToken cancel = default) where T : class =>
@@ -97,7 +102,9 @@ public sealed class Database : IAsyncDisposable
             await PingOnce(limit.Token).WaitAsync(PingLimit, stop).ConfigureAwait(false);
             return true;
         }
-        catch (Exception error) when (error is TimeoutException or OperationCanceledException or NpgsqlException && !stop.IsCancellationRequested)
+        catch (Exception error)
+            when (error is TimeoutException or OperationCanceledException or NpgsqlException
+                && !stop.IsCancellationRequested)
         {
             return false;
         }

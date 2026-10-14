@@ -113,7 +113,9 @@ public sealed record AreaSettings : IValidatableObject
     public double HomeLevel { get; init; } = 15;
 
     public IEnumerable<ValidationResult> Validate(ValidationContext context) =>
-        MinLongitude < MaxLongitude && MinLatitude < MaxLatitude ? [] : [new ValidationResult("The box must run west to east and south to north.")];
+        MinLongitude < MaxLongitude && MinLatitude < MaxLatitude
+            ? []
+            : [new ValidationResult("The box must run west to east and south to north.")];
 }
 
 /// <summary>The database's connection, from the URL in <see cref="Variable"/>, checked at start-up.</summary>
@@ -128,7 +130,9 @@ public sealed class DatabaseConnection : IValidatableObject
     public string Text => TesseraSettings.ConnectionString(Url).GetValueOrDefault("");
 
     public IEnumerable<ValidationResult> Validate(ValidationContext context) =>
-        TesseraSettings.ConnectionString(Url) is { IsFailure: true } refused ? [new ValidationResult($"{Variable}: {refused.Error}")] : [];
+        TesseraSettings.ConnectionString(Url) is { IsFailure: true } refused
+            ? [new ValidationResult($"{Variable}: {refused.Error}")]
+            : [];
 }
 
 /// <summary>
@@ -151,7 +155,9 @@ public static class TesseraSettings
     /// <c>Tiles__CacheSeconds=0</c> wins over the file; each '__' steps down a level.
     /// </summary>
     public static void AddFile(IConfigurationBuilder configuration) =>
-        configuration.AddJsonFile(Path.Combine(AppContext.BaseDirectory, "tessera.json"), optional: true).AddEnvironmentVariables();
+        configuration
+            .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "tessera.json"), optional: true)
+            .AddEnvironmentVariables();
 
     /// <summary>
     /// Binds each section to its record, with the record's own limits, and the database URL from
@@ -166,7 +172,8 @@ public static class TesseraSettings
         Section<CatalogueSettings>(services, "Catalogue");
         Section<AreaSettings>(services, "Area");
         services.AddOptions<DatabaseConnection>()
-            .Configure(connection => (connection.Variable, connection.Url) = (databaseVariable, configuration[databaseVariable]))
+            .Configure(connection =>
+                (connection.Variable, connection.Url) = (databaseVariable, configuration[databaseVariable]))
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
@@ -178,7 +185,9 @@ public static class TesseraSettings
             .Distinct()
             .ToArray();
         services.AddOptions<SectionCheck>()
-            .Validate(_ => unknown.Length == 0, $"tessera.json: no section is named {string.Join(", ", unknown.Select(name => $"'{name}'"))}.")
+            .Validate(
+                _ => unknown.Length == 0,
+                $"tessera.json: no section is named {string.Join(", ", unknown.Select(name => $"'{name}'"))}.")
             .ValidateOnStart();
     }
 

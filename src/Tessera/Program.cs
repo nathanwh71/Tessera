@@ -26,7 +26,8 @@ static async Task<int> Serve()
     {
         app = TesseraService.Build();
     }
-    catch (Exception error) when (error is OptionsValidationException or AggregateException or InvalidOperationException)
+    catch (Exception error)
+        when (error is OptionsValidationException or AggregateException or InvalidOperationException)
     {
         return Fail(TesseraSettings.Problems(error));
     }
@@ -47,12 +48,14 @@ static int Seed()
     {
         TesseraSettings.Check(host.Services);
     }
-    catch (Exception error) when (error is OptionsValidationException or AggregateException or InvalidOperationException)
+    catch (Exception error)
+        when (error is OptionsValidationException or AggregateException or InvalidOperationException)
     {
         return Fail(TesseraSettings.Problems(error));
     }
 
-    var ran = SeedScripts.Run(host.Services.GetRequiredService<IOptions<DatabaseConnection>>().Value.Text, SeedScripts.Folder);
+    var connection = host.Services.GetRequiredService<IOptions<DatabaseConnection>>().Value.Text;
+    var ran = SeedScripts.Run(connection, SeedScripts.Folder);
     if (ran.IsFailure)
         return Fail([ran.Error]);
 

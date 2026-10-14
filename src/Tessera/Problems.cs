@@ -12,10 +12,12 @@ public static class Problems
     /// <summary>The seconds a client should wait after a 503 before it asks again (N-22).</summary>
     public const int RetryAfterSeconds = 5;
 
-    public static IResult NotFound(string? detail = null) => TypedResults.Problem(detail, statusCode: StatusCodes.Status404NotFound);
+    public static IResult NotFound(string? detail = null) =>
+        TypedResults.Problem(detail, statusCode: StatusCodes.Status404NotFound);
 
     /// <summary>503: the service is well but cannot answer now, such as while the database is down.</summary>
-    public static IResult Unavailable(string detail) => TypedResults.Problem(detail, statusCode: StatusCodes.Status503ServiceUnavailable);
+    public static IResult Unavailable(string detail) =>
+        TypedResults.Problem(detail, statusCode: StatusCodes.Status503ServiceUnavailable);
 
     public static IResult Fault() => TypedResults.Problem(statusCode: StatusCodes.Status500InternalServerError);
 
@@ -30,6 +32,7 @@ public static class Problems
         context.ProblemDetails.Extensions.Remove("traceId");
         context.HttpContext.Response.Headers.CacheControl = "no-store";
         if (context.ProblemDetails.Status == StatusCodes.Status503ServiceUnavailable)
-            context.HttpContext.Response.Headers.RetryAfter = RetryAfterSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            context.HttpContext.Response.Headers.RetryAfter =
+                RetryAfterSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
     }
 }
