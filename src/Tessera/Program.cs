@@ -7,8 +7,8 @@ using Tessera.Sql;
 // The program's starting point: the first lines that run. It sits in the Service project, the one
 // part that joins every module, and one program does both jobs (ADR 0001). The operator, or the
 // start-up script, runs it in one of two ways:
-//   Tessera.Service                 serves tiles and the map
-//   Tessera.Service import <file>   loads the places from a GeoJSON file, a text file that
+//   Tessera                         serves tiles and the map
+//   Tessera import <file>           loads the places from a GeoJSON file, a text file that
 //                                   describes places on a map, then stops (US-24)
 // The program ends with an exit code, a number it hands back to whatever started it: 0 means
 // success, 1 a failure, and 2 a command it did not understand.
@@ -70,7 +70,7 @@ static int FailWith(string problem)
 // The command was neither of the two the program knows; exit code 2 tells the two cases apart.
 static int Usage()
 {
-    Console.Error.WriteLine("Usage: Tessera.Service            serve tiles and the map");
-    Console.Error.WriteLine("       Tessera.Service import FILE  load the places from a GeoJSON file");
+    Console.Error.WriteLine("Usage: Tessera                   serve tiles and the map");
+    Console.Error.WriteLine("       Tessera import FILE        load the places from a GeoJSON file");
     return 2;
 }

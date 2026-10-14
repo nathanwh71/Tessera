@@ -1,18 +1,9 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/Tessera.Kernel/Tessera.Kernel.csproj" />
-    <Project Path="src/Tessera.Settings/Tessera.Settings.csproj" />
-    <Project Path="src/Tessera.Sql/Tessera.Sql.csproj" />
-    <Project Path="src/Tessera.Catalogue/Tessera.Catalogue.csproj" />
-    <Project Path="src/Tessera.Import/Tessera.Import.csproj" />
-    <Project Path="src/Tessera.Tiles/Tessera.Tiles.csproj" />
-    <Project Path="src/Tessera.Http/Tessera.Http.csproj" />
-    <Project Path="src/Tessera.Map/Tessera.Map.csproj" />
-    <Project Path="src/Tessera.Service/Tessera.Service.csproj" />
+    <Project Path="src/Tessera/Tessera.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Tessera.UnitTests/Tessera.UnitTests.csproj" />
-    <Project Path="tests/Tessera.ArchitectureTests/Tessera.ArchitectureTests.csproj" />
     <Project Path="tests/Tessera.IntegrationTests/Tessera.IntegrationTests.csproj" />
   </Folder>
 </Solution>

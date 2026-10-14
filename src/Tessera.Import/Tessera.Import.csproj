@@ -1,8 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <!-- The import command: reads and checks the GeoJSON seed and loads the nine tables (US-24). -->
-  <ItemGroup>
-    <ProjectReference Include="../Tessera.Kernel/Tessera.Kernel.csproj" />
-    <ProjectReference Include="../Tessera.Settings/Tessera.Settings.csproj" />
-    <ProjectReference Include="../Tessera.Sql/Tessera.Sql.csproj" />
-  </ItemGroup>
-</Project>

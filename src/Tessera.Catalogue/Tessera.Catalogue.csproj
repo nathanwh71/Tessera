@@ -1,7 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <!-- The list of layers: every table and view granted to the service's role (US-03). -->
-  <ItemGroup>
-    <ProjectReference Include="../Tessera.Kernel/Tessera.Kernel.csproj" />
-    <ProjectReference Include="../Tessera.Sql/Tessera.Sql.csproj" />
-  </ItemGroup>
-</Project>

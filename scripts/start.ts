@@ -67,12 +67,12 @@ if (decision.kind === 'refuse') {
 if (decision.kind === 'import') {
   console.log('The nine tables are empty: importing the places.');
   // dotnet run starts the program in the project's own folder, so the seed's path must be whole.
-  await $({ env: { ...process.env, TESSERA_PUBLISHER_DATABASE_URL: databaseUrl('tessera_publisher', settings.publisherPassword, settings.database) } })`dotnet run --project src/Tessera.Service --configuration Release -- import ${resolve('data/macau-pois.geojson')}`;
+  await $({ env: { ...process.env, TESSERA_PUBLISHER_DATABASE_URL: databaseUrl('tessera_publisher', settings.publisherPassword, settings.database) } })`dotnet run --project src/Tessera --configuration Release -- import ${resolve('data/macau-pois.geojson')}`;
   console.log('Imported. The service shows the places once the publisher grants them: npm run publish.');
 }
 
 console.log(`Starting the service on port ${settings.httpPort}.`);
-const service = $({ env: { ...process.env, DATABASE_URL: databaseUrl('tessera_reader', settings.readerPassword, settings.database) }, stdio: 'inherit' })`dotnet run --project src/Tessera.Service --configuration Release`;
+const service = $({ env: { ...process.env, DATABASE_URL: databaseUrl('tessera_reader', settings.readerPassword, settings.database) }, stdio: 'inherit' })`dotnet run --project src/Tessera --configuration Release`;
 
 // The service answers at once, but serves tiles only once its list of layers loads, so the script
 // says 'ready' only when /health says UP (N-25). It keeps running beside the service either way.

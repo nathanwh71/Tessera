@@ -346,7 +346,7 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
     {
         var port = Http.FreePort();
         var start = new System.Diagnostics.ProcessStartInfo("dotnet") { RedirectStandardOutput = true, RedirectStandardError = true };
-        start.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "Tessera.Service.dll"));
+        start.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "Tessera.dll"));
         start.Environment["TESSERA_HTTPPORT"] = port.ToString(System.Globalization.CultureInfo.InvariantCulture);
         start.Environment["DATABASE_URL"] = $"postgresql://{service.Database.Reader.User}:{service.Database.Reader.Password}@{service.Database.Reader.Host}:{service.Database.Reader.Port}/tessera";
         using var program = System.Diagnostics.Process.Start(start)!;

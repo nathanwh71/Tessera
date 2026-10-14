@@ -17,7 +17,7 @@ public sealed record ImportSummary(ImmutableSortedDictionary<string, int> Places
 /// <summary>
 /// Loads the checked places into nine tables, one for each layer, in one transaction, a group of
 /// changes the database makes all together or not at all (US-24). It belongs to the Import module:
-/// Program.cs calls <see cref="Run"/> for the command <c>Tessera.Service import &lt;file&gt;</c>, and
+/// Program.cs calls <see cref="Run"/> for the command <c>Tessera import &lt;file&gt;</c>, and
 /// <see cref="Seed"/> reads and checks the file first.
 /// </summary>
 /// <remarks>

@@ -1,6 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <!-- Reads tessera.json and the environment (US-00, ADR 0003). -->
-  <ItemGroup>
-    <ProjectReference Include="../Tessera.Kernel/Tessera.Kernel.csproj" />
-  </ItemGroup>
-</Project>

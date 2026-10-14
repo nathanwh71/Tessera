@@ -1,9 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <!-- Screens raw request targets (S-06) and writes every problem document (US-07 c5, ADR 0001 rule 4). -->
-  <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="../Tessera.Kernel/Tessera.Kernel.csproj" />
-  </ItemGroup>
-</Project>

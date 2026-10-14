@@ -15,7 +15,7 @@
     <PackageReference Include="Npgsql" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../../src/Tessera.Service/Tessera.Service.csproj" />
+    <ProjectReference Include="../../src/Tessera/Tessera.csproj" />
   </ItemGroup>
   <ItemGroup>
     <!-- Two classes at a time: each starts a database, and the build machine may have two cores. -->

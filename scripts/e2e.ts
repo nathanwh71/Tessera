@@ -38,7 +38,7 @@ function freePort(): Promise<number> {
 const databasePort = await freePort();
 const servicePort = await freePort();
 const url = (user: string, password: string) => `postgresql://${user}:${password}@127.0.0.1:${databasePort}/${name}`;
-const service = resolve('src/Tessera.Service/bin/Release/net10.0/Tessera.Service.dll');
+const service = resolve('src/Tessera/bin/Release/net10.0/Tessera.dll');
 
 await $`docker build --quiet --tag ${container} db`;
 // A database left behind by a run that was killed would hold the name; remove it first.

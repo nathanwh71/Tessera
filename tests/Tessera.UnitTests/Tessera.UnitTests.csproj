@@ -9,14 +9,7 @@
     <PackageReference Include="FsCheck.Xunit.v3" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../../src/Tessera.Kernel/Tessera.Kernel.csproj" />
-    <ProjectReference Include="../../src/Tessera.Settings/Tessera.Settings.csproj" />
-    <ProjectReference Include="../../src/Tessera.Sql/Tessera.Sql.csproj" />
-    <ProjectReference Include="../../src/Tessera.Catalogue/Tessera.Catalogue.csproj" />
-    <ProjectReference Include="../../src/Tessera.Import/Tessera.Import.csproj" />
-    <ProjectReference Include="../../src/Tessera.Tiles/Tessera.Tiles.csproj" />
-    <ProjectReference Include="../../src/Tessera.Http/Tessera.Http.csproj" />
-    <ProjectReference Include="../../src/Tessera.Map/Tessera.Map.csproj" />
+    <ProjectReference Include="../../src/Tessera/Tessera.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />

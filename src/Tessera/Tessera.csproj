@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <!-- The whole service in one project, a folder for each module (ADR 0001). -->
+  <PropertyGroup>
+    <!-- The map's files go out as Vite built them; the SDK's static-web-assets pipeline stays off. -->
+    <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="Dapper" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Tessera.UnitTests" />
+    <InternalsVisibleTo Include="Tessera.IntegrationTests" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- tessera.json sits beside the program, where the service looks for it (ADR 0003). -->
+    <None Include="../../tessera.json" Link="tessera.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- The built map ships inside the release (US-23 c4). `npm run build` makes web/dist first. -->
+    <Content Include="../../web/dist/**" Link="wwwroot/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- The seed ships with the release, ready for the import (US-01 c2). -->
+    <None Include="../../data/macau-pois.geojson" Link="data/macau-pois.geojson" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

@@ -27,7 +27,6 @@ jobs:
       # database from db/Dockerfile on the runner's own Docker.
       - run: dotnet build --configuration Release
       - run: dotnet run --project tests/Tessera.UnitTests --configuration Release --no-build
-      - run: dotnet run --project tests/Tessera.ArchitectureTests --configuration Release --no-build
       - run: dotnet run --project tests/Tessera.IntegrationTests --configuration Release --no-build
       - run: npm ci
       - run: npm run typecheck

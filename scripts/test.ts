@@ -11,7 +11,7 @@ await $`node --test scripts/**/*.test.ts`;
 await $({ cwd: 'web' })`npm ci --no-audit --no-fund`;
 await $({ cwd: 'web' })`npm test`;
 await $`node scripts/build.ts`;
-for (const suite of ['UnitTests', 'ArchitectureTests', 'IntegrationTests']) {
+for (const suite of ['UnitTests', 'IntegrationTests']) {
   await $`dotnet run --no-build --configuration Release --project tests/Tessera.${suite}`;
 }
 // Last, the browser tests: the slowest, against the real service and the places.

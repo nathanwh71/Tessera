@@ -19,7 +19,7 @@ public sealed class StartTests
     private static ProcessStartInfo Start(IReadOnlyDictionary<string, string> variables, params string[] arguments)
     {
         var start = new ProcessStartInfo("dotnet") { RedirectStandardError = true, RedirectStandardOutput = true };
-        start.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "Tessera.Service.dll"));
+        start.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "Tessera.dll"));
         foreach (var argument in arguments)
             start.ArgumentList.Add(argument);
         // Start from an empty environment, keeping only what .NET itself needs to run.
