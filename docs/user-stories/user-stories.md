@@ -717,7 +717,7 @@ A ***crowd*** ***asking*** for ***one*** ***unbuilt*** tile ***shares*** ***one*
 
 ## Part D · The Java way
 
-***Five*** ***stories*** ***joined*** on 14 ***October*** 2026, and all ***five*** were ***built*** the same ***morning***. Each ***brings*** ***one*** ***behaviour*** of the Java ***build*** into this ***one***, so the ***office*** ***loses*** ***nothing*** when the Java ***build*** is ***archived*** (ADR 0006, as ***amended***). The maintainer ***decided*** ***one*** ***rule*** for all ***five***: ***follow*** the Java ***way***, so the ***service*** and the database may ***start*** in any ***order***. The ***stories*** ***take*** N-21 to N-25, after Part C.
+***Five*** ***stories*** ***joined*** on 14 ***October*** 2026, and all ***five*** were ***built*** the same ***morning***. Each ***brings*** ***one*** ***behaviour*** of the Java ***build*** into this ***one***, so the ***office*** ***loses*** ***nothing*** when the Java ***build*** is ***archived*** (ADR 0006, as ***amended***). The maintainer ***decided*** ***one*** ***rule*** for all ***five***: ***follow*** the Java ***way***, so the ***service*** and the database may ***start*** in any ***order***. The ***stories*** ***take*** N-21 to N-25, after Part C. A ***sixth***, N-26, ***joined*** that ***afternoon***, when ***reading*** Npgsql's ***pool*** ***showed*** that it ***already*** ***keeps*** the Java ***build***'s ***order***.
 
 ### Step 20 · N-21 Name the settings as pg_tileserv names them
 
@@ -843,6 +843,30 @@ A ***crowd*** ***asking*** for ***one*** ***unbuilt*** tile ***shares*** ***one*
 1. **UP on the running service.**
 2. **DOWN with the database down**, and no ***fault*** ***named***.
 
+### Step 25 · N-26 Wait in the order of arrival
+
+| | |
+|---|---|
+| Size | 1 ***point*** |
+| Builds on | N-22: the ***pool***'s ***limits***; N-25: `/health` |
+| Traces | ADR 0006 ***rule*** 7; ***new*** on 14 ***October*** 2026 |
+
+**In plain words.** When ***many*** ***people*** ***pan*** the ***map*** at ***once***, ***requests*** for ***different*** tiles ***wait*** for a ***free*** database ***connection***. The ***first*** to ***arrive*** should be the ***first*** ***served***, or an ***unlucky*** ***request*** ***loses*** its ***turn*** ***again*** and ***again*** and ***runs*** out of ***time***. The Java ***build*** ***keeps*** this ***order*** with a ***gate*** in ***front*** of its ***pool***; Npgsql's ***pool*** ***keeps*** it ***itself***, so the .NET ***build*** ***needs*** only ***tests*** that ***prove*** it.
+
+> **Story.** **As** the maintainer, **I want** queries to ***wait*** for a ***connection*** in the ***order*** they ***arrive***, and the health ***check*** to ***wait*** ***behind*** none of them, **so that** no ***request*** ***waits*** far ***longer*** than the ***rest***, and a ***busy*** ***service*** ***still*** ***reports*** `UP`.
+
+**Acceptance criteria**
+
+1. **Given** every ***connection*** ***busy***, **then** the ***pool*** ***lends*** the next ***free*** one to the ***request*** that has ***waited*** ***longest***.
+2. **Given** a ***request*** ***cancelled*** while it ***waits***, such as by a browser that has ***left***, **then** it ***leaves*** the ***queue*** at ***once***.
+3. **Given** every tile ***connection*** ***busy***, **then** `/health` ***still*** ***pings*** the database ***within*** a ***second***, through a ***pool*** of its ***own*** with ***one*** ***connection***.
+
+**Tests to write first**
+
+1. **Five tiles, one connection.** ***Five*** ***different*** tiles of a ***view*** that ***sleeps*** 0.4 ***seconds***, ***asked*** for 50 ms ***apart***, ***finish*** in the ***order*** ***asked***.
+2. **The ping beside a busy pool.** With the ***only*** tile ***connection*** ***held*** for ***three*** ***seconds***, the ***ping*** ***answers*** ***within*** ***one***. ***Pointed*** at the ***shared*** ***pool***, the same ***test*** ***fails***.
+3. **A cancelled wait.** A ***request*** ***cancelled*** after 200 ms ***leaves*** ***within*** a ***second***, not after the ***pool***'s 30.
+
 ## The INVEST check
 
 A tick ***means*** the ***story*** ***meets*** the ***test*** in ***full***; 'Partly' ***names*** the ***reason***. ***Under*** 'Independent', each ***story*** ***names*** the ***stories*** ***above*** it that it ***needs***; ***none*** ***needs*** a ***story*** ***below*** it.
@@ -873,5 +897,6 @@ A tick ***means*** the ***story*** ***meets*** the ***test*** in ***full***; 'Pa
 | 22 | N-23 ***Grants*** without a restart | ✓ after US-03, N-22 | ✓ | ✓ | ✓ | ✓ 2 | ✓ |
 | 23 | N-24 ***One*** query for a ***crowd*** | ✓ after N-19 | ✓ | ✓ | ✓ | ✓ 1 | ✓ |
 | 24 | N-25 `/health` | ✓ after N-22, N-23 | ✓ | ***Partly***: for the maintainer | ✓ | ✓ 1 | ✓ |
+| 25 | N-26 ***Order*** of ***arrival*** | ✓ after N-22, N-25 | ✓ | ***Partly***: for the maintainer | ✓ | ✓ 1 | ✓ |
 
-The ***twenty***-***four*** ***stories*** ***come*** to 41 ***points***: 13 for the ***service***, 16 for the ***map***, 4 for Part C and 8 for Part D. Some criteria ***name*** a ***later*** ***story***: US-03 for its ***problem*** ***documents*** (US-07), US-07 for the 400 of S-06, and UI-09 for a ***click*** on a cluster (UI-10). Each such ***criterion*** ***holds*** once that ***story*** is ***built***, and the ***later*** ***story***'s ***tests*** ***prove*** it.
+The ***twenty***-***five*** ***stories*** ***come*** to 42 ***points***: 13 for the ***service***, 16 for the ***map***, 4 for Part C and 9 for Part D. Some criteria ***name*** a ***later*** ***story***: US-03 for its ***problem*** ***documents*** (US-07), US-07 for the 400 of S-06, and UI-09 for a ***click*** on a cluster (UI-10). Each such ***criterion*** ***holds*** once that ***story*** is ***built***, and the ***later*** ***story***'s ***tests*** ***prove*** it.

@@ -45,12 +45,23 @@ public sealed record PoolLimits(int MaxConns, TimeSpan MaxConnLifeTime, TimeSpan
 /// This class sits at the edge of the Sql module, where a database can fail, so it turns each
 /// database failure into a <see cref="Result{T, TError}"/> value. A connection pool keeps a few
 /// connections open between requests, so a tile need not pay for a new one each time.
+/// <para>
+/// When every connection is busy, Npgsql's pool lends the next free one to the request that has
+/// waited longest, so queries run in the order they arrive (N-26, ADR 0006 rule 7). The Java
+/// build needs a gate in front of its pool for this; Npgsql's pool keeps the order itself, and
+/// an integration test proves it.
+/// </para>
+/// <para>
+/// The health check's ping has a pool of its own, of one connection, so it never waits behind
+/// tiles: a busy service is still a healthy one (N-26 c3).
+/// </para>
 /// </remarks>
 public sealed class Database : IAsyncDisposable
 {
     private readonly NpgsqlDataSource _source;
+    private readonly NpgsqlDataSource _ping;
 
-    private Database(NpgsqlDataSource source) => _source = source;
+    private Database(NpgsqlDataSource source, NpgsqlDataSource ping) => (_source, _ping) = (source, ping);
 
     public static Database Open(DatabaseAddress address) => Open(address, PoolLimits.Default);
 
@@ -60,7 +71,13 @@ public sealed class Database : IAsyncDisposable
     /// waits for one, then gives up.
     /// </summary>
     public static Database Open(DatabaseAddress address, PoolLimits limits) =>
-        new(NpgsqlDataSource.Create(new NpgsqlConnectionStringBuilder
+        new(
+            Source(address, limits, "tessera"),
+            // One connection is enough: a ping is quick, and the health check asks one at a time.
+            Source(address, limits with { MaxConns = 1 }, "tessera-health"));
+
+    private static NpgsqlDataSource Source(DatabaseAddress address, PoolLimits limits, string name) =>
+        NpgsqlDataSource.Create(new NpgsqlConnectionStringBuilder
         {
             Host = address.Host,
             Port = address.Port,
@@ -68,21 +85,28 @@ public sealed class Database : IAsyncDisposable
             Username = address.User,
             Password = address.Password,
             // The name shows in pg_stat_activity, so the maintainer can tell Tessera's connections apart.
-            ApplicationName = "tessera",
+            ApplicationName = name,
             MaxPoolSize = limits.MaxConns,
             ConnectionLifetime = (int)limits.MaxConnLifeTime.TotalSeconds,
             CommandTimeout = (int)limits.CommandTimeout.TotalSeconds,
             // Npgsql's Timeout covers both opening a connection and waiting for a free one in the pool.
             Timeout = (int)limits.ConnectionTimeout.TotalSeconds,
-        }.ConnectionString));
+        }.ConnectionString);
+
+    /// <summary>
+    /// Asks the database for <c>SELECT 1</c> through the ping's own pool, so the answer never waits
+    /// behind tile queries (N-25, N-26 c3).
+    /// </summary>
+    public Task<Result<ImmutableArray<int>, DatabaseError>> Ping(CancellationToken cancel = default) =>
+        Run(_ping, async connection => (await connection.QueryAsync<int>(Command(HealthQueries.Ping, null, cancel)).ConfigureAwait(false)).ToImmutableArray(), cancel);
 
     /// <summary>Runs a query and maps each row to <typeparamref name="T"/> by column name.</summary>
     public Task<Result<ImmutableArray<T>, DatabaseError>> Rows<T>(Query query, CancellationToken cancel = default) =>
-        Run(async connection => (await connection.QueryAsync<T>(Command(query, null, cancel)).ConfigureAwait(false)).ToImmutableArray());
+        Run(_source, async connection => (await connection.QueryAsync<T>(Command(query, null, cancel)).ConfigureAwait(false)).ToImmutableArray(), cancel);
 
     /// <summary>Runs a query that returns one value, or none.</summary>
     public Task<Result<Option<T>, DatabaseError>> Single<T>(Query query, CancellationToken cancel = default) where T : class =>
-        Run(async connection => (await connection.QuerySingleOrDefaultAsync<T>(Command(query, null, cancel)).ConfigureAwait(false)).ToOption());
+        Run(_source, async connection => (await connection.QuerySingleOrDefaultAsync<T>(Command(query, null, cancel)).ConfigureAwait(false)).ToOption(), cancel);
 
     /// <summary>
     /// Runs every step in one transaction: all of them take effect, or none does (US-24 c6).
@@ -113,13 +137,19 @@ public sealed class Database : IAsyncDisposable
         }
     }
 
-    public ValueTask DisposeAsync() => _source.DisposeAsync();
+    public async ValueTask DisposeAsync()
+    {
+        await _source.DisposeAsync().ConfigureAwait(false);
+        await _ping.DisposeAsync().ConfigureAwait(false);
+    }
 
-    private async Task<Result<T, DatabaseError>> Run<T>(Func<NpgsqlConnection, Task<T>> work)
+    // The token reaches the wait for a connection too, so a request that is cancelled, such as by a
+    // browser that has left, steps out of the pool's queue at once rather than holding a place in it.
+    private static async Task<Result<T, DatabaseError>> Run<T>(NpgsqlDataSource source, Func<NpgsqlConnection, Task<T>> work, CancellationToken cancel)
     {
         try
         {
-            await using var connection = await _source.OpenConnectionAsync().ConfigureAwait(false);
+            await using var connection = await source.OpenConnectionAsync(cancel).ConfigureAwait(false);
             return Result.Ok<T, DatabaseError>(await work(connection).ConfigureAwait(false));
         }
         catch (NpgsqlException error)

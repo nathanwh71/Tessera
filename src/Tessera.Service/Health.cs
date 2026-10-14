@@ -17,7 +17,8 @@ namespace Tessera.Service;
 /// </summary>
 /// <remarks>
 /// Two checks must both pass: the list of layers has loaded at least once (N-23), and the database
-/// answers a ping within a second. The answer names no check and no fault, so a stranger learns
+/// answers a ping within a second. The ping uses a pool of its own, so it never waits behind
+/// tiles, and a busy service still reports UP (N-26 c3), as the Java build's does. The answer names no check and no fault, so a stranger learns
 /// nothing of the service's insides; the log holds the detail. It lives here, in the program,
 /// because it reads both the catalogue and the database, and no module may reference both.
 /// </remarks>
@@ -81,7 +82,7 @@ public static class Health
             limit.CancelAfter(PingTimeout);
             try
             {
-                return (await database.Rows<int>(HealthQueries.Ping, limit.Token).ConfigureAwait(false)).Match(
+                return (await database.Ping(limit.Token).ConfigureAwait(false)).Match(
                     _ => HealthCheckResult.Healthy(),
                     error => HealthCheckResult.Unhealthy($"The database did not answer ({error.SqlState}): {error.Message}"));
             }
