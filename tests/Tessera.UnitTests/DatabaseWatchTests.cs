@@ -96,4 +96,15 @@ public sealed class DatabaseWatchTests
     [InlineData("42P01", false)]
     public void Knows_which_failures_prove_the_database_down(string state, bool proof) =>
         Assert.Equal(proof, Database.LostConnection(new DatabaseError(state, "")));
+
+    // DbPoolConnectionTimeout counts milliseconds, from 250, but Npgsql counts whole seconds and reads
+    // 0 as 'wait for ever': a short wait must round up, never down to 0.
+    [Theory]
+    [InlineData(250, 1)]
+    [InlineData(999, 1)]
+    [InlineData(1000, 1)]
+    [InlineData(3000, 3)]
+    [InlineData(3500, 4)]
+    public void Rounds_the_pools_wait_up_to_whole_seconds(int milliseconds, int seconds) =>
+        Assert.Equal(seconds, Database.WholeSeconds(TimeSpan.FromMilliseconds(milliseconds)));
 }

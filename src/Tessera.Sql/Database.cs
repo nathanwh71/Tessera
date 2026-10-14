@@ -121,8 +121,9 @@ public sealed class Database : IAsyncDisposable
             ConnectionLifetime = (int)limits.MaxConnLifeTime.TotalSeconds,
             CommandTimeout = (int)limits.CommandTimeout.TotalSeconds,
             // Npgsql's Timeout, in seconds, covers both opening a connection and waiting for a free one
-            // in the pool.
-            Timeout = (int)limits.ConnectionTimeout.TotalSeconds,
+            // in the pool. It counts whole seconds, and 0 means 'wait for ever', so the wait is rounded
+            // up: DbPoolConnectionTimeout of 250 ms becomes one second, not an endless wait.
+            Timeout = WholeSeconds(limits.ConnectionTimeout),
             // Planning a query costs time, so a query text sent three times on a connection becomes a
             // prepared statement: the database plans it once and reuses the plan, as the Java build's
             // driver does (prepareThreshold=3). The tile query's text differs only by layer, so nine
@@ -182,6 +183,12 @@ public sealed class Database : IAsyncDisposable
             return Sql.Ping.Slow;
         }
     }
+
+    /// <summary>
+    /// A wait in whole seconds, rounded up and never below one, for Npgsql's <c>Timeout</c>, which
+    /// counts whole seconds and reads 0 as 'wait for ever'.
+    /// </summary>
+    internal static int WholeSeconds(TimeSpan wait) => Math.Max(1, (int)Math.Ceiling(wait.TotalSeconds));
 
     // Closes a connection once the step it belongs to has finished, without making the ping wait.
     private static void CloseLater(Task<NpgsqlConnection> step) =>
