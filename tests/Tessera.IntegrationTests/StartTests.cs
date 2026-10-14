@@ -40,8 +40,8 @@ public sealed class StartTests
     {
         var (code, errors) = await Run();
 
+        // The port defaults to pg_tileserv's 7800 (ADR 0006 rule 4); the database has no default.
         Assert.Equal(1, code);
-        Assert.Contains("TESSERA_HTTPPORT", errors, StringComparison.Ordinal);
         Assert.Contains("DATABASE_URL", errors, StringComparison.Ordinal);
     }
 

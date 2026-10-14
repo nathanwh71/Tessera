@@ -60,14 +60,17 @@ public sealed record LayerSource(TableName Table, QuotedName Geometry, int Srid,
 /// <summary>One tile's address on the web map's grid: zoom level z, column x, row y.</summary>
 public sealed record TileCell(int Z, int X, int Y);
 
-/// <summary>The most features one tile may carry, and how far past its edge it reaches, in tile units.</summary>
-public sealed record TileLimits(int MaxFeatures, int Buffer);
+/// <summary>
+/// The most features one tile may carry, how far past its edge it reaches, and how many units wide
+/// it is: pg_tileserv's <c>DefaultResolution</c>, 4096 unless set.
+/// </summary>
+public sealed record TileLimits(int MaxFeatures, int Buffer, int Resolution = TileQueries.Extent);
 
 public static class TileQueries
 {
     /// <summary>
-    /// A vector tile stores positions as whole numbers inside a square 4096 units wide, the usual
-    /// size for Mapbox vector tiles.
+    /// A vector tile stores positions as whole numbers inside a square 4096 units wide by default, the
+    /// usual size for Mapbox vector tiles; <c>DefaultResolution</c> may change it.
     /// </summary>
     public const int Extent = 4096;
 
@@ -84,10 +87,10 @@ public static class TileQueries
     /// </remarks>
     public static Query Tile(LayerSource layer, TileCell tile, TileLimits limits) =>
         Query.Of($"""
-            SELECT ST_AsMVT(tile.*, {layer.LayerId}, {Extent}, 'tessera_shape') FROM (
-              SELECT ST_AsMVTGeom(ST_Transform(t.{layer.Geometry}, 3857), ST_TileEnvelope({tile.Z}, {tile.X}, {tile.Y}), {Extent}, {limits.Buffer}, true) AS tessera_shape{new NameList(layer.Properties, LeadingComma: true)}
+            SELECT ST_AsMVT(tile.*, {layer.LayerId}, {limits.Resolution}, 'tessera_shape') FROM (
+              SELECT ST_AsMVTGeom(ST_Transform(t.{layer.Geometry}, 3857), ST_TileEnvelope({tile.Z}, {tile.X}, {tile.Y}), {limits.Resolution}, {limits.Buffer}, true) AS tessera_shape{new NameList(layer.Properties, LeadingComma: true)}
               FROM {layer.Table} AS t
-              WHERE t.{layer.Geometry} && ST_Transform(ST_TileEnvelope({tile.Z}, {tile.X}, {tile.Y}, margin => {(double)limits.Buffer / Extent}), {layer.Srid})
+              WHERE t.{layer.Geometry} && ST_Transform(ST_TileEnvelope({tile.Z}, {tile.X}, {tile.Y}, margin => {(double)limits.Buffer / limits.Resolution}), {layer.Srid})
               LIMIT {limits.MaxFeatures}
             ) AS tile
             """);

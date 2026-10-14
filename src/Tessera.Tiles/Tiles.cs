@@ -23,25 +23,26 @@ namespace Tessera.Tiles;
 public sealed record TileAddress(int Z, int X, int Y)
 {
     /// <summary>
-    /// The deepest level the service serves. At level 22 a tile spans about 10 metres, a doorway
-    /// on the map (UI-09); deeper levels add nothing for points.
+    /// The deepest level the service serves unless <c>DefaultMaxZoom</c> says otherwise. At level 22
+    /// a tile spans about 10 metres, a doorway on the map (UI-09); deeper levels add nothing for points.
     /// </summary>
     public const int MaxZoom = 22;
 
-    /// <summary>Checks that the tile exists: z from 0 to 22, and x and y inside that level's grid.</summary>
-    public static Result<TileAddress, string> Of(int z, int x, int y) =>
-        z is < 0 or > MaxZoom
-            ? Result.Refuse<TileAddress, string>($"The zoom level must lie from 0 to {MaxZoom}.")
-            : x < 0 || y < 0 || x >= 1 << z || y >= 1 << z
-                ? Result.Refuse<TileAddress, string>($"At level {z}, x and y must lie from 0 to {(1 << z) - 1}.")
-                : Result.Ok<TileAddress, string>(new TileAddress(z, x, y));
+    /// <summary>
+    /// Checks that the tile exists: z within the levels served, and x and y inside that level's
+    /// grid. A tile that does not exist is not found, as in the Java build (ADR 0006 rule 6).
+    /// </summary>
+    public static Result<TileAddress, string> Of(int z, int x, int y, int minZoom = 0, int maxZoom = MaxZoom) =>
+        z < minZoom || z > maxZoom || z > 30 || x < 0 || y < 0 || x >= 1 << z || y >= 1 << z
+            ? Result.Refuse<TileAddress, string>("No tile has those coordinates.")
+            : Result.Ok<TileAddress, string>(new TileAddress(z, x, y));
 }
 
 /// <summary>The tile query, built in Sql from the layer, the tile and the settings (US-07).</summary>
 public static class TileQuery
 {
     public static Query For(Layer layer, TileAddress tile, TileSettings settings) =>
-        TileQueries.Tile(layer.Source, new TileCell(tile.Z, tile.X, tile.Y), new TileLimits(settings.MaxFeatures, settings.Buffer));
+        TileQueries.Tile(layer.Source, new TileCell(tile.Z, tile.X, tile.Y), new TileLimits(settings.MaxFeatures, settings.Buffer, settings.Resolution));
 }
 
 /// <summary>The headers that tell a browser how to treat a tile it has received (N-18).</summary>
@@ -135,7 +136,7 @@ public sealed class TileServer(Func<Option<LayerCatalogue>> catalogue, TileReade
             from layers in catalogue().OrRefuse(Problems.Unavailable("The list of layers has not loaded yet. Try again shortly."))
             // The detail never repeats the request's layer id: an answer should not echo what a stranger sent.
             from layer in layers.Find(layerId).OrRefuse(Problems.NotFound("No published layer has that name."))
-            from tile in TileAddress.Of(z, x, y).MapError(Problems.BadRequest)
+            from tile in TileAddress.Of(z, x, y, settings.MinZoom, settings.MaxZoom).MapError(Problems.NotFound)
             select (Layer: layer, Tile: tile);
 
         return await target.Match(

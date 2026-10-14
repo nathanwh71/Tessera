@@ -10,8 +10,10 @@ using Tessera.Sql;
 namespace Tessera.Service;
 
 /// <summary>
-/// <c>/health</c>: 200 <c>{"status":"UP"}</c> when the service can serve tiles, else 503
-/// <c>{"status":"DOWN"}</c> (N-25). pg_tileserv answers at the same address.
+/// <c>/health</c>: 200 <c>{"status":"UP"}</c> when the service can serve tiles; 503
+/// <c>{"status":"OUT_OF_SERVICE"}</c> while the first list of layers loads; 503
+/// <c>{"status":"DOWN"}</c> when the database does not answer (N-25). pg_tileserv answers at the
+/// same address, and the Java build gives the same three answers there (ADR 0006 rule 5).
 /// </summary>
 /// <remarks>
 /// Two checks must both pass: the list of layers has loaded at least once (N-23), and the database
@@ -47,11 +49,20 @@ public static class Health
                 // A watcher asks again each time, so no copy of an old answer may stand in for a new one.
                 context.Response.Headers.CacheControl = "no-store";
                 context.Response.ContentType = "application/json";
-                return context.Response.WriteAsync(report.Status == HealthStatus.Healthy ? """{"status":"UP"}""" : """{"status":"DOWN"}""");
+                return context.Response.WriteAsync($$"""{"status":"{{Status(report)}}"}""");
             },
         });
         return routes;
     }
+
+    /// <summary>
+    /// The word Spring's health check, in the Java build, gives for the same state: DOWN outranks
+    /// OUT_OF_SERVICE, which outranks UP, so a database that does not answer is DOWN whatever the list.
+    /// </summary>
+    public static string Status(HealthReport report) =>
+        report.Entries.TryGetValue("database", out var database) && database.Status != HealthStatus.Healthy ? "DOWN"
+            : report.Status != HealthStatus.Healthy ? "OUT_OF_SERVICE"
+            : "UP";
 
     // .NET builds this check itself and hands it the live catalogue, a singleton of the service.
     private sealed class CatalogueLoaded(LiveCatalogue catalogue) : IHealthCheck

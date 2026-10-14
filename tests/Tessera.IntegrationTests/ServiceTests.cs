@@ -270,11 +270,12 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
     }
 
     [Fact]
-    public async Task Answers_a_tile_outside_the_grid_with_400()
+    public async Task Answers_a_tile_outside_the_grid_with_404()
     {
         using var answer = await Get("/food.cafes/1/5/0.pbf");
 
-        Assert.Equal(HttpStatusCode.BadRequest, answer.StatusCode);
+        // ADR 0006 rule 6: a tile that does not exist is not found, in both builds.
+        Assert.Equal(HttpStatusCode.NotFound, answer.StatusCode);
         Assert.Equal("application/problem+json", answer.Content.Headers.ContentType?.MediaType);
     }
 

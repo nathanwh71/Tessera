@@ -21,18 +21,27 @@ public sealed record MapSettings(bool Preview);
 
 /// <summary>
 /// One tile's limits and how long a copy of it lives (US-07, N-18, N-19). Each field reads a key
-/// with pg_tileserv's name: <c>MaxFeaturesPerTile</c>, <c>DefaultBuffer</c>, <c>CacheTTL</c>, and
-/// Tessera's own <c>TileCacheMegabytes</c>.
+/// with pg_tileserv's name: <c>MaxFeaturesPerTile</c>, <c>DefaultBuffer</c>, <c>CacheTTL</c>,
+/// <c>DefaultResolution</c>, <c>DefaultMinZoom</c> and <c>DefaultMaxZoom</c>, and Tessera's own
+/// <c>TileCacheMegabytes</c>.
 /// </summary>
 /// <remarks>
-/// A tile is 4096 units wide, so a buffer of 64 reaches 1/64 of a tile beyond each edge.
-/// CacheSeconds is how long a browser may keep a tile, and how long the service keeps its own copy;
-/// 0 means neither keeps one. CacheMegabytes caps the memory the service's copies take together.
+/// A tile is Resolution units wide, 4096 by default, so a buffer of 256 reaches 1/16 of a tile
+/// beyond each edge. CacheSeconds is how long a browser may keep a tile, and how long the service
+/// keeps its own copy; 0 means neither keeps one. CacheMegabytes caps the memory the service's
+/// copies take together. MinZoom and MaxZoom bound the levels the service serves.
 /// </remarks>
-public sealed record TileSettings(int MaxFeatures, int Buffer, int CacheSeconds, int CacheMegabytes);
+public sealed record TileSettings(int MaxFeatures, int Buffer, int CacheSeconds, int CacheMegabytes, int Resolution = 4096, int MinZoom = 0, int MaxZoom = 22);
 
-/// <summary>Where the service listens: pg_tileserv's <c>HttpPort</c>.</summary>
-public sealed record HttpSettings(int Port);
+/// <summary>
+/// Where and how the service listens: pg_tileserv's <c>HttpHost</c> and <c>HttpPort</c>, and the
+/// Java build's <c>HttpMaxConnections</c>, the most connections open at once, and
+/// <c>HttpAcceptCount</c>, how many more may wait in line.
+/// </summary>
+public sealed record HttpSettings(System.Net.IPAddress Host, int Port, int MaxConnections = 8192, int AcceptCount = 100)
+{
+    public HttpSettings(int port) : this(System.Net.IPAddress.Any, port) { }
+}
 
 /// <summary>
 /// The database, and the limits on the service's use of it (N-22). The keys are pg_tileserv's

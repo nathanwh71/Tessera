@@ -35,7 +35,15 @@ public static class TesseraService
     {
         var cache = new TileCache(settings.Tiles, TimeProvider.System);
         var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions());
-        builder.WebHost.UseKestrelCore().ConfigureKestrel(kestrel => kestrel.Listen(IPAddress.Any, settings.Http.Port));
+        // HttpMaxConnections caps the connections open at once; HttpAcceptCount is how many more may
+        // wait in the operating system's line before it refuses a new one.
+        builder.WebHost.UseKestrelCore()
+            .UseSockets(sockets => sockets.Backlog = settings.Http.AcceptCount)
+            .ConfigureKestrel(kestrel =>
+            {
+                kestrel.Limits.MaxConcurrentConnections = settings.Http.MaxConnections;
+                kestrel.Listen(settings.Http.Host, settings.Http.Port);
+            });
         builder.Services.AddRoutingCore();
         // The map's own files travel gzip-packed when the browser accepts it (N-20); a tile packs
         // itself, once, in Tiles. The usual text types are on the list already; .NET names a script

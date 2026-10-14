@@ -1,17 +1,27 @@
 {
-  "ShowPreview": true,
+  "DefaultResolution": 4096,
+  "DefaultBuffer": 256,
+  "MaxFeaturesPerTile": 10000,
+  "DefaultMinZoom": 0,
+  "DefaultMaxZoom": 22,
   "DbPoolMaxConns": 4,
   "DbPoolMaxConnLifeTime": "1h",
   "DbTimeout": 10,
-  "DbPoolConnectionTimeout": 3,
-  "MaxFeaturesPerTile": 10000,
-  "DefaultBuffer": 64,
+  "DbPoolConnectionTimeout": 3000,
   "CacheTTL": 60,
   "TileCacheMegabytes": 64,
+  "ShowPreview": true,
   "CatalogueRefresh": 30,
+  "HttpMaxConnections": 8192,
+  "HttpAcceptCount": 100,
   "Area": {
     "Name": "Macau",
-    "Box": { "West": 113.52, "South": 22.10, "East": 113.61, "North": 22.22 },
-    "Home": { "Longitude": 113.55, "Latitude": 22.19, "Zoom": 15 }
+    "MinLongitude": 113.52,
+    "MinLatitude": 22.10,
+    "MaxLongitude": 113.61,
+    "MaxLatitude": 22.22,
+    "HomeLongitude": 113.55,
+    "HomeLatitude": 22.19,
+    "HomeLevel": 15
   }
 }
