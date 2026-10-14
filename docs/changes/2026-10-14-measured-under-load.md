@@ -73,3 +73,17 @@ The ***same*** ***afternoon***, N-28 ***gave*** .NET a ***watch*** with Java's *
 | ***Stopped***: ***full*** ***service*** after the ***database*** | ***about*** 1 s | ***about*** 1 s | ***about*** 5 s |
 
 In both ***builds***, ***requests*** ***already*** ***waiting*** when the ***database*** ***freezes*** ***still*** ***wait*** out their 3 ***seconds***, so a ***freeze*** ***brings*** ***some*** ***seconds*** of ***slow*** 503s before the ***fast*** ones. Java ***still*** ***returns*** after a ***stop*** up to 5 ***seconds*** behind .NET, ***because*** of Hikari's ***reconnect*** ***wait***.
+
+## Update: tiles abandoned by panning
+
+When a ***person*** ***pans*** ***away*** before a tile ***arrives***, the ***map*** ***cancels*** its ***request***, but the ***service*** ***finishes*** the query (N-26, ***known*** ***limit***). Does that ***slow*** the tiles ***still*** on ***screen***? k6 ***sent*** '***viewers***', who ***wait*** for their tiles, and '***panners***', who ***give*** up after 100 ms, with no tile ***cache***. ***Two*** ***runs*** ***each***, 30 ***seconds***; ***viewers***' ***figures*** ***only***.
+
+| Load | ***Viewers*** ***alone*** | With ***panners*** who ***give*** up | With ***panners*** who ***wait*** |
+|---|---|---|---|
+| 300 + 400 a ***second***: ***median*** | 1.0 to 1.1 ms | 1.2 ms | 1.2 ms |
+| 300 + 400 a ***second***: p99 | 4.6 to 5.8 ms | 14 to 17 ms | 15 to 17 ms |
+| 300 + 400 a ***second***: ***requests*** ***given*** up | — | none | — |
+| 1,000 + 1,200 a ***second***: ***median*** | 1.1 ms | 101 to 132 ms | 49 to 82 ms |
+| 1,000 + 1,200 a ***second***: ***requests*** ***given*** up | — | 53 to 54 % of ***panners***' | — |
+
+**What it shows.** At a ***busy*** but ***sane*** ***load***, a ***third*** of ***capacity***, every tile ***comes*** ***back*** long before a ***map*** would ***cancel*** it, so there is nothing to ***cancel***. ***Only*** ***under*** ***overload*** do ***requests*** ***wait*** ***long*** ***enough*** to be ***given*** up, and then ***cancelling*** would ***save*** some ***work***, but a ***service*** ***past*** its ***capacity*** ***needs*** a ***limit*** on ***load***, which ADR 0007 ***defers***. So the ***cancel*** is not ***built***.
