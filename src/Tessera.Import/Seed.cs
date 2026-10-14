@@ -189,12 +189,15 @@ public static class Seed
             value.ValueKind == JsonValueKind.String && value.GetString() is { Length: > 0 } text ? Option.Some(text) : Option.None<string>());
 
     // Every property but the id becomes a column; the id is the primary key, the column whose values
-    // name each row, instead. A property with an empty name is skipped, since no column can take it.
+    // name each row, instead. A property with an empty name is refused, naming the feature: no column
+    // can take it, and a value that vanished without a word would be a fault no one could find.
     // JSON allows one name twice in an object, but a table cannot hold two columns of one name.
     private static Result<ImmutableSortedDictionary<string, PropertyValue>, ImportError> Values(JsonElement properties, string feature)
     {
-        var members = properties.EnumerateObject().Where(property => property.Name != "id" && property.Name.Length > 0).ToImmutableArray();
-        return members.Any(property => property.Name == GeometryColumn)
+        var members = properties.EnumerateObject().Where(property => property.Name != "id").ToImmutableArray();
+        return members.Any(property => property.Name.Length == 0)
+            ? Refuse<ImmutableSortedDictionary<string, PropertyValue>>($"{feature} has a property with no name. Give it a name, or remove it.")
+            : members.Any(property => property.Name == GeometryColumn)
             ? Refuse<ImmutableSortedDictionary<string, PropertyValue>>($"{feature} has a property named '{GeometryColumn}', the name of the geometry column.")
             : members.Select(property => property.Name).Distinct(StringComparer.Ordinal).Count() != members.Length
                 ? Refuse<ImmutableSortedDictionary<string, PropertyValue>>($"{feature} names one property twice.")

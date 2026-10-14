@@ -154,6 +154,21 @@ public sealed class SeedTests
         Assert.Equal(8, queries.Count(text => text.EndsWith($"ADD COLUMN IF NOT EXISTS \"sample\" {SqlType.Boolean.Keyword}", StringComparison.Ordinal)));
     }
 
+    // A property with no name can have no column, so the file is refused, and the message names the
+    // feature, rather than the property vanishing without a word.
+    [Fact]
+    public void Refuses_a_property_with_no_name_and_names_the_feature()
+    {
+        var message = Problem(Sample(file =>
+        {
+            ((JsonObject)FirstFeature(file)["properties"]!)[""] = "lost";
+            return file;
+        }));
+
+        Assert.StartsWith("Feature 'buses-001' (number 1 in the file)", message, StringComparison.Ordinal);
+        Assert.Contains("a property with no name", message, StringComparison.Ordinal);
+    }
+
     private static ImmutableArray<string> PlanTexts(Importer.ExistingColumns existing) =>
         Seed.Read(Sample(), Macau).Bind(places => Importer.Plan(places, existing)).Match(found => found.Select(query => query.Text).ToImmutableArray(), _ => []);
 
