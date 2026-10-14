@@ -149,8 +149,10 @@ public sealed class Database : IAsyncDisposable
         await _ping.DisposeAsync().ConfigureAwait(false);
     }
 
-    // The token reaches the wait for a connection too, so a request that is cancelled, such as by a
-    // browser that has left, steps out of the pool's queue at once rather than holding a place in it.
+    // The token reaches the wait for a connection too, so a query whose token is cancelled steps out
+    // of the pool's queue at once rather than holding a place in it (N-26 c2). A tile query passes
+    // the service's stop token, not the browser's, so it stays in the queue when the browser leaves:
+    // other people may share it (N-24).
     private static async Task<Result<T, DatabaseError>> Run<T>(NpgsqlDataSource source, Func<NpgsqlConnection, Task<T>> work, CancellationToken cancel)
     {
         try

@@ -858,14 +858,16 @@ A ***crowd*** ***asking*** for ***one*** ***unbuilt*** tile ***shares*** ***one*
 **Acceptance criteria**
 
 1. **Given** every ***connection*** ***busy***, **then** the ***pool*** ***lends*** the next ***free*** one to the ***request*** that has ***waited*** ***longest***.
-2. **Given** a ***request*** ***cancelled*** while it ***waits***, such as by a browser that has ***left***, **then** it ***leaves*** the ***queue*** at ***once***.
+2. **Given** a query ***sent*** with its ***request***'s own ***cancel*** ***signal***, and that ***request*** ***cancelled*** while the query ***waits***, **then** the query ***leaves*** the ***queue*** at ***once***. A tile query is not such a query: see ***Known*** ***limit***.
 3. **Given** every tile ***connection*** ***busy***, **then** `/health` ***still*** ***pings*** the database ***within*** a ***second***, through a ***pool*** of its ***own*** with ***one*** ***connection***.
 
 **Tests to write first**
 
 1. **Five tiles, one connection.** ***Five*** ***different*** tiles of a ***view*** that ***sleeps*** 0.4 ***seconds***, ***asked*** for 50 ms ***apart***, ***finish*** in the ***order*** ***asked***.
 2. **The ping beside a busy pool.** With the ***only*** tile ***connection*** ***held*** for ***three*** ***seconds***, the ***ping*** ***answers*** ***within*** ***one***. ***Pointed*** at the ***shared*** ***pool***, the same ***test*** ***fails***.
-3. **A cancelled wait.** A ***request*** ***cancelled*** after 200 ms ***leaves*** ***within*** a ***second***, not after the ***pool***'s 30.
+3. **A cancelled wait.** A query ***cancelled*** after 200 ms ***leaves*** ***within*** a ***second***, not after the ***pool***'s 30.
+
+**Known limit.** A tile query ***runs*** on the ***service***'s ***stop*** ***signal***, not the ***browser***'s, so ***several*** ***people*** can ***share*** it (N-24). When a ***person*** ***pans*** ***away*** before a tile ***arrives***, the ***map*** ***cancels*** the ***request***, but the query ***still*** ***waits*** its ***turn***, ***runs***, and ***lands*** in the ***cache***. The Java ***build*** ***does*** the ***same***. Nothing is ***lost***: a ***person*** who ***pans*** ***back*** ***gets*** the tile at no ***cost***. On a ***busy*** ***day***, though, ***abandoned*** queries ***hold*** ***connections*** that tiles ***still*** on ***screen*** ***need***. ***Cancelling*** a ***shared*** query once its ***last*** ***waiter*** has ***left*** would ***free*** them; a ***load*** ***run*** that ***cancels*** ***requests*** ***mid***-***flight*** should first ***show*** whether the ***delay*** ***matters***.
 
 ## The INVEST check
 

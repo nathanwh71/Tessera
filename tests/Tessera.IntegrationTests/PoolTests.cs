@@ -76,8 +76,9 @@ public sealed class PoolTests(DatabaseFixture database) : IClassFixture<Database
         await hold;
     }
 
-    // N-26 c2: a request that is cancelled while it waits leaves the queue at once, rather than
-    // waiting out the pool's whole timeout.
+    // N-26 c2: a query whose own token is cancelled while it waits leaves the queue at once, rather
+    // than waiting out the pool's whole timeout. Tile queries pass the service's stop token instead,
+    // so this covers the other queries, such as the list of layers.
     [Fact]
     public async Task Lets_a_cancelled_request_leave_the_queue()
     {
