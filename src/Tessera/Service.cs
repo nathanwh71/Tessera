@@ -42,7 +42,7 @@ public static class TesseraService
             TimeSpan.FromSeconds(Problems.RetryAfterSeconds),
             services.GetRequiredService<ILoggerFactory>().CreateLogger("Tessera.Catalogue")));
         builder.Services.AddHostedService(services => services.GetRequiredService<LiveCatalogue>());
-        // N-25: the database must answer a ping, on its own pool, within a second.
+        // N-25: the database must answer a ping within a second, through the same pool as the tiles.
         builder.Services.AddHealthChecks().AddCheck<DatabaseAnswers>("database");
 
         var app = builder.Build();

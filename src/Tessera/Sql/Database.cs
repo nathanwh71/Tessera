@@ -39,45 +39,39 @@ public sealed record DatabaseError(string SqlState, string Message)
 /// </summary>
 /// <remarks>
 /// A pool keeps a few connections open for requests to share. When every one is busy, Npgsql lends
-/// the next free one to the request that has waited longest (N-26). The health check's ping has a
-/// pool of its own, so it never waits behind tiles (N-26 c3).
+/// the next free one to the request that has waited longest (N-26). The health check's ping shares
+/// the pool too, so a pool busy for more than a second makes /health say DOWN (N-26 c3).
 /// </remarks>
 public sealed class Database : IAsyncDisposable
 {
     private readonly NpgsqlDataSource _source;
-    private readonly NpgsqlDataSource _ping;
 
-    private Database(NpgsqlDataSource source, NpgsqlDataSource ping) => (_source, _ping) = (source, ping);
+    private Database(NpgsqlDataSource source) => _source = source;
 
     /// <summary>The longest a ping may take, from connecting to the answer.</summary>
     private static readonly TimeSpan PingLimit = TimeSpan.FromSeconds(1);
 
-    /// <summary>Opens the pool within the given limits, or the defaults, and the ping's pool of one.</summary>
+    /// <summary>Opens the pool within the given limits, or the defaults.</summary>
     /// <param name="connection">Npgsql's connection string, made from the database URL.</param>
     /// <param name="limits">The pool's limits (N-22).</param>
     public static Database Open(string connection, DatabaseSettings? limits = null)
     {
         var pool = limits ?? new DatabaseSettings();
-        return new(
-            Source(connection, pool.PoolSize, pool.ConnectionLifetimeSeconds, pool.QueryTimeoutSeconds, pool.ConnectionWaitSeconds, "tessera"),
-            Source(connection, 1, pool.ConnectionLifetimeSeconds, 1, 1, "tessera-health"));
-    }
-
-    private static NpgsqlDataSource Source(string connection, int size, int lifetime, int queryTimeout, int wait, string name) =>
-        NpgsqlDataSource.Create(new NpgsqlConnectionStringBuilder(connection)
+        return new(NpgsqlDataSource.Create(new NpgsqlConnectionStringBuilder(connection)
         {
             // The name shows in pg_stat_activity, so the maintainer can tell Tessera's connections apart.
-            ApplicationName = name,
-            MaxPoolSize = size,
-            ConnectionLifetime = lifetime,
-            CommandTimeout = queryTimeout,
+            ApplicationName = "tessera",
+            MaxPoolSize = pool.PoolSize,
+            ConnectionLifetime = pool.ConnectionLifetimeSeconds,
+            CommandTimeout = pool.QueryTimeoutSeconds,
             // Covers both opening a connection and waiting for a free one in the pool.
-            Timeout = wait,
+            Timeout = pool.ConnectionWaitSeconds,
             // A query text sent three times on a connection becomes a prepared statement, planned once.
             // Measured on 14 October 2026, this raised the rate from 1,580 to 2,408 tiles a second.
             MaxAutoPrepare = 32,
             AutoPrepareMinUsages = 3,
-        }.ConnectionString);
+        }.ConnectionString));
+    }
 
     /// <summary>Runs a query and turns each row into a <typeparamref name="T"/>, matching columns to fields by name.</summary>
     public Task<Result<ImmutableArray<T>, DatabaseError>> Rows<T>(Query query, CancellationToken cancel = default) =>
@@ -88,34 +82,40 @@ public sealed class Database : IAsyncDisposable
         Run(connection => connection.QuerySingleOrDefaultAsync<T>(Command(query, cancel)), cancel);
 
     /// <summary>
-    /// True when the database answers <c>SELECT 1</c> within a second (N-25). The ping keeps its own
-    /// clock, since a frozen database can hold Npgsql's limits for longer; a step it gives up on
-    /// finishes, or fails, out of sight.
+    /// True when the database answers <c>SELECT 1</c> within a second, the wait for a free connection
+    /// included (N-25, N-26 c3). The ping keeps its own clock, since a frozen database can hold
+    /// Npgsql's limits for longer; a step it gives up on finishes, or fails, out of sight.
     /// </summary>
     public async Task<bool> Ping(CancellationToken stop)
     {
+        // The second token takes the ping out of the pool's queue when the second runs out, so a
+        // ping that gave up never takes a connection a tile is waiting for.
+        var limit = CancellationTokenSource.CreateLinkedTokenSource(stop);
+        limit.CancelAfter(PingLimit);
         try
         {
-            await PingOnce(stop).WaitAsync(PingLimit, stop).ConfigureAwait(false);
+            await PingOnce(limit.Token).WaitAsync(PingLimit, stop).ConfigureAwait(false);
             return true;
         }
-        catch (Exception error) when (error is TimeoutException or NpgsqlException && !stop.IsCancellationRequested)
+        catch (Exception error) when (error is TimeoutException or OperationCanceledException or NpgsqlException && !stop.IsCancellationRequested)
         {
             return false;
         }
+        finally
+        {
+            // Cancelled before it is disposed, so the queue hears of it whichever clock ran out first.
+            await limit.CancelAsync().ConfigureAwait(false);
+            limit.Dispose();
+        }
     }
 
-    private async Task PingOnce(CancellationToken stop)
+    private async Task PingOnce(CancellationToken limit)
     {
-        await using var connection = await _ping.OpenConnectionAsync(stop).ConfigureAwait(false);
-        await connection.ExecuteScalarAsync<int>(Command(Queries.Ping, stop)).ConfigureAwait(false);
+        await using var connection = await _source.OpenConnectionAsync(limit).ConfigureAwait(false);
+        await connection.ExecuteScalarAsync<int>(Command(Queries.Ping, limit)).ConfigureAwait(false);
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        await _source.DisposeAsync().ConfigureAwait(false);
-        await _ping.DisposeAsync().ConfigureAwait(false);
-    }
+    public ValueTask DisposeAsync() => _source.DisposeAsync();
 
     // The cancellation token reaches the wait for a connection too, so a request that gives up leaves
     // the pool's queue at once (N-26 c2).

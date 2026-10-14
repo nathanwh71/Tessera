@@ -4,8 +4,8 @@ using Tessera.Sql;
 namespace Tessera.IntegrationTests;
 
 /// <summary>
-/// N-26: queries wait for a connection in the order they arrive, and the health check's ping never
-/// waits behind them (ADR 0006 rule 7).
+/// N-26: queries wait for a connection in the order they arrive, and the health check's ping gives
+/// up after a second in the same queue (ADR 0006 rule 7).
 /// </summary>
 /// <remarks>
 /// The Java build keeps the order with a gate in front of its pool. The .NET build relies on
@@ -15,7 +15,8 @@ namespace Tessera.IntegrationTests;
 public sealed class PoolTests(DatabaseFixture database) : IClassFixture<DatabaseFixture>, IAsyncLifetime
 {
     // One place in the tile, and two views of it that sleep: a short pause for the queue, a long
-    // hold for the health check. pg_sleep runs once for each row the view reads.
+    // hold for the health check and the cancelled request. pg_sleep runs once for each row the
+    // view reads.
     public async ValueTask InitializeAsync() => await database.Owner("""
         CREATE SCHEMA IF NOT EXISTS stage;
         CREATE TABLE IF NOT EXISTS stage.queue_place (id int PRIMARY KEY, geom geometry(Point, 4326));
@@ -58,10 +59,11 @@ public sealed class PoolTests(DatabaseFixture database) : IClassFixture<Database
         Assert.Equal([0, 1, 2, 3, 4], finished.ToArray());
     }
 
-    // N-26 c3 and test 2: with the only tile connection busy for three seconds, the ping still
-    // answers within the health check's one second.
+    // N-26 c3 and test 2: with the only connection busy for three seconds, the ping gives up within
+    // about a second, and /health would say DOWN. Its place in the queue goes with it, so once the
+    // tile query ends, the next ping answers.
     [Fact]
-    public async Task Answers_the_ping_while_every_tile_connection_is_busy()
+    public async Task Gives_up_the_ping_while_every_connection_is_busy()
     {
         await using var reader = Database.Open(database.Reader, OneConnection);
         var layer = await Layer(reader, "stage.queue_hold");
@@ -72,11 +74,11 @@ public sealed class PoolTests(DatabaseFixture database) : IClassFixture<Database
         var clock = System.Diagnostics.Stopwatch.StartNew();
         var answered = await reader.Ping(TestContext.Current.CancellationToken);
 
-        // The ping has a pool of its own, so a busy tile pool never makes it slow.
-        Assert.True(answered);
-        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(1), $"took {clock.Elapsed}");
+        Assert.False(answered);
+        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(1.5), $"took {clock.Elapsed}");
         Assert.False(hold.IsCompleted, "the tile query should still hold its connection");
         await hold;
+        Assert.True(await reader.Ping(TestContext.Current.CancellationToken));
     }
 
     // N-26 c2: a query whose own token is cancelled while it waits leaves the queue at once, rather
