@@ -1,11 +1,11 @@
 # Study resources for building Tessera
 
-**The short answer.** To ***build*** the backend, ***learn*** ***four*** ***things***: ASP.NET Core's minimal APIs and ***options***, Npgsql with Dapper, PostGIS's ***tile*** ***functions***, and Nginx's ***cache***. To ***build*** the ***map***, ***learn*** ***four*** more: TypeScript, React with the Elm ***architecture***, MapLibre GL JS, and Vite with its ***test*** ***tools***. ***One*** ***idea*** ***joins*** both ***halves***: a ***pure*** ***core*** ***inside*** a ***thin*** ***shell***, with ***failures*** ***carried*** as ***values***. ***Read*** the essential ***resources*** in the ***order*** of `docs/guides/reading-the-code.md`; ***turn*** to the ***optional*** ***ones*** when a ***step*** ***raises*** a ***question***.
+**The short answer.** To ***build*** the backend, ***learn*** ***four*** ***things***: ASP.NET Core's minimal APIs and ***options***, Npgsql with Dapper, PostGIS's ***tile*** ***functions***, and Nginx's ***cache***. To ***build*** the ***map***, ***learn*** ***four*** more: TypeScript, React with the Elm ***architecture***, MapLibre GL JS, and Vite with its ***test*** ***tools***. ***One*** ***idea*** ***joins*** both ***halves***: a ***pure*** ***core*** ***inside*** a ***thin*** ***shell***, with ***failures*** ***carried*** as ***values***. ***Read*** the essential ***resources*** in the ***order*** of `docs/guides/reading-the-code.md`; ***turn*** to the ***optional*** ***ones*** when a ***step*** ***raises*** a ***question***. 'The story map' at the ***end*** ***names*** the ***resources*** for ***each*** of the 26 ***stories***.
 
 **How to read the tables.**
 - **ID** ***names*** ***each*** ***resource***, so 'Where to start' can refer to it.
 - **Kind** ***says*** what it is: ***Book***, Docs, Article, Video, Repo or ***Standard***.
-- **Steps** ***names*** the ***steps*** of `docs/guides/reading-the-code.md` the ***resource*** ***serves***.
+- **Steps** ***names*** the ***steps*** of `docs/guides/reading-the-code.md` the ***resource*** ***serves***; 'The story map' ***names*** the ***stories***.
 - Every ***link*** was ***checked*** on 14 ***October*** 2026. ***Books*** ***name*** their ***edition***; a ***library*** or the ***publisher***'s ***site*** ***gives*** the ***current*** ***one***.
 
 ## 1 · Ideas both halves share
@@ -94,6 +94,22 @@
 | M13 | fabian-hiller/valibot, <https://github.com/fabian-hiller/valibot> | Repo | Valibot's ***source***, ***small*** ***enough*** to ***read*** in an ***evening*** | 14 |
 | M14 | maplibre/maplibre-gl-js, <https://github.com/maplibre/maplibre-gl-js> | Repo | MapLibre's ***own*** ***code*** and ***examples***, when the docs ***leave*** a ***question*** ***open*** | 13 |
 
+## 4 · For single stories
+
+These ***resources*** ***serve*** ***one*** or ***two*** ***stories*** ***each***, so the ***groups*** ***above*** ***leave*** them out.
+
+| ID | Resource | Kind | Why it helps | Stories |
+|---|---|---|---|---|
+| X1 | PostgreSQL 18, 'Privileges', <https://www.postgresql.org/docs/18/ddl-priv.html> | Docs | `GRANT`, `REVOKE` and `USAGE`: ***publishing*** by ***grant*** | US-03, N-23 |
+| X2 | RFC 7946, The GeoJSON ***Format***, <https://www.rfc-editor.org/rfc/rfc7946> | ***Standard*** | The ***format*** of the Macau ***seed***, and why it is in longitude and latitude | US-24 |
+| X3 | OpenStreetMap Wiki, 'Slippy map tilenames', <https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames> | Article | The z/x/y ***grid***, and the ***sums*** ***behind*** a ***tile***'s ***address*** | US-07, UI-09, UI-19 |
+| X4 | OWASP, 'SQL Injection Prevention Cheat Sheet', <https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html> | Article | ***Values*** as ***parameters*** and ***names*** ***quoted***, the ***two*** ***rules*** of S-01 | S-01 |
+| X5 | RFC 9457, ***Problem*** ***Details*** for HTTP APIs, <https://www.rfc-editor.org/rfc/rfc9457> | ***Standard*** | The ***shape*** of every ***error*** ***answer*** | US-07, S-06, N-22 |
+| X6 | RFC 3986, URI ***Generic*** ***Syntax***, <https://www.rfc-editor.org/rfc/rfc3986> | ***Standard*** | Percent-encoding and dot ***segments***, which Nginx ***refuses*** | S-06 |
+| X7 | W3C, How to ***Meet*** WCAG (***Quick*** ***Reference***), <https://www.w3.org/WAI/WCAG22/quickref/> | ***Standard*** | ***Contrast***, ***names*** and focus, the ***rules*** ***behind*** the ***map***'s ***controls*** | UI-12, UI-15 |
+| X8 | dequelabs/axe-core, <https://github.com/dequelabs/axe-core> | Repo | The accessibility ***check*** the ***browser*** ***tests*** ***run*** on ***each*** ***page*** | UI-12, UI-15, US-23 |
+| X9 | MDN ***Web*** Docs, 'HTTP caching', <https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Caching> | Docs | `max-age`, `ETag`, 304 and `Vary`, the ***whole*** of ***Part*** C | N-18, N-19, N-20 |
+
 ## Where to start
 
 ***Start*** with F1, F3, B1 and M2: they ***explain*** the ***shape*** of the ***whole*** ***code*** in ***four*** sittings. Then ***follow*** `docs/guides/reading-the-code.md`, ***reading*** ***each*** ***step***'s essential ***resources*** in the ***week*** you ***reach*** it. ***Keep*** `docs/guides/reading-the-harder-files.md` ***beside*** B3, B5 and B11, which ***explain*** the ***three*** harder ***files***.
@@ -115,3 +131,42 @@
 | 13 · Where the map meets MapLibre | M4, M5, F3 | M14 |
 | 14 · The shared kernel and design | M1, F2 | F7, M7, M8, M11, M13 |
 | 15 · The tests | F4 | F8, M9, M10, G4 |
+
+## The story map
+
+This ***table*** ***turns*** the ***lists*** ***round***: for ***each*** ***story*** in `docs/user-stories/user-stories.md`, the essential ***resources*** to ***read*** ***before*** you ***build*** it, then the ***optional*** ***ones*** that ***help*** ***most***. F1 to F4 ***serve*** every ***story*** and are not ***repeated***.
+
+| Step | Story | Essential | Optional |
+|---|---|---|---|
+| | **Part A · The service** | | |
+| 1 | US-00 ***Set*** ***up*** the ***walking*** skeleton | B1, B3, M9 | F8, G3, M10 |
+| 2 | US-01 ***Start*** the ***same*** ***database*** for the ***service*** and its ***tests*** | B5, G4 | B13 |
+| 3 | US-03 ***Publish*** a ***table*** by ***granting*** it | B6, B7, X1, F7 | B13, G1 |
+| 4 | US-24 ***Publish*** the ***places*** of the ***area*** in ***nine*** ***layers*** | B14, B15, X2 | B13, B8 |
+| 5 | US-07 ***Serve*** a ***tile*** | B2, B4, B8, X3 | B17, B18, G1, G2, X5 |
+| 6 | S-01 ***Keep*** SQL out of every ***request*** | B6, X4 | F7 |
+| 7 | S-06 ***Refuse*** ***malformed*** URLs | B9, X6 | X5 |
+| 8 | US-35 ***Open*** the ***service*** to the ***office*** on ***port*** 80 | B9 | B16 |
+| | **Part B · The map** | | |
+| 9 | US-23 ***Open*** the ***map*** of the ***area*** | M1, M2, M3, M4, M5 | M7, M8, M9, M10, X8 |
+| 10 | UI-09 ***Zoom*** by web-map ***levels*** 0 to 22 | M5, X3 | M6 |
+| 11 | UI-15 ***Keep*** the ***page*** ***calm*** in Material 3 | M11, M6 | X7, X8 |
+| 12 | UI-12 ***Tell*** ***place*** ***types*** ***apart*** ***without*** ***relying*** on ***colour*** | M6, X7 | M11, X8 |
+| 13 | UI-19 ***Read*** ***distance***, ***direction*** and ***position*** | M1, M5 | X3, B13 |
+| 14 | UI-10 ***See*** ***crowded*** ***places*** merge into clusters that ***open*** as I ***zoom*** | M5, M6 | M14 |
+| 15 | UI-11 ***Read*** ***place*** ***names*** when ***zoomed*** in | M6 | M14 |
+| 16 | UI-17 ***Keep*** ***place*** ***names*** from overlapping | M6, M10 | M14 |
+| | **Part C · Tiles that cost less** | | |
+| 17 | N-18 ***Let*** a ***browser*** ***keep*** a ***tile*** | X9 | B9 |
+| 18 | N-19 ***Answer*** a ***kept*** ***tile*** ***without*** a ***query*** | X9, B9 | — |
+| 19 | N-20 ***Send*** ***tiles*** and the ***map***'s ***files*** ***packed*** | B9, X9 | M9 |
+| | **Part D · The Java way** | | |
+| 20 | N-21 ***Name*** the ***settings*** as pg_tileserv ***names*** them | B3, G1 | B1 |
+| 21 | N-22 ***Ask*** the ***browser*** to ***wait*** when the ***database*** ***cannot*** ***answer*** | B4, B16 | X5 |
+| 22 | N-23 ***Serve*** a ***newly*** ***granted*** ***table*** ***without*** a ***restart*** | B11, X1 | F6, G1 |
+| 23 | N-24 ***Serve*** a ***crowd*** from ***one*** ***query*** | B9 | B16 |
+| 24 | N-25 ***Tell*** a ***watcher*** the ***service*** is ***well*** | B12 | B16, G3 |
+| 25 | N-26 ***Wait*** in the ***order*** of ***arrival*** | B5 | B16, G5 |
+| 26 | N-28 ***Answer*** at ***once*** ***while*** the ***database*** ***hangs*** | B9 | B16 |
+
+***Three*** ***stories*** ***now*** ***rest*** on Nginx ***rather*** than on the ***service***'s ***own*** ***code***: N-19, N-24 and N-28 (ADR 0008). For those, B9 ***explains*** the configuration you ***read***, and the ***service***'s ***own*** ***code*** is ***small***.
