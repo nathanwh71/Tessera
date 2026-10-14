@@ -8,7 +8,7 @@ namespace Tessera.IntegrationTests;
 /// <summary>US-24 tests 1, 5 and 6: nine typed tables, published by grant alone, replaced whole.</summary>
 public sealed class ImportTests(DatabaseFixture database) : IClassFixture<DatabaseFixture>
 {
-    private static readonly AreaBox Macau = new(113.52, 22.10, 113.61, 22.22);
+    private static readonly AreaSettings Macau = new();
 
     private async Task<ImportSummary> Import(string json)
     {

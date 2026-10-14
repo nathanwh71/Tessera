@@ -1,19 +1,24 @@
 {
-  "DefaultResolution": 4096,
-  "DefaultBuffer": 256,
-  "MaxFeaturesPerTile": 10000,
-  "DefaultMinZoom": 0,
-  "DefaultMaxZoom": 22,
-  "DbPoolMaxConns": 4,
-  "DbPoolMaxConnLifeTime": "1h",
-  "DbTimeout": 10,
-  "DbPoolConnectionTimeout": 3000,
-  "CacheTTL": 60,
-  "TileCacheMegabytes": 64,
-  "ShowPreview": true,
-  "CatalogueRefresh": 30,
-  "HttpMaxConnections": 8192,
-  "HttpAcceptCount": 100,
+  "Database": {
+    "PoolSize": 4,
+    "ConnectionLifetimeSeconds": 3600,
+    "QueryTimeoutSeconds": 10,
+    "ConnectionWaitSeconds": 3
+  },
+  "Tiles": {
+    "Resolution": 4096,
+    "Buffer": 256,
+    "MaxFeatures": 10000,
+    "MinZoom": 0,
+    "MaxZoom": 22,
+    "CacheSeconds": 60
+  },
+  "Map": {
+    "ShowPreview": true
+  },
+  "Catalogue": {
+    "RefreshSeconds": 30
+  },
   "Area": {
     "Name": "Macau",
     "MinLongitude": 113.52,

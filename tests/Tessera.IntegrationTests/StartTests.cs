@@ -53,7 +53,7 @@ public sealed class StartTests
         var port = Http.FreePort();
         var start = Start(new Dictionary<string, string>
         {
-            ["TESSERA_HTTPPORT"] = port.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["TESSERA__HTTP__PORT"] = port.ToString(System.Globalization.CultureInfo.InvariantCulture),
             ["DATABASE_URL"] = $"postgresql://tessera_reader:x@127.0.0.1:{Http.FreePort()}/tessera",
         });
         using var program = Process.Start(start)!;

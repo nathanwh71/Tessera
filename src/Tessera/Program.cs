@@ -24,26 +24,25 @@ return args is ["import", var path]
 // the status code, or number in the answer, that means 'try again later' (N-23 c4). The map's built
 // files sit in wwwroot, a folder beside the program.
 static async Task<int> Serve() =>
-    await SettingsLoader.LoadService().Match(
-        async settings =>
+    await SettingsLoader.Load(SettingsLoader.ReaderDatabase).Match(
+        async loaded =>
         {
-            await using var database = Database.Open(settings.Db.Address, new PoolLimits(
-                settings.Db.PoolMaxConns, settings.Db.PoolMaxConnLifeTime, settings.Db.Timeout, settings.Db.PoolConnectionTimeout));
+            await using var database = Database.Open(loaded.Database, loaded.Settings.Database);
             var mapFolder = Path.Combine(AppContext.BaseDirectory, "wwwroot");
-            await TesseraService.Build(settings, database, mapFolder).RunAsync();
+            await TesseraService.Build(loaded.Settings, database, mapFolder).RunAsync();
             return 0;
         },
         errors => Task.FromResult(Fail(errors)));
 
 // Loads one file of places into the database and prints how many places each layer received.
 static async Task<int> Import(string path) =>
-    await SettingsLoader.LoadImport().Match(
-        async settings =>
+    await SettingsLoader.Load(SettingsLoader.PublisherDatabase).Match(
+        async loaded =>
         {
             if (!File.Exists(path))
                 return FailWith($"No file at {path}.");
-            await using var database = Database.Open(settings.Database);
-            return (await Importer.Run(database, await File.ReadAllTextAsync(path), settings.Box)).Match(
+            await using var database = Database.Open(loaded.Database);
+            return (await Importer.Run(database, await File.ReadAllTextAsync(path), loaded.Settings.Area)).Match(
                 summary =>
                 {
                     Console.WriteLine(summary);
@@ -54,7 +53,7 @@ static async Task<int> Import(string path) =>
         errors => Task.FromResult(Fail(errors)));
 
 // The service refuses to start and names each setting it lacks or cannot read (US-00 c4).
-static int Fail(ImmutableArray<SettingsError> errors)
+static int Fail(ImmutableArray<string> errors)
 {
     foreach (var error in errors)
         Console.Error.WriteLine(error);

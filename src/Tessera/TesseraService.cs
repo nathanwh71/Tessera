@@ -5,7 +5,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Net;
 using Tessera.Catalogue;
-using Tessera.Http;
 using Tessera.Map;
 using Tessera.Settings;
 using Tessera.Sql;
@@ -42,15 +41,8 @@ public static class TesseraService
     {
         var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions());
         // Kestrel is the web server built into .NET, the part that holds the network connections.
-        // HttpMaxConnections caps the connections open at once; HttpAcceptCount is how many more may
-        // wait in the operating system's line before it refuses a new one.
-        builder.WebHost.UseKestrelCore()
-            .UseSockets(sockets => sockets.Backlog = settings.Http.AcceptCount)
-            .ConfigureKestrel(kestrel =>
-            {
-                kestrel.Limits.MaxConcurrentConnections = settings.Http.MaxConnections;
-                kestrel.Listen(settings.Http.Host, settings.Http.Port);
-            });
+        builder.WebHost.UseKestrelCore().ConfigureKestrel(kestrel => kestrel.Listen(IPAddress.Parse(settings.Http.Host), settings.Http.Port));
+        builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = Problems.Shape);
         builder.Services.AddRoutingCore();
         builder.Logging.AddConsole();
         // The log is the running record of events the service writes. The empty builder reads no
@@ -75,11 +67,14 @@ public static class TesseraService
                 },
                 error => log.LogWarning("Could not read the list of layers ({SqlState}): {Message}", error.SqlState, error.Message));
         });
-        builder.Services.AddHostedService(services => new CatalogueRefresh(services.GetRequiredService<LiveCatalogue>(), settings.Catalogue.Refresh));
+        builder.Services.AddHostedService(services => new CatalogueRefresh(services.GetRequiredService<LiveCatalogue>(), TimeSpan.FromSeconds(settings.Catalogue.RefreshSeconds)));
         builder.Services.AddTesseraHealth(database);
 
         var app = builder.Build();
-        app.UseProblemDocuments();
+        // The first catches a crash and the second an empty error, such as a 404 for an address no
+        // route knows; both answer with a problem document.
+        app.UseExceptionHandler();
+        app.UseStatusCodePages();
         app.UseMapHeaders();
         app.UseRouting();
         app.MapTesseraHealth();

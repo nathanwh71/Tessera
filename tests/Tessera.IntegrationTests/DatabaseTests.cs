@@ -35,7 +35,7 @@ public sealed class DatabaseTests(DatabaseFixture database) : IClassFixture<Data
         // SHA-256 turns a file into a 64-digit fingerprint; one changed byte changes the fingerprint.
         // This one is the fingerprint of data/macau-pois.geojson in nathanwh71/JTessera on 13 October 2026.
         Assert.Equal("d9319335cc40dd25ecc8782c4cf9041cf2be53bdebd0aaa8637991b5e050e2f3", Convert.ToHexStringLower(SHA256.HashData(seed)));
-        var places = Tessera.Import.Seed.Read(System.Text.Encoding.UTF8.GetString(seed), new AreaBox(113.52, 22.10, 113.61, 22.22))
+        var places = Tessera.Import.Seed.Read(System.Text.Encoding.UTF8.GetString(seed), new AreaSettings())
             .Match(found => found, error => throw new Xunit.Sdk.XunitException(error.Message));
         Assert.Equal(900, places.Length);
         Assert.All(places.GroupBy(place => place.Layer), layer => Assert.Equal(100, layer.Count()));

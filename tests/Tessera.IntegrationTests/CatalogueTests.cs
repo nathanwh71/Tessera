@@ -8,7 +8,7 @@ namespace Tessera.IntegrationTests;
 /// <summary>US-03 test 4: publish a table by granting it, signed in as the real role.</summary>
 public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<DatabaseFixture>, IAsyncLifetime
 {
-    private static readonly TileSettings Tiles = new(10000, 64, 60, 64);
+    private static readonly TileSettings Tiles = new() { Buffer = 64 };
 
     private static TileServer Server(LayerCatalogue catalogue, Database reader) =>
         new(() => Option.Some(catalogue), reader.Single<byte[]>, Tiles);
@@ -105,7 +105,7 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
     {
         await using var reader = Database.Open(database.Reader);
         var catalogue = await Load(reader);
-        await using var gone = Database.Open(database.Reader with { Port = Http.FreePort() }, PoolLimits.Default with { ConnectionTimeout = TimeSpan.FromSeconds(1) });
+        await using var gone = Database.Open($"Host=127.0.0.1;Port={Http.FreePort()};Database=tessera;Username=tessera_reader;Password=x", new DatabaseSettings { ConnectionWaitSeconds = 1 });
 
         var answer = await Server(catalogue, gone).Answer("stage.granted", 0, 0, 0, TestContext.Current.CancellationToken);
         var (status, headers) = await Http.StatusAndHeaders(answer);
@@ -120,7 +120,7 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
     [Fact]
     public async Task Answers_503_when_a_query_runs_past_its_time()
     {
-        await using var reader = Database.Open(database.Reader, PoolLimits.Default with { CommandTimeout = TimeSpan.FromSeconds(1) });
+        await using var reader = Database.Open(database.Reader, new DatabaseSettings { QueryTimeoutSeconds = 1 });
         var catalogue = await Load(reader);
         var clock = System.Diagnostics.Stopwatch.StartNew();
 

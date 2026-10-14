@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Tessera.Catalogue;
-using Tessera.Http;
 using Tessera.Kernel;
 using Tessera.Settings;
 using Tessera.Sql;
@@ -134,7 +133,7 @@ public sealed class TileServer(Func<Option<LayerCatalogue>> catalogue, TileReade
             error => error.IsMissingTable ? Problems.NotFound("No published layer has that name.")
                 : error.IsMissingColumn ? LayerChanged()
                 : error.IsUnavailable ? Problems.Unavailable("The database cannot be reached. Try again shortly.")
-                : Problems.Answer(StatusCodes.Status500InternalServerError, Option.None<string>()));
+                : Problems.Fault());
 
     private IResult LayerChanged()
     {

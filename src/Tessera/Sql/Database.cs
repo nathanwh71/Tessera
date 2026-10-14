@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using Dapper;
 using Npgsql;
 using Tessera.Kernel;
+using Tessera.Settings;
 
 namespace Tessera.Sql;
 
@@ -36,21 +37,6 @@ public sealed record DatabaseError(string SqlState, string Message)
 }
 
 /// <summary>
-/// The limits on the service's use of the database (N-22): the most connections the pool holds, how
-/// long each lives, the longest a query may run, and the longest a request waits for a free
-/// connection. A connection is an open line to the database; a connection pool keeps a few open for
-/// requests to share.
-/// </summary>
-/// <remarks>
-/// The Java build's tuning guide chose the defaults by measurement: 4 connections, each living one
-/// hour, 10 seconds for a query and 3 seconds to wait.
-/// </remarks>
-public sealed record PoolLimits(int MaxConns, TimeSpan MaxConnLifeTime, TimeSpan CommandTimeout, TimeSpan ConnectionTimeout)
-{
-    public static readonly PoolLimits Default = new(4, TimeSpan.FromHours(1), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(3));
-}
-
-/// <summary>
 /// The one gate between Tessera and PostgreSQL (S-01 c2, ADR 0001 rule 3). It belongs to the Sql
 /// module: the Catalogue, Tiles and Import modules and the health check send every query through it
 /// as a <see cref="Query"/>, and Program.cs opens it at start-up. No other project references Npgsql
@@ -82,39 +68,32 @@ public sealed class Database : IAsyncDisposable
     /// <summary>The longest a ping may take, from connecting to the answer.</summary>
     internal static readonly TimeSpan PingLimit = TimeSpan.FromSeconds(1);
 
-    /// <summary>Opens the pools with the <see cref="PoolLimits.Default"/> limits.</summary>
-    public static Database Open(DatabaseAddress address) => Open(address, PoolLimits.Default);
-
     /// <summary>
-    /// Opens a pool of connections within the given limits, and a second pool of one for the ping. A
-    /// query past its time is cancelled on the server too, so it frees its connection; a request that
-    /// finds every connection busy waits for one, then gives up.
+    /// Opens a pool of connections within the given limits, or the defaults, and a second pool of one
+    /// for the ping. A query past its time is cancelled on the server too, so it frees its connection.
     /// </summary>
-    public static Database Open(DatabaseAddress address, PoolLimits limits) =>
-        new(
-            Source(address, limits, "tessera"),
-            // One connection is enough: a ping is quick, and the watch sends one at a time. The ping
-            // gets one second to connect and one second to answer.
-            Source(address, limits with { MaxConns = 1, CommandTimeout = PingLimit, ConnectionTimeout = PingLimit }, "tessera-health", ping: true));
+    /// <param name="connection">Npgsql's connection string, from the database URL.</param>
+    /// <param name="limits">The pool's limits (N-22).</param>
+    public static Database Open(string connection, DatabaseSettings? limits = null)
+    {
+        var pool = limits ?? new DatabaseSettings();
+        return new(
+            Source(connection, pool.PoolSize, pool.ConnectionLifetimeSeconds, pool.QueryTimeoutSeconds, pool.ConnectionWaitSeconds, "tessera"),
+            // One connection is enough for the ping; it gets a second to connect and a second to answer.
+            Source(connection, 1, pool.ConnectionLifetimeSeconds, 1, 1, "tessera-health", ping: true));
+    }
 
-    private static NpgsqlDataSource Source(DatabaseAddress address, PoolLimits limits, string name, bool ping = false) =>
-        NpgsqlDataSource.Create(new NpgsqlConnectionStringBuilder
+    private static NpgsqlDataSource Source(string connection, int size, int lifetime, int queryTimeout, int wait, string name, bool ping = false) =>
+        NpgsqlDataSource.Create(new NpgsqlConnectionStringBuilder(connection)
         {
-            Host = address.Host,
-            Port = address.Port,
-            Database = address.Database,
-            Username = address.User,
-            Password = address.Password,
             // The name shows in pg_stat_activity, the database's list of open connections, so the
             // maintainer can tell Tessera's connections apart.
             ApplicationName = name,
-            MaxPoolSize = limits.MaxConns,
-            ConnectionLifetime = (int)limits.MaxConnLifeTime.TotalSeconds,
-            CommandTimeout = (int)limits.CommandTimeout.TotalSeconds,
-            // Npgsql's Timeout, in seconds, covers both opening a connection and waiting for a free one
-            // in the pool. It counts whole seconds, and 0 means 'wait for ever', so the wait is rounded
-            // up: DbPoolConnectionTimeout of 250 ms becomes one second, not an endless wait.
-            Timeout = WholeSeconds(limits.ConnectionTimeout),
+            MaxPoolSize = size,
+            ConnectionLifetime = lifetime,
+            CommandTimeout = queryTimeout,
+            // Npgsql's Timeout covers both opening a connection and waiting for a free one in the pool.
+            Timeout = wait,
             // Planning a query costs time, so a query text sent three times on a connection becomes a
             // prepared statement: the database plans it once and reuses the plan, as the Java build's
             // driver does (prepareThreshold=3). The tile query's text differs only by layer, so nine
@@ -151,12 +130,6 @@ public sealed class Database : IAsyncDisposable
         await using var connection = await _ping.OpenConnectionAsync(stop).ConfigureAwait(false);
         await connection.QueryAsync<int>(Command(HealthQueries.Ping, null, stop)).ConfigureAwait(false);
     }
-
-    /// <summary>
-    /// A wait in whole seconds, rounded up and never below one, for Npgsql's <c>Timeout</c>, which
-    /// counts whole seconds and reads 0 as 'wait for ever'.
-    /// </summary>
-    internal static int WholeSeconds(TimeSpan wait) => Math.Max(1, (int)Math.Ceiling(wait.TotalSeconds));
 
     /// <summary>
     /// Runs a query and turns each row into a <typeparamref name="T"/>, matching columns to fields by name.

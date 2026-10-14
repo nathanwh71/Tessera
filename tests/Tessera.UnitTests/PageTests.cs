@@ -7,7 +7,7 @@ namespace Tessera.UnitTests;
 /// <summary>US-23 c1, c5 and c7, and ADR 0006's contract: the page carries the area, in the one block the map reads.</summary>
 public sealed class PageTests
 {
-    private static readonly Area Macau = new("Macau", new AreaBox(113.52, 22.10, 113.61, 22.22), new HomeView(113.55, 22.19, 15));
+    private static readonly AreaSettings Macau = new();
     private const string Html = "<!doctype html><html><head><title>Map</title></head><body><div id=\"root\"></div></body></html>";
 
     [Fact]
@@ -34,11 +34,11 @@ public sealed class PageTests
 
     [Fact]
     public void Answers_off_when_the_preview_is_switched_off() =>
-        Assert.Equal("off", Page.Of(Option.Some(Html), Macau, new MapSettings(Preview: false)).Match(_ => "shown", () => "off", () => "missing"));
+        Assert.Equal("off", Page.Of(Option.Some(Html), Macau, new MapSettings { ShowPreview = false }).Match(_ => "shown", () => "off", () => "missing"));
 
     [Fact]
     public void Answers_missing_when_the_release_carries_no_map() =>
-        Assert.Equal("missing", Page.Of(Option.None<string>(), Macau, new MapSettings(Preview: true)).Match(_ => "shown", () => "off", () => "missing"));
+        Assert.Equal("missing", Page.Of(Option.None<string>(), Macau, new MapSettings()).Match(_ => "shown", () => "off", () => "missing"));
 
     [Theory]
     [InlineData("food.cafes.html", "food.cafes")]

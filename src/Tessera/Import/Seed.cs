@@ -92,7 +92,7 @@ public static class Seed
     /// </summary>
     /// <param name="json">The whole text of the GeoJSON file.</param>
     /// <param name="box">The area's edges in degrees; every place must lie inside them (US-24 c4).</param>
-    public static Result<ImmutableArray<Place>, ImportError> Read(string json, AreaBox box)
+    public static Result<ImmutableArray<Place>, ImportError> Read(string json, AreaSettings box)
     {
         try
         {
@@ -108,7 +108,7 @@ public static class Seed
     }
 
     // The 'from ... select' form runs each check in turn and stops at the first refusal.
-    private static Result<ImmutableArray<Place>, ImportError> Read(JsonElement root, AreaBox box) =>
+    private static Result<ImmutableArray<Place>, ImportError> Read(JsonElement root, AreaSettings box) =>
         from collection in IsText(Child(root, "type"), "FeatureCollection")
             ? Child(root, "features")
                 .Bind(features => features.ValueKind == JsonValueKind.Array ? Option.Some(features) : Option.None<JsonElement>())
@@ -133,7 +133,7 @@ public static class Seed
     // The id may sit on the feature or among its properties; the feature's own wins. The name built
     // here gives each message the feature's id and its number in the file, counting from 1, so the
     // maintainer can find it.
-    private static Result<Place, ImportError> ReadFeature(JsonElement feature, int index, AreaBox box)
+    private static Result<Place, ImportError> ReadFeature(JsonElement feature, int index, AreaSettings box)
     {
         var properties = Child(feature, "properties").Bind(found => found.ValueKind == JsonValueKind.Object ? Option.Some(found) : Option.None<JsonElement>());
         var id = Text(feature, "id").Match(Option.Some, () => properties.Bind(found => Text(found, "id")));

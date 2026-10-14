@@ -49,7 +49,7 @@ public static class Importer
     /// refusal the database keeps its old rows (US-24 c6). A place outside <paramref name="box"/>, the
     /// area's bounds in degrees, is refused (US-24 c4).
     /// </summary>
-    public static async Task<Result<ImportSummary, ImportError>> Run(Database database, string json, AreaBox box, CancellationToken cancel = default)
+    public static async Task<Result<ImportSummary, ImportError>> Run(Database database, string json, AreaSettings box, CancellationToken cancel = default)
     {
         var places = Seed.Read(json, box);
         return await places.Match(

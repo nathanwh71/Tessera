@@ -34,9 +34,13 @@ public sealed class DatabaseFixture : IAsyncLifetime
 
     private PostgreSqlContainer? _container;
 
-    public DatabaseAddress Reader => Address("tessera_reader", ReaderPassword);
+    /// <summary>Npgsql's connection string for the service's role.</summary>
+    public string Reader => Connection("tessera_reader", ReaderPassword);
 
-    public DatabaseAddress Publisher => Address("tessera_publisher", PublisherPassword);
+    /// <summary>The same sign-in as a database URL, the form DATABASE_URL takes.</summary>
+    public string ReaderUrl => $"postgresql://tessera_reader:{ReaderPassword}@{_container!.Hostname}:{_container.GetMappedPublicPort(5432)}/{Name}";
+
+    public string Publisher => Connection("tessera_publisher", PublisherPassword);
 
     public async ValueTask InitializeAsync()
     {
@@ -80,6 +84,12 @@ public sealed class DatabaseFixture : IAsyncLifetime
         GRANT SELECT ON ALL TABLES IN SCHEMA food, outdoors, culture, transport TO tessera_reader;
         """);
 
-    private DatabaseAddress Address(string user, string password) =>
-        new(_container!.Hostname, _container.GetMappedPublicPort(5432), Name, user, password);
+    private string Connection(string user, string password) => new NpgsqlConnectionStringBuilder
+    {
+        Host = _container!.Hostname,
+        Port = _container.GetMappedPublicPort(5432),
+        Database = Name,
+        Username = user,
+        Password = password,
+    }.ConnectionString;
 }

@@ -18,7 +18,7 @@ public static class Http
     {
         var context = new DefaultHttpContext
         {
-            RequestServices = new ServiceCollection().AddLogging().AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance).BuildServiceProvider(),
+            RequestServices = new ServiceCollection().AddLogging().AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance).AddProblemDetails(options => options.CustomizeProblemDetails = Problems.Shape).BuildServiceProvider(),
         };
         context.Response.Body = new MemoryStream();
         await answer.ExecuteAsync(context);
@@ -30,7 +30,7 @@ public static class Http
     {
         var context = new DefaultHttpContext
         {
-            RequestServices = new ServiceCollection().AddLogging().AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance).BuildServiceProvider(),
+            RequestServices = new ServiceCollection().AddLogging().AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance).AddProblemDetails(options => options.CustomizeProblemDetails = Problems.Shape).BuildServiceProvider(),
         };
         context.Response.Body = new MemoryStream();
         await answer.ExecuteAsync(context);

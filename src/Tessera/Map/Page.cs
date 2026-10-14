@@ -59,8 +59,8 @@ public abstract record Page
     /// Builds the page from the built map's text, if any, the area, and the preview switch. The
     /// switch wins: with the preview off, the page is <see cref="Off"/> even when the text exists.
     /// </summary>
-    public static Page Of(Option<string> html, Area area, MapSettings settings) =>
-        !settings.Preview ? new Off()
+    public static Page Of(Option<string> html, AreaSettings area, MapSettings settings) =>
+        !settings.ShowPreview ? new Off()
             : html.Match<Page>(text => new Shown(Render(text, area)), () => new Missing());
 
     /// <summary>
@@ -69,7 +69,7 @@ public abstract record Page
     /// unchanged. The block's shape is ADR 0006's:
     /// <c>{name, bounds: [west, south, east, north], home: {center: {lng, lat}, zoom}}</c>.
     /// </summary>
-    public static string Render(string html, Area area)
+    public static string Render(string html, AreaSettings area)
     {
         var block = $"""<script id="tessera-area" type="application/json">{Json(area)}</script>""";
         var head = html.IndexOf("</head>", StringComparison.OrdinalIgnoreCase);
@@ -87,10 +87,10 @@ public abstract record Page
 
     // The numbers must use a decimal point whatever the machine's language, since the map reads them
     // that way; JsonSerializer always writes them so.
-    private static string Json(Area area) => JsonSerializer.Serialize(new
+    private static string Json(AreaSettings area) => JsonSerializer.Serialize(new
     {
         name = area.Name,
-        bounds = new[] { area.Box.West, area.Box.South, area.Box.East, area.Box.North },
-        home = new { center = new { lng = area.Home.Longitude, lat = area.Home.Latitude }, zoom = area.Home.Zoom },
+        bounds = new[] { area.MinLongitude, area.MinLatitude, area.MaxLongitude, area.MaxLatitude },
+        home = new { center = new { lng = area.HomeLongitude, lat = area.HomeLatitude }, zoom = area.HomeLevel },
     });
 }

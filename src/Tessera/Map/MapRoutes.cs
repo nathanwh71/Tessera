@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.FileProviders;
-using Tessera.Http;
 using Tessera.Kernel;
 using Tessera.Settings;
 
@@ -44,11 +43,11 @@ public static class MapRoutes
     /// <param name="area">The area written into the page.</param>
     /// <param name="settings">Holds the preview switch.</param>
     /// <param name="folder">The folder that holds the built map.</param>
-    public static WebApplication UseMap(this WebApplication app, Area area, MapSettings settings, string folder)
+    public static WebApplication UseMap(this WebApplication app, AreaSettings area, MapSettings settings, string folder)
     {
         var page = Page.Of(ReadPage(folder), area, settings);
         var assets = Path.Combine(folder, "assets");
-        if (settings.Preview && Directory.Exists(assets))
+        if (settings.ShowPreview && Directory.Exists(assets))
         {
             // Each file's name carries a hash, a short fingerprint of its content, so a changed file
             // gets a new name; a browser may therefore keep each one for a year (31,536,000 seconds)
@@ -70,7 +69,7 @@ public static class MapRoutes
         app.MapMethods("/", read, () => Answer(page));
         // Any other single name, such as /index.html, is not found: the page goes out through these
         // two routes alone. The 404 holds no detail, as in the Java build: the status says all there is.
-        app.MapMethods("/{file}", read, (string file) => Page.LayerOf(file).Match(_ => Answer(page), () => Problems.Answer(StatusCodes.Status404NotFound, Option.None<string>())));
+        app.MapMethods("/{file}", read, (string file) => Page.LayerOf(file).Match(_ => Answer(page), () => Problems.NotFound()));
         return app;
     }
 

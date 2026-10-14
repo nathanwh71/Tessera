@@ -8,7 +8,7 @@ namespace Tessera.UnitTests;
 /// <summary>US-24 c2 to c4, and tests 2 to 4: the import reads degrees alone, and refuses anything else.</summary>
 public sealed class SeedTests
 {
-    private static readonly AreaBox Macau = new(113.52, 22.10, 113.61, 22.22);
+    private static readonly AreaSettings Macau = new();
 
     /// <summary>A sample file with two places for each of the nine layers (US-24 test 1).</summary>
     public static string Sample(Func<JsonObject, JsonObject>? change = null)

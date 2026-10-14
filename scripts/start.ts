@@ -66,7 +66,7 @@ if (decision.kind === 'import') {
 }
 
 console.log(`Starting the service on port ${settings.servicePort}, behind Nginx on port ${settings.httpPort}.`);
-const service = $({ env: { ...process.env, DATABASE_URL: databaseUrl('tessera_reader', settings.readerPassword, settings.database), TESSERA_HTTPPORT: settings.servicePort }, stdio: 'inherit' })`dotnet run --project src/Tessera --configuration Release`;
+const service = $({ env: { ...process.env, DATABASE_URL: databaseUrl('tessera_reader', settings.readerPassword, settings.database), TESSERA__HTTP__PORT: settings.servicePort }, stdio: 'inherit' })`dotnet run --project src/Tessera --configuration Release`;
 
 // A container left from an earlier start may hold old ports, so Nginx starts afresh each time.
 await $({ nothrow: true, quiet: true })`docker rm --force ${nginx}`;

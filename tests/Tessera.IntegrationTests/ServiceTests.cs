@@ -29,7 +29,7 @@ public sealed class ServiceFixture : IAsyncLifetime
     public async ValueTask InitializeAsync()
     {
         await Database.InitializeAsync();
-        var box = new AreaBox(113.52, 22.10, 113.61, 22.22);
+        var box = new AreaSettings();
         var seed = await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "data", "macau-pois.geojson"));
         await using (var publisher = Sql.Database.Open(Database.Publisher))
             (await Importer.Run(publisher, seed, box)).Match(_ => 0, error => throw new InvalidOperationException(error.Message));
@@ -44,13 +44,7 @@ public sealed class ServiceFixture : IAsyncLifetime
             """);
 
         _reader = Sql.Database.Open(Database.Reader);
-        var settings = new ServiceSettings(
-            new Area("Macau", box, new HomeView(113.55, 22.19, 14)),
-            new MapSettings(Preview: true),
-            new TileSettings(10000, 64, 60, 64),
-            new HttpSettings(Port),
-            new DbSettings(Database.Reader, 4, TimeSpan.FromHours(1), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(3)),
-            new CatalogueSettings(TimeSpan.FromSeconds(30)));
+        var settings = new ServiceSettings { Http = new HttpSettings { Port = Port }, Tiles = new TileSettings { Buffer = 64 } };
 
         // The built map, copied beside the tests by the service's project reference (US-23 c4).
         _app = TesseraService.Build(settings, _reader, Path.Combine(AppContext.BaseDirectory, "wwwroot"));
@@ -253,8 +247,8 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         var port = Http.FreePort();
         var start = new System.Diagnostics.ProcessStartInfo("dotnet") { RedirectStandardOutput = true, RedirectStandardError = true };
         start.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "Tessera.dll"));
-        start.Environment["TESSERA_HTTPPORT"] = port.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        start.Environment["DATABASE_URL"] = $"postgresql://{service.Database.Reader.User}:{service.Database.Reader.Password}@{service.Database.Reader.Host}:{service.Database.Reader.Port}/tessera";
+        start.Environment["TESSERA__HTTP__PORT"] = port.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        start.Environment["DATABASE_URL"] = service.Database.ReaderUrl;
         using var program = System.Diagnostics.Process.Start(start)!;
         try
         {
