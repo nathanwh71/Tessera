@@ -190,9 +190,9 @@ public static class ImportQueries
     /// PostgreSQL's own rules.
     /// </summary>
     /// <remarks>
-    /// The import runs this before it empties the table, so the old rows are still there: an old
-    /// value that will not turn, such as the text 'closed' into a number, makes the database refuse,
-    /// and the whole import rolls back.
+    /// The import runs this after it empties the table, so no old value has to turn: before
+    /// 14 October 2026 it ran first, and a word such as 'closed' in a column becoming a number made
+    /// the database refuse, and the whole import roll back.
     /// </remarks>
     public static Query ChangeColumnType(ImportTable table, ImportColumn column) =>
         Query.Of($"ALTER TABLE {table.Table} ALTER COLUMN {column.Name} TYPE {column.Type} USING {column.Name}::text::{column.Type}");

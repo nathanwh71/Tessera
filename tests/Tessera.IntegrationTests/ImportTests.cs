@@ -112,4 +112,29 @@ public sealed class ImportTests(DatabaseFixture database) : IClassFixture<Databa
         Assert.Equal("boolean", await database.OwnerValue<string>(
             "SELECT data_type FROM information_schema.columns WHERE table_schema = 'food' AND table_name = 'cafes' AND column_name = 'sample'"));
     }
+
+    private Task<string?> TypeOfCafes(string column) => database.OwnerValue<string?>(
+        $"SELECT data_type FROM information_schema.columns WHERE table_schema = 'food' AND table_name = 'cafes' AND column_name = '{column}'");
+
+    // The likely fault of 14 October 2026: a text column holding a word, such as 'closed', could not
+    // become a number column, because the old rows were still there, and the whole import rolled back.
+    [Fact]
+    public async Task Turns_a_text_column_of_words_into_numbers()
+    {
+        await Import(Samples.Sample(file =>
+        {
+            ((System.Text.Json.Nodes.JsonObject)file["features"]![2]!)["properties"]!["seats"] = "closed";
+            return file;
+        }));
+        Assert.Equal("text", await TypeOfCafes("seats"));
+
+        await Import(Samples.Sample(file =>
+        {
+            ((System.Text.Json.Nodes.JsonObject)file["features"]![2]!)["properties"]!["seats"] = 12;
+            return file;
+        }));
+
+        Assert.Equal("double precision", await TypeOfCafes("seats"));
+        Assert.Equal(12.0, await database.OwnerValue<double>("SELECT seats FROM food.cafes WHERE id = 'cafes-001'"));
+    }
 }

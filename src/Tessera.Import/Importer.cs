@@ -85,13 +85,19 @@ public static class Importer
         new($"The database refused the import ({error.SqlState}): {error.Message}");
 
     /// <summary>
-    /// Every query the import runs, in order: schemas, tables, columns and indexes first, then the
-    /// rows of all nine tables replaced, then fresh statistics. The queries themselves live in
+    /// Every query the import runs, in order: schemas and tables; then the old rows of all nine
+    /// tables emptied; then each table's columns added or changed, its index made; then the
+    /// new rows; then fresh statistics. The queries themselves live in
     /// Sql's <see cref="ImportQueries"/>; this function decides which to run, and touches no database.
     /// </summary>
     /// <remarks>
     /// The <c>from ... select</c> form runs each step in turn and stops at the first refusal, like a
     /// chain of checks; here a refusal means a name that will not quote.
+    /// <para>
+    /// The rows go before the columns change, so a change of type meets an empty table: no old
+    /// value has to turn into the new type, which a word such as 'closed' cannot do into a number.
+    /// All of it runs in one transaction, so a reader sees the old table or the new, never between.
+    /// </para>
     /// </remarks>
     /// <param name="places">The checked places.</param>
     /// <param name="existing">
@@ -109,8 +115,9 @@ public static class Importer
             select (Layer: layer.Key, Table: new ImportTable(table, id, geometry, index, columns)))
         select ImmutableArray.CreateRange(
             schemas
-                .Concat(tables.SelectMany(target => Shape(target.Table, existing.Of(target.Table.Table.Id))))
+                .Concat(tables.Select(target => ImportQueries.CreateTable(target.Table)))
                 .Concat(tables.Select(target => ImportQueries.Empty(target.Table)))
+                .Concat(tables.SelectMany(target => Shape(target.Table, existing.Of(target.Table.Table.Id))))
                 .Concat(tables.SelectMany(target => places
                     .Where(place => place.Layer == target.Layer)
                     .Select(place => ImportQueries.Insert(target.Table, Row(target.Table, place)))))
@@ -145,13 +152,13 @@ public static class Importer
     }
 
     // A property that was text in one file and a number in the next should load rather than fail the
-    // whole import, so a column the database holds with another type is changed.
+    // whole import, so a column the database holds with another type is changed. The table is empty
+    // by now, so the change meets no old value.
     private static IEnumerable<Query> Shape(ImportTable table, ImmutableDictionary<string, string> existing) =>
-        new[] { ImportQueries.CreateTable(table) }
-            .Concat(table.Columns.Select(column =>
+        table.Columns.Select(column =>
                 existing.TryGetValue(column.Name.Raw, out var type) && type != column.Type.Keyword
                     ? ImportQueries.ChangeColumnType(table, column)
-                    : ImportQueries.AddColumn(table, column)))
+                    : ImportQueries.AddColumn(table, column))
             .Append(ImportQueries.CreateIndex(table));
 
     private static ImportRow Row(ImportTable table, Place place) =>

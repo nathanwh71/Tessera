@@ -153,4 +153,23 @@ public sealed class SeedTests
         Assert.Contains(queries, text => text == $"ALTER TABLE \"food\".\"cafes\" ALTER COLUMN \"sample\" TYPE {SqlType.Boolean.Keyword} USING \"sample\"::text::{SqlType.Boolean.Keyword}");
         Assert.Equal(8, queries.Count(text => text.EndsWith($"ADD COLUMN IF NOT EXISTS \"sample\" {SqlType.Boolean.Keyword}", StringComparison.Ordinal)));
     }
+
+    private static ImmutableArray<string> PlanTexts(Importer.ExistingColumns existing) =>
+        Seed.Read(Sample(), Macau).Bind(places => Importer.Plan(places, existing)).Match(found => found.Select(query => query.Text).ToImmutableArray(), _ => []);
+
+    private static Importer.ExistingColumns CafesHold(params (string Name, string Type)[] columns) =>
+        new(ImmutableDictionary<string, ImmutableDictionary<string, string>>.Empty.Add(
+            "food.cafes", columns.ToImmutableDictionary(column => column.Name, column => column.Type, StringComparer.Ordinal)));
+
+    // The old rows go before any column changes, so a change of type meets an empty table and no
+    // old value can refuse to turn, such as the text 'closed' into a number.
+    [Fact]
+    public void Empties_each_table_before_it_changes_a_column()
+    {
+        var queries = PlanTexts(CafesHold(("sample", "text")));
+
+        var empty = queries.IndexOf("DELETE FROM \"food\".\"cafes\"");
+        var change = Array.FindIndex(queries.ToArray(), text => text.StartsWith("ALTER TABLE \"food\".\"cafes\" ALTER COLUMN", StringComparison.Ordinal));
+        Assert.True(empty >= 0 && change > empty, $"DELETE at {empty}, ALTER at {change}");
+    }
 }
