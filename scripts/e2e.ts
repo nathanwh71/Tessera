@@ -2,6 +2,7 @@
 // real service, which holds the office's places.
 //
 //   npm run e2e
+//   npm run e2e -- --grep-invert "approved image"   (every test but the screenshot comparisons)
 //
 // It needs nothing set beforehand. It starts a database of its own in Docker, on a free port and
 // with passwords made for this run alone; loads and publishes the places; starts the built service;
@@ -63,7 +64,8 @@ try {
   if ((await waitForHealth(`${base}/health`, 60)) !== 'up') throw new Error('The service did not say UP within a minute.');
 
   // `inherit` shows Playwright's own report, test by test, here and in the automatic build's log.
-  await $({ cwd: 'web', stdio: 'inherit', env: { ...process.env, TESSERA_BASE_URL: base } })`npx playwright test`;
+  // Arguments after `--` pass on to Playwright, such as `--grep-invert` to leave some tests out.
+  await $({ cwd: 'web', stdio: 'inherit', env: { ...process.env, TESSERA_BASE_URL: base } })`npx playwright test ${process.argv.slice(2)}`;
 } finally {
   await running?.kill();
   await $({ nothrow: true, quiet: true })`docker rm --force ${container}`;
