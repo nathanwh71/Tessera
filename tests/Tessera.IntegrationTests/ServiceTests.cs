@@ -135,7 +135,7 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         Assert.Empty(await second.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken));
     }
 
-    // ADR 0006 rule 6: HEAD gets a tile's headers and no body, as in the Java build.
+    // ADR 0006 rule 7: HEAD gets a tile's headers and no body, as in the Java build.
     [Fact]
     public async Task Answers_head_with_the_headers_alone()
     {
@@ -280,7 +280,7 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
 
         Assert.Equal(HttpStatusCode.NotFound, answer.StatusCode);
         Assert.Equal("application/problem+json", answer.Content.Headers.ContentType?.MediaType);
-        // ADR 0006 rule 6: no detail, as in the Java build.
+        // ADR 0006 rule 7: no detail, as in the Java build.
         Assert.DoesNotContain("detail", await answer.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
     }
 
@@ -289,7 +289,7 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
     {
         using var answer = await Get("/food.cafes/1/5/0.pbf");
 
-        // ADR 0006 rule 6: a tile that does not exist is not found, in both builds.
+        // ADR 0006 rule 7: a tile that does not exist is not found, in both builds.
         Assert.Equal(HttpStatusCode.NotFound, answer.StatusCode);
         Assert.Equal("application/problem+json", answer.Content.Headers.ContentType?.MediaType);
     }
@@ -322,7 +322,7 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         Assert.Contains("application/problem+json", answer, StringComparison.Ordinal);
         Assert.Contains("\"title\":\"Bad Request\"", answer, StringComparison.Ordinal);
         Assert.DoesNotContain("food.cafes", answer, StringComparison.Ordinal);
-        // ADR 0006 rule 6: no detail, as in the Java build, so the answer names no trick either.
+        // ADR 0006 rule 7: no detail, as in the Java build, so the answer names no trick either.
         Assert.DoesNotContain("\"detail\"", answer, StringComparison.Ordinal);
     }
 

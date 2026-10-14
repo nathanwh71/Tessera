@@ -30,7 +30,7 @@ public sealed record TileAddress(int Z, int X, int Y)
 
     /// <summary>
     /// Checks that the tile exists: z within the levels served, and x and y inside that level's
-    /// grid. A tile that does not exist is not found, as in the Java build (ADR 0006 rule 6).
+    /// grid. A tile that does not exist is not found, as in the Java build (ADR 0006 rule 7).
     /// </summary>
     public static Result<TileAddress, string> Of(int z, int x, int y, int minZoom = 0, int maxZoom = MaxZoom) =>
         z < minZoom || z > maxZoom || z > 30 || x < 0 || y < 0 || x >= 1 << z || y >= 1 << z
@@ -210,7 +210,7 @@ public static class TileRoutes
             server.Answer(layer, z, x, y, TileRequest.Of(request), cancel);
 
         // HEAD asks for the headers alone; the web server leaves the body out. Both builds answer it
-        // (ADR 0006 rule 6).
+        // (ADR 0006 rule 7).
         routes.MapMethods("/{layer}/{z:int}/{x:int}/{y:int}.pbf", ReadMethods, Serve);
         routes.MapMethods("/{layer}/{z:int}/{x:int}/{y:int}.mvt", ReadMethods, Serve);
         return routes;

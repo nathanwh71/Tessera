@@ -47,7 +47,7 @@ public static class MapRoutes
             });
         }
 
-        // GET and HEAD, as the Java build answers both (ADR 0006 rule 6).
+        // GET and HEAD, as the Java build answers both (ADR 0006 rule 7).
         string[] read = [HttpMethods.Get, HttpMethods.Head];
         app.MapMethods("/", read, () => Answer(page));
         // Any other single name, such as /index.html, is not found: the page goes out through these two routes alone.

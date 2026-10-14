@@ -28,7 +28,7 @@ public static class TargetScreen
             : rawTarget.Any(character => character < 0x20 || character == 0x7F) ? Option.Some("a control character")
             : StrayPercent(rawTarget) ? Option.Some("a '%' without two hexadecimal digits")
             : EncodesControl(rawTarget) ? Option.Some("an encoded control character")
-            // An encoded slash or backslash is refused in the query too, as the Java build refuses it (ADR 0006 rule 6).
+            // An encoded slash or backslash is refused in the query too, as the Java build refuses it (ADR 0006 rule 7).
             : path.Contains('\\') || rawTarget.Contains("%5c", StringComparison.OrdinalIgnoreCase) ? Option.Some("a backslash")
             : rawTarget.Contains("%2f", StringComparison.OrdinalIgnoreCase) ? Option.Some("an encoded slash")
             : path.Split('/').Any(DotSegment) ? Option.Some("a dot segment")
@@ -40,7 +40,7 @@ public static class TargetScreen
     /// Screens every request first. The answer holds no detail at all, as the Java build's does
     /// not: it never repeats the target, since a disguised address can carry anything (S-06 c2),
     /// and naming the kind of problem would tell a prober which trick the screen caught
-    /// (ADR 0006 rule 6). <see cref="Problem"/> still names it, for the tests.
+    /// (ADR 0006 rule 7). <see cref="Problem"/> still names it, for the tests.
     /// </summary>
     public static WebApplication UseTargetScreen(this WebApplication app)
     {

@@ -3,7 +3,7 @@ using Tessera.Settings;
 namespace Tessera.UnitTests;
 
 /// <summary>
-/// US-00 c4, ADR 0003, N-21 and ADR 0006 rule 4: settings come from the environment and the one
+/// US-00 c4, ADR 0003, N-21 and ADR 0006 rule 5: settings come from the environment and the one
 /// tessera.json both builds read, in pg_tileserv's names, checked at start-up.
 /// </summary>
 public sealed class SettingsTests
@@ -55,7 +55,7 @@ public sealed class SettingsTests
         Assert.Equal(new TileSettings(10000, 64, 0, 64), settings.Tiles);
     }
 
-    // ADR 0006 rule 4: a key left out takes the Java build's default, which is pg_tileserv's where it has one.
+    // ADR 0006 rule 5: a key left out takes the Java build's default, which is pg_tileserv's where it has one.
     [Fact]
     public void Gives_each_key_the_file_leaves_out_the_java_builds_default()
     {
@@ -84,7 +84,7 @@ public sealed class SettingsTests
     public void Treats_an_empty_variable_as_missing() =>
         Assert.Contains("DATABASE_URL", Problems(Machines.SetItem("DATABASE_URL", "")));
 
-    // ADR 0006 rule 4: a key neither build reads is refused, since it is most often a misspelling.
+    // ADR 0006 rule 5: a key neither build reads is refused, since it is most often a misspelling.
     [Theory]
     [InlineData("CacheTtl")]
     [InlineData("Tiles")]
@@ -139,7 +139,7 @@ public sealed class SettingsTests
         Assert.True(Read(Machines, Shipped).Match(_ => true, _ => false));
     }
 
-    // ADR 0006 rule 4: the shipped file is the Java build's, byte for byte; this is its fingerprint.
+    // ADR 0006 rule 5: the shipped file is the Java build's, byte for byte; this is its fingerprint.
     [Fact]
     public void Ships_the_same_file_as_the_java_build() =>
         Assert.Equal(

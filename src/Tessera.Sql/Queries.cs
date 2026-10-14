@@ -28,7 +28,7 @@ public static class CatalogueQueries
     /// DISTINCT ON keeps one geometry column for each table: the first, by column number. The
     /// column names travel as JSON text, since Dapper cannot fill a list from a database array.
     /// keycolumns lists the primary key's columns, those that name each row, in the key's own
-    /// order; a view has none, so its list is empty (ADR 0006 rule 6).
+    /// order; a view has none, so its list is empty (ADR 0006 rule 7).
     /// </remarks>
     public static readonly Query List = Query.Of($"""
         SELECT DISTINCT ON (n.nspname, c.relname)
@@ -97,7 +97,7 @@ public static class TileQueries
     /// symbol near an edge still appears on both tiles.
     /// Features come out in the order of the table's key, as in the Java build, so where two names
     /// clash on the map the same one wins every time, and both builds send the same bytes for the
-    /// same tile (ADR 0006 rule 6).
+    /// same tile (ADR 0006 rule 7).
     /// </remarks>
     public static Query Tile(LayerSource layer, TileCell tile, TileLimits limits) =>
         Query.Of($"""

@@ -13,7 +13,7 @@ namespace Tessera.Service;
 /// <c>/health</c>: 200 <c>{"status":"UP"}</c> when the service can serve tiles; 503
 /// <c>{"status":"OUT_OF_SERVICE"}</c> while the first list of layers loads; 503
 /// <c>{"status":"DOWN"}</c> when the database does not answer (N-25). pg_tileserv answers at the
-/// same address, and the Java build gives the same three answers there (ADR 0006 rule 5).
+/// same address, and the Java build gives the same three answers there (ADR 0006 rule 6).
 /// </summary>
 /// <remarks>
 /// Two checks must both pass: the list of layers has loaded at least once (N-23), and the database

@@ -621,7 +621,7 @@ The ***places*** ***arrive*** as ***one*** **GeoJSON** ***file***, the ***seed**
 
 **Acceptance criteria**
 
-1. **Given** a tile ***answered*** 200, **then** it ***carries*** `Cache-Control: public, max-age=N`, where N is `CacheTTL` from `tessera.json`, and 60 when the ***file*** ***leaves*** it out.
+1. **Given** a tile ***answered*** 200, **then** it ***carries*** `Cache-Control: public, max-age=N`, where N is `CacheTTL` from `tessera.json`; the ***shipped*** ***file*** ***sets*** 60. Left out, it ***takes*** pg_tileserv's ***default***, 0 (ADR 0006 ***rule*** 5).
 2. **Given** `CacheTTL` ***set*** to 0, **then** a tile ***carries*** `Cache-Control: no-cache`, so a browser ***checks*** with the ***service*** before it ***reuses*** a ***copy***; N-19 ***makes*** that ***check*** ***cheap***.
 3. **Given** any ***error*** ***answer***, such as the 404 of US-07, **then** it ***carries*** `Cache-Control: no-store`, so no browser ***keeps*** a ***problem*** ***document***.
 4. **Given** a ***new*** ***import***, **when** `max-age` ***seconds*** ***pass***, **then** every browser ***asks*** ***again*** and ***sees*** the ***new*** ***places***.
@@ -733,10 +733,10 @@ A ***crowd*** ***asking*** for ***one*** ***unbuilt*** tile ***shares*** ***one*
 
 **Acceptance criteria**
 
-1. **Given** `tessera.json`, **then** its ***keys*** are ***flat*** and ***spelt*** as pg_tileserv ***spells*** them where it has the same ***setting***: `HttpPort`, `ShowPreview`, `DbPoolMaxConns`, `DbPoolMaxConnLifeTime`, `DbTimeout`, `MaxFeaturesPerTile`, `DefaultBuffer`, `CacheTTL`. Tessera's ***own*** ***keys*** ***take*** the same ***style***: `DbPoolConnectionTimeout`, `TileCacheMegabytes`, `CatalogueRefresh`. `Area` ***stays*** ***nested***.
-2. **Given** a ***key*** ***left*** out, **then** it ***takes*** its ***default***, as in pg_tileserv; only `Area` and `HttpPort` are ***required***.
+1. **Given** `tessera.json`, **then** its ***keys*** are ***flat*** and ***spelt*** as pg_tileserv ***spells*** them where it has the same ***setting***: `HttpPort`, `ShowPreview`, `DbPoolMaxConns`, `DbPoolMaxConnLifeTime`, `DbTimeout`, `MaxFeaturesPerTile`, `DefaultBuffer`, `CacheTTL`. Tessera's ***own*** ***keys*** ***take*** the same ***style***: `DbPoolConnectionTimeout`, `TileCacheMegabytes`, `CatalogueRefresh`. `Area` ***holds*** ***eight*** ***flat*** ***keys***, `Name` to `HomeLevel`, as in the Java ***build***.
+2. **Given** a ***key*** ***left*** out, or the ***file*** ***missing***, **then** each ***key*** ***takes*** its ***default***, as in pg_tileserv: `HttpPort` 7800 and `Area` Macau.
 3. **Given** `TESSERA_` and a ***key***'s ***name***, in any ***case***, such as `TESSERA_CACHETTL`, **then** it ***overrides*** that ***key***, as `TS_HTTPPORT` does in pg_tileserv; `__` ***steps*** ***down*** a ***level***.
-4. **Given** the ***shipped*** ***file***, **then** it ***names*** no ***port***, so the ***office*** ***names*** 80 in `TESSERA_HTTPPORT` (US-00 c4).
+4. **Given** the ***shipped*** ***file***, **then** it ***names*** no ***port***; the ***office*** ***names*** 80 in `TESSERA_HTTPPORT` (US-00 c4), or ***runs*** on 7800.
 
 **Tests to write first**
 
@@ -834,7 +834,7 @@ A ***crowd*** ***asking*** for ***one*** ***unbuilt*** tile ***shares*** ***one*
 **Acceptance criteria**
 
 1. **Given** the ***list*** of ***layers*** ***loaded*** and the database ***answering*** ***within*** a ***second***, **then** `/health` ***answers*** 200 `{"status":"UP"}`.
-2. **Given** either ***check*** ***failing***, **then** it ***answers*** 503 `{"status":"DOWN"}`, and ***names*** no ***fault***; the log ***holds*** the ***detail***.
+2. **Given** the database ***failing***, **then** it ***answers*** 503 `{"status":"DOWN"}`; **given** only the ***list*** ***unloaded***, 503 `{"status":"OUT_OF_SERVICE"}`. It ***names*** no ***fault***; the log ***holds*** the ***detail***. Both ***builds*** ***answer*** alike (ADR 0006 ***rule*** 6).
 3. **Given** either ***answer***, **then** it ***carries*** `Cache-Control: no-store`.
 4. **Given** `npm start`, **then** it ***says*** the ***service*** is ***ready*** only once `/health` ***says*** `UP`.
 

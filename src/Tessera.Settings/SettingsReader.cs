@@ -11,7 +11,7 @@ namespace Tessera.Settings;
 /// problem it found (US-00 c4, ADR 0003).
 /// </summary>
 /// <remarks>
-/// The file is the one both builds read, key for key (ADR 0006, rule 4): the Java build's keys,
+/// The file is the one both builds read, key for key (ADR 0006, rule 5): the Java build's keys,
 /// forms and defaults, which are pg_tileserv's wherever pg_tileserv has the setting. So one
 /// tessera.json starts either build, and a file one refuses, the other refuses too.
 /// These functions are pure: they read only their parameters and touch no file, so a test can hand
@@ -121,7 +121,7 @@ public static class SettingsReader
 
     /// <summary>
     /// Every key the service reads, spelt as pg_tileserv spells it where it has the same setting
-    /// (ADR 0003, ADR 0006 rule 4). An override must name one of these.
+    /// (ADR 0003, ADR 0006 rule 5). An override must name one of these.
     /// </summary>
     public static readonly ImmutableArray<string> Keys =
         [.. TopKeys.Where(key => key != "Area"), .. AreaKeys.Select(key => $"Area.{key}")];
@@ -257,7 +257,7 @@ public static class SettingsReader
 
     /// <summary>
     /// A length of time: a whole number of seconds, as the Java build first wrote it, or pg_tileserv's
-    /// form, such as <c>1h</c>, <c>30m</c> or <c>1h30m</c> (ADR 0006 rule 4). Both builds read both.
+    /// form, such as <c>1h</c>, <c>30m</c> or <c>1h30m</c> (ADR 0006 rule 5). Both builds read both.
     /// </summary>
     private static Result<TimeSpan, SettingsError> DurationOr(JsonObject json, string path, TimeSpan fallback) =>
         Find(json, path).Match(
