@@ -37,9 +37,9 @@ describe("US-23 open the map of the area", () => {
 	});
 
 	it("leaves a failed tile's detail in the model, read from the answer's body", () => {
-		const body = JSON.stringify({ type: "about:blank", title: "Service Unavailable", status: 503, detail: "The list of layers has not loaded yet." });
+		const body = JSON.stringify({ type: "about:blank", title: "Service Unavailable", status: 503, detail: "The list of layers is not ready yet." });
 		const [model] = updateFn(...args(Msg.tileFailed(tileProblem(503, "Service Unavailable", body))));
-		expect(model.notice).toBe("The list of layers has not loaded yet.");
+		expect(model.notice).toBe("The list of layers is not ready yet.");
 	});
 
 	it("makes words from the status alone when the body is no problem document", () => {

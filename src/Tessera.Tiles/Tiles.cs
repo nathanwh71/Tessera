@@ -133,7 +133,7 @@ public sealed class TileServer(Func<Option<LayerCatalogue>> catalogue, TileReade
     {
         var target =
             // Before the first list of layers loads, nothing can be found, so the browser is asked to wait (N-23 c4).
-            from layers in catalogue().OrRefuse(Problems.Unavailable("The list of layers has not loaded yet. Try again shortly."))
+            from layers in catalogue().OrRefuse(Problems.Unavailable("The list of layers is not ready yet."))
             // The detail never repeats the request's layer id: an answer should not echo what a stranger sent.
             from layer in layers.Find(layerId).OrRefuse(Problems.NotFound("No published layer has that name."))
             from tile in TileAddress.Of(z, x, y, settings.MinZoom, settings.MaxZoom).MapError(Problems.NotFound)
@@ -185,7 +185,7 @@ public sealed class TileServer(Func<Option<LayerCatalogue>> catalogue, TileReade
             // A table revoked since start-up answers 42501; it has left, so it is not found (US-03 c6).
             // A database that cannot answer now asks the browser to try again (N-22); anything else is a fault.
             error => error.IsMissingTable ? Problems.NotFound("No published layer has that name.")
-                : error.IsUnavailable ? Problems.Unavailable("The database cannot answer now. Try again shortly.")
+                : error.IsUnavailable ? Problems.Unavailable("The database cannot be reached. Try again shortly.")
                 : Problems.Answer(StatusCodes.Status500InternalServerError, Option.None<string>()));
 
     // The browser that already holds this tile gets 304 and no body; any other gets the bytes, packed if it can unpack them.
@@ -200,6 +200,8 @@ public static class TileRoutes
 {
     public const string ContentType = "application/vnd.mapbox-vector-tile";
 
+    private static readonly string[] ReadMethods = [HttpMethods.Get, HttpMethods.Head];
+
     public static IEndpointRouteBuilder MapTiles(this IEndpointRouteBuilder routes, LiveCatalogue catalogue, Database database, TileSettings settings, TileCache cache)
     {
         var stopping = routes.ServiceProvider.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping;
@@ -207,8 +209,10 @@ public static class TileRoutes
         Task<IResult> Serve(string layer, int z, int x, int y, HttpRequest request, CancellationToken cancel) =>
             server.Answer(layer, z, x, y, TileRequest.Of(request), cancel);
 
-        routes.MapGet("/{layer}/{z:int}/{x:int}/{y:int}.pbf", Serve);
-        routes.MapGet("/{layer}/{z:int}/{x:int}/{y:int}.mvt", Serve);
+        // HEAD asks for the headers alone; the web server leaves the body out. Both builds answer it
+        // (ADR 0006 rule 6).
+        routes.MapMethods("/{layer}/{z:int}/{x:int}/{y:int}.pbf", ReadMethods, Serve);
+        routes.MapMethods("/{layer}/{z:int}/{x:int}/{y:int}.mvt", ReadMethods, Serve);
         return routes;
     }
 }

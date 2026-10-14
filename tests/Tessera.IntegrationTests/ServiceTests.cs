@@ -135,6 +135,19 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         Assert.Empty(await second.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken));
     }
 
+    // ADR 0006 rule 6: HEAD gets a tile's headers and no body, as in the Java build.
+    [Fact]
+    public async Task Answers_head_with_the_headers_alone()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Head, $"/food.cafes/{Zoom}/{Tile.X}/{Tile.Y}.pbf");
+        using var head = await service.Client.SendAsync(request, TestContext.Current.CancellationToken);
+        using var get = await Get($"/food.cafes/{Zoom}/{Tile.X}/{Tile.Y}.pbf");
+
+        Assert.Equal(HttpStatusCode.OK, head.StatusCode);
+        Assert.Equal(get.Headers.ETag, head.Headers.ETag);
+        Assert.Empty(await head.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken));
+    }
+
     // US-07 c2.
     [Fact]
     public async Task Serves_the_same_body_for_mvt()
@@ -267,6 +280,8 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
 
         Assert.Equal(HttpStatusCode.NotFound, answer.StatusCode);
         Assert.Equal("application/problem+json", answer.Content.Headers.ContentType?.MediaType);
+        // ADR 0006 rule 6: no detail, as in the Java build.
+        Assert.DoesNotContain("detail", await answer.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -307,6 +322,8 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         Assert.Contains("application/problem+json", answer, StringComparison.Ordinal);
         Assert.Contains("\"title\":\"Bad Request\"", answer, StringComparison.Ordinal);
         Assert.DoesNotContain("food.cafes", answer, StringComparison.Ordinal);
+        // ADR 0006 rule 6: no detail, as in the Java build, so the answer names no trick either.
+        Assert.DoesNotContain("\"detail\"", answer, StringComparison.Ordinal);
     }
 
     // Kestrel, the web server inside .NET, refuses an encoded null (%00) and a raw control character

@@ -47,9 +47,12 @@ public static class MapRoutes
             });
         }
 
-        app.MapGet("/", () => Answer(page));
+        // GET and HEAD, as the Java build answers both (ADR 0006 rule 6).
+        string[] read = [HttpMethods.Get, HttpMethods.Head];
+        app.MapMethods("/", read, () => Answer(page));
         // Any other single name, such as /index.html, is not found: the page goes out through these two routes alone.
-        app.MapGet("/{file}", (string file) => Page.LayerOf(file).Match(_ => Answer(page), () => Problems.NotFound("No page has that name.")));
+        // The 404 holds no detail, as the Java build's does not: the status says all there is.
+        app.MapMethods("/{file}", read, (string file) => Page.LayerOf(file).Match(_ => Answer(page), () => Problems.Answer(StatusCodes.Status404NotFound, Option.None<string>())));
         return app;
     }
 

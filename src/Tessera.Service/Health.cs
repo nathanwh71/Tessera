@@ -70,7 +70,7 @@ public static class Health
         public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default) =>
             Task.FromResult(catalogue.Current.Match(
                 _ => HealthCheckResult.Healthy(),
-                () => HealthCheckResult.Unhealthy("The list of layers has not loaded yet.")));
+                () => HealthCheckResult.Unhealthy("The list of layers is not ready yet.")));
     }
 
     private sealed class DatabaseAnswers(Database database) : IHealthCheck

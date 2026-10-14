@@ -91,14 +91,14 @@ test.describe("US-23 open the map of the area", () => {
 			route.fulfill({
 				status: 503,
 				contentType: "application/problem+json",
-				body: JSON.stringify({ type: "about:blank", title: "Service Unavailable", status: 503, detail: "The list of layers has not loaded yet." }),
+				body: JSON.stringify({ type: "about:blank", title: "Service Unavailable", status: 503, detail: "The list of layers is not ready yet." }),
 			}),
 		);
 		await page.addInitScript(() => {
 			window.__tesseraTest = true;
 		});
 		await page.goto("/");
-		await expect(page.getByRole("alert")).toHaveText("The list of layers has not loaded yet.");
+		await expect(page.getByRole("alert")).toHaveText("The list of layers is not ready yet.");
 		expect(await axe(page)).toEqual([]);
 	});
 });

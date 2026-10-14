@@ -37,15 +37,17 @@ public static class TargetScreen
     }
 
     /// <summary>
-    /// Screens every request first. The answer names the kind of problem but never repeats the
-    /// target, since a disguised address can carry anything (S-06 c2).
+    /// Screens every request first. The answer holds no detail at all, as the Java build's does
+    /// not: it never repeats the target, since a disguised address can carry anything (S-06 c2),
+    /// and naming the kind of problem would tell a prober which trick the screen caught
+    /// (ADR 0006 rule 6). <see cref="Problem"/> still names it, for the tests.
     /// </summary>
     public static WebApplication UseTargetScreen(this WebApplication app)
     {
         app.Use((context, next) =>
             context.Features.Get<IHttpRequestFeature>() is { } request
                 ? Problem(request.RawTarget).Match(
-                    problem => Problems.Write(context, StatusCodes.Status400BadRequest, Option.Some($"The address holds {problem}.")),
+                    _ => Problems.Write(context, StatusCodes.Status400BadRequest, Option.None<string>()),
                     () => next(context))
                 : next(context));
         return app;
