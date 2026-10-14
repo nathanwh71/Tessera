@@ -8,19 +8,29 @@ namespace Tessera.Settings;
 
 /// <summary>
 /// Turns the environment and the text of tessera.json into settings, or into a list of every
-/// problem it found (US-00 c4, ADR 0003).
+/// problem it found (US-00 c4, ADR 0003). It is the heart of the Settings module:
+/// <see cref="SettingsLoader"/> calls it once at start-up, for the service or for the import.
 /// </summary>
 /// <remarks>
-/// The file is the one both builds read, key for key (ADR 0006, rule 5): the Java build's keys,
-/// forms and defaults, which are pg_tileserv's wherever pg_tileserv has the setting. So one
-/// tessera.json starts either build, and a file one refuses, the other refuses too.
+/// <para>
+/// The file is the one both builds read, key for key (ADR 0006, rule 5). The Java build is Tessera's
+/// twin, written in Java; its keys, forms and defaults are those of pg_tileserv, an older tile server,
+/// wherever pg_tileserv has the setting. So one tessera.json starts either build, and a file one
+/// refuses, the other refuses too.
+/// </para>
+/// <para>
 /// These functions are pure: they read only their parameters and touch no file, so a test can hand
 /// them any environment it likes. <see cref="SettingsLoader"/> does the reading from disk.
 /// They report every problem at once, not the first alone, so one failed start tells the maintainer
 /// everything to fix.
+/// </para>
 /// </remarks>
 public static class SettingsReader
 {
+    /// <summary>
+    /// Reads the service's settings. <paramref name="configName"/> names the file in any message;
+    /// <paramref name="configText"/> is its text, or none when no file exists.
+    /// </summary>
     public static Result<ServiceSettings, ImmutableArray<SettingsError>> ReadService(
         IReadOnlyDictionary<string, string> environment, string configName, Option<string> configText)
     {
@@ -38,6 +48,10 @@ public static class SettingsReader
             .MapError(errors => errors.SelectMany(group => group).Distinct().ToImmutableArray());
     }
 
+    /// <summary>
+    /// Reads the import's settings: the area's box from the file and the publisher's database from
+    /// <c>TESSERA_PUBLISHER_DATABASE_URL</c>.
+    /// </summary>
     public static Result<ImportSettings, ImmutableArray<SettingsError>> ReadImport(
         IReadOnlyDictionary<string, string> environment, string configName, Option<string> configText) =>
         Result.Collect(
@@ -46,8 +60,9 @@ public static class SettingsReader
             .Map(found => new ImportSettings(found.Item1, found.Item2));
 
     /// <summary>
-    /// Reads <c>postgresql://user:password@host:port/database</c>. A password may hold any
-    /// character, so URL rules apply: a character such as '@' arrives "percent-encoded" as %40.
+    /// Reads <c>postgresql://user:password@host:port/database</c>; with no port, it takes 5432,
+    /// PostgreSQL's usual one. A password may hold any character, so URL rules apply: a character
+    /// such as '@' arrives 'percent-encoded', written as % and its number, here %40.
     /// </summary>
     public static Result<DatabaseAddress, SettingsError> ParseDatabaseUrl(string name, string text)
     {
@@ -67,7 +82,8 @@ public static class SettingsReader
             : Result.Refuse<DatabaseAddress, SettingsError>(refusal);
     }
 
-    // As in pg_tileserv, a missing file is no fault: every key then takes its default.
+    // As in pg_tileserv, a missing file is no fault: every key then takes its default. A JSON object,
+    // the { ... } that pairs each key with a value, stands in for the file.
     private static Result<JsonObject, SettingsError> Document(
         IReadOnlyDictionary<string, string> environment, string configName, Option<string> configText) =>
         configText
@@ -75,8 +91,9 @@ public static class SettingsReader
             .Map(json => Override(json, environment));
 
     /// <summary>
-    /// Refuses a key the service does not read. A key it does not know is most often a misspelling
-    /// of one it does, so the maintainer learns at start-up rather than wondering why a value had no effect.
+    /// Refuses a key the service does not read, naming the first such key it finds. A key it does not
+    /// know is most often a misspelling of one it does, so the maintainer learns at start-up rather than
+    /// wondering why a value had no effect (ADR 0006 rule 5).
     /// </summary>
     private static Result<JsonObject, SettingsError> Known(JsonObject json)
     {
@@ -110,8 +127,9 @@ public static class SettingsReader
         }
         catch (Exception error) when (error is JsonException or ArgumentException)
         {
-            // System.Text.Json reports text that is not JSON, or a key written twice, by throwing,
-            // so the parse alone sits in a try.
+            // System.Text.Json, .NET's own JSON reader, reports text that is not JSON, or a key written
+            // twice, by throwing an exception, an error that jumps out of the normal flow. So the parse
+            // alone sits in a try, and the exception becomes a refusal here.
             return Result.Refuse<JsonObject, SettingsError>(new SettingsError(configName, error.Message));
         }
     }
@@ -121,17 +139,18 @@ public static class SettingsReader
 
     /// <summary>
     /// Every key the service reads, spelt as pg_tileserv spells it where it has the same setting
-    /// (ADR 0003, ADR 0006 rule 5). An override must name one of these.
+    /// (ADR 0003, ADR 0006 rule 5). A key inside Area carries a dot: <c>Area.HomeLevel</c>. An override
+    /// must name one of these.
     /// </summary>
     public static readonly ImmutableArray<string> Keys =
         [.. TopKeys.Where(key => key != "Area"), .. AreaKeys.Select(key => $"Area.{key}")];
 
     /// <summary>
     /// Copies the file's settings and lays each override over the key it names: <c>TESSERA_</c>, then
-    /// the key in any case, as pg_tileserv's <c>TS_HTTPPORT</c> overrides <c>HttpPort</c>. "__" steps
-    /// down a level, so <c>TESSERA_AREA__HOMELEVEL</c> overrides <c>Area.HomeLevel</c>. A variable that
-    /// names no key, such as <c>TESSERA_DB_PASSWORD</c>, is left alone. The copy keeps the parsed
-    /// file unchanged.
+    /// the key in any mix of capitals and small letters, as pg_tileserv's <c>TS_HTTPPORT</c> overrides
+    /// <c>HttpPort</c>. '__' steps down a level, so <c>TESSERA_AREA__HOMELEVEL</c> overrides
+    /// <c>Area.HomeLevel</c>. A variable that names no key, such as <c>TESSERA_DB_PASSWORD</c>, is left
+    /// alone. The copy keeps the parsed file unchanged.
     /// </summary>
     private static JsonObject Override(JsonObject file, IReadOnlyDictionary<string, string> environment) =>
         environment
@@ -141,10 +160,12 @@ public static class SettingsReader
             .OrderBy(variable => variable.Key, StringComparer.Ordinal)
             .Aggregate((JsonObject)file.DeepClone(), (json, variable) => Set(json, variable.Key!.Split('.'), variable.Value));
 
+    // The key a variable's name stands for, or null when it stands for none.
     private static string? KeyOf(string name) =>
         Keys.FirstOrDefault(key => string.Equals(key.Replace(".", "__", StringComparison.Ordinal), name, StringComparison.OrdinalIgnoreCase));
 
-    // JsonObject is mutable, so Override hands this a fresh copy and nothing outside sees the change.
+    // JsonObject can change in place, so Override hands this a fresh copy and nothing outside sees the
+    // change.
     private static JsonObject Set(JsonObject json, string[] path, string value)
     {
         var parent = path[..^1].Aggregate(json, (node, key) =>
@@ -156,9 +177,12 @@ public static class SettingsReader
     // Macau, the office's area, when the file names none: the Java build's default.
     private static readonly Area Macau = new("Macau", new AreaBox(113.52, 22.10, 113.61, 22.22), new HomeView(113.55, 22.19, 15));
 
-    // Web Mercator, the map's own projection, cannot show the poles: it stops near 85 degrees.
+    // Web Mercator, the projection that flattens the globe onto the map, cannot show the poles: it
+    // stops near 85 degrees of latitude, north and south.
     private const double FarthestLatitude = 85.06;
 
+    // The 'from … in … select' form below runs each step in turn and stops at the first refusal; it
+    // works through Result's Select and SelectMany.
     private static Result<Area, SettingsError> ReadArea(JsonObject json) =>
         from name in TextOr(json, "Area.Name", Macau.Name)
         from west in NumberOr(json, "Area.MinLongitude", Macau.Box.West, -180, 180)
@@ -182,7 +206,7 @@ public static class SettingsReader
         from zooms in maxZoom >= minZoom
             ? Result.Ok<int, SettingsError>(maxZoom)
             : Result.Refuse<int, SettingsError>(new SettingsError("DefaultMaxZoom", "not below DefaultMinZoom"))
-        // pg_tileserv sends no cache rule by default; the shipped file asks for a minute.
+        // pg_tileserv's default is 0 seconds; the shipped file asks for 60.
         from cacheSeconds in WholeOr(json, "CacheTTL", 0, 0, int.MaxValue)
         from cacheMegabytes in WholeOr(json, "TileCacheMegabytes", 64, 1, 65_536)
         select new TileSettings(maxFeatures, buffer, cacheSeconds, cacheMegabytes, resolution, minZoom, maxZoom);
@@ -199,6 +223,8 @@ public static class SettingsReader
         from acceptCount in WholeOr(json, "HttpAcceptCount", 100, 1, 1_000_000)
         select new HttpSettings(address, port, maxConnections, acceptCount);
 
+    // Collect, unlike the 'from' form, keeps every refusal, so a missing DATABASE_URL and a bad pool
+    // size are named together (US-00 c4). DbTimeout counts seconds.
     private static Result<DbSettings, ImmutableArray<SettingsError>> ReadDb(JsonObject json, IReadOnlyDictionary<string, string> environment) =>
         Result.Collect(
                 Database(environment, EnvironmentNames.ReaderDatabase),
@@ -211,9 +237,11 @@ public static class SettingsReader
 
     private static ImmutableArray<SettingsError> One(SettingsError error) => [error];
 
+    // CatalogueRefresh counts seconds.
     private static Result<CatalogueSettings, SettingsError> ReadCatalogue(JsonObject json) =>
         WholeOr(json, "CatalogueRefresh", 30, 0, int.MaxValue).Map(seconds => new CatalogueSettings(TimeSpan.FromSeconds(seconds)));
 
+    // Follows a dotted path such as 'Area.HomeLevel' down through the file, one key at a time.
     private static Option<JsonNode> Find(JsonObject json, string path) =>
         path.Split('.')
             .Aggregate(Option.Some<JsonNode>(json), (node, key) => node.Bind(found =>
@@ -228,7 +256,8 @@ public static class SettingsReader
                 ? Result.Ok<string, SettingsError>(text)
                 : Result.Refuse<string, SettingsError>(new SettingsError(path, "expected text")));
 
-    // A number may arrive as a JSON number from the file or as text from an override variable.
+    // A number may arrive as a JSON number from the file or as text from an override variable. The
+    // text is read the same way on every machine, with '.' as the decimal point.
     private static Result<double, SettingsError> Number(JsonObject json, string path, double lowest, double highest) =>
         Node(json, path).Bind(node =>
             node is JsonValue value
@@ -239,19 +268,25 @@ public static class SettingsReader
                 ? Result.Ok<double, SettingsError>(number)
                 : Result.Refuse<double, SettingsError>(new SettingsError(path, $"expected a number from {lowest} to {highest}")));
 
+    // The ...Or functions let the file leave a key out, as pg_tileserv's keys may be: the fallback then
+    // stands. A key the file does give must be valid.
     private static Result<double, SettingsError> NumberOr(JsonObject json, string path, double fallback, double lowest, double highest) =>
         Find(json, path).Match(_ => Number(json, path, lowest, highest), () => Result.Ok<double, SettingsError>(fallback));
 
     private static Result<string, SettingsError> TextOr(JsonObject json, string path, string fallback) =>
         Find(json, path).Match(_ => Text(json, path), () => Result.Ok<string, SettingsError>(fallback));
 
-    /// <summary>A whole number within a range.</summary>
+    /// <summary>
+    /// A whole number from <paramref name="lowest"/> to <paramref name="highest"/>, both included.
+    /// </summary>
     private static Result<int, SettingsError> Whole(JsonObject json, string path, int lowest, int highest) =>
         Number(json, path, lowest, highest).Bind(number => number % 1 == 0
             ? Result.Ok<int, SettingsError>((int)number)
             : Result.Refuse<int, SettingsError>(new SettingsError(path, $"expected a whole number from {lowest} to {highest}")));
 
-    /// <summary>A whole number the file may leave out, as pg_tileserv's keys may be: the fallback then stands.</summary>
+    /// <summary>
+    /// A whole number the file may leave out, as pg_tileserv's keys may be: the fallback then stands.
+    /// </summary>
     private static Result<int, SettingsError> WholeOr(JsonObject json, string path, int fallback, int lowest, int highest) =>
         Find(json, path).Match(_ => Whole(json, path, lowest, highest), () => Result.Ok<int, SettingsError>(fallback));
 
@@ -267,6 +302,12 @@ public static class SettingsReader
                     .MapError(_ => new SettingsError(path, "expected a whole number of seconds, or a time such as 1h, 30m or 90s")),
             () => Result.Ok<TimeSpan, SettingsError>(fallback));
 
+    /// <summary>
+    /// Reads hours, minutes and seconds in that order, each optional, such as <c>1h30m</c> or
+    /// <c>90s</c>. A pattern, a regular expression, checks the form: <c>\d+</c> means one or more
+    /// digits, and <c>?</c> makes the part before it optional.
+    /// </summary>
+    /// <returns>The length of time, or null when the text has another form or is empty.</returns>
     public static TimeSpan? ParseDuration(string text)
     {
         var match = System.Text.RegularExpressions.Regex.Match(text, @"^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$");
@@ -277,6 +318,8 @@ public static class SettingsReader
     private static Result<bool, SettingsError> FlagOr(JsonObject json, string path, bool fallback) =>
         Find(json, path).Match(_ => Flag(json, path), () => Result.Ok<bool, SettingsError>(fallback));
 
+    // A flag may arrive as JSON true or false from the file, or as the text 'true' or 'false' from an
+    // override variable.
     private static Result<bool, SettingsError> Flag(JsonObject json, string path) =>
         Node(json, path).Bind(node =>
             node is JsonValue value
@@ -285,6 +328,7 @@ public static class SettingsReader
                 ? Result.Ok<bool, SettingsError>(flag)
                 : Result.Refuse<bool, SettingsError>(new SettingsError(path, "expected true or false")));
 
+    // An environment variable that is set but empty counts as missing.
     private static Result<string, SettingsError> Required(IReadOnlyDictionary<string, string> environment, string name) =>
         environment.GetValueOrDefault(name).ToOption()
             .Bind(value => value.Length > 0 ? Option.Some(value) : Option.None<string>())

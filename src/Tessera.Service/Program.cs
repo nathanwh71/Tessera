@@ -4,10 +4,14 @@ using Tessera.Service;
 using Tessera.Settings;
 using Tessera.Sql;
 
-// Two ways to run the one program (ADR 0001):
+// The program's starting point: the first lines that run. It sits in the Service project, the one
+// part that joins every module, and one program does both jobs (ADR 0001). The operator, or the
+// start-up script, runs it in one of two ways:
 //   Tessera.Service                 serves tiles and the map
-//   Tessera.Service import <file>   loads the places from a GeoJSON file, then stops (US-24)
-// An exit code of 0 means success; any other number tells the start-up script something failed.
+//   Tessera.Service import <file>   loads the places from a GeoJSON file, a text file that
+//                                   describes places on a map, then stops (US-24)
+// The program ends with an exit code, a number it hands back to whatever started it: 0 means
+// success, 1 a failure, and 2 a command it did not understand.
 
 return args is ["import", var path]
     ? await Import(path)
@@ -15,8 +19,10 @@ return args is ["import", var path]
         ? await Serve()
         : Usage();
 
-// The service starts whether or not the database answers yet, so the two may start in either
-// order; until the list of layers loads, tiles answer 503 (N-23 c4).
+// Serves until the service is told to stop. The service starts whether or not the database answers
+// yet, so the two may start in either order; until the list of layers loads, tile requests get 503,
+// the status code, or number in the answer, that means 'try again later' (N-23 c4). The map's built
+// files sit in wwwroot, a folder beside the program.
 static async Task<int> Serve() =>
     await SettingsLoader.LoadService().Match(
         async settings =>
@@ -29,6 +35,7 @@ static async Task<int> Serve() =>
         },
         errors => Task.FromResult(Fail(errors)));
 
+// Loads one file of places into the database and prints how many places each layer received.
 static async Task<int> Import(string path) =>
     await SettingsLoader.LoadImport().Match(
         async settings =>
@@ -46,7 +53,7 @@ static async Task<int> Import(string path) =>
         },
         errors => Task.FromResult(Fail(errors)));
 
-// US-00 c4: the service refuses to start and names each setting it lacks.
+// The service refuses to start and names each setting it lacks or cannot read (US-00 c4).
 static int Fail(ImmutableArray<SettingsError> errors)
 {
     foreach (var error in errors)
@@ -60,6 +67,7 @@ static int FailWith(string problem)
     return 1;
 }
 
+// The command was neither of the two the program knows; exit code 2 tells the two cases apart.
 static int Usage()
 {
     Console.Error.WriteLine("Usage: Tessera.Service            serve tiles and the map");

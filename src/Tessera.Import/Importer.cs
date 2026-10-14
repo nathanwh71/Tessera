@@ -5,7 +5,9 @@ using Tessera.Sql;
 
 namespace Tessera.Import;
 
-/// <summary>What the import loaded: the number of places in each layer.</summary>
+/// <summary>
+/// What the import loaded: the number of places in each layer, which the program prints when it ends.
+/// </summary>
 public sealed record ImportSummary(ImmutableSortedDictionary<string, int> PlacesInLayer)
 {
     public override string ToString() =>
@@ -13,25 +15,40 @@ public sealed record ImportSummary(ImmutableSortedDictionary<string, int> Places
 }
 
 /// <summary>
-/// Loads the checked places into nine tables, one for each layer, in one transaction (US-24).
+/// Loads the checked places into nine tables, one for each layer, in one transaction, a group of
+/// changes the database makes all together or not at all (US-24). It belongs to the Import module:
+/// Program.cs calls <see cref="Run"/> for the command <c>Tessera.Service import &lt;file&gt;</c>, and
+/// <see cref="Seed"/> reads and checks the file first.
 /// </summary>
 /// <remarks>
-/// <see cref="Plan"/> is pure: it turns the places into the list of queries to run, so a test can
-/// read the plan without a database. <see cref="Run"/> sends that list to the database. The import
-/// signs in as tessera_publisher, which owns the tables; it never grants them. Publishing is the
-/// data publisher's own act (US-24 c5).
+/// <see cref="Plan"/> is pure, a function that only computes its answer and touches nothing outside:
+/// it turns the places into the list of queries to run, so a test can read the plan without a
+/// database. <see cref="Run"/> sends that list to the database.
+/// <para>
+/// Publishing is the data publisher's own act (US-24 c5), so the import signs in as
+/// tessera_publisher, the role (database user) that owns the tables, and never grants them, that is,
+/// never gives the service permission to read them.
+/// </para>
 /// </remarks>
 public static class Importer
 {
     /// <summary>The type of each column a table holds, by column name, for each layer's table id.</summary>
     public sealed record ExistingColumns(ImmutableDictionary<string, ImmutableDictionary<string, string>> OfTable)
     {
+        /// <summary>No tables at all, as in a database the import has never filled.</summary>
         public static readonly ExistingColumns None = new(ImmutableDictionary<string, ImmutableDictionary<string, string>>.Empty);
 
+        /// <summary>The columns of one table; none for a table the database lacks.</summary>
         public ImmutableDictionary<string, string> Of(string tableId) =>
             OfTable.GetValueOrDefault(tableId) ?? ImmutableDictionary<string, string>.Empty;
     }
 
+    /// <summary>
+    /// Reads and checks the GeoJSON text, then replaces every layer's rows in one transaction. Returns
+    /// the number of places in each layer, or the reason the file or the database refused; on a
+    /// refusal the database keeps its old rows (US-24 c6). A place outside <paramref name="box"/>, the
+    /// area's bounds in degrees, is refused (US-24 c4).
+    /// </summary>
     public static async Task<Result<ImportSummary, ImportError>> Run(Database database, string json, AreaBox box, CancellationToken cancel = default)
     {
         var places = Seed.Read(json, box);
@@ -45,7 +62,10 @@ public static class Importer
             error => Task.FromResult(Result.Refuse<ImportSummary, ImportError>(error))).ConfigureAwait(false);
     }
 
-    /// <summary>A column's type as information_schema names it: <c>text</c>, <c>boolean</c> or <c>double precision</c>.</summary>
+    /// <summary>
+    /// A column's type as information_schema names it: <c>text</c>, <c>boolean</c> or
+    /// <c>double precision</c>.
+    /// </summary>
     public sealed record ColumnType(string Name, string Type);
 
     // Reads the columns inside the transaction, so the plan matches the tables it will change.
@@ -59,14 +79,20 @@ public static class Importer
             .ConfigureAwait(false))
         .Map(tables => new ExistingColumns(tables.ToImmutableDictionary(table => table.TableId, table => table.Types, StringComparer.Ordinal)));
 
+    // SQLSTATE is the database's five-character code for the kind of failure; it goes in the message
+    // so the maintainer can look it up.
     private static ImportError Refused(DatabaseError error) =>
         new($"The database refused the import ({error.SqlState}): {error.Message}");
 
     /// <summary>
     /// Every query the import runs, in order: schemas, tables, columns and indexes first, then the
     /// rows of all nine tables replaced, then fresh statistics. The queries themselves live in
-    /// Sql's <see cref="ImportQueries"/>; this function decides which to run, purely.
+    /// Sql's <see cref="ImportQueries"/>; this function decides which to run, and touches no database.
     /// </summary>
+    /// <remarks>
+    /// The <c>from ... select</c> form runs each step in turn and stops at the first refusal, like a
+    /// chain of checks; here a refusal means a name that will not quote.
+    /// </remarks>
     /// <param name="places">The checked places.</param>
     /// <param name="existing">
     /// The type of each column the database already holds, by table id and column name, so a
@@ -100,6 +126,7 @@ public static class Importer
             select (table.Id, ImportQueries.ColumnTypes(new ImportTable(table, id, geometry, index, []))))
         select tables;
 
+    // One column for each property name any place in the layer carries, sorted by name.
     private static Result<ImmutableArray<ImportColumn>, ImportError> Columns(IEnumerable<Place> places) =>
         places
             .SelectMany(place => place.Properties)
@@ -117,8 +144,8 @@ public static class Importer
             : SqlType.Text;
     }
 
-    // A column the database holds with another type is changed, so a property that was text in one
-    // file and a number in the next loads rather than fails the whole import.
+    // A property that was text in one file and a number in the next should load rather than fail the
+    // whole import, so a column the database holds with another type is changed.
     private static IEnumerable<Query> Shape(ImportTable table, ImmutableDictionary<string, string> existing) =>
         new[] { ImportQueries.CreateTable(table) }
             .Concat(table.Columns.Select(column =>
@@ -131,6 +158,9 @@ public static class Importer
         new(place.Id, place.Longitude, place.Latitude,
             [.. table.Columns.Select(column => Parameter(column, place.Properties.GetValueOrDefault(column.Name.Raw)))]);
 
+    // A value whose kind matches its column goes as it is. In a text column, which holds mixed
+    // kinds, a number or a flag goes as its text. A place that lacks the property, or gives null,
+    // gets the database's NULL, its mark for an empty cell.
     private static object Parameter(ImportColumn column, PropertyValue? value) => value switch
     {
         PropertyValue.Text(var text) when column.Type == SqlType.Text => text,
@@ -145,6 +175,7 @@ public static class Importer
     private static ImportSummary Summary(ImmutableArray<Place> places) =>
         new(places.GroupBy(place => place.Layer).ToImmutableSortedDictionary(layer => layer.Key, layer => layer.Count(), StringComparer.Ordinal));
 
+    // Runs the queries one after another and stops at the first that fails.
     private static async Task<Result<int, ImportError>> RunAll(Database.Session session, ImmutableArray<Query> queries) =>
         (await queries.TraverseAsync(async query => (await session.Execute(query).ConfigureAwait(false)).MapError(Refused)).ConfigureAwait(false))
             .Map(counts => counts.Length);
