@@ -1,7 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using CSharpFunctionalExtensions;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Npgsql;
@@ -147,9 +146,6 @@ public static class TesseraSettings
     /// <summary>The database URL the seed writes places with.</summary>
     public const string PublisherDatabase = "TESSERA_PUBLISHER_DATABASE_URL";
 
-    // The sections tessera.json may hold. Urls and Logging are ASP.NET Core's own.
-    private static readonly string[] Sections = ["Database", "Tiles", "Map", "Catalogue", "Area", "Logging", "Urls"];
-
     /// <summary>
     /// Adds tessera.json, beside the program, then the environment again, so a variable such as
     /// <c>Tiles__CacheSeconds=0</c> wins over the file; each '__' steps down a level.
@@ -162,7 +158,8 @@ public static class TesseraSettings
     /// <summary>
     /// Binds each section to its record, with the record's own limits, and the database URL from
     /// <paramref name="databaseVariable"/>. A key the service does not read is refused, since it is
-    /// most often a misspelling; so is a section.
+    /// most often a misspelling. A misspelt section name passes unseen: its keys bind to nothing, so
+    /// the section keeps its defaults.
     /// </summary>
     public static void Register(IServiceCollection services, IConfiguration configuration, string databaseVariable)
     {
@@ -176,19 +173,6 @@ public static class TesseraSettings
                 (connection.Variable, connection.Url) = (databaseVariable, configuration[databaseVariable]))
             .ValidateDataAnnotations()
             .ValidateOnStart();
-
-        // The sections the JSON itself names; the environment holds many other names, all left alone.
-        var unknown = ((IConfigurationRoot)configuration).Providers
-            .Where(provider => provider is JsonConfigurationProvider or JsonStreamConfigurationProvider)
-            .SelectMany(provider => provider.GetChildKeys([], null))
-            .Where(name => !Sections.Contains(name, StringComparer.OrdinalIgnoreCase))
-            .Distinct()
-            .ToArray();
-        services.AddOptions<SectionCheck>()
-            .Validate(
-                _ => unknown.Length == 0,
-                $"tessera.json: no section is named {string.Join(", ", unknown.Select(name => $"'{name}'"))}.")
-            .ValidateOnStart();
     }
 
     private static void Section<T>(IServiceCollection services, string name) where T : class =>
@@ -196,8 +180,6 @@ public static class TesseraSettings
             .BindConfiguration(name, binder => binder.ErrorOnUnknownConfiguration = true)
             .ValidateDataAnnotations()
             .ValidateOnStart();
-
-    private sealed class SectionCheck;
 
     /// <summary>Checks every section at once; throws with every problem found.</summary>
     public static void Check(IServiceProvider services) => services.GetRequiredService<IStartupValidator>().Validate();

@@ -83,12 +83,15 @@ public sealed class SettingsTests
         Assert.Contains(problem, problems, StringComparison.Ordinal);
     }
 
-    // A key or section the service does not read is refused: it is most often a misspelling.
-    [Theory]
-    [InlineData("""{"Tiles":{"CacheSecond":60}}""", "CacheSecond")]
-    [InlineData("""{"Tile":{}}""", "Tile")]
-    public void Refuses_a_key_it_does_not_know(string json, string key) =>
-        Assert.Contains($"'{key}'", Problems(json), StringComparison.Ordinal);
+    // A key the service does not read is refused: it is most often a misspelling. A misspelt
+    // section name is not checked; its keys bind to nothing (ADR 0003).
+    [Fact]
+    public void Refuses_a_key_it_does_not_know() =>
+        Assert.Contains("'CacheSecond'", Problems("""{"Tiles":{"CacheSecond":60}}"""), StringComparison.Ordinal);
+
+    [Fact]
+    public void Leaves_a_misspelt_section_at_its_defaults() =>
+        Assert.Equal(60, Settings<TileSettings>("""{"Tile":{"CacheSeconds":0}}""").CacheSeconds);
 
     // Every value out of range is named at once, so one failed start shows everything to fix.
     [Fact]
