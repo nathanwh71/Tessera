@@ -4,13 +4,13 @@ namespace Tessera.Etl.Tests;
 
 /// <summary>
 /// <b><i>Filters</i></b> joined with <c>&gt;&gt;</c>, and columns that filters add or remove: a
-/// chain must behave as its filters do one after another, and the script must hold the columns
-/// the last filter left (US-36, criterion 1).
+/// chain must behave as its filters do one after another (US-36, criterion 1), and the script
+/// must hold the columns the last filter left.
 /// </summary>
 public sealed class ChainTests
 {
     // The same area and the same way to make a place as FilterTests, so a chain is checked on
-    // the very rows each filter was checked on alone.
+    // rows made just as each filter's own tests make them.
     private static readonly Area Macau = FilterTests.Macau;
 
     private static Row Place(int number, double longitude, double latitude, params (string, object?)[] values) =>

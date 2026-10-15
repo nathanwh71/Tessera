@@ -20,7 +20,7 @@ public sealed record TableReport(TablePlan Table, ImmutableArray<string> Filters
 
     /// <summary>
     /// The rows lost, counted from the rows read, so the count stays right whichever filter dropped
-    /// them; the <b><i>stop rules</i></b> and the log both report it.
+    /// them; the log and the program's summary line both report it.
     /// </summary>
     public int Dropped => Read - Kept.Length;
 }

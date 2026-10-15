@@ -132,8 +132,8 @@ export async function checkEdge(base: string, stopFirst: () => Promise<void>, st
 
   // N-29: with the first copy stopped, the second serves a tile Nginx never held, and /health
   // still says UP. Nginx tries the stopped copy, meets a refused connection, and moves on. The copies
-  // take turns (round robin), so six fresh tiles send at least three to the stopped copy: enough to
-  // meet it, and to reach max_fails=3, after which Nginx rests it.
+  // take turns (round robin), so some of the six fresh tiles try the stopped copy first; each then
+  // moves on to the second, and three such failures within ten seconds rest it (max_fails=3).
   await stopFirst();
   for (let attempt = 0; attempt < 6; attempt++) {
     const fresh = await ask(`${base}/food.cafes/22/1/${attempt}.pbf`, { 'Accept-Encoding': 'identity' });

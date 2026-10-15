@@ -7,7 +7,7 @@ obj/
 out/
 TestResults/
 
-# This machine's settings and secrets: a password in Git reaches everyone who clones it (US-00 c4)
+# This machine's settings and secrets: a password in Git reaches everyone who clones it
 .env
 
 # The start-up task's log (scripts/boot.ts): it belongs to one machine, and grows each start

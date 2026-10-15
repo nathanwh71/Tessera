@@ -25,8 +25,8 @@ const scripts = (): Map<string, number> =>
 	);
 
 describe("the page's files, split for the cache", () => {
-	// A full build takes several seconds, far past the test runner's usual 5-second limit, so the
-	// build may take up to a minute.
+	// A full build can outlast the 10 seconds the test runner allows a setup step by default, so this
+	// one may take up to a minute.
 	beforeAll(async () => {
 		await build({ root: ROOT, logLevel: "silent", build: { outDir: OUT, emptyOutDir: true } });
 	}, 60_000);

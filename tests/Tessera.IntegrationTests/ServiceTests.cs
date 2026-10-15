@@ -12,14 +12,14 @@ namespace Tessera.IntegrationTests;
 
 /// <summary>
 /// The whole service over real HTTP: the seed loaded and granted, the <b><i>catalogue</i></b>
-/// loaded, the service listening on a port of its own (US-00, US-07, S-01, S-06, US-23 c5).
+/// loaded, the service listening on a port of its own (US-00, US-07, S-01, S-06, US-23).
 /// </summary>
 public sealed class ServiceFixture : IAsyncLifetime
 {
     /// <summary>
     /// The class's own database, a free port and a client aimed at it, so this class shares no rows
-    /// and no port with any other class running at the same time. The client is replaced once the
-    /// port is known to answer.
+    /// and no port with any other class running at the same time. The client starts empty, and
+    /// InitializeAsync aims a new one at the service as soon as it has started.
     /// </summary>
     public DatabaseFixture Database { get; } = new();
 
@@ -145,8 +145,8 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         Assert.Equal(first.Headers.ETag, second.Headers.ETag);
     }
 
-    // A watcher, or Nginx checking a tag (N-19, ADR 0008), may ask with HEAD for a tile's headers
-    // alone; they must match a GET's, with no body sent.
+    // A watcher, such as a script that checks a tile's tag, may ask with HEAD for the headers alone
+    // (ADR 0008); the answer carries the same tag as a GET's, with no body sent.
     [Fact]
     public async Task Answers_head_with_the_headers_alone()
     {
@@ -244,8 +244,8 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         Assert.DoesNotContain("detail", await answer.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
     }
 
-    // US-07 c4 and c5: level 1 has two columns, 0 and 1, so column 5 names no tile. The service
-    // refuses it before any query runs, and says so as a problem document, as for an unknown layer.
+    // Level 1 has two columns, 0 and 1, so column 5 names no tile. The service refuses it with 404
+    // before any query runs, and says so as a problem document (US-07 c5), as for an unknown layer.
     [Fact]
     public async Task Answers_a_tile_outside_the_grid_with_404()
     {

@@ -13,7 +13,8 @@
     <!-- The test framework every test project here uses, so all tests run the same way. -->
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="Testcontainers.PostgreSql" />
-    <!-- Reads a vector tile back into points, so a test can check where each feature sits (US-07 c3). -->
+    <!-- Reads a vector tile back into points, so a test can check where each feature sits
+         (US-07 c3). -->
     <PackageReference Include="NetTopologySuite.IO.VectorTiles.Mapbox" />
     <!-- The tests sign in as the database's owner to set the stage: grants, test tables. The service never does. -->
     <PackageReference Include="Npgsql" />

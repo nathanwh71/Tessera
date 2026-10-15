@@ -15,8 +15,8 @@ public static class Gdal
     public const string Image = "ghcr.io/osgeo/gdal:alpine-small-3.11.4";
 
     // Whether this machine has its own ogr2ogr. Lazy asks once, at the first run, and every later
-    // run reuses the answer. Waiting on .Result here is safe: a console program has no UI thread,
-    // so the task never needs the very thread that waits for it.
+    // run reuses the answer. Waiting on .Result here is safe: Start awaits with
+    // ConfigureAwait(false), so its task never needs the very thread that waits for it.
     private static readonly Lazy<bool> Local = new(() => Start("ogr2ogr", ["--version"]).Result.IsSuccess);
 
     /// <summary>

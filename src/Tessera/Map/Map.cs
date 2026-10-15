@@ -26,7 +26,8 @@ public static class MapRoutes
 
     /// <summary>
     /// The nine layers the map names in its own code (US-23 c7); this list must match the map's. The
-    /// server keeps it so a page for any other name, such as <c>/x.html</c>, answers 404, not an empty map.
+    /// server keeps it so a page for any other name, such as <c>/x.html</c>, answers 404, not an
+    /// empty map.
     /// </summary>
     public static readonly ImmutableHashSet<string> LayerIds =
     [
@@ -90,13 +91,15 @@ public static class MapRoutes
         });
         var head = html.IndexOf("</head>", StringComparison.OrdinalIgnoreCase);
         var script = $"""<script id="tessera-area" type="application/json">{json}</script>""";
-        // A page without </head> is not the built map's page, so it goes out untouched rather than broken.
+        // A page without </head> is not the built map's page, so it goes out untouched rather than
+        // broken.
         return head < 0 ? html : html[..head] + script + html[head..];
     }
 
     /// <summary>
-    /// The layer a page's name opens, such as <c>food.cafes</c> for <c>food.cafes.html</c>, or null when
-    /// the name opens none of the nine. The match is ordinal, letter for letter, as layer ids are (US-03).
+    /// The layer a page's name opens, such as <c>food.cafes</c> for <c>food.cafes.html</c>, or null
+    /// when the name opens none of the nine. The match is ordinal, letter for letter, as layer ids are
+    /// (US-03).
     /// </summary>
     public static string? LayerOf(string file) =>
         file.EndsWith(".html", StringComparison.Ordinal) && LayerIds.Contains(file[..^".html".Length])

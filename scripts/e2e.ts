@@ -21,8 +21,7 @@ import { nginxArguments } from './lib/plan.ts';
 
 /**
  * The containers' names differ from npm start's tessera-db and tessera-nginx, so a test run never
- * stops or removes the office's own; the database keeps the usual name, tessera, as the service
- * expects.
+ * stops or removes the office's own; the database inside keeps npm start's name, tessera.
  */
 const container = 'tessera-e2e';
 const nginx = 'tessera-e2e-nginx';

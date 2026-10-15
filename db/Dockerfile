@@ -7,8 +7,8 @@ FROM postgis/postgis:18-3.6
 # The image runs these scripts once, on a new, empty data folder, after its own 10_postgis.sh.
 COPY initdb/ /docker-entrypoint-initdb.d/
 
-# jit=off: with just-in-time compilation switched on, a tile query took 7.1 seconds at first and 0.016 at best;
-# without it, 0.001 (phase 0's settings.md).
+# jit=off: with just-in-time compilation switched on, a tile query took 7.1 seconds at first and
+# 0.016 at best; without it, 0.001 (phase 0's settings.md).
 # max_connections=20: two copies of the service hold at most 4 connections each (Database.PoolSize,
 # N-29), so 8; the rest leave room for the seed, npm run publish and psql.
 # shared_buffers=256MB and effective_cache_size=2GB: the office machine shares its memory with the

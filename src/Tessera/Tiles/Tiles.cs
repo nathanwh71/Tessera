@@ -46,8 +46,8 @@ public sealed class TileServer(
     Func<LayerCatalogue?> catalogue, TileReader read, TileSettings settings, Action? layerChanged = null)
 {
     /// <summary>
-    /// The registered media type of a <b><i>vector tile</i></b>, which map libraries such as
-    /// MapLibre expect (US-07 c1).
+    /// The registered media type of a <b><i>vector tile</i></b>, which US-07 c1 asks of every tile,
+    /// so a client knows what the bytes hold.
     /// </summary>
     public const string ContentType = "application/vnd.mapbox-vector-tile";
 
@@ -60,8 +60,8 @@ public sealed class TileServer(
     /// <summary>
     /// The tile's ETag, the label a browser sends back to ask 'is mine still good?' (N-19). It comes from
     /// a hash of the bytes, so equal bytes give an equal tag; it is a <b><i>weak ETag</i></b>,
-    /// <c>W/"…"</c>, because one tag covers the plain and the gzip form (N-20 c4). Sixteen of the hash's
-    /// 32 bytes keep the tag short, yet two different tiles still never share one in practice.
+    /// <c>W/"…"</c>, because one tag covers the plain and the gzip form (N-20 c4). Sixteen of the
+    /// hash's 32 bytes keep the tag short, yet two different tiles still never share one in practice.
     /// </summary>
     public static string Tag(byte[] bytes) => $"W/\"{Convert.ToHexStringLower(SHA256.HashData(bytes).AsSpan(0, 16))}\"";
 
@@ -145,7 +145,7 @@ public static class TileRoutes
         }
 
         var server = new TileServer(() => catalogue.Current, database.Single<byte[]>, settings, Reread);
-        // HEAD asks for the headers alone, as a watcher or Nginx checking a tag may.
+        // HEAD asks for the headers alone, as a watcher checking a tag may.
         string[] read = [HttpMethods.Get, HttpMethods.Head];
         routes.MapMethods("/{layer}/{z:int}/{x:int}/{y:int}.pbf", read, server.Answer);
         routes.MapMethods("/{layer}/{z:int}/{x:int}/{y:int}.mvt", read, server.Answer);

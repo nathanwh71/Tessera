@@ -5,10 +5,10 @@
 //
 // MapLibre clusters only a GeoJSON source (GeoJSON is the form of points and shapes in JSON, the text
 // form of a value that programs exchange), and the service sends vector tiles, square pieces of the
-// map holding points rather than pictures (ADR 0005). So the map
-// reads the features, the points with their properties, of the tiles it has loaded for each layer that
-// is on, and feeds them here. A point near a tile's edge arrives in each tile whose margin holds it,
-// which is why each id is kept once.
+// map holding points rather than pictures (ADR 0005). So the map reads the features, the points with
+// their properties, of the tiles it has loaded for each layer that is on, and feeds them here. A
+// point near a tile's edge arrives in each tile whose margin holds it, which is why each id is kept
+// once.
 
 import * as v from "valibot";
 import type { GroupKey } from "../design";
@@ -16,7 +16,7 @@ import { type LayerId, layerOf } from "../layers";
 
 /**
  * A property value as a ***vector tile*** carries it: text, a number, true or false, or null. Only
- * these pass to the clustered source, whose properties must be plain values.
+ * these pass to the clustered source, so each place there holds plain values alone.
  */
 export type PropertyValue = string | number | boolean | null;
 
@@ -76,8 +76,8 @@ export interface PlaceCollection {
 const LAYER_STEP = 1_000_000;
 
 /**
- * True for a plain value. A tile's feature may carry other things, such as nested objects, which the
- * clustered source cannot hold, so valuesOf keeps only these.
+ * True for a plain value. A feature's properties arrive typed as unknown, so valuesOf keeps only
+ * these and passes nothing else to the clustered source.
  */
 const isValue = (v: unknown): v is PropertyValue =>
 	v === null || typeof v === "string" || typeof v === "number" || typeof v === "boolean";

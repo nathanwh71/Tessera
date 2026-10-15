@@ -107,8 +107,8 @@ export function plain(name: string): string {
  */
 export function nextScript(existing: readonly string[], source: string): string {
   const highest = Math.max(0, ...existing.map(name => /(?:^|\/)(\d{4})-[^/]*$/.exec(name)?.[1]).map(Number).filter(Number.isFinite));
-  // A geodatabase is a folder, often typed with a trailing slash, so the slash goes before the
-  // last part of the path gives the name.
+  // A geodatabase is a folder, often typed with a trailing slash, so the slash goes first; the
+  // last part of the path then gives the name.
   const stem = plain((source.replace(/[/\\]+$/, '').split(/[/\\]/).pop() ?? '').replace(/\.[^.]*$/, '')).replaceAll('_', '-');
   return `${String(highest + 1).padStart(4, '0')}-${stem}.sql`;
 }
@@ -124,10 +124,10 @@ const quoted = (field: string): string => `"${field.replaceAll('"', '""')}"`;
 /**
  * The ***filters*** most sources need, in the order they must run. dropEmptyShapes comes first and
  * stops the run, so the maintainer looks at the source before any row is lost, and may relax it to
- * a drop; the later filters need a shape to test. repairShapes mends lines and areas, which may cross themselves; a point
- * cannot. swapCoordinates mends a swapped place before insideArea judges where it lies. tidyText
- * then makes names alike, and a name field, when there is one, is required, since a place with no
- * name has no label on the map.
+ * a drop; the later filters need a shape to test. repairShapes mends lines and areas, which may
+ * cross themselves; a point cannot. swapCoordinates mends a swapped place before insideArea judges
+ * where it lies. tidyText then makes names alike, and a name field, when there is one, is
+ * required, since a place with no name has no label on the map.
  */
 function filters(layer: LayerInfo): readonly object[] {
   const name = layer.fields.find(field => field.toLowerCase() === 'name');
@@ -142,9 +142,9 @@ function filters(layer: LayerInfo): readonly object[] {
 }
 
 /**
- * A starting pipeline file: one table for each layer, in the ***schema*** `places`, with the filters most
- * sources need. With `split`, the one layer becomes one table for each value of a field, each picked
- * by a `where`. The maintainer then edits the names, the schemas and the filters.
+ * A starting pipeline file: one table for each layer, in the ***schema*** `places`, with the
+ * filters most sources need. With `split`, the one layer becomes one table for each value of a
+ * field, each picked by a `where`. The maintainer then edits the names, the schemas and the filters.
  */
 export function starter(
   source: string,
@@ -158,8 +158,9 @@ export function starter(
       : split.values.map(value => ({ name: plain(value), where: `${quoted(split.field)} = '${value.replaceAll("'", "''")}'` }));
     return parts.map(part => ({
       table: `places.${part.name}`,
-      // A split source has one layer, and GDAL reads a one-layer source whole when no layer is
-      // named, so the file names the layer only when there is a choice.
+      // An unsplit source names each table's layer, so the file shows where every table comes from.
+      // A split source has one layer, which GDAL reads whole when no layer is named, so its tables
+      // name a layer only when the source holds more than one.
       ...(split === undefined || layers.length > 1 ? { layer: layer.name } : {}),
       ...(part.where === undefined ? {} : { where: part.where }),
       ...(isLines(layer) ? { lines: true } : {}),

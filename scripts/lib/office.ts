@@ -5,7 +5,7 @@
  * WSL2's mirrored networking gives Ubuntu the Windows machine's own address. Nginx then sees each
  * office machine's own address, which the office-only rule and the limits for each visitor need
  * (S-07, S-30); a Windows port proxy would show every request as coming from Windows itself. The
- * address also survives a restart of WSL2, so no step needs running again (US-35 c3).
+ * address also survives a restart of WSL2, so no step needs running again (US-35 c4).
  */
 export const mirrored = 'mirrored';
 

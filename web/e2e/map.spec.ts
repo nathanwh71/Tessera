@@ -173,8 +173,8 @@ test.describe("UI-09 levels", () => {
 		const [west = 0, south = 0, east = 0, north = 0] = (await page.evaluate(() => window.__tesseraMap?.getBounds().toArray().flat())) ?? [];
 		expect(west).toBeGreaterThanOrEqual(-180);
 		expect(east).toBeLessThanOrEqual(180);
-		// Web Mercator, the flat projection web maps use, ends at 85.06 degrees north and south, where the
-		// world becomes a square; beyond it lies blank space.
+		// Web Mercator, the flat projection web maps use, ends at about 85.05 degrees north and south,
+		// where the world becomes a square; beyond it lies blank space.
 		expect(south).toBeGreaterThanOrEqual(-85.06);
 		expect(north).toBeLessThanOrEqual(85.06);
 	});

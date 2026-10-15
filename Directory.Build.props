@@ -28,7 +28,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <!--
       No culture data: numbers and dates read and print the same on every machine, so a setting
-      such as 22.19 never turns into 22,19, and the release is smaller.
+      such as 22.19 never turns into 22,19, and the service needs no ICU library on the machine.
     -->
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>

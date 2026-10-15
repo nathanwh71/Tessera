@@ -86,7 +86,8 @@ const runCopy = (port: string) => keepRunning(`port ${port}`, {
 // Ctrl+C stops both copies and then this script; Nginx and the database keep running in Docker.
 process.on('SIGINT', () => {
   stopping = true;
-  // A copy may have stopped already, and zx refuses to kill it twice; that refusal changes nothing.
+  // A copy may end just as the signal goes, and the kill then fails; .catch drops that failure,
+  // which changes nothing. zx throws at once, before .catch, for a copy it already knows has ended.
   for (const copy of copiesNow.values()) void copy.kill().catch(() => undefined);
 });
 

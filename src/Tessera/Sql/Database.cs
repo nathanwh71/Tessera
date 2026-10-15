@@ -5,8 +5,8 @@ using Npgsql;
 using Tessera.Settings;
 
 // The door to PostgreSQL: the query a module hands over, the reasons the database may refuse it, and
-// the one class that sends every query through the pool (ADR 0001, rule 4). Every failure comes back
-// as a value, never an exception, so each caller must decide what it means (ADR 0004).
+// the one class that sends every query through the pool (ADR 0001, rule 4). Each database failure
+// comes back as a value, never an exception, so each caller must decide what it means (ADR 0004).
 
 namespace Tessera.Sql;
 
@@ -100,8 +100,8 @@ public sealed class Database : IAsyncDisposable
             (await connection.QueryAsync<T>(Command(query, cancel)).ConfigureAwait(false)).ToImmutableArray(), cancel);
 
     /// <summary>
-    /// Runs a query that returns one value, or null for none, such as an empty <b><i>tile</i></b>.
-    /// T must be a class, so null can stand for 'no row'.
+    /// Runs a query that returns one value, or null for none; the <b><i>tile</i></b> route reads a
+    /// null as an empty tile. T must be a class, so null can stand for 'no row'.
     /// </summary>
     public Task<Result<T?, DatabaseError>> Single<T>(Query query, CancellationToken cancel = default) where T : class =>
         Run(connection => connection.QuerySingleOrDefaultAsync<T>(Command(query, cancel)), cancel);
@@ -123,7 +123,8 @@ public sealed class Database : IAsyncDisposable
             return true;
         }
         // A cancel from the caller's own token is no fault of the database, so it escapes and the
-        // caller stops; every other failure, a timeout included, means 'not well'.
+        // caller stops. A timeout, a cancel at the time limit, or a database error means 'not well';
+        // any other exception is a fault in the code, so it escapes too.
         catch (Exception error)
             when (error is TimeoutException or OperationCanceledException or NpgsqlException
                 && !stop.IsCancellationRequested)

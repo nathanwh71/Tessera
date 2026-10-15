@@ -32,7 +32,8 @@ export interface CanvasInputs {
 	readonly landed: boolean;
 	readonly origin: string;
 	readonly initialView: View;
-	// Each callback becomes a message for the update, so the model hears what the map did (ADR 0004).
+	// Each callback becomes a message for the update, so the model hears what the map did (US-23,
+	// criterion 3).
 	readonly onViewChange: (view: View) => void;
 	readonly onPointer: (position: LngLat | null) => void;
 	readonly onClusterOpen: (center: LngLat, expansionLevel: Level) => void;
@@ -261,8 +262,8 @@ export function useStyle(
 		const map = mapRef.current;
 		if (map === null || !loaded) return;
 		for (const [layer, property, value] of landingPaint(landed)) {
-			// MapLibre throws for a layer it lacks, and a layer may be missing while a new style is
-			// still being applied.
+			// MapLibre reports an error for a layer it lacks, and a layer may be missing while a new
+			// style is still being applied.
 			if (map.getLayer(layer) !== undefined) map.setPaintProperty(layer, property, value);
 		}
 	}, [mapRef, landed, loaded, style]);

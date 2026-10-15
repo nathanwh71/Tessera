@@ -67,8 +67,8 @@ export async function drawn(page: Page, layers: readonly string[]): Promise<{ id
 	return page.evaluate((ids) => {
 		const map = window.__tesseraMap;
 		if (map === undefined) return [];
-		// MapLibre refuses a query that names a layer its style lacks, such as 'names' on a page with
-		// no names, so only the layers present are asked.
+		// MapLibre refuses a query that names a layer its style lacks, so only the layers present are
+		// asked.
 		const present = ids.filter((id) => map.getLayer(id) !== undefined);
 		return map.queryRenderedFeatures({ layers: present }).map((f) => ({
 			// A place carries its own `id`; a cluster carries `cluster_id` instead.

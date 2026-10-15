@@ -8,8 +8,8 @@ import { expect, test } from "@playwright/test";
 test.use({
 	launchOptions: {
 		args: ["--disable-webgl", "--disable-webgl2", "--disable-3d-apis"],
-		// A file's own launch settings replace those of playwright.config.ts, so this one names a
-		// machine's own Chromium, as a build container has, the same way.
+		// A file's own launch settings replace those of playwright.config.ts, so this file names a
+		// machine's own Chromium, such as a build container's, as that one does.
 		...(process.env["CHROMIUM_PATH"] === undefined ? {} : { executablePath: process.env["CHROMIUM_PATH"] }),
 	},
 });

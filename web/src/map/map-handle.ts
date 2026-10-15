@@ -59,8 +59,8 @@ export function createMapHandle(): MapHandle {
 
 	return {
 		ports: {
-			// The four numbers are copied into a fresh array, since MapLibre's type takes an array it may
-			// change and the area's bounds are read-only.
+			// The four numbers are copied into a fresh array, since MapLibre's type asks for a plain,
+			// changeable array and the area's bounds are read-only.
 			fitBounds: (bounds: Bounds, maxLevel: Level) =>
 				run((map) => map.fitBounds([bounds[0], bounds[1], bounds[2], bounds[3]], { ...motion(), maxZoom: toMapZoom(maxLevel), padding: FRAME_PADDING })),
 			// The port keeps the update's name for a move to a view, but eases there rather than jumps:

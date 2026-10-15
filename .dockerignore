@@ -5,7 +5,7 @@
 # Build output: each image builds its own, so a copy from this machine only slows the build.
 **/bin/
 **/obj/
-# Git's history: no image needs it, and it is the largest folder in the repository.
+# Git's history: no image needs it, and it grows with every commit.
 .git/
 # This machine's passwords: anything in a build's context can end up in an image layer.
 .env

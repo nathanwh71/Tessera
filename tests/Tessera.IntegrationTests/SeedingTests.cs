@@ -6,8 +6,8 @@ namespace Tessera.IntegrationTests;
 
 /// <summary>
 /// US-24 and ADR 0009: DbUp runs each <b><i>seed script</i></b> once, as tessera_publisher, each in
-/// a transaction of its own, and a table waits for the publisher's grant. Each test names its scripts and schemas
-/// apart from the others', so the tests share one database in any order.
+/// a transaction of its own, and a table waits for the publisher's grant. Each test names its
+/// scripts and schemas apart from the others', so the tests share one database in any order.
 /// </summary>
 public sealed class SeedingTests(DatabaseFixture database) : IClassFixture<DatabaseFixture>
 {

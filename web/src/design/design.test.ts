@@ -21,8 +21,8 @@ const TOKENS: ReadonlyMap<string, string> = new Map(
 );
 
 /**
- * One colour of the theme by its short name. A name the theme lacks throws, so a typing slip fails the
- * test rather than comparing an empty string.
+ * One colour of the theme by its short name. A name the theme lacks throws, so a typing slip fails
+ * the test rather than comparing an empty string.
  */
 function token(name: string): string {
 	const value = TOKENS.get(`--color-${name}`);

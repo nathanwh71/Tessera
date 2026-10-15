@@ -169,8 +169,8 @@ const empty = (): GeoJSON.FeatureCollection => ({ type: "FeatureCollection", fea
 
 /**
  * The style's sources: a vector tile source for each layer that is on, which no layer draws but
- * which loads the places, and the clustered GeoJSON source that places.ts fills, since MapLibre
- * clusters GeoJSON alone (ADR 0005).
+ * which loads the places, and the clustered GeoJSON source that feedPlaces, in maplibre.ts, fills,
+ * since MapLibre clusters GeoJSON alone (ADR 0005).
  */
 function sources(input: StyleInput): Record<string, SourceSpecification> {
 	const tiles = input.visible.map((id): [string, SourceSpecification] => [

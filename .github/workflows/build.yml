@@ -55,10 +55,10 @@ jobs:
       - run: dotnet run --project tests/Tessera.Etl.Tests --configuration Release --no-build
       # The browser tests drive Chrome against the built service and a database of their own
       # (scripts/e2e.ts). They use the Google Chrome the runner image ships with, through
-      # CHROMIUM_PATH: downloading Playwright's own browser can hang for ten minutes. The
-      # screenshot comparisons stay out: the approved images come from
-      # Playwright's own Chromium, and this Chrome draws text a few per cent differently. npm test
-      # runs them on a machine with Playwright's browser. The time limit fails a stuck run in minutes.
+      # CHROMIUM_PATH: downloading Playwright's own browser can hang for ten minutes. The screenshot
+      # comparisons stay out: the approved images come from Playwright's own Chromium, and this
+      # Chrome draws text a few per cent differently. npm test runs them on a machine with
+      # Playwright's browser. The time limit fails a stuck run in minutes.
       - run: npm run e2e -- --grep-invert "approved image"
         timeout-minutes: 20
         env:

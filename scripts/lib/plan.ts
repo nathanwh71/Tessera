@@ -25,7 +25,7 @@ export type DatabasePlace = {
  * the maintainer everything to fix. The result is the map's own ***Result*** type (ADR 0006), shared
  * so the scripts and the map say "failed" one way.
  *
- * The first copy listens on 7800 unless told otherwise, the port every story names for the
+ * The first copy listens on 7800 unless told otherwise, the port US-35 and N-29 name for the
  * service, and the second on the next port. A port below 1024 needs root on Linux, and the second
  * copy needs room for port + 1, so the first must lie between 1024 and 65534.
  */
@@ -124,8 +124,8 @@ export function databaseUrl(user: string, password: string, database: DatabasePl
  * (ADR 0008, N-29). Nginx shares the machine's own network, so it reaches the service at
  * 127.0.0.1 and opens the office port itself; it runs as root inside its container, so port 80
  * needs no change to Ubuntu. The image fills the ports and the office's network into the template
- * when it starts (S-07). --restart unless-stopped brings Nginx back after a reboot or a restart
- * of Docker, so the office reaches the service again with no one at the machine.
+ * when it starts (S-07). --restart unless-stopped brings Nginx back after a crash, a reboot or a
+ * restart of Docker; the copies behind it come back only when npm start runs again.
  */
 export function nginxArguments(container: string, httpPort: string, servicePorts: readonly [string, string], officeNetwork: string, template: string): readonly string[] {
   return [
@@ -141,7 +141,7 @@ export function nginxArguments(container: string, httpPort: string, servicePorts
 
 /**
  * The Nginx image both the start-up script and the browser tests run, so the tests check the Nginx
- * the office runs. The tag fixes the version at 1.29, so a new Nginx arrives only when this line
- * changes; Alpine keeps the image small.
+ * the office runs. The tag holds Nginx to 1.29, so only its patch releases arrive without a change
+ * to this line; Alpine keeps the image small.
  */
 export const nginxImage = 'nginx:1.29-alpine';

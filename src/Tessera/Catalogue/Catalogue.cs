@@ -41,7 +41,8 @@ public sealed record Layer(
 
 /// <summary>
 /// One row of <see cref="Queries.Layers"/>; Dapper fills it by matching column names. KeyColumns
-/// defaults to '[]', an empty list, so a row built without a key, such as a view's in a test, still reads.
+/// defaults to '[]', an empty list, so a row built without a key, such as a view's in a test,
+/// still reads.
 /// </summary>
 public sealed record CatalogueRow(
     string Schema, string Name, string GeometryColumn, int Srid, string GeometryType,
@@ -82,7 +83,7 @@ public sealed record LayerCatalogue(ImmutableDictionary<string, Layer> Layers)
 
     /// <summary>
     /// Reads the list as the service's <b><i>role</i></b>, the user name it signs in as, since the
-    /// database shows a role only the tables it may read (US-03).
+    /// query asks the database which tables that role may read (US-03).
     /// </summary>
     public static async Task<Result<LayerCatalogue, DatabaseError>> Load(
         Database database, CancellationToken cancel = default) =>

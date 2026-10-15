@@ -25,9 +25,8 @@ public sealed record Pipeline(
 /// <b><i>layer</i></b> to read from the source, such as a feature class of a
 /// <b><i>geodatabase</i></b>; an optional filter on the source's rows; whether its shapes are lines
 /// or areas, which may mix single and multiple parts; and its cleaning <b><i>filters</i></b>, run
-/// in the order given. Each
-/// filter is an object that names it, with its own settings beside the name, such as
-/// <c>{ "filter": "insideArea", "onFail": "stop" }</c>.
+/// in the order given. Each filter is an object that names it, with its own settings beside the
+/// name, such as <c>{ "filter": "insideArea", "onFail": "stop" }</c>.
 /// </summary>
 public sealed record TablePlan(
     string Table,

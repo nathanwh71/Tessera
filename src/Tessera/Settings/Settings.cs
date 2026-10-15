@@ -191,7 +191,7 @@ public static class TesseraSettings
 
     /// <summary>
     /// Binds one section by the rules Register sets out: an unknown key refused, and every limit
-    /// checked as the program starts, so one failed start names every problem (US-00 c4).
+    /// checked as the program starts, so one failed start names every problem (N-21 c4).
     /// </summary>
     private static void Section<T>(IServiceCollection services, string name) where T : class =>
         services.AddOptions<T>()

@@ -12,8 +12,7 @@ import { FRAME_MAX_LEVEL, type Message, type Model, Msg, type Props, init, notic
 
 /**
  * Fresh props for each test, with fake ***ports*** from vi.fn() that record each move the
- * ***update*** asks for;
- * `openLayer` stands for the /{layer}.html address (US-23, criterion 2).
+ * ***update*** asks for; `openLayer` stands for the /{layer}.html address (US-23, criterion 2).
  */
 const props = (openLayer?: Props["openLayer"]): Props => ({
 	ports: { fitBounds: vi.fn(), jumpTo: vi.fn() },

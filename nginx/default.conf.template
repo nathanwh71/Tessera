@@ -5,8 +5,9 @@
 # The Nginx image fills in ${TESSERA_HTTPPORT}, ${TESSERA_OFFICE_NETWORK}, and the two copies'
 # ports, ${TESSERA_SERVICE_PORT} and ${TESSERA_SECOND_SERVICE_PORT}, when it starts.
 
-# 64 MB of tiles on disk; a tile no one asks for in ten minutes goes first. The office's places make
-# far fewer tiles than that, so the store rarely fills, yet it stays small beside the machine's disk.
+# 64 MB of tiles on disk; a tile no one asks for in ten minutes leaves, and when the store is full,
+# the tile used longest ago goes first. The office's places make far fewer tiles than that, so the
+# store rarely fills, yet it stays small beside the machine's disk.
 # keys_zone=tiles:10m keeps the tiles' names in 10 MB of memory, room for about 80,000 of them.
 # levels=1:2 spreads the files over two levels of folders, so no one folder holds thousands.
 # use_temp_path=off writes each tile straight into the store's own folder, saving a copy between
@@ -36,9 +37,9 @@ limit_conn_zone $visitor zone=connections:10m;
 
 # N-29: two copies of the service share the requests in turn. Passive health check: after 3 failed
 # requests in 10 seconds Nginx rests a copy for 10 seconds, and sends its requests to the other.
-# keepalive 16 keeps up to 16 idle connections to the copies open for reuse, so a tile skips the
-# work of opening a new connection. The number caps idle connections, not traffic: past 16, Nginx
-# opens new ones as before, so a small number serves one office.
+# keepalive 16 keeps up to 16 idle connections to the copies open in each Nginx worker, so a tile
+# skips the work of opening a new connection. The number caps idle connections, not traffic: past
+# 16, Nginx opens new ones as before, so a small number serves one office.
 upstream tessera {
     server 127.0.0.1:${TESSERA_SERVICE_PORT} max_fails=3 fail_timeout=10s;
     server 127.0.0.1:${TESSERA_SECOND_SERVICE_PORT} max_fails=3 fail_timeout=10s;
@@ -60,18 +61,20 @@ server {
     limit_req_status 429;
     error_page 429 = @busy;
 
-    # N-20: tiles and the map's files travel packed with gzip. gzip_proxied any packs answers that
-    # come from the service, which Nginx would otherwise pass on as they are. Level 1 is the fastest:
-    # a tile shrinks nearly as much as at level 9, for a fraction of the work. gzip_vary adds
-    # 'Vary: Accept-Encoding', so a cache along the way never hands a packed copy to a client
-    # that cannot unpack it. gzip_types lists the kinds worth packing; images are packed already.
+    # N-20: tiles and the map's files travel packed with gzip. gzip_proxied any packs answers to
+    # requests that came through another proxy too, such as an office's web proxy, which Nginx
+    # would otherwise send unpacked. Level 1 is the fastest: a tile shrinks nearly as much as at
+    # level 9, for a fraction of the work. gzip_vary adds 'Vary: Accept-Encoding', so a cache along
+    # the way never hands a packed copy to a client that cannot unpack it. gzip_types lists the
+    # kinds worth packing; images are packed already.
     gzip on;
     gzip_proxied any;
     gzip_comp_level 1;
     gzip_vary on;
     gzip_types application/vnd.mapbox-vector-tile application/problem+json application/json text/css text/javascript application/javascript;
 
-    # HTTP/1.1 with an empty Connection header lets the upstream's keepalive reuse connections;
+    # The upstream is the group of service copies Nginx passes requests to, named 'tessera' above.
+    # HTTP/1.1 with an empty Connection header lets its keepalive reuse connections;
     # Nginx would otherwise speak HTTP/1.0 to the copies and close each connection after one answer.
     proxy_http_version 1.1;
     proxy_set_header Connection "";
@@ -103,8 +106,8 @@ server {
         proxy_cache_background_update on;
         # A browser that leaves does not cancel a tile others may be waiting for.
         proxy_ignore_client_abort on;
-        # HIT, MISS or STALE on each tile, so the edge checks (scripts/lib/edge.ts) and a maintainer
-        # can see whether a tile came from the store (N-19).
+        # A word such as HIT, MISS or STALE on each tile, so the edge checks (scripts/lib/edge.ts)
+        # and a maintainer can see whether a tile came from the store (N-19).
         add_header X-Cache-Status $upstream_cache_status always;
     }
 
@@ -140,7 +143,7 @@ server {
     }
 
     # With the service down and no copy held, the browser gets the service's own kind of answer:
-    # a problem document that asks it to try again in five seconds (N-22).
+    # a problem document that asks it to try again in five seconds (N-22, N-28).
     error_page 502 504 = @unavailable;
     location @unavailable {
         default_type application/problem+json;

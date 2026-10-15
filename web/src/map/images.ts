@@ -29,7 +29,7 @@ export const PIN_PREFIX = "pin:";
 
 /**
  * The image name of a group's pin, such as `pin:food`. index.ts exports it, so code outside the map
- * ***module*** can name a pin's image without knowing the prefix (ADR 0001).
+ * ***module*** can name a pin's image without knowing the prefix.
  */
 export function pinImage(group: GroupKey): string {
 	return `${PIN_PREFIX}${group}`;

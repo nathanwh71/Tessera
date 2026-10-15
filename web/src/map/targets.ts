@@ -47,8 +47,8 @@ const groupOf = (v: unknown): GroupKey | null => GROUP_KEYS.find((g) => g === v)
 
 /** The pins and clusters drawn in view, in reading order: top to bottom, then left to right. */
 export function targetsInView(map: MapLibreMap, clusterNames: ReadonlyMap<number, readonly string[]>): Target[] {
-	// MapLibre throws when asked about a layer it lacks, and the layers are missing until a style has
-	// loaded, so the query names only those present.
+	// MapLibre reports an error and finds nothing when asked about a layer it lacks, and the layers
+	// are missing until a style has loaded, so the query names only those present.
 	const layers = [LAYER.clusters, LAYER.pins].filter((id) => map.getLayer(id) !== undefined);
 	if (layers.length === 0) return [];
 	const { clientWidth: width, clientHeight: height } = map.getContainer();

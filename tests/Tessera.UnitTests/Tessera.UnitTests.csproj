@@ -9,7 +9,7 @@
   <ItemGroup>
     <!-- The test framework every test project here uses, so all tests run the same way. -->
     <PackageReference Include="xunit.v3" />
-    <!-- Property tests: FsCheck tries hundreds of made-up inputs against one rule (S-01 c1, US-03). -->
+    <!-- Property tests: FsCheck tries a hundred made-up inputs against one rule (S-01 c1, US-03). -->
     <PackageReference Include="FsCheck.Xunit.v3" />
   </ItemGroup>
   <ItemGroup>

@@ -95,7 +95,7 @@ public sealed class CatalogueTests
         Assert.Equal(["food.cafes"], Ids(live));
     }
 
-    // N-23 c5: a database that blinks does not unpublish every layer.
+    // N-23 c4: a database that blinks does not unpublish every layer.
     [Fact]
     public async Task Keeps_the_last_good_list_through_a_failure()
     {
@@ -108,7 +108,7 @@ public sealed class CatalogueTests
         Assert.Equal(["food.cafes"], Ids(live));
     }
 
-    // N-23 c4: the loop tries again until the database answers.
+    // N-23 c3: the loop tries again until the database answers.
     [Fact]
     public async Task Tries_until_the_database_answers()
     {

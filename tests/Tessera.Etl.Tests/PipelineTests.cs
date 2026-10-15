@@ -11,8 +11,8 @@ public sealed class PipelineTests
     // Macau's box, as tessera.json holds it, standing in for the settings file's area.
     private static readonly Area Macau = new(113.52, 22.10, 113.61, 22.22);
 
-    // A pipeline file with no fault. Each refusal test below changes one key in it, so the one
-    // change is the only fault the reader can find.
+    // A pipeline file with no fault. The first refusal tests below each change one thing in it, so
+    // every fault the reader finds comes from that change.
     private const string Good = """
         {
           "source": "data/macau.gdb",
@@ -97,7 +97,8 @@ public sealed class PipelineTests
     private static readonly (string, Filter) RequireName = (RequireFields.Name, RequireFields.Create(["name"]));
 
     // Ten places, the first `named` of them with a name. With ten rows, each unnamed row is ten
-    // per cent of the table, so one row crosses the default limit of 10 % (US-36, test 2).
+    // per cent of the table: one row meets the default limit of 10 %, and a second crosses it
+    // (US-36, test 2).
     private static ImmutableArray<Row> Ten(int named) =>
         [.. Enumerable.Range(1, 10).Select(number => FilterTests.Place(number, 113.55, 22.19, ("name", number <= named ? $"Place {number}" : null)))];
 

@@ -94,7 +94,7 @@ test("a drag over the busiest street, with every layer on", async ({ page }) => 
 		// The first entry runs from the recorder's start, not from one redraw to the next, so it goes.
 		return { frames: s.frames.slice(1), scripts: s.scripts, longFrames: s.longFrames, longFrameMs: s.longFrameMs };
 	});
-	// Fewer than ten frames means the recorder never ran, and the numbers would mean nothing.
+	// Ten frames or fewer means the recorder barely ran, and the numbers would mean nothing.
 	expect(seen.frames.length).toBeGreaterThan(10);
 
 	const slow = seen.frames.filter((f) => f > 16.7).length;

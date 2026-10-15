@@ -49,7 +49,7 @@ export function App({ area, origin, openLayer, map: handle, onMapReady }: AppPro
 
 	return (
 		<main className="relative h-full w-full overflow-hidden bg-surface font-sans text-on-surface">
-			{/* Hidden from sight but read aloud: a screen reader names the page by its first heading. */}
+			{/* Hidden from sight but read aloud: a screen reader's list of headings opens on the area. */}
 			<h1 className="sr-only">Map of {area.name}</h1>
 			<div className="absolute inset-0 z-0">
 				<MapView.MapCanvas

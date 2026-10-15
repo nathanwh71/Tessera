@@ -96,7 +96,7 @@ export type Message =
  * through these, so a misspelt name or a missing field fails to compile rather than at run time.
  */
 export const Msg = {
-	/** A press of '+' or '−', or of a zoom key (UI-09, criterion 1). */
+	/** A press of the '+' button, which moves the map in one whole level (UI-09, criterion 1). */
 	zoomIn: (): Message => ({ name: "zoomIn" }),
 	zoomOut: (): Message => ({ name: "zoomOut" }),
 	/** The map moved, by the visitor or a port, so the model keeps the view the buttons read (UI-09). */
@@ -162,7 +162,7 @@ export const canZoomOut = (model: Model): boolean => model.view.zoom > MIN_ZOOM;
  */
 export const noticeOf = (problem: Problem): string => problem.detail ?? problem.title;
 
-/** One level in or out, as far as the map allows: the buttons and the keys share it (UI-09). */
+/** One level in or out, as far as the map allows: the '+' and '−' buttons share it (UI-09). */
 function zoomBy(step: 1 | -1, model: Model, props: Props): UpdateReturnType<Model, Message> {
 	const allowed = step > 0 ? canZoomIn(model) : canZoomOut(model);
 	return allowed ? [{}, jump(props, { ...model.view, zoom: clampZoom(model.view.zoom + step) })] : [{}];

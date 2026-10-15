@@ -7,7 +7,8 @@ import type { Map as MapLibreMap } from "maplibre-gl";
 
 /**
  * The same two fields main.tsx declares. The tests in e2e/ compile on their own
- * (tsconfig.node.json), apart from src/, so they cannot see main.tsx's declaration and need this copy.
+ * (tsconfig.node.json), apart from src/, so they cannot see main.tsx's declaration and need this
+ * copy.
  */
 declare global {
 	interface Window {

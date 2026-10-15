@@ -4,9 +4,9 @@ namespace Tessera.Etl.Tests;
 
 /// <summary>
 /// Whole runs of the <b><i>pipeline</i></b>, from a file <b><i>geodatabase</i></b> that GDAL
-/// builds from the fixtures (US-36, test 3): seven
-/// cafés with one fault each, and two parks, one an area whose edge crosses itself. The runs use the
-/// machine's ogr2ogr, or GDAL's Docker image when it has none.
+/// builds from the fixtures (US-36, test 3): seven cafés with one fault each, and two parks, one
+/// an area whose edge crosses itself. The runs use the machine's ogr2ogr, or GDAL's Docker image
+/// when it has none.
 /// </summary>
 public sealed class RunTests
 {

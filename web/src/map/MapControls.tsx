@@ -9,7 +9,8 @@ import { zoomLabel } from "./labels";
 
 /**
  * Props for the controls: the inputs the component receives. They are plain values and callbacks, so
- * the controls hold no state and the ***model*** stays the one source of truth (ADR 0004).
+ * the controls hold no state and the ***model*** stays the one source of truth (US-23,
+ * criterion 3).
  */
 export interface MapControlsProps {
 	/**

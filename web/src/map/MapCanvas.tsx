@@ -29,7 +29,8 @@ import { openCluster } from "./targets";
 
 /**
  * Props for the map, the inputs the component receives. Every event leaves through a callback, which
- * the app turns into a ***message***, so the model alone decides what happens next (ADR 0004).
+ * the app turns into a ***message***, so the model alone decides what happens next (US-23,
+ * criterion 3).
  */
 export interface MapCanvasProps {
 	/**
@@ -100,9 +101,9 @@ export function MapCanvas(props: MapCanvasProps): ReactNode {
 			{/* MapLibre sets its container to position: relative, so the container must take its size from
 			    width and height rather than from its edges. */}
 			<div ref={container} className="h-full w-full" />
-			{/* UI-15, criterion 6: the dropping pins are page elements, since MapLibre cannot animate a
-			    pin's fall. They are only a show, so a screen reader skips them; the targets below
-			    speak for the places. */}
+			{/* UI-15, criterion 6: the dropping pins are page elements, since MapLibre cannot drop
+			    each pin in turn, one after another. They are only a show, so a screen reader skips
+			    them; the targets below speak for the places. */}
 			{!landed && landing.stage === "dropping" && (
 				<div aria-hidden="true" className="overlay">
 					{landing.drops.map((d) => (

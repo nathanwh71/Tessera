@@ -83,8 +83,8 @@ export function baseOptions(reducedMotion: boolean): Partial<MapOptions> {
 export function provideImages(map: MapLibreMap, theme: Theme): void {
 	map.setMissingStyleImageResolver((name) => {
 		const request = readImageName(name);
-		// A name this module never makes draws nothing; and addImage throws for a name the map already
-		// holds, so a repeated request is skipped.
+		// A name this module never makes draws nothing; and addImage reports an error for a name the
+		// map already holds, so a repeated request is skipped.
 		if (request === null || map.hasImage(name)) return;
 		switch (request.kind) {
 			case "pin":
@@ -129,7 +129,7 @@ export function feedPlaces(map: MapLibreMap, state: () => FeedState, onFed: () =
 		if (source === undefined) return;
 		const { visible } = state();
 		// A layer just switched on may have no tile source yet, until MapLibre applies the new style;
-		// asking for its features then would throw.
+		// asking for its features then would find none, so the feed reads only the sources present.
 		const loaded: LoadedLayer[] = visible
 			.filter((id) => map.getSource(SOURCE.tiles(id)) !== undefined)
 			.map((id) => ({ layerId: id, features: map.querySourceFeatures(SOURCE.tiles(id), { sourceLayer: id }) }));
@@ -166,8 +166,8 @@ export function feedPlaces(map: MapLibreMap, state: () => FeedState, onFed: () =
 
 /**
  * A failed request as MapLibre reports it: an AJAXError, which carries the answer's status, its
- * three-digit result, and its body. MapLibre's error event types the error as unknown, so this schema
- * checks its shape before the code reads the body.
+ * three-digit result, and its body. MapLibre's error event types the error only as something with a
+ * message, so this schema checks its shape before the code reads the status and the body.
  */
 const FailedRequest = v.object({ status: v.number(), statusText: v.string(), body: v.instance(Blob) });
 

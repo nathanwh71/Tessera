@@ -11,7 +11,7 @@
 /*
   Roboto (UI-15, criterion 2), served from the page's own files rather than a font service on the
   internet, which the office may not reach. Weights 400 and 500 are the two the type scale uses;
-  latin-ext adds the accented letters of Portuguese place names in Macau.
+  latin-ext adds the rarer accented Latin letters that the latin files lack.
 */
 @import "@fontsource/roboto/latin-400.css";
 @import "@fontsource/roboto/latin-500.css";
@@ -148,7 +148,8 @@
     font-family: var(--font-sans);
   }
 
-  /* Browsers give buttons a font of their own; these take the page's, as Material's type scale asks. */
+  /* Browsers give buttons a font of their own; these take the page's, as Material's type scale
+     asks. */
   button {
     font: inherit;
     color: inherit;

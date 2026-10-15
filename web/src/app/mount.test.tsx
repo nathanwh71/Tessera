@@ -14,8 +14,8 @@ describe("US-23 criterion 9: a page that fails says so", () => {
 		// test; the browser has no `act`, so the page here runs as React runs it in the browser.
 		const wasAct: unknown = Reflect.get(globalThis, "IS_REACT_ACT_ENVIRONMENT");
 		Reflect.set(globalThis, "IS_REACT_ACT_ENVIRONMENT", false);
-		// React and mount() both log the thrown error, as they should; silenced here, it no longer hides
-		// the test's own output.
+		// mount() logs the thrown error, as it should; silenced here, it no longer hides the test's own
+		// output.
 		const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
 		const element = document.createElement("div");
 		mount(element, <Broken />);

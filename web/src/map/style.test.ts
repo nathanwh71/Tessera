@@ -43,7 +43,7 @@ function symbol(id: string, changes: Partial<StyleInput> = {}): SymbolLayerSpeci
 
 /**
  * A café at one point with the given id, named after it; the tests that use it vary only the ids,
- * since the order of names rests on ids alone (UI-17, criterion 2).
+ * since within one layer the order of names rests on ids alone (UI-17, criterion 2).
  */
 function feature(id: string): SourceFeature {
 	return { properties: { id, name: id, type: "Café" }, geometry: { type: "Point", coordinates: [113.55, 22.19] } };

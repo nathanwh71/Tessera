@@ -11,7 +11,7 @@ import { scaleBar } from "./scale";
 
 /**
  * Props for the scale bar: the inputs the component receives. They are plain values and a callback,
- * so the bar holds no state and the ***model*** stays the one source of truth (ADR 0004).
+ * so the bar holds no state and the ***model*** stays the one source of truth (US-23, criterion 3).
  */
 export interface ScaleBarProps {
 	/**
