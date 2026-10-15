@@ -4,17 +4,23 @@
     packaged database (db/Dockerfile) in Docker, through Testcontainers, so classes never share rows.
   -->
   <PropertyGroup>
+    <!-- xunit.v3 builds each test project as a program that runs its own tests. -->
     <OutputType>Exe</OutputType>
+    <!-- Tests ship to no one, so no NuGet package is made of them. -->
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
+    <!-- The test framework every test project here uses, so all tests run the same way. -->
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="Testcontainers.PostgreSql" />
+    <!-- Reads a vector tile back into points, so a test can check where each feature sits (US-07 c3). -->
     <PackageReference Include="NetTopologySuite.IO.VectorTiles.Mapbox" />
     <!-- The tests sign in as the database's owner to set the stage: grants, test tables. The service never does. -->
     <PackageReference Include="Npgsql" />
   </ItemGroup>
   <ItemGroup>
+    <!-- The service under test. The build also copies Tessera.dll and the built map beside the
+         tests, so a test can start the real program and fetch the real page (US-00 c2, US-23 c4). -->
     <ProjectReference Include="../../src/Tessera/Tessera.csproj" />
   </ItemGroup>
   <ItemGroup>
@@ -22,6 +28,7 @@
     <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Names every test file uses, written once here rather than at the head of each file. -->
     <Using Include="Xunit" />
     <Using Include="System.Collections.Immutable" />
     <Using Include="CSharpFunctionalExtensions" />

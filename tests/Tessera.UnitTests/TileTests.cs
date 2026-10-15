@@ -5,15 +5,32 @@ using Tessera.Tiles;
 
 namespace Tessera.UnitTests;
 
-/// <summary>US-07 and S-01 test 2: the tile query's text, and the tile addresses the service accepts.</summary>
+/// <summary>
+/// US-07 and S-01 test 2: the <b><i>tile</i></b> query's text, and the tile addresses the service
+/// accepts.
+/// </summary>
 public sealed class TileTests
 {
+    /// <summary>
+    /// A <b><i>layer</i></b> with three properties and a primary key, <c>id</c>, so the query under
+    /// test carries both a column list and an ORDER BY, which fixes the order of features (US-24).
+    /// </summary>
     private static readonly Layer Cafes = LayerCatalogue.ToLayer(new CatalogueRow("food", "cafes", "geom", 4326, "POINT", """["group","layer","name"]""", """["id"]"""));
 
+    /// <summary>
+    /// A buffer fixed here, apart from the shipped 256, so a change to that default leaves the
+    /// expected <b><i>parameter</i></b> values below unchanged.
+    /// </summary>
     private static readonly TileSettings Limits = new() { Buffer = 64 };
 
+    /// <summary>
+    /// The approved text. Line endings are made alike and the trailing newline dropped, so a checkout
+    /// on Windows, which writes '\r\n', compares equal.
+    /// </summary>
     private static string Approved => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "approved", "tile-query.sql")).ReplaceLineEndings().TrimEnd();
 
+    // Web-map levels run from 0 to 22 (UI-09), and level z has 2^z columns and rows, numbered from 0;
+    // so 4194303, 2^22 - 1, is the last column at level 22. Anything past these edges names no tile.
     [Theory]
     [InlineData(0, 0, 0)]
     [InlineData(15, 27154, 14280)]
@@ -40,12 +57,17 @@ public sealed class TileTests
     [FsCheck.Xunit.Property]
     public bool Keeps_every_tile_address_out_of_the_text(byte level, uint column, uint row)
     {
+        // Folds any random number onto a real tile: a level from 0 to 22, then a column and row
+        // within that level's 2^z.
         var z = level % 23;
         var size = 1L << z;
         var tile = new TileAddress(z, (int)(column % size), (int)(row % size));
         return Queries.Tile(Cafes.Source, tile.Z, tile.X, tile.Y, Limits).Text.ReplaceLineEndings().TrimEnd() == Approved;
     }
 
+    // S-01 c1: the layer's name and the address travel as parameters, never in the text. The margin
+    // is the buffer as a share of the tile, 64 / 4096; the limit is the 10,000 features a tile may
+    // carry (US-07).
     [Fact]
     public void Sends_the_layer_and_the_tile_as_parameters()
     {

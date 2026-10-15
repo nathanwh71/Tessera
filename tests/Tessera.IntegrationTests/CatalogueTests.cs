@@ -5,11 +5,21 @@ using Tessera.Tiles;
 
 namespace Tessera.IntegrationTests;
 
-/// <summary>US-03 test 4: publish a table by granting it, signed in as the real role.</summary>
+/// <summary>
+/// US-03 test 4: publish a table by a <b><i>grant</i></b>, signed in as the real <b><i>role</i></b>.
+/// </summary>
 public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<DatabaseFixture>, IAsyncLifetime
 {
+    /// <summary>
+    /// A buffer fixed here, apart from the shipped 256, so these tests do not shift when that
+    /// default changes; the unit tests pin the same 64.
+    /// </summary>
     private static readonly TileSettings Tiles = new() { Buffer = 64 };
 
+    /// <summary>
+    /// The tile route's own code, called directly with a fixed <b><i>catalogue</i></b>, so a test
+    /// controls which list and which database it meets, with no web server to start.
+    /// </summary>
     private static TileServer Server(LayerCatalogue catalogue, Database reader) =>
         new(() => catalogue, reader.Single<byte[]>, Tiles);
 
@@ -34,8 +44,16 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
         GRANT EXECUTE ON FUNCTION stage.places_near(int, int, int) TO tessera_reader;
         """");
 
+    /// <summary>
+    /// Nothing to undo: the stage stays for the next test, and the fixture's container, with every
+    /// table in it, vanishes once the class ends.
+    /// </summary>
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
+    /// <summary>
+    /// Loads the list as the service does. A failure throws, so the test stops with the database's
+    /// own message rather than failing later on an empty list.
+    /// </summary>
     private async Task<LayerCatalogue> Load(Database reader) =>
         (await LayerCatalogue.Load(reader, TestContext.Current.CancellationToken))
             .Match(found => found, error => throw new Xunit.Sdk.XunitException(error.Message));
@@ -105,6 +123,8 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
     {
         await using var reader = Database.Open(database.Reader);
         var catalogue = await Load(reader);
+        // A port FreePort has just found unused, so nothing answers there: a database that cannot be
+        // reached. A one-second wait keeps the test short.
         await using var gone = Database.Open($"Host=127.0.0.1;Port={Http.FreePort()};Database=tessera;Username=tessera_reader;Password=x", new DatabaseSettings { ConnectionWaitSeconds = 1 });
 
         var answer = await Server(catalogue, gone).Answer("stage.granted", 0, 0, 0, TestContext.Current.CancellationToken);
@@ -115,8 +135,8 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
         Assert.Equal("no-store", headers.CacheControl.ToString());
     }
 
-    // N-22 c2 and test 3: a query past DbTimeout is cancelled and answers 503; here a view that
-    // sleeps three seconds meets a limit of one.
+    // N-22 c2 and test 3: a query past Database.QueryTimeoutSeconds is cancelled and answers 503;
+    // here a view that sleeps three seconds meets a limit of one.
     [Fact]
     public async Task Answers_503_when_a_query_runs_past_its_time()
     {
@@ -137,6 +157,8 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
     {
         await database.Owner("CREATE TABLE IF NOT EXISTS stage.late (id int PRIMARY KEY, geom geometry(Point, 4326)); REVOKE SELECT ON stage.late FROM tessera_reader;");
         await using var reader = Database.Open(database.Reader);
+        // A refresh every 200 ms and a retry every 100 ms, in place of the service's 30 and 5
+        // seconds, so each change shows within the test's five-second wait.
         var live = new LiveCatalogue(cancel => LayerCatalogue.Load(reader, cancel), TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(100), Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance);
         await live.StartAsync(TestContext.Current.CancellationToken);
 
@@ -152,6 +174,10 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
         await live.StopAsync(TestContext.Current.CancellationToken);
     }
 
+    /// <summary>
+    /// Waits for the list to change, checking every 100 ms for up to five seconds. A refresh runs
+    /// in the background, so no single moment is sure to see it; polling ends as soon as it shows.
+    /// </summary>
     private static async Task Until(Func<bool> condition)
     {
         for (var attempt = 0; attempt < 50 && !condition(); attempt++)

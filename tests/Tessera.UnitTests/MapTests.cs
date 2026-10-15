@@ -8,9 +8,19 @@ namespace Tessera.UnitTests;
 /// <summary>US-23 c1, c5 and c7, and ADR 0006's contract: the page carries the area, in the one block the map reads.</summary>
 public sealed class MapTests
 {
+    /// <summary>
+    /// The area's defaults, which describe Macau, so the test needs no <b><i>settings file</i></b>.
+    /// </summary>
     private static readonly AreaSettings Macau = new();
+
+    /// <summary>
+    /// The smallest page with a head and the map's root, standing in for the built page, so the test
+    /// runs without a front-end build.
+    /// </summary>
     private const string Html = "<!doctype html><html><head><title>Map</title></head><body><div id=\"root\"></div></body></html>";
 
+    // ADR 0006 puts the block before </head>, so it is in place when the map's script runs, and the
+    // map needs no extra request for the area.
     [Fact]
     public void Writes_the_area_block_before_the_head_closes()
     {
@@ -44,6 +54,8 @@ public sealed class MapTests
         Assert.Equal(detail, answer.ProblemDetails.Detail);
     }
 
+    // US-23 c2 and c7: the map names its nine layers in its own code, so a page opens for each of
+    // them and for no other name, even an almost-right one; any other name answers 404.
     [Theory]
     [InlineData("food.cafes.html", "food.cafes")]
     [InlineData("transport.buses.html", "transport.buses")]

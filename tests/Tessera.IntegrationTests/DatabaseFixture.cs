@@ -7,14 +7,20 @@ namespace Tessera.IntegrationTests;
 
 /// <summary>
 /// One fresh copy of the packaged database for a test class (US-01 c3): the image db/Dockerfile
-/// builds, with the shipped role script, started in Docker.
+/// builds, with the shipped script that makes each <b><i>role</i></b>, started in Docker.
 /// </summary>
 /// <remarks>
-/// Docker runs a program inside a "container", a sealed box with its own files and network, so a
+/// Docker runs a program inside a 'container', a sealed box with its own files and network, so a
 /// test gets a real PostgreSQL that vanishes afterwards. Testcontainers starts and stops the box.
 /// </remarks>
 public sealed class DatabaseFixture : IAsyncLifetime
 {
+    /// <summary>
+    /// The database's name and the three roles' passwords. They may sit in plain sight: each
+    /// container lives only as long as its tests and holds test data alone. The role script
+    /// reads the reader's and the publisher's from <b><i>environment variable</i></b>s, as in
+    /// production; the owner's stays private, since only this fixture signs in as the owner.
+    /// </summary>
     public const string Name = "tessera";
     public const string ReaderPassword = "reader-test";
     public const string PublisherPassword = "publisher-test";
@@ -32,16 +38,29 @@ public sealed class DatabaseFixture : IAsyncLifetime
         return image;
     });
 
+    /// <summary>The running database; null until InitializeAsync starts it.</summary>
     private PostgreSqlContainer? _container;
 
-    /// <summary>Npgsql's connection string for the service's role.</summary>
+    /// <summary>
+    /// Npgsql's connection string for tessera_reader, the role the service signs in as, so a test
+    /// sees exactly what the service may see and no more (US-01 test 1).
+    /// </summary>
     public string Reader => Connection("tessera_reader", ReaderPassword);
 
     /// <summary>The same sign-in as a database URL, the form DATABASE_URL takes.</summary>
     public string ReaderUrl => $"postgresql://tessera_reader:{ReaderPassword}@{_container!.Hostname}:{_container.GetMappedPublicPort(5432)}/{Name}";
 
+    /// <summary>
+    /// The connection string for tessera_publisher, the role that runs each
+    /// <b><i>seed script</i></b> (ADR 0009), so the seeding tests run with its rights alone.
+    /// </summary>
     public string Publisher => Connection("tessera_publisher", PublisherPassword);
 
+    /// <summary>
+    /// Starts the database. The owner is 'postgres', who may make the stage's tables and grants; the
+    /// two passwords go in as the variables the role script reads, since it refuses to start
+    /// without them.
+    /// </summary>
     public async ValueTask InitializeAsync()
     {
         _container = new PostgreSqlBuilder(await Image.Value.ConfigureAwait(false))
@@ -54,6 +73,10 @@ public sealed class DatabaseFixture : IAsyncLifetime
         await _container.StartAsync().ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Stops and removes the database. The check covers a start that failed before the container
+    /// existed, so the real failure is the one reported.
+    /// </summary>
     public async ValueTask DisposeAsync()
     {
         if (_container is not null)
@@ -69,7 +92,10 @@ public sealed class DatabaseFixture : IAsyncLifetime
         await command.ExecuteNonQueryAsync();
     }
 
-    /// <summary>Reads one value as the owner.</summary>
+    /// <summary>
+    /// Reads one value as the owner, who sees every table and setting, so a test can check what the
+    /// reader cannot see, such as row counts before a grant or a role's settings.
+    /// </summary>
     public async Task<T> OwnerValue<T>(string sql)
     {
         await using var connection = new NpgsqlConnection(_container!.GetConnectionString());
@@ -84,6 +110,10 @@ public sealed class DatabaseFixture : IAsyncLifetime
         GRANT SELECT ON ALL TABLES IN SCHEMA food, outdoors, culture, transport TO tessera_reader;
         """);
 
+    /// <summary>
+    /// A connection string for one role. Docker maps the container's port 5432 to a free port on
+    /// this machine, so two test classes' databases never clash; the string names that port.
+    /// </summary>
     private string Connection(string user, string password) => new NpgsqlConnectionStringBuilder
     {
         Host = _container!.Hostname,

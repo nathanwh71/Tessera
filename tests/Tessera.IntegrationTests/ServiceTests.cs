@@ -11,19 +11,29 @@ using Tessera.Sql;
 namespace Tessera.IntegrationTests;
 
 /// <summary>
-/// The whole service over real HTTP: the seed loaded and granted, the catalogue loaded, the
-/// service listening on a port of its own (US-00, US-07, S-01, S-06, US-23 c5).
+/// The whole service over real HTTP: the seed loaded and granted, the <b><i>catalogue</i></b>
+/// loaded, the service listening on a port of its own (US-00, US-07, S-01, S-06, US-23 c5).
 /// </summary>
 public sealed class ServiceFixture : IAsyncLifetime
 {
+    /// <summary>
+    /// The class's own database, a free port and a client aimed at it, so this class shares no rows
+    /// and no port with any other class running at the same time. The client is replaced once the
+    /// port is known to answer.
+    /// </summary>
     public DatabaseFixture Database { get; } = new();
 
     public int Port { get; } = Http.FreePort();
 
     public HttpClient Client { get; private set; } = new();
 
+    /// <summary>The running service; null until InitializeAsync builds it.</summary>
     private WebApplication? _app;
 
+    /// <summary>
+    /// Readies the stage in the order the release does: the database, the <b><i>seed script</i></b>
+    /// as the publisher, the <b><i>grant</i></b>, then the service.
+    /// </summary>
     public async ValueTask InitializeAsync()
     {
         await Database.InitializeAsync();
@@ -40,7 +50,7 @@ public sealed class ServiceFixture : IAsyncLifetime
 
 
         // The real service, as Program.cs builds it, on a free port and the test database, so each
-        // test reaches it through real HTTP (US-00 c3). It serves the built map, which the service's
+        // test reaches it through real HTTP (US-00 c2). It serves the built map, which the service's
         // project reference copies beside the tests (US-23 c4). A 64-unit buffer keeps the tiles small.
         _app = TesseraService.Build(new Dictionary<string, string?>
         {
@@ -63,6 +73,10 @@ public sealed class ServiceFixture : IAsyncLifetime
         throw new InvalidOperationException("The list of layers did not load within ten seconds.");
     }
 
+    /// <summary>
+    /// Stops in the reverse order of the start: the client and the service first, so no request
+    /// meets a database that has already gone.
+    /// </summary>
     public async ValueTask DisposeAsync()
     {
         Client.Dispose();
@@ -72,9 +86,15 @@ public sealed class ServiceFixture : IAsyncLifetime
     }
 }
 
+/// <summary>
+/// US-07, S-01, N-18, N-19, N-25 and US-23 through the running service: what a browser receives
+/// for a <b><i>tile</i></b>, the map page, an unknown address and an attack. Unit tests prove each
+/// rule alone; these prove the parts are wired together.
+/// </summary>
 public sealed class ServiceTests(ServiceFixture service) : IClassFixture<ServiceFixture>
 {
-    // cafes-001 lies at longitude 113.577677, latitude 22.158784.
+    // cafes-001 lies at longitude 113.577677, latitude 22.158784. Level 15 is the map's home level
+    // (ADR 0006), where a tile is about a kilometre wide.
     private const double Longitude = 113.577677;
     private const double Latitude = 22.158784;
     private const int Zoom = 15;
@@ -92,8 +112,15 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         return (x, y);
     }
 
+    /// <summary>
+    /// The tile that holds cafes-001, worked out once, so every test asks for the same one.
+    /// </summary>
     private static readonly (int X, int Y) Tile = TileOf(Longitude, Latitude, Zoom);
 
+    /// <summary>
+    /// A GET through the shared client, with the test's own cancel signal, so a test stopped early
+    /// stops its request too.
+    /// </summary>
     private Task<HttpResponseMessage> Get(string path) => service.Client.GetAsync(path, TestContext.Current.CancellationToken);
 
     // US-07 c1, and N-18 c1 and test 2: a tile carries the minute the browser may keep it.
@@ -118,7 +145,8 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         Assert.Equal(first.Headers.ETag, second.Headers.ETag);
     }
 
-    // HEAD gets a tile's headers and no body.
+    // A watcher, or Nginx checking a tag (N-19, ADR 0008), may ask with HEAD for a tile's headers
+    // alone; they must match a GET's, with no body sent.
     [Fact]
     public async Task Answers_head_with_the_headers_alone()
     {
@@ -200,8 +228,8 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         Assert.Equal("text/javascript", asset.Content.Headers.ContentType?.MediaType);
     }
 
-    // US-00: an address no route knows answers a 404 problem document too, and so does a page named
-    // for anything but one of the nine layers.
+    // S-06 c3 and test 3, and US-23 c7: an address no route knows answers a 404 problem document
+    // too, and so does a page named for anything but one of the nine layers.
     [Theory]
     [InlineData("/nothing-here")]
     [InlineData("/index.html")]
@@ -216,17 +244,18 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         Assert.DoesNotContain("detail", await answer.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
     }
 
+    // US-07 c4 and c5: level 1 has two columns, 0 and 1, so column 5 names no tile. The service
+    // refuses it before any query runs, and says so as a problem document, as for an unknown layer.
     [Fact]
     public async Task Answers_a_tile_outside_the_grid_with_404()
     {
         using var answer = await Get("/food.cafes/1/5/0.pbf");
 
-        // A tile that does not exist is not found.
         Assert.Equal(HttpStatusCode.NotFound, answer.StatusCode);
         Assert.Equal("application/problem+json", answer.Content.Headers.ContentType?.MediaType);
     }
 
-    // S-01 test 4: an attack changes nothing.
+    // S-01 c4 and test 3: an attack changes nothing.
     [Theory]
     [InlineData("x;%20DROP%20TABLE%20cafes")]
     [InlineData("food.cafes'%3B%20--")]

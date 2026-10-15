@@ -2,9 +2,17 @@ using System.Diagnostics;
 
 namespace Tessera.IntegrationTests;
 
-/// <summary>US-00 c4 and test 2, and N-23 c4: the program stops when a setting is missing, and starts when only the database is.</summary>
+/// <summary>
+/// US-00 c4 and test 2, N-23 c3, and ADR 0009: the program stops when a setting is missing, for
+/// serving and for seeding alike, and starts when only the database is.
+/// </summary>
 public sealed class StartTests
 {
+    /// <summary>
+    /// Runs the built program in a process of its own, with only the given
+    /// <b><i>environment variable</i></b>s, and returns its exit code and error output. Only a real
+    /// start shows what a person at the command line sees; the first form passes no variables.
+    /// </summary>
     private static Task<(int Code, string Errors)> Run(params string[] arguments) =>
         Run(new Dictionary<string, string>(), arguments);
 
@@ -16,6 +24,10 @@ public sealed class StartTests
         return (process.ExitCode, errors);
     }
 
+    /// <summary>
+    /// How to start the program, with its output caught so a test can read it. The tests that keep
+    /// the program running build on this directly.
+    /// </summary>
     private static ProcessStartInfo Start(IReadOnlyDictionary<string, string> variables, params string[] arguments)
     {
         var start = new ProcessStartInfo("dotnet") { RedirectStandardError = true, RedirectStandardOutput = true };
@@ -45,8 +57,8 @@ public sealed class StartTests
         Assert.Contains("DATABASE_URL", errors, StringComparison.Ordinal);
     }
 
-    // N-23 c4 and test 4, and N-25: with the database down, the program starts anyway and asks each browser
-    // to wait, so the service and the database may start in either order.
+    // N-23 c3 and test 3, and N-25: with the database down, the program starts anyway and asks each
+    // browser to wait, so the service and the database may start in either order.
     [Fact]
     public async Task Starts_with_the_database_down_and_answers_503()
     {
@@ -100,6 +112,8 @@ public sealed class StartTests
         }
     }
 
+    // ADR 0009: 'Tessera seed' signs in as tessera_publisher, a role with more rights than the
+    // reader's, so it reads its own variable and never falls back on DATABASE_URL.
     [Fact]
     public async Task Refuses_to_seed_and_names_the_publishers_variable()
     {

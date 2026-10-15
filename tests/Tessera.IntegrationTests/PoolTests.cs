@@ -8,9 +8,9 @@ namespace Tessera.IntegrationTests;
 /// up after a second in the same queue.
 /// </summary>
 /// <remarks>
-/// The service needs no code of its own for the order: it relies on
-/// Npgsql's pool, which hands each freed connection to the request that has waited longest; these
-/// tests prove that it does, so a later Npgsql that changed it would fail the build.
+/// The service needs no code of its own for the order: it relies on Npgsql's
+/// <b><i>connection pool</i></b>, which hands each freed connection to the request that has waited
+/// longest; these tests prove that it does, so a later Npgsql that changed it would fail the build.
 /// </remarks>
 public sealed class PoolTests(DatabaseFixture database) : IClassFixture<DatabaseFixture>, IAsyncLifetime
 {
@@ -27,11 +27,19 @@ public sealed class PoolTests(DatabaseFixture database) : IClassFixture<Database
         GRANT SELECT ON stage.queue_place, stage.queue_pause, stage.queue_hold TO tessera_reader;
         """);
 
+    /// <summary>
+    /// Nothing to undo: the views stay for the next test, and the fixture's container vanishes once
+    /// the class ends.
+    /// </summary>
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     // One connection, and a wait long enough that no request gives up while the others run.
     private static readonly Settings.DatabaseSettings OneConnection = new() { PoolSize = 1, QueryTimeoutSeconds = 30, ConnectionWaitSeconds = 30 };
 
+    /// <summary>
+    /// A buffer fixed here, apart from the shipped 256, as in the other tile tests; these tests
+    /// time the queue, so any fixed buffer serves.
+    /// </summary>
     private static readonly Settings.TileSettings Limits = new() { Buffer = 64 };
 
     // N-26 c1 and test 1: five tiles asked for a moment apart, on a pool of one connection, finish
@@ -69,6 +77,8 @@ public sealed class PoolTests(DatabaseFixture database) : IClassFixture<Database
         var layer = await Layer(reader, "stage.queue_hold");
         var (x, y) = TileOf(113.54, 22.19, 0);
         var hold = reader.Single<byte[]>(Queries.Tile(layer.Source, 0, x, y, Limits), TestContext.Current.CancellationToken);
+        // Long enough for the held query to take the only connection; far shorter than its three
+        // seconds.
         await Task.Delay(300, TestContext.Current.CancellationToken);
 
         var clock = System.Diagnostics.Stopwatch.StartNew();
@@ -91,6 +101,7 @@ public sealed class PoolTests(DatabaseFixture database) : IClassFixture<Database
         var layer = await Layer(reader, "stage.queue_hold");
         var (x, y) = TileOf(113.54, 22.19, 0);
         var hold = reader.Single<byte[]>(Queries.Tile(layer.Source, 0, x, y, Limits), TestContext.Current.CancellationToken);
+        // As above: the held query takes the only connection before the second query asks.
         await Task.Delay(300, TestContext.Current.CancellationToken);
 
         using var leave = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
@@ -104,6 +115,10 @@ public sealed class PoolTests(DatabaseFixture database) : IClassFixture<Database
         await hold;
     }
 
+    /// <summary>
+    /// One <b><i>layer</i></b> from the list, as the service would find it. A failure or a missing
+    /// layer throws, so the test stops with the reason rather than timing a query that never ran.
+    /// </summary>
     private async Task<Layer> Layer(Database reader, string id) =>
         (await LayerCatalogue.Load(reader, TestContext.Current.CancellationToken))
             .Match(found => found, error => throw new Xunit.Sdk.XunitException(error.Message))

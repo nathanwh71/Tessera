@@ -4,23 +4,46 @@ using Tessera.Sql;
 
 namespace Tessera.UnitTests;
 
-/// <summary>US-03 test 2 and N-23: a row becomes a layer, and the live list is swapped whole and kept through a failure.</summary>
+/// <summary>
+/// US-03 test 2 and N-23: a row becomes a <b><i>layer</i></b>, and the live
+/// <b><i>catalogue</i></b> is swapped whole and kept through a failure.
+/// </summary>
 public sealed class CatalogueTests
 {
+    /// <summary>
+    /// One row as the database's list of tables returns it, written by hand so the test needs no
+    /// database (ADR 0004).
+    /// </summary>
     private static readonly CatalogueRow Cafes = new("food", "cafes", "geom", 4326, "POINT", """["layer","name"]""");
 
+    /// <summary>
+    /// A catalogue of the named tables. They carry no properties, since these tests look only at
+    /// which layers the list holds.
+    /// </summary>
     private static LayerCatalogue With(params string[] tables) =>
         LayerCatalogue.FromRows(tables.Select(table => new CatalogueRow("food", table, "geom", 4326, "POINT", "[]")));
 
+    /// <summary>
+    /// Stand-ins for a load that succeeds and one that fails, so a test decides each answer the
+    /// database gives. SQLSTATE 08006, a lost connection, is a failure that may pass (N-22).
+    /// </summary>
     private static Task<Result<LayerCatalogue, DatabaseError>> Ok(LayerCatalogue catalogue) =>
         Task.FromResult(Result.Success<LayerCatalogue, DatabaseError>(catalogue));
 
     private static Task<Result<LayerCatalogue, DatabaseError>> Down() =>
         Task.FromResult(Result.Failure<LayerCatalogue, DatabaseError>(new DatabaseError("08006", "down")));
 
+    /// <summary>
+    /// A live list over a stand-in load. It retries every 10 ms, not the service's 5 seconds
+    /// (N-23 c3), so a test of the retry loop ends in a moment.
+    /// </summary>
     private static LiveCatalogue Live(Func<CancellationToken, Task<Result<LayerCatalogue, DatabaseError>>> load, TimeSpan every = default) =>
         new(load, every, TimeSpan.FromMilliseconds(10), NullLogger.Instance);
 
+    /// <summary>
+    /// The ids of the current list, sorted so the comparison never depends on order. 'none' stands
+    /// for no list yet, so an assertion can tell 'no list' from 'an empty list'.
+    /// </summary>
     private static string[] Ids(LiveCatalogue live) => live.Current?.Layers.Keys.Order(StringComparer.Ordinal).ToArray() ?? ["none"];
 
     [Fact]
@@ -34,6 +57,8 @@ public sealed class CatalogueTests
         Assert.Equal(4326, layer.Srid);
     }
 
+    // US-03 test 2: PostgreSQL holds 'food.cafes' and a quoted "Food"."Cafes" as two tables, so the
+    // lookup matches letter for letter, and a schema alone names no layer.
     [Fact]
     public void Finds_a_layer_exactly_and_case_sensitively()
     {

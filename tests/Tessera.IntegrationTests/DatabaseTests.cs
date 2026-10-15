@@ -16,6 +16,8 @@ public sealed class DatabaseTests(DatabaseFixture database) : IClassFixture<Data
         await using var reader = Database.Open(database.Reader);
         var catalogue = await LayerCatalogue.Load(reader, TestContext.Current.CancellationToken);
 
+        // A load that succeeds proves the sign-in worked; an empty list proves the role starts with
+        // no grant, since this fresh database has had none (US-03).
         Assert.True(catalogue.Match(found => found.Layers.IsEmpty, _ => false));
     }
 

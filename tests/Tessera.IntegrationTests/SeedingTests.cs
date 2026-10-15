@@ -5,12 +5,16 @@ using Tessera.Sql;
 namespace Tessera.IntegrationTests;
 
 /// <summary>
-/// US-24 and ADR 0009: DbUp runs each seed script once, as tessera_publisher, each in a transaction
-/// of its own, and a table waits for the publisher's grant. Each test names its scripts and schemas
+/// US-24 and ADR 0009: DbUp runs each <b><i>seed script</i></b> once, as tessera_publisher, each in
+/// a transaction of its own, and a table waits for the publisher's grant. Each test names its scripts and schemas
 /// apart from the others', so the tests share one database in any order.
 /// </summary>
 public sealed class SeedingTests(DatabaseFixture database) : IClassFixture<DatabaseFixture>
 {
+    /// <summary>
+    /// Runs a folder of scripts as <c>Tessera seed</c> does and returns the names it ran. A failure
+    /// throws, so a test that expects success stops with the script's own error.
+    /// </summary>
     private static IReadOnlyList<string> Run(string connection, string folder) =>
         SeedScripts.Run(connection, folder).Match(ran => ran, error => throw new Xunit.Sdk.XunitException(error));
 
@@ -23,6 +27,10 @@ public sealed class SeedingTests(DatabaseFixture database) : IClassFixture<Datab
         return folder;
     }
 
+    /// <summary>
+    /// The ids of the layers the service would publish now, read as tessera_reader, so a test sees
+    /// what a <b><i>grant</i></b> has opened to the service, not what the owner can see.
+    /// </summary>
     private async Task<string[]> Published()
     {
         await using var reader = Database.Open(database.Reader);

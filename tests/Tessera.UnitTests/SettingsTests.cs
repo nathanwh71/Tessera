@@ -8,11 +8,22 @@ using Tessera.Sql;
 
 namespace Tessera.UnitTests;
 
-/// <summary>US-00 c4 and ADR 0003: settings come from tessera.json and the environment, checked at start-up.</summary>
+/// <summary>
+/// US-00 c4, N-21 and ADR 0003: settings come from the <b><i>settings file</i></b>, tessera.json,
+/// and from each <b><i>environment variable</i></b>, checked at start-up.
+/// </summary>
 public sealed class SettingsTests
 {
+    /// <summary>
+    /// A database URL with every part set apart from the defaults: a password holding an encoded '@'
+    /// and a port other than 5432, so a test sees each part read, not assumed (US-00 c4).
+    /// </summary>
     private const string Url = "postgresql://tessera_reader:s%40cret@db.office:5433/tessera";
 
+    /// <summary>
+    /// The settings file the release ships, copied beside the tests, so the tests check
+    /// the real file rather than a copy that could drift from it (N-21).
+    /// </summary>
     private static string Shipped => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "tessera.json"));
 
     // A host as the program builds one, with the file's text and the environment given here.
@@ -27,6 +38,10 @@ public sealed class SettingsTests
         return builder.Build();
     }
 
+    /// <summary>
+    /// One section's settings, read after the start-up check, as the program reads them; a value
+    /// the check would refuse fails the test here rather than passing unseen.
+    /// </summary>
     private static T Settings<T>(string json, Dictionary<string, string?>? environment = null) where T : class
     {
         using var host = Host(json, environment: environment);
