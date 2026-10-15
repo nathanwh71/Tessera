@@ -2,49 +2,49 @@
 
 | | |
 |---|---|
-| Status | ***Accepted*** |
-| Date | 13 ***October*** 2026 |
-| Decider | The ***maintainer*** |
-| Covers | Every ***script*** that ***builds***, ***tests***, ***starts*** or ***deploys*** ***Tessera***, in `nathanwh71/Tessera` |
-| Related | ADR 0001, whose start-up ***script*** ***runs*** `seed` at every ***start***; ADR 0009 |
+| Status | <span style="color:grey">Accepted</span> |
+| Date | 13 <span style="color:grey">October</span> 2026 |
+| Decider | The <span style="color:grey">maintainer</span> |
+| Covers | Every <span style="color:grey">script</span> that <span style="color:grey">builds</span>, <span style="color:grey">tests</span>, <span style="color:grey">starts</span> or <span style="color:grey">deploys</span> Tessera, in `nathanwh71/Tessera` |
+| Related | ADR 0001, whose start-up <span style="color:grey">script</span> <span style="color:grey">runs</span> `seed` at every <span style="color:grey">start</span>; ADR 0009 |
 
 ## Decision
 
-***Tessera***'s ***scripts*** are ***written*** in TypeScript 6, in a ***functional*** ***style***, and ***run*** ***shell*** ***commands*** ***through*** Google's zx. Node.js 26 ***runs*** ***each*** `.ts` ***file*** ***directly***, and `tsc --noEmit` ***checks*** its ***types***.
+Tessera's <span style="color:grey">scripts</span> are <span style="color:grey">written</span> in TypeScript 6, in a ***functional style***, and <span style="color:grey">run</span> <span style="color:grey">shell</span> <span style="color:grey">commands</span> <span style="color:grey">through</span> Google's zx. Node.js 26 <span style="color:grey">runs</span> <span style="color:grey">each</span> `.ts` <span style="color:grey">file</span> <span style="color:grey">directly</span>, and `tsc --noEmit` <span style="color:grey">checks</span> its <span style="color:grey">types</span>.
 
-**Node.js 26.** It ***becomes*** the ***latest*** long-term ***support*** ***release*** on 28 ***October*** 2026, ***enters*** ***maintenance*** on 20 ***October*** 2027 and ***reaches*** its ***end*** on 30 ***April*** 2029. Node.js 24 ***enters*** ***maintenance*** on 20 ***October*** 2026, so Node.js 26 ***receives*** ***fixes*** a ***year*** ***longer***. `package.json` ***sets*** `"engines": { "node": ">=26" }`.
+**Node.js 26.** It <span style="color:grey">becomes</span> the <span style="color:grey">latest</span> long-term <span style="color:grey">support</span> <span style="color:grey">release</span> on 28 <span style="color:grey">October</span> 2026, <span style="color:grey">enters</span> <span style="color:grey">maintenance</span> on 20 <span style="color:grey">October</span> 2027 and <span style="color:grey">reaches</span> its <span style="color:grey">end</span> on 30 <span style="color:grey">April</span> 2029. Node.js 24 <span style="color:grey">enters</span> <span style="color:grey">maintenance</span> on 20 <span style="color:grey">October</span> 2026, so Node.js 26 <span style="color:grey">receives</span> <span style="color:grey">fixes</span> a <span style="color:grey">year</span> <span style="color:grey">longer</span>. `package.json` <span style="color:grey">sets</span> `"engines": { "node": ">=26" }`.
 
 ## Why
 
-- **One language with the map.** The ***front*** ***end*** is TypeScript, so the ***map*** and the ***scripts*** ***share*** ***one*** ***language***, ***one*** ***set*** of ***tools*** and ***one*** ***style***.
-- **Types catch mistakes before a run.** A ***missing*** variable or a ***wrong*** ***path*** ***fails*** the ***type*** ***check***, not a ***run*** on the ***office*** ***machine***.
-- **Logic you can test.** A ***pure*** ***function*** ***decides*** what to do, such as how ***long*** to ***wait*** ***before*** ***starting*** a ***stopped*** ***copy*** ***again***, or ***whether*** an ***office*** ***network*** is ***too*** wide; zx ***runs*** the ***commands*** at the ***edge***. `node --test` ***tests*** the ***decisions*** ***without*** a ***shell***.
-- **Shell where shell helps.** zx's `$` ***runs*** `docker`, `psql` and `dotnet` as a ***shell*** would, and ***quotes*** ***each*** ***value*** it ***passes***.
-- **Pinned versions.** The ***scripts*** ***run*** on TypeScript 6.0.3 and zx 8.8.5, on Node.js 26.
+- **One language with the map.** The <span style="color:grey">front</span> <span style="color:grey">end</span> is TypeScript, so the <span style="color:grey">map</span> and the <span style="color:grey">scripts</span> <span style="color:grey">share</span> <span style="color:grey">one</span> <span style="color:grey">language</span>, <span style="color:grey">one</span> <span style="color:grey">set</span> of <span style="color:grey">tools</span> and <span style="color:grey">one</span> <span style="color:grey">style</span>.
+- **Types catch mistakes before a run.** A <span style="color:grey">missing</span> variable or a <span style="color:grey">wrong</span> <span style="color:grey">path</span> <span style="color:grey">fails</span> the <span style="color:grey">type</span> <span style="color:grey">check</span>, not a <span style="color:grey">run</span> on the <span style="color:grey">office</span> <span style="color:grey">machine</span>.
+- **Logic you can test.** A ***pure function*** <span style="color:grey">decides</span> what to do, such as how <span style="color:grey">long</span> to <span style="color:grey">wait</span> <span style="color:grey">before</span> <span style="color:grey">starting</span> a <span style="color:grey">stopped</span> <span style="color:grey">copy</span> <span style="color:grey">again</span>, or <span style="color:grey">whether</span> an ***office network*** is <span style="color:grey">too</span> wide; zx <span style="color:grey">runs</span> the <span style="color:grey">commands</span> at the <span style="color:grey">edge</span>. `node --test` <span style="color:grey">tests</span> the <span style="color:grey">decisions</span> <span style="color:grey">without</span> a <span style="color:grey">shell</span>.
+- **Shell where shell helps.** zx's `$` <span style="color:grey">runs</span> `docker`, `psql` and `dotnet` as a <span style="color:grey">shell</span> would, and <span style="color:grey">quotes</span> <span style="color:grey">each</span> <span style="color:grey">value</span> it <span style="color:grey">passes</span>.
+- **Pinned versions.** The <span style="color:grey">scripts</span> <span style="color:grey">run</span> on TypeScript 6.0.3 and zx 8.8.5, on Node.js 26.
 
 ## Options considered
 
 | Option | Why not |
 |---|---|
-| Bash | No ***types***, ***fragile*** ***quoting***, and ***logic*** ***hard*** to ***test*** |
-| C# files run by `dotnet run` | ***One*** ***language*** with the ***back*** ***end***, but a ***second*** ***language*** ***beside*** the ***map***, and a ***slow*** ***start*** for ***short*** ***scripts*** |
+| Bash | No <span style="color:grey">types</span>, <span style="color:grey">fragile</span> <span style="color:grey">quoting</span>, and <span style="color:grey">logic</span> <span style="color:grey">hard</span> to <span style="color:grey">test</span> |
+| C# files run by `dotnet run` | <span style="color:grey">One</span> <span style="color:grey">language</span> with the <span style="color:grey">back</span> <span style="color:grey">end</span>, but a <span style="color:grey">second</span> <span style="color:grey">language</span> <span style="color:grey">beside</span> the <span style="color:grey">map</span>, and a <span style="color:grey">slow</span> <span style="color:grey">start</span> for <span style="color:grey">short</span> <span style="color:grey">scripts</span> |
 
 ## Rules
 
-1. **Pure decisions, effects at the edge.** ***Each*** ***script*** ***reads*** its ***inputs***, ***passes*** them to ***pure*** ***functions***, and ***runs*** ***commands*** ***only*** at the ***end***.
-2. **Immutable values.** ***Scripts*** ***pass*** `readonly` ***values***, and ***never*** ***change*** an ***object*** in ***place***.
-3. **Settings from the environment.** ***Scripts*** ***read*** ***machine*** ***names***, ***addresses***, ***ports*** and ***passwords*** from ***environment*** variables (US-00), as ADR 0001 ***names*** them, and ***name*** a ***missing*** ***one*** ***before*** they ***start***.
-4. **Syntax that strips away.** Node.js ***strips*** ***types*** but does not ***compile*** TypeScript, so the ***scripts*** ***use*** ***only*** ***syntax*** that ***leaves*** ***plain*** JavaScript when its ***types*** ***go***: no `enum`, no `namespace`, and no ***other*** ***syntax*** that ***produces*** ***code***. `tsconfig.json` ***sets*** `erasableSyntaxOnly`, so `tsc --noEmit` ***refuses*** the ***rest***.
-5. **Settled features only.** ***Scripts*** ***use*** the ***latest*** ***settled*** TypeScript and Node.js ***features***, ***never*** ***experimental*** ***ones***.
-6. **One command, one line.** A ***line*** ***break*** ***inside*** zx's `$` ***ends*** the ***command***, as in a ***shell***. A ***long*** ***command*** ***passes*** its ***arguments*** as a ***list***, which zx ***quotes*** ***one*** by ***one***.
+1. **Pure decisions, effects at the edge.** <span style="color:grey">Each</span> <span style="color:grey">script</span> <span style="color:grey">reads</span> its <span style="color:grey">inputs</span>, <span style="color:grey">passes</span> them to <span style="color:grey">pure</span> <span style="color:grey">functions</span>, and <span style="color:grey">runs</span> <span style="color:grey">commands</span> <span style="color:grey">only</span> at the <span style="color:grey">end</span>.
+2. **Immutable values.** <span style="color:grey">Scripts</span> <span style="color:grey">pass</span> `readonly` <span style="color:grey">values</span>, and <span style="color:grey">never</span> <span style="color:grey">change</span> an <span style="color:grey">object</span> in <span style="color:grey">place</span>.
+3. **Settings from the environment.** <span style="color:grey">Scripts</span> <span style="color:grey">read</span> <span style="color:grey">machine</span> <span style="color:grey">names</span>, <span style="color:grey">addresses</span>, <span style="color:grey">ports</span> and <span style="color:grey">passwords</span> from ***environment variables*** (US-00), as ADR 0001 <span style="color:grey">names</span> them, and <span style="color:grey">name</span> a <span style="color:grey">missing</span> <span style="color:grey">one</span> <span style="color:grey">before</span> they <span style="color:grey">start</span>.
+4. **Syntax that strips away.** Node.js <span style="color:grey">strips</span> <span style="color:grey">types</span> but does not <span style="color:grey">compile</span> TypeScript, so the <span style="color:grey">scripts</span> <span style="color:grey">use</span> <span style="color:grey">only</span> <span style="color:grey">syntax</span> that <span style="color:grey">leaves</span> <span style="color:grey">plain</span> JavaScript when its <span style="color:grey">types</span> <span style="color:grey">go</span>: no `enum`, no `namespace`, and no <span style="color:grey">other</span> <span style="color:grey">syntax</span> that <span style="color:grey">produces</span> <span style="color:grey">code</span>. `tsconfig.json` <span style="color:grey">sets</span> `erasableSyntaxOnly`, so `tsc --noEmit` <span style="color:grey">refuses</span> the <span style="color:grey">rest</span>.
+5. **Settled features only.** <span style="color:grey">Scripts</span> <span style="color:grey">use</span> the <span style="color:grey">latest</span> <span style="color:grey">settled</span> TypeScript and Node.js <span style="color:grey">features</span>, <span style="color:grey">never</span> <span style="color:grey">experimental</span> <span style="color:grey">ones</span>.
+6. **One command, one line.** A <span style="color:grey">line</span> <span style="color:grey">break</span> <span style="color:grey">inside</span> zx's `$` <span style="color:grey">ends</span> the <span style="color:grey">command</span>, as in a <span style="color:grey">shell</span>. A <span style="color:grey">long</span> <span style="color:grey">command</span> <span style="color:grey">passes</span> its <span style="color:grey">arguments</span> as a <span style="color:grey">list</span>, which zx <span style="color:grey">quotes</span> <span style="color:grey">one</span> by <span style="color:grey">one</span>.
 
 ## Consequences
 
-- The ***office*** ***machine*** ***needs*** Node.js 26 ***beside*** .NET. The ***map***'s ***build*** ***already*** ***needs*** Node.js, so the ***cost*** is ***small***.
-- The ***scripts*** ***cost*** ***little*** to ***rewrite***, so this ***decision*** is ***easy*** to ***reverse***.
+- The <span style="color:grey">office</span> <span style="color:grey">machine</span> <span style="color:grey">needs</span> Node.js 26 <span style="color:grey">beside</span> .NET. The <span style="color:grey">map</span>'s <span style="color:grey">build</span> <span style="color:grey">already</span> <span style="color:grey">needs</span> Node.js, so the <span style="color:grey">cost</span> is <span style="color:grey">small</span>.
+- The <span style="color:grey">scripts</span> <span style="color:grey">cost</span> <span style="color:grey">little</span> to <span style="color:grey">rewrite</span>, so this <span style="color:grey">decision</span> is <span style="color:grey">easy</span> to <span style="color:grey">reverse</span>.
 
 ## When to revisit
 
-- The ***map***'s ***build*** ***stops*** ***needing*** Node.js, which may then ***leave*** the ***office*** ***machine***.
-- Node.js 26 ***enters*** ***maintenance*** on 20 ***October*** 2027; ***move*** to the ***next*** long-term ***support*** ***release*** ***before*** then.
-- A ***script*** ***grows*** into a ***program***; it then ***belongs*** in the ***back*** ***end***, in C#.
+- The <span style="color:grey">map</span>'s <span style="color:grey">build</span> <span style="color:grey">stops</span> <span style="color:grey">needing</span> Node.js, which may then <span style="color:grey">leave</span> the <span style="color:grey">office</span> <span style="color:grey">machine</span>.
+- Node.js 26 <span style="color:grey">enters</span> <span style="color:grey">maintenance</span> on 20 <span style="color:grey">October</span> 2027; <span style="color:grey">move</span> to the <span style="color:grey">next</span> long-term <span style="color:grey">support</span> <span style="color:grey">release</span> <span style="color:grey">before</span> then.
+- A <span style="color:grey">script</span> <span style="color:grey">grows</span> into a <span style="color:grey">program</span>; it then <span style="color:grey">belongs</span> in the <span style="color:grey">back</span> <span style="color:grey">end</span>, in C#.
