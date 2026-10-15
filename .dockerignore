@@ -9,6 +9,8 @@
 .git/
 # This machine's passwords: anything in a build's context can end up in an image layer.
 .env
+# Installed packages: an image installs its own, for its own system, and these are large.
+**/node_modules/
 # Tests, documents and raw places: the running service needs none of them.
 tests/
 docs/
