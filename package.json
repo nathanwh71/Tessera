@@ -11,7 +11,7 @@
     "test": "node scripts/test.ts",
     "start": "node --env-file-if-exists=.env scripts/start.ts",
     "etl": "dotnet run --project tools/Tessera.Etl --configuration Release --",
-    "inspect": "dotnet run --project tools/Tessera.Etl --configuration Release -- inspect",
+    "inspect": "node scripts/inspect.ts",
     "publish": "node --env-file-if-exists=.env scripts/publish.ts",
     "e2e": "node scripts/e2e.ts",
     "office-port": "node --env-file-if-exists=.env scripts/office-port.ts",

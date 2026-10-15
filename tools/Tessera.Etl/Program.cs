@@ -16,10 +16,8 @@ using Tessera.Etl;
 // a table breaks its stop rules. It ends with an exit code: 0 when it wrote the script, 1 when it
 // stopped or failed, 2 when the command or the pipeline file is wrong.
 
-if (args is ["inspect", var inspected, .. var options])
-    return await Inspect(inspected, options);
 if (args is not [var pipelineFile])
-    return Fail(2, "Usage: npm run etl -- PIPELINE.json", "       npm run inspect -- SOURCE [--split FIELD]");
+    return Fail(2, "Usage: npm run etl -- PIPELINE.json");
 if (!File.Exists(pipelineFile))
     return Fail(2, $"{pipelineFile}: no such file.");
 
@@ -87,45 +85,6 @@ int Finish(int code, string result)
     (code == 0 ? Console.Out : Console.Error).WriteLine($"{(code == 0 ? "Done" : "Stopped")}: {result}");
     Console.WriteLine($"The log is in {logFile}.");
     return code;
-}
-
-// Describes a source's layers, and prints a starting pipeline file for it (npm run inspect).
-// --split FIELD makes one table for each value of FIELD, as the Macau places need for 'layer'.
-static async Task<int> Inspect(string inspected, string[] options)
-{
-    var source = Path.GetFullPath(inspected);
-    if (!File.Exists(source) && !Directory.Exists(source))
-        return Fail(2, $"{inspected}: no such file or folder.");
-    string[] folders = [Path.GetDirectoryName(source)!];
-    var described = await Gdal.Info(["-json", "-so", "-al", source], folders);
-    if (described.IsFailure)
-        return Fail(1, described.Error);
-    var layers = Inspection.Read(described.Value);
-    Console.WriteLine(Inspection.Summary(inspected, layers));
-
-    (string, ImmutableArray<string>)? split = null;
-    if (options is ["--split", var field])
-    {
-        if (layers.Length != 1)
-            return Fail(2, "--split needs a source with one layer.");
-        if (!layers[0].Fields.Contains(field))
-            return Fail(2, $"--split: {layers[0].Name} has no field '{field}'.");
-        // OGR SQL, GDAL's own small SQL, lists each value of the field once.
-        var values = await Gdal.Run(["-f", "CSV", "/vsistdout/", source, "-sql", $"SELECT DISTINCT \"{field}\" FROM \"{layers[0].Name}\""], folders);
-        if (values.IsFailure)
-            return Fail(1, values.Error);
-        split = (field, [.. values.Value.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Skip(1).Select(value => value.Trim('"')).Where(value => value.Length > 0).Order(StringComparer.Ordinal)]);
-    }
-    else if (options.Length > 0)
-        return Fail(2, "Usage: npm run inspect -- SOURCE [--split FIELD]");
-
-    var existing = Directory.Exists("db/seed") ? Directory.GetFiles("db/seed", "*.sql") : [];
-    var output = $"db/seed/{Inspection.NextScript(existing, inspected)}";
-    Console.WriteLine("A starting pipeline file. Save it beside the data, such as data/NAME.pipeline.json,");
-    Console.WriteLine("then set each table's schema and name, and its filters, before npm run etl:");
-    Console.WriteLine();
-    Console.WriteLine(Inspection.Starter(inspected, output, layers, split));
-    return 0;
 }
 
 static int Fail(int code, params string[] problems)

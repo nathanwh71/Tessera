@@ -149,7 +149,7 @@ The ***service*** is ***one*** ***program***, with ***each*** ***module*** a ***
 | `tests/` | ***Unit***, ***property*** and ***integration*** ***tests*** of the ***service***, and the ***pipeline***'s ***tests*** |
 | `db/` | The ***packaged*** ***database***: PostgreSQL 18 with PostGIS 3.6, the ***role*** ***script***, the ***seed*** ***scripts*** in `db/seed`, and, ***beside*** ***each*** ***script*** `npm run etl` ***writes***, its ***log*** in `db/seed-logs` |
 | `data/` | The ***seed***'s ***source***: 900 ***places*** in longitude and latitude, and `macau.pipeline.json`, which ***cleans*** them into a ***seed*** ***script*** |
-| `scripts/` | The ***scripts***, in TypeScript with zx (ADR 0002), and the Nginx ***checks*** in `scripts/lib/edge.ts` |
+| `scripts/` | The ***scripts***, in TypeScript with zx (ADR 0002): `start.ts`, `publish.ts`, `inspect.ts`, `office-port.ts`, the ***test*** and ***build*** ***runners***, and the Nginx ***checks*** in `scripts/lib/edge.ts` |
 | `docs/` | The ***stories*** and the ***architecture*** ***decision*** ***records*** |
 
 ## The documents

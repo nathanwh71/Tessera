@@ -5,9 +5,9 @@ using CSharpFunctionalExtensions;
 namespace Tessera.Etl;
 
 /// <summary>
-/// Runs GDAL's programs, ogr2ogr and ogrinfo: the machine's own when it has them, and GDAL's Docker
-/// image when not. Every path passed in is absolute, and Docker sees each folder at the same path,
-/// so the arguments need no change between the two.
+/// Runs GDAL's ogr2ogr: the machine's own when it has one, and GDAL's Docker image when not. Every
+/// path passed in is absolute, and Docker sees each folder at the same path, so the arguments need
+/// no change between the two.
 /// </summary>
 public static class Gdal
 {
@@ -22,10 +22,6 @@ public static class Gdal
     /// </summary>
     public static Task<Result<string, string>> Run(IReadOnlyList<string> arguments, IReadOnlyList<string> folders) =>
         Program("ogr2ogr", arguments, folders);
-
-    /// <summary>Runs ogrinfo, GDAL's program that describes a source, in the same way.</summary>
-    public static Task<Result<string, string>> Info(IReadOnlyList<string> arguments, IReadOnlyList<string> folders) =>
-        Program("ogrinfo", arguments, folders);
 
     private static Task<Result<string, string>> Program(string program, IReadOnlyList<string> arguments, IReadOnlyList<string> folders) =>
         Local.Value
