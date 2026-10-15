@@ -24,7 +24,8 @@ A ***pipeline*** in C#, `tools/Tessera.Etl`, ***turns*** ***each*** ***file*** o
 
 | Step | Run by | What happens |
 |---|---|---|
-| Write the pipeline file | The ***maintainer*** | ***Names*** the ***source***, the ***script*** to ***write***, and ***each*** ***table*** with its ***layer***, its ***rows*** and its filters, such as `data/macau.pipeline.json` |
+| Inspect | `npm run inspect -- SOURCE [--split FIELD]` | GDAL's `ogrinfo` ***describes*** ***each*** ***layer***: its ***rows***, its ***shape***, its ***system*** and its ***fields***; the ***command*** ***prints*** a ***starting*** ***pipeline*** ***file***, with the ***next*** ***script***'s ***number*** |
+| Write the pipeline file | The ***maintainer*** | ***Edits*** the ***starting*** ***file***: ***each*** ***table***'s schema, ***name*** and filters, such as `data/macau.pipeline.json` |
 | Run it | `npm run etl -- PIPELINE.json` | Extracts, ***cleans*** and ***loads*** ***each*** ***table***; ***writes*** the ***script***, such as `db/seed/0002-parks.sql`, and its ***log*** in `db/seed-logs/` |
 | Review | The ***maintainer*** | ***Reads*** the ***log*** and the ***script***, then ***commits*** both; ***together*** they ***record*** what ***entered*** the ***database***, and what was ***left*** out and why |
 | Seed | `Tessera seed`, which `npm start` ***runs*** at every ***start*** | DbUp ***runs*** ***each*** ***new*** ***script*** in a ***transaction*** of its ***own*** and ***records*** it in `tessera.schemaversions` |

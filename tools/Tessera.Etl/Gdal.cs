@@ -5,9 +5,9 @@ using CSharpFunctionalExtensions;
 namespace Tessera.Etl;
 
 /// <summary>
-/// Runs GDAL's ogr2ogr: the machine's own when it has one, and GDAL's Docker image when not. Every
-/// path passed in is absolute, and Docker sees each folder at the same path, so the arguments need
-/// no change between the two.
+/// Runs GDAL's programs, ogr2ogr and ogrinfo: the machine's own when it has them, and GDAL's Docker
+/// image when not. Every path passed in is absolute, and Docker sees each folder at the same path,
+/// so the arguments need no change between the two.
 /// </summary>
 public static class Gdal
 {
@@ -21,9 +21,16 @@ public static class Gdal
     /// <paramref name="folders"/> are the folders Docker must see, when it runs the image.
     /// </summary>
     public static Task<Result<string, string>> Run(IReadOnlyList<string> arguments, IReadOnlyList<string> folders) =>
+        Program("ogr2ogr", arguments, folders);
+
+    /// <summary>Runs ogrinfo, GDAL's program that describes a source, in the same way.</summary>
+    public static Task<Result<string, string>> Info(IReadOnlyList<string> arguments, IReadOnlyList<string> folders) =>
+        Program("ogrinfo", arguments, folders);
+
+    private static Task<Result<string, string>> Program(string program, IReadOnlyList<string> arguments, IReadOnlyList<string> folders) =>
         Local.Value
-            ? Start("ogr2ogr", arguments)
-            : Start("docker", ["run", "--rm", .. folders.Distinct().SelectMany(folder => new[] { "--volume", $"{folder}:{folder}" }), Image, "ogr2ogr", .. arguments]);
+            ? Start(program, arguments)
+            : Start("docker", ["run", "--rm", .. folders.Distinct().SelectMany(folder => new[] { "--volume", $"{folder}:{folder}" }), Image, program, .. arguments]);
 
     // Runs one program to its end. The output is read as it comes, so a large table cannot fill
     // the pipe and leave the program waiting for a reader.
