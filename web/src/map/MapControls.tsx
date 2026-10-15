@@ -7,15 +7,20 @@ import type { ReactNode } from "react";
 import { Icon } from "../design";
 import { zoomLabel } from "./labels";
 
-/** Props for the controls: the inputs the component receives. */
+/**
+ * Props for the controls: the inputs the component receives. They are plain values and callbacks, so
+ * the controls hold no state and the ***model*** stays the one source of truth (ADR 0004).
+ */
 export interface MapControlsProps {
 	/**
 	 * The current web-map zoom level, 0 for the whole world and 22 at its closest, which only the
 	 * buttons' labels say (UI-09, criterion 3).
 	 */
 	readonly level: number;
+	/** False at either end of the range, where that button turns grey (UI-09, criterion 2). */
 	readonly canZoomIn: boolean;
 	readonly canZoomOut: boolean;
+	/** Called on a press, so the app can send the ***message*** that moves the map one level (UI-09). */
 	readonly onZoomIn: () => void;
 	readonly onZoomOut: () => void;
 }
@@ -27,6 +32,9 @@ export interface MapControlsProps {
 export function Compass(): ReactNode {
 	return (
 		<div role="img" aria-label="Compass: north is up" className="mr-1 flex size-12 items-center justify-center rounded-full bg-surface-low shadow-level-2">
+			{/* A 40-pixel face inside the 48-pixel disc, drawn on a grid of 40 units: the ring of
+			    radius 16 leaves room for the ticks at east, south and west, and the 'N' sits above the
+			    needle in place of the north tick, so north reads first. */}
 			<svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true">
 				<circle cx="20" cy="20" r="16" className="fill-none stroke-outline-variant" strokeWidth="1" />
 				<path d="M36 20h-3M20 36v-3M4 20h3" className="fill-none stroke-on-surface-variant" strokeWidth="1.5" strokeLinecap="round" />
@@ -41,6 +49,10 @@ export function Compass(): ReactNode {
 	);
 }
 
+/**
+ * One zoom button, '+' or '−'. Both share this one component, so they cannot drift apart in size,
+ * label or behaviour at the end of the range (UI-09, criteria 2 and 3).
+ */
 function ZoomButton({ direction, level, enabled, onPress }: { direction: "in" | "out"; level: number; enabled: boolean; onPress: () => void }): ReactNode {
 	return (
 		<button

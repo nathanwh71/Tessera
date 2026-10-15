@@ -9,13 +9,21 @@ import { formatPosition } from "./coordinates";
 import type { Units } from "./map";
 import { scaleBar } from "./scale";
 
-/** Props for the scale bar: the inputs the component receives. */
+/**
+ * Props for the scale bar: the inputs the component receives. They are plain values and a callback,
+ * so the bar holds no state and the ***model*** stays the one source of truth (ADR 0004).
+ */
 export interface ScaleBarProps {
-	/** The web-map zoom level, 0 for the whole world and 22 at its closest. */
+	/**
+	 * The web-map zoom level, 0 for the whole world and 22 at its closest; each level up halves the
+	 * ground a pixel spans, so the bar's length follows it.
+	 */
 	readonly level: number;
 	/** The latitude of the map's centre, where the scale holds; it stretches further north and south. */
 	readonly latitude: number;
+	/** Metric or imperial, kept in the model so a click can switch it (UI-19, criterion 4). */
 	readonly units: Units;
+	/** Called on a click, so the app sends the ***message*** that switches units (UI-19, c4). */
 	readonly onToggleUnits: () => void;
 }
 
@@ -25,6 +33,8 @@ export interface ScaleBarProps {
  */
 export function ScaleBar({ level, latitude, units, onToggleUnits }: ScaleBarProps): ReactNode {
 	const bar = scaleBar(level, latitude, units);
+	// The bar and the row of figures share one width, so '0', the halfway figure and the full length
+	// sit under the bar's start, middle and end.
 	const width = { width: `${bar.widthPx}px` };
 	return (
 		<button
@@ -33,6 +43,8 @@ export function ScaleBar({ level, latitude, units, onToggleUnits }: ScaleBarProp
 			onClick={onToggleUnits}
 			className="state-layer card flex min-h-11 cursor-pointer flex-col justify-center gap-[3px] border-0 pt-2 pr-3.5 pb-1.5 pl-3"
 		>
+			{/* The button's label already says the length in words, so a screen reader skips the bar
+			    and its figures rather than read '0 250 500 m' as well. */}
 			<span
 				aria-hidden="true"
 				className="scale-sections block h-2 rounded-[2px] border-[1.5px] border-solid border-on-surface transition-[width] duration-300 ease-emphasized"

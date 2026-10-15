@@ -8,6 +8,7 @@ import { type Landing, type LandingEvent, START, step } from "./landing";
 /** A pin in view, as the map reports it: where it lands and its group. */
 const pin = (key: string) => ({ key, x: 10, y: 20, group: "food" as const });
 
+/** Runs a list of events through `step`, so each test reads as the story of one page load. */
 const run = (events: readonly LandingEvent[], from: Landing = START): Landing => events.reduce(step, from);
 
 describe("UI-15 the pins' landing, as a pure state machine", () => {

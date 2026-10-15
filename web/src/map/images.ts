@@ -9,7 +9,10 @@
 
 import { GROUP_KEYS, type GroupKey } from "../design";
 
-/** What an image name asks the canvas, the bitmap the page paints images on, to draw. */
+/**
+ * What an image name asks the canvas, the bitmap the page paints images on, to draw. A closed set of
+ * named cases, so maplibre.ts must handle each kind and the compiler flags one it misses (ADR 0004).
+ */
 export type ImageRequest =
 	| { readonly kind: "pin"; readonly group: GroupKey }
 	| { readonly kind: "cluster"; readonly counts: Readonly<Record<GroupKey, number>> }
@@ -18,20 +21,28 @@ export type ImageRequest =
 /** The tooltip: the dark box behind every name, stretched to fit it (UI-11, criterion 1). */
 export const TOOLTIP_IMAGE = "tooltip";
 
-/** The prefix of every pin image; the group follows, such as `pin:food`. */
+/**
+ * The prefix of every pin image; the group follows, such as `pin:food`. The prefix tells a pin's
+ * name from a ***cluster***'s when readImageName reads it back.
+ */
 export const PIN_PREFIX = "pin:";
 
-/** The image name of a group's pin, such as `pin:food`. */
+/**
+ * The image name of a group's pin, such as `pin:food`. index.ts exports it, so code outside the map
+ * ***module*** can name a pin's image without knowing the prefix (ADR 0001).
+ */
 export function pinImage(group: GroupKey): string {
 	return `${PIN_PREFIX}${group}`;
 }
 
 /**
  * The prefix of every cluster image; the counts of the four groups follow, in the map's order, joined
- * by '-', such as `cluster:3-0-1-0`.
+ * by '-', such as `cluster:3-0-1-0`. The counts sit in the name so each mix of groups gets an image
+ * of its own, ringed in their colours in proportion (UI-10, criterion 1).
  */
 export const CLUSTER_PREFIX = "cluster:";
 
+/** True for one of the four groups; a name with any other text after `pin:` draws nothing. */
 const isGroup = (text: string): text is GroupKey => GROUP_KEYS.some((g) => g === text);
 
 /**
@@ -43,6 +54,8 @@ export function readImageName(name: string): ImageRequest | null {
 	if (name.startsWith(CLUSTER_PREFIX)) {
 		const counts = name.slice(CLUSTER_PREFIX.length).split("-").map(Number);
 		const valid = counts.length === GROUP_KEYS.length && counts.every((c) => Number.isInteger(c) && c >= 0);
+		// `valid` has checked there are four, but the compiler cannot know it, so each takes 0 as a
+		// default to stay a number.
 		const [food = 0, outdoors = 0, culture = 0, transport = 0] = counts;
 		return valid ? { kind: "cluster", counts: { food, outdoors, culture, transport } } : null;
 	}

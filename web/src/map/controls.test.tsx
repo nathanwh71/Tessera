@@ -10,8 +10,13 @@ import { MACAU } from "../shared";
 import { violations } from "../testing/axe";
 import { Coordinates, MapControls, ScaleBar } from ".";
 
+// Macau's latitude, where the stories give the scale bar's lengths (UI-19, criterion 1).
 const LAT = MACAU.home.center.lat;
 
+/**
+ * Draws the controls at a level, with each button greyed as the app would grey it at 0 and 22, and
+ * returns the fake handlers so a test can check what a press sent.
+ */
 function controls(level: number) {
 	const handlers = { onZoomIn: vi.fn(), onZoomOut: vi.fn() };
 	const view = render(<MapControls level={level} canZoomIn={level < 22} canZoomOut={level > 0} {...handlers} />);

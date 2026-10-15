@@ -13,6 +13,10 @@ import { LAYER, NAMES_FROM_LEVEL, SOURCE, type SourceFeature, type StyleInput, T
 // the tests check where colours go, not what they are.
 const THEME = themeFrom((variable) => `var(${variable})`);
 
+/**
+ * A style for the nine ***layers***, landed, with only the inputs a test names changed, so each test
+ * states just what it is about.
+ */
 function style(changes: Partial<StyleInput> = {}) {
 	return buildStyle({
 		origin: "http://tessera.office.lan",
@@ -24,14 +28,23 @@ function style(changes: Partial<StyleInput> = {}) {
 	});
 }
 
+/** A style layer by its id, or undefined, so a test can check that a layer is missing too. */
 const layerById = (layers: readonly LayerSpecification[], id: string): LayerSpecification | undefined => layers.find((l) => l.id === id);
 
+/**
+ * A symbol layer by its id; it throws when there is none, so a test fails with a clear message
+ * rather than on a missing field later.
+ */
 function symbol(id: string, changes: Partial<StyleInput> = {}): SymbolLayerSpecification {
 	const found = layerById(style(changes).layers, id);
 	if (found?.type !== "symbol") throw new Error(`no symbol layer '${id}'`);
 	return found;
 }
 
+/**
+ * A café at one point with the given id, named after it; the tests that use it vary only the ids,
+ * since the order of names rests on ids alone (UI-17, criterion 2).
+ */
 function feature(id: string): SourceFeature {
 	return { properties: { id, name: id, type: "Café" }, geometry: { type: "Point", coordinates: [113.55, 22.19] } };
 }
@@ -60,6 +73,7 @@ describe("UI-15 a plain background", () => {
 		const layers = style().layers;
 		expect(layers[0]).toEqual({ id: LAYER.background, type: "background", paint: { "background-color": "var(--color-surface)" } });
 		expect(layers.filter((l) => !["background", "symbol"].includes(l.type)).every((l) => l.id.startsWith("feed:"))).toBe(true);
+		// Names draw from the self-hosted Roboto, so the style asks no glyph server for anything.
 		expect(style().glyphs).toBeUndefined();
 	});
 

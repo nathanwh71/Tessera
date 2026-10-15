@@ -8,8 +8,9 @@ import { metresPerPixel } from "./scale";
 import { CLUSTER_RADIUS_PX } from "./style";
 
 /**
- * How many of a cluster's places its label names; the rest it counts. A cluster is one mark that
- * stands for several places close together.
+ * How many of a ***cluster***'s places its label names; the rest it counts. A cluster is one mark
+ * that stands for several places close together. Ten names tell a listener what is there, yet keep
+ * the label short enough to hear out; a longer list would bury the closing hint to zoom in.
  */
 export const NAMED_IN_CLUSTER = 10;
 
@@ -29,7 +30,11 @@ export function pinLabel(name: string, type: string | null): string {
 	return type === null ? name : `${name}, ${type}`;
 }
 
-/** A zoom level as the zoom buttons say it: whole levels plainly, others to one decimal place. */
+/**
+ * A zoom level as the zoom buttons say it: whole levels plainly, others to one decimal place. The
+ * map may stop between levels, such as 16.4 after a cluster opens (UI-09, criterion 4), and one
+ * decimal is enough to tell those apart.
+ */
 export function levelText(level: number): string {
 	const tenths = Math.round(level * 10) / 10;
 	return Number.isInteger(tenths) ? String(tenths) : tenths.toFixed(1);

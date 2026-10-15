@@ -10,11 +10,18 @@ import { LAYER_IDS } from "../layers";
 import { MACAU, level } from "../shared";
 import { FRAME_MAX_LEVEL, type Message, type Model, Msg, type Props, init, noticeOf, tileProblem, update } from ".";
 
+/**
+ * Fresh props for each test, with fake ***ports*** from vi.fn() that record each move the
+ * ***update*** asks for;
+ * `openLayer` stands for the /{layer}.html address (US-23, criterion 2).
+ */
 const props = (openLayer?: Props["openLayer"]): Props => ({
 	ports: { fitBounds: vi.fn(), jumpTo: vi.fn() },
 	area: MACAU,
 	...(openLayer === undefined ? {} : { openLayer }),
 });
+// react-elmish's helpers: `updateFn` runs one message through the update, and `args` builds its
+// arguments from a fresh model, changed only where a test says, so no test leaks into the next.
 const updateFn = getUpdateFn(update);
 const args = createUpdateArgsFactory<Props, Model, Message>(() => init(props())[0], () => props());
 

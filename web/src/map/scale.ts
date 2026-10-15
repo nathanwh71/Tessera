@@ -9,6 +9,10 @@ import type { Units } from "./map";
  * uses (EPSG:3857, radius 6,378,137 m).
  */
 const EQUATOR_METRES = 2 * Math.PI * 6378137;
+/**
+ * The imperial units by their legal definitions, a foot being exactly 0.3048 m, so the imperial bar
+ * measures the same ground as the metric one (UI-19, criterion 4).
+ */
 const FEET_PER_METRE = 1 / 0.3048;
 const FEET_PER_MILE = 5280;
 
@@ -27,7 +31,8 @@ export function metresPerPixel(level: number, latitude: number): number {
 
 /**
  * The largest 1, 2 or 5 times a power of ten (1, 2, 5, 10, 20, 50 and so on) that is at most the
- * value given.
+ * value given. The bar shows a round length, 1, 2 or 5 of a unit (UI-19, criterion 1), the steps
+ * printed maps use, since a reader takes them in at a glance.
  */
 export function roundLengthBelow(value: number): number {
 	const power = 10 ** Math.floor(Math.log10(value));
@@ -35,7 +40,10 @@ export function roundLengthBelow(value: number): number {
 	return (leading >= 5 ? 5 : leading >= 2 ? 2 : 1) * power;
 }
 
-/** What the scale bar draws and says. */
+/**
+ * What the scale bar draws and says, worked out together in one value, so the drawing and the
+ * spoken label can never disagree.
+ */
 export interface ScaleReading {
 	/** The bar's length on screen, in pixels, at most 140. */
 	readonly widthPx: number;
@@ -50,8 +58,13 @@ export interface ScaleReading {
 	readonly label: string;
 }
 
+/** The four units the bar may name, two for each system (UI-19, criterion 4). */
 type Unit = "m" | "km" | "ft" | "mi";
 
+/**
+ * Each unit in words, one and many, since the screen-reader label says '1 mile' but '500 metres'
+ * where the bar shows only 'mi' or 'm'.
+ */
 const UNIT_WORDS: Readonly<Record<Unit, readonly [one: string, many: string]>> = {
 	m: ["metre", "metres"],
 	km: ["kilometre", "kilometres"],
@@ -59,12 +72,20 @@ const UNIT_WORDS: Readonly<Record<Unit, readonly [one: string, many: string]>> =
 	mi: ["mile", "miles"],
 };
 
-/** A figure with a comma every three digits and no more than three decimals: '1,000', '0.5'. */
+/**
+ * A figure with a comma every three digits and no more than three decimals: '1,000', '0.5'. The
+ * British form keeps the figures the same in every browser, whatever its language; three decimals
+ * cover the smallest halfway figure without showing the rounding error of floating point.
+ */
 function figure(value: number): string {
 	return (Math.round(value * 1000) / 1000).toLocaleString("en-GB", { maximumFractionDigits: 3 });
 }
 
-/** The length to draw, in the unit to name, and how many metres it covers. */
+/**
+ * The length to draw, in the unit to name, and how many metres it covers. Metres turn into
+ * kilometres from 1,000, and feet into miles from one mile, so the figure stays short; the metres
+ * let the caller turn the length back into pixels.
+ */
 function roundLength(span: number, units: Units): { length: number; unit: Unit; metres: number } {
 	if (units === "metric") {
 		const metres = roundLengthBelow(span);

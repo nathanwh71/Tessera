@@ -14,15 +14,21 @@ import { levelOf } from "./levels";
 import { pointOf } from "./places";
 import { LAYER, SOURCE } from "./style";
 
-/** A pin or cluster in view: where it sits on screen and what a screen reader says for it. */
+/** A pin or ***cluster*** in view: where it sits on screen and what a screen reader says for it. */
 export interface Target {
+	/**
+	 * `place:` and the place's id, or `cluster:` and the cluster's id: stable across draws, so React
+	 * keeps each target's element, and unique, so a place drawn twice yields one target.
+	 */
 	readonly key: string;
 	readonly x: number;
 	readonly y: number;
 	readonly label: string;
 	/** The cluster's id, or null for a pin. */
 	readonly clusterId: number | null;
+	/** Longitude and latitude, kept so a press of a cluster's button can centre the map on it. */
 	readonly point: readonly [number, number];
+	/** The pin's group, so the landing drops a pin of the right colour; null for a cluster. */
 	readonly group: GroupKey | null;
 }
 
@@ -32,14 +38,22 @@ export interface Target {
  */
 export type ClusterNames = Map<number, readonly string[]>;
 
+/**
+ * A feature's properties arrive untyped from MapLibre, so these read them safely: text, or null for
+ * none, so a pin's label leaves out a missing type; and a known group, or null.
+ */
 const textOf = (v: unknown): string | null => (typeof v === "string" && v !== "" ? v : null);
 const groupOf = (v: unknown): GroupKey | null => GROUP_KEYS.find((g) => g === v) ?? null;
 
 /** The pins and clusters drawn in view, in reading order: top to bottom, then left to right. */
 export function targetsInView(map: MapLibreMap, clusterNames: ReadonlyMap<number, readonly string[]>): Target[] {
+	// MapLibre throws when asked about a layer it lacks, and the layers are missing until a style has
+	// loaded, so the query names only those present.
 	const layers = [LAYER.clusters, LAYER.pins].filter((id) => map.getLayer(id) !== undefined);
 	if (layers.length === 0) return [];
 	const { clientWidth: width, clientHeight: height } = map.getContainer();
+	// A place near a tile's edge is drawn in each tile that holds it, so the query may return it
+	// twice; the keys seen so far keep one target for each.
 	const seen = new Set<string>();
 	return map
 		.queryRenderedFeatures({ layers })
@@ -51,6 +65,8 @@ export function targetsInView(map: MapLibreMap, clusterNames: ReadonlyMap<number
 			if (point === null || seen.has(key)) return [];
 			seen.add(key);
 			const at = map.project(point);
+			// The query returns a symbol whose image reaches into view even when its point lies outside;
+			// a target there would sit off the page, where the keyboard could reach a place unseen.
 			if (at.x < 0 || at.x > width || at.y < 0 || at.y > height) return [];
 			const label =
 				clusterId === null
@@ -82,6 +98,10 @@ export function nameClusters(map: MapLibreMap, names: ClusterNames, done: () => 
 		.map((f): unknown => f.properties["cluster_id"])
 		.filter((id): id is number => typeof id === "number" && !names.has(id));
 	if (ids.length === 0) return;
+	// Asks for ten leaves from the first, the most the label names (NAMED_IN_CLUSTER in labels.ts);
+	// the two numbers must change together. A cluster may vanish before its names arrive, when the
+	// places change and MapLibre renumbers its clusters; the label then keeps its count alone until
+	// the next rest, so a failure is ignored.
 	void Promise.all(
 		[...new Set(ids)].map((id) =>
 			source.getClusterLeaves(id, 10, 0).then((leaves) => names.set(id, leaves.map((l) => String(l.properties?.["name"] ?? "")))),

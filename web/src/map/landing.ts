@@ -12,6 +12,7 @@ import { type GroupKey, dropDelays, dropMs } from "../design";
 
 /** A pin in view, as the map reports it: where its tip sits on screen and its group's colour. */
 export interface PinInView {
+	/** Made from the place's id, so it stays the same across draws and React keeps each pin in place. */
 	readonly key: string;
 	readonly x: number;
 	readonly y: number;
@@ -38,7 +39,10 @@ export type Landing =
 	/** The map's own pins show; nothing moves this stage on. */
 	| { readonly stage: "landed" };
 
-/** What can happen during the landing. */
+/**
+ * What can happen during the landing: the events that move the ***state machine*** on. Like the
+ * stages, a closed set, so `step` must answer each one (ADR 0004).
+ */
 export type LandingEvent =
 	/** The clustered source, the data the map draws the places from, gained its first places. */
 	| { readonly name: "placesFed" }
@@ -54,14 +58,18 @@ export type LandingEvent =
 	/** The wait for the first places ran out. */
 	| { readonly name: "timedOut" };
 
-/** Before the page has its places. */
+/** Before the page has its places: every page load starts here, so the drop waits for them. */
 export const START: Landing = { stage: "waiting", fed: false };
 
+/**
+ * The one landed stage, shared, so landing again hands back the same object and React, seeing
+ * nothing new, skips a redraw.
+ */
 const LANDED: Landing = { stage: "landed" };
 
 /**
  * The stage after an event. An event that means nothing at the current stage returns that stage
- * unchanged.
+ * unchanged, the very same object, so React sees no change and skips a redraw.
  */
 export function step(landing: Landing, event: LandingEvent): Landing {
 	switch (event.name) {

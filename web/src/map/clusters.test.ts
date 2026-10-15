@@ -22,13 +22,18 @@ import {
 	update,
 } from ".";
 
+// Macau's latitude, since the merge distance depends on latitude and the stories measure it there.
 const LAT = MACAU.home.center.lat;
 // Along the equator, on the sphere of Web Mercator, the flat projection every web map uses.
 const METRES_PER_DEGREE = (2 * Math.PI * 6378137) / 360;
 
+// The points Supercluster takes, named from its own type so the test cannot drift from the library.
 type Points = Parameters<Supercluster["load"]>[0];
 
-/** Two places at Macau's centre, the second the given ground distance due east. */
+/**
+ * Two places at Macau's centre, the second the given ground distance due east. Due east keeps both
+ * on one latitude, where the merge distance holds, so the test measures that distance alone.
+ */
 function pair(metres: number): Points {
 	const { lng, lat } = MACAU.home.center;
 	const east = metres / (METRES_PER_DEGREE * Math.cos((lat * Math.PI) / 180));
@@ -36,13 +41,14 @@ function pair(metres: number): Points {
 }
 
 /**
- * Clusters as MapLibre does for the places source, the data it draws the places from: the same
- * library, radius and last level. MapLibre measures the radius against tiles, square pieces of the
- * map, 512 pixels wide, so the test does too.
+ * Groups places into ***clusters*** as MapLibre does for the places source, the data it draws the
+ * places from: the same library, radius and last level. MapLibre measures the radius against
+ * ***tiles***, square pieces of the map, 512 pixels wide, so the test does too.
  */
 function clustersAt(at: Level, features: Points): number {
 	const index = new Supercluster({ radius: CLUSTER_RADIUS_PX, extent: 512, maxZoom: toMapZoom(LAST_CLUSTER_LEVEL) });
 	index.load(features);
+	// The whole world, cut at latitude 85 north and south, where Web Mercator ends.
 	return index.getClusters([-180, -85, 180, 85], toMapZoom(at)).length;
 }
 
@@ -72,9 +78,12 @@ describe("UI-10 clusters", () => {
 });
 
 describe("UI-10 opening a cluster", () => {
+	// Fake ports from vi.fn() record each move the update asks for; react-elmish's helpers build
+	// each call's arguments from a fresh model, so no test leaks into the next.
 	const props = (): Props => ({ ports: { fitBounds: vi.fn(), jumpTo: vi.fn() }, area: MACAU });
 	const updateFn = getUpdateFn(update);
 	const args = createUpdateArgsFactory<Props, Model, Message>(() => init(props())[0], props);
+	// Any point in Macau serves: the tests check the zoom, and the centre passes through unchanged.
 	const center = { lng: 113.54, lat: 22.2 };
 
 	it("zooms at least to level 16", async () => {

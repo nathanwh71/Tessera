@@ -8,7 +8,7 @@ import { type Problem, defaultWith, flatMap, parseJson, pipe, readProblem } from
 
 /**
  * A problem made from the status alone, the answer's three-digit result, for a body that is no
- * problem document.
+ * ***problem document***.
  */
 const problemOfStatus = (status: number, statusText: string): Problem => ({
 	type: "about:blank",
@@ -17,11 +17,12 @@ const problemOfStatus = (status: number, statusText: string): Problem => ({
 });
 
 /**
- * The problem a failed tile request reports. The service answers every error with a problem document
- * in the form RFC 9457, the internet standard for error answers, sets; `body` is the answer's text. A
- * body that is not one, such as the HTML page of a proxy, a server that stands between the browser
- * and the service, gives a problem made from the status alone, so the page still has words to show.
- * A pipe, a chain of steps run in the order written (shared/pipe.ts), joins the three steps.
+ * The problem a failed ***tile*** request reports. The service answers every error with a problem
+ * document in the form RFC 9457, the internet standard for error answers, sets; `body` is the
+ * answer's text. A body that is not one, such as the HTML page of a proxy, a server that stands
+ * between the browser and the service, gives a problem made from the status alone, so the page
+ * still has words to show. A pipe, a chain of steps run in the order written (shared/pipe.ts),
+ * joins the three steps.
  */
 export const tileProblem = (status: number, statusText: string, body: string): Problem =>
 	pipe(

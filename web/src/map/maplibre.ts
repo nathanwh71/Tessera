@@ -3,9 +3,10 @@
 // It holds what every map MapLibre draws shares: its start-up options, its images, the wiring of its
 // events, and the feed of loaded places into the clustered source (a source is the data a map layer
 // draws from; a cluster is one mark for several places close together). useMapLibre, in
-// canvas-hooks.ts, calls each function once as the map starts. This is the shell of side effects, work that reaches outside the
-// program, around the pure functions of style.ts and places.ts; it holds no rule of its own, and it
-// is one of the two files the architecture test lets hold changing state.
+// canvas-hooks.ts, calls each function once as the map starts. This is the shell of side effects,
+// work that reaches outside the program, around the pure functions of style.ts and places.ts; it
+// holds no rule of its own, and it is one of the two files the architecture test lets hold changing
+// state.
 
 import latinFont from "@fontsource/roboto/files/roboto-latin-400-normal.woff2?url";
 import latinExtFont from "@fontsource/roboto/files/roboto-latin-ext-400-normal.woff2?url";
@@ -27,7 +28,11 @@ import { tileProblem } from "./tiles";
 // /assets/, and this tells MapLibre where.
 setWorkerUrl(workerUrl);
 
-/** The Roboto font files the names draw with, served from the page's own site. */
+/**
+ * The Roboto font files the names draw with (UI-15, criterion 2), served from the page's own site,
+ * as the tiles are (US-23, criterion 7), so the map asks nothing of a font service outside the
+ * office.
+ */
 export const FONT_FILES: FontFiles = { latin: latinFont, latinExt: latinExtFont };
 
 /**
@@ -78,6 +83,8 @@ export function baseOptions(reducedMotion: boolean): Partial<MapOptions> {
 export function provideImages(map: MapLibreMap, theme: Theme): void {
 	map.setMissingStyleImageResolver((name) => {
 		const request = readImageName(name);
+		// A name this module never makes draws nothing; and addImage throws for a name the map already
+		// holds, so a repeated request is skipped.
 		if (request === null || map.hasImage(name)) return;
 		switch (request.kind) {
 			case "pin":
@@ -92,23 +99,25 @@ export function provideImages(map: MapLibreMap, theme: Theme): void {
 				return;
 			}
 			default:
+				// Compiles only while every kind above is handled, so a new kind of image cannot be
+				// forgotten here (ADR 0004).
 				request satisfies never;
 		}
 	});
 }
 
-/** What the feed reads afresh each time it runs: the layers that are on. */
+/** What the feed reads afresh each time it runs: the ***layers*** that are on. */
 export interface FeedState {
 	readonly visible: readonly LayerId[];
 }
 
 /**
- * Keeps the clustered source in step with the tiles, the square pieces of the map, that MapLibre has
- * loaded for the layers that are on (ADR 0005; see places.ts). Runs when a tile source finishes
- * loading, when the map comes to rest, and when the caller calls the returned `refresh`. Sets the
- * source's data only when its places change, since each new set makes MapLibre cluster again;
- * `refresh` sets it regardless, since a new style empties it. `onFed` hears each time the source
- * is set with places.
+ * Keeps the clustered source in step with the ***tiles***, the square pieces of the map, that
+ * MapLibre has loaded for the layers that are on (ADR 0005; see places.ts). Runs when a tile
+ * source finishes loading, when the map comes to rest, and when the caller calls the returned
+ * `refresh`. Sets the source's data only when its places change, since each new set makes MapLibre
+ * cluster again; `refresh` sets it regardless, since a new style empties it. `onFed` hears each time
+ * the source is set with places.
  */
 export function feedPlaces(map: MapLibreMap, state: () => FeedState, onFed: () => void = () => undefined): { refresh(): void; stop(): void } {
 	let last = "";
@@ -119,6 +128,8 @@ export function feedPlaces(map: MapLibreMap, state: () => FeedState, onFed: () =
 		const source = map.getSource<GeoJSONSource>(SOURCE.places);
 		if (source === undefined) return;
 		const { visible } = state();
+		// A layer just switched on may have no tile source yet, until MapLibre applies the new style;
+		// asking for its features then would throw.
 		const loaded: LoadedLayer[] = visible
 			.filter((id) => map.getSource(SOURCE.tiles(id)) !== undefined)
 			.map((id) => ({ layerId: id, features: map.querySourceFeatures(SOURCE.tiles(id), { sourceLayer: id }) }));
@@ -127,6 +138,8 @@ export function feedPlaces(map: MapLibreMap, state: () => FeedState, onFed: () =
 		if (print === last) return;
 		last = print;
 		if (collection.features.length > 0) onFed();
+		// Each point's coordinates are copied into a fresh array, since GeoJSON's types take arrays a
+		// caller may change and places.ts keeps its points read-only.
 		void source.setData({ type: "FeatureCollection", features: collection.features.map((f) => ({ ...f, geometry: { ...f.geometry, coordinates: [...f.geometry.coordinates] } })) });
 	};
 
@@ -153,15 +166,16 @@ export function feedPlaces(map: MapLibreMap, state: () => FeedState, onFed: () =
 
 /**
  * A failed request as MapLibre reports it: an AJAXError, which carries the answer's status, its
- * three-digit result, and its body.
+ * three-digit result, and its body. MapLibre's error event types the error as unknown, so this schema
+ * checks its shape before the code reads the body.
  */
 const FailedRequest = v.object({ status: v.number(), statusText: v.string(), body: v.instance(Blob) });
 
 /**
- * Reports each tile request that the service answers with an error, as the problem document that its
- * body holds: the service's form of an error in JSON, the text form of a value that programs exchange
- * (US-23, criterion 8). Errors of anything but a tile source, such as a missing image, are not the
- * service's and are left to MapLibre.
+ * Reports each tile request that the service answers with an error, as the ***problem document***
+ * that its body holds: the service's form of an error in JSON, the text form of a value that
+ * programs exchange (US-23, criterion 8). Errors of anything but a tile source, such as a missing
+ * image, are not the service's and are left to MapLibre.
  */
 export function watchTileErrors(map: MapLibreMap, report: (problem: Problem) => void): void {
 	map.on("error", (event: { error?: unknown; sourceId?: string }) => {
@@ -169,6 +183,7 @@ export function watchTileErrors(map: MapLibreMap, report: (problem: Problem) => 
 		if (sourceId?.startsWith("tiles:") !== true || !v.is(FailedRequest, error)) return;
 		void error.body.text().then(
 			(text) => report(tileProblem(error.status, error.statusText, text)),
+			// A body that cannot be read still leaves the status, so the page still has words to show.
 			() => report(tileProblem(error.status, error.statusText, "")),
 		);
 	});
@@ -176,19 +191,25 @@ export function watchTileErrors(map: MapLibreMap, report: (problem: Problem) => 
 
 /** What the page wants to hear from the map. Each is called with plain values; none sees MapLibre. */
 export interface MapEvents {
-	/** The map moved, by the visitor or by a port, a function the update moves the map through. */
+	/**
+	 * The map moved, by the visitor or by a ***port***, a function the update moves the map through, so
+	 * the model's view and the targets in view keep up (UI-09).
+	 */
 	readonly onMove: () => void;
-	/** The map came to rest. */
+	/** The map came to rest, the moment to read the targets, name clusters and start the drop. */
 	readonly onIdle: () => void;
 	/** The visitor, not a port, started to move the map. */
 	readonly onVisitorMove: () => void;
-	/** The clustered source holds a new set of places, so MapLibre has renumbered its clusters. */
+	/** The clustered source holds a new set of places, so MapLibre has renumbered its ***clusters***. */
 	readonly onPlacesChanged: () => void;
 	/** The pointer sits here, or has left the map. */
 	readonly onPointer: (position: LngLat | null) => void;
 	/** The visitor clicked a cluster: its id, and its point in longitude and latitude. */
 	readonly onClusterClick: (clusterId: number, point: readonly [number, number]) => void;
-	/** MapLibre has loaded its first style. */
+	/**
+	 * MapLibre has loaded its first style; from then on it can diff a new one, and the wait for the
+	 * first places starts.
+	 */
 	readonly onLoad: () => void;
 	/** The browser took WebGL away from the map, as it may when the graphics card resets. */
 	readonly onDrawingLost: () => void;
@@ -219,6 +240,7 @@ export function attachEvents(map: MapLibreMap, events: MapEvents): () => void {
 		const id: unknown = feature?.properties["cluster_id"];
 		if (point !== null && typeof id === "number") events.onClusterClick(id, point);
 	};
+	// A hand over a cluster, and the plain cursor elsewhere, since only a cluster answers a click.
 	const cursor = (value: string) => (): void => {
 		const canvas = map.getCanvas();
 		canvas.style.cursor = value;
@@ -240,6 +262,8 @@ export function attachEvents(map: MapLibreMap, events: MapEvents): () => void {
 		map.on("webglcontextlost", events.onDrawingLost),
 		map.on("webglcontextrestored", events.onDrawingRestored),
 	];
+	// The first load happens once, and `once` takes its listener off after it fires. A map removed
+	// before it loads never fires it, so the unwiring below need not reach it.
 	map.once("load", events.onLoad);
 	return () => subscriptions.forEach((subscription) => subscription.unsubscribe());
 }

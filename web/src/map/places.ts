@@ -14,7 +14,10 @@ import * as v from "valibot";
 import type { GroupKey } from "../design";
 import { type LayerId, layerOf } from "../layers";
 
-/** A property value as a vector tile carries it: text, a number, true or false, or null. */
+/**
+ * A property value as a ***vector tile*** carries it: text, a number, true or false, or null. Only
+ * these pass to the clustered source, whose properties must be plain values.
+ */
 export type PropertyValue = string | number | boolean | null;
 
 /** A feature as `map.querySourceFeatures` returns it, reduced to what this module reads. */
@@ -23,7 +26,10 @@ export interface SourceFeature {
 	readonly geometry: { readonly type: string; readonly coordinates?: unknown };
 }
 
-/** The features loaded for one layer that is on. */
+/**
+ * The features loaded for one ***layer*** that is on, kept with its id, since the id gives each place
+ * its group and its rank in the map's order.
+ */
 export interface LoadedLayer {
 	readonly layerId: LayerId;
 	readonly features: readonly SourceFeature[];
@@ -47,14 +53,17 @@ export type PlaceProperties = Readonly<Record<string, PropertyValue>> & {
 	readonly sort: number;
 };
 
-/** One place on the clustered source. */
+/**
+ * One place on the clustered source, the source MapLibre groups into ***clusters***. Always a point,
+ * since MapLibre clusters points alone.
+ */
 export interface PlaceFeature {
 	readonly type: "Feature";
 	readonly geometry: { readonly type: "Point"; readonly coordinates: readonly [number, number] };
 	readonly properties: PlaceProperties;
 }
 
-/** The places for the clustered source, as GeoJSON. */
+/** The places for the clustered source, as GeoJSON, the one form MapLibre clusters (ADR 0005). */
 export interface PlaceCollection {
 	readonly type: "FeatureCollection";
 	readonly features: readonly PlaceFeature[];
@@ -66,10 +75,17 @@ export interface PlaceCollection {
  */
 const LAYER_STEP = 1_000_000;
 
+/**
+ * True for a plain value. A tile's feature may carry other things, such as nested objects, which the
+ * clustered source cannot hold, so valuesOf keeps only these.
+ */
 const isValue = (v: unknown): v is PropertyValue =>
 	v === null || typeof v === "string" || typeof v === "number" || typeof v === "boolean";
 
-/** A point's shape: the type "Point" and two numbers, longitude then latitude; a third, a height, is left out. */
+/**
+ * A point's shape: the type "Point" and two numbers, longitude then latitude; a third, a height, is
+ * left out, since a pin marks only where a place stands on the ground.
+ */
 const PointGeometry = v.object({ type: v.literal("Point"), coordinates: v.tuple([v.number(), v.number()]) });
 
 /** The point a feature stands at, in degrees, or null for any other shape: a line, an area, or none. */
@@ -78,14 +94,25 @@ export function pointOf(feature: { readonly geometry: unknown }): [number, numbe
 	return read.success ? read.output.coordinates : null;
 }
 
+/**
+ * A property as text: a vector tile may carry an id as a number, yet the code compares and joins ids
+ * as text, so a number becomes text and anything else the empty text, which marks it missing.
+ */
 const textOf = (v: unknown): string => (typeof v === "string" ? v : typeof v === "number" ? String(v) : "");
 
-/** The tile's properties that are plain values, with the place's id and name as text. */
+/**
+ * The tile's properties that are plain values, with the place's id and name as text, so each place
+ * can be kept once by its id and labelled by its name.
+ */
 function valuesOf(feature: SourceFeature): Readonly<Record<string, PropertyValue>> & { id: string; name: string } {
 	const values = Object.fromEntries(Object.entries(feature.properties).filter(([, v]) => isValue(v)));
 	return { ...values, id: textOf(feature.properties["id"]), name: textOf(feature.properties["name"]) };
 }
 
+/**
+ * Orders two places by id, comparing the text code by code rather than by the browser's language, so
+ * every browser ranks the same ids the same way and the same name wins (UI-17, criterion 2).
+ */
 const byId = (a: { values: { id: string } }, b: { values: { id: string } }): number =>
 	a.values.id < b.values.id ? -1 : a.values.id > b.values.id ? 1 : 0;
 
@@ -99,6 +126,7 @@ const byId = (a: { values: { id: string } }, b: { values: { id: string } }): num
 export function placeCollection(loaded: readonly LoadedLayer[]): PlaceCollection {
 	const features = loaded.flatMap(({ layerId, features: raw }, layerIndex) => {
 		const layer = layerOf(layerId);
+		// A layer the page does not name has no group to colour its pins, so its places are left out.
 		if (layer === undefined) return [];
 		const unique = new Map(
 			raw.flatMap((f) => {
