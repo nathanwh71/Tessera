@@ -971,7 +971,7 @@ All ***three*** ***stories*** ***follow*** ***one*** ***idea***: a ***tile*** th
 
 **Open to talk**
 
-- ***Running*** ***each*** ***copy*** as a ***systemd*** ***service***, which would ***also*** ***restart*** a ***copy*** ***after*** the ***machine*** ***restarts***, in ***place*** of `npm start`.
+- A start-up ***task*** in ***Windows*** ***runs*** `npm start` when the ***machine*** ***switches*** on, and ***writes*** its ***output*** to `start.log`; `npm run boot-task` ***prints*** the ***steps*** that register it. It ***needs*** a ***first*** ***run*** on the ***office*** ***machine***. ***Running*** ***each*** ***copy*** as a ***systemd*** ***service*** would do the ***same*** from ***inside*** Ubuntu.
 - A ***second*** ***machine***, which would ***guard*** ***against*** a ***failed*** ***machine*** ***too***.
 
 **Critical to success**

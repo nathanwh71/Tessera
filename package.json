@@ -15,6 +15,7 @@
     "publish": "node --env-file-if-exists=.env scripts/publish.ts",
     "e2e": "node scripts/e2e.ts",
     "office-port": "node --env-file-if-exists=.env scripts/office-port.ts",
+    "boot-task": "node scripts/boot-task.ts",
     "test:scripts": "node --test \"scripts/**/*.test.ts\"",
     "typecheck": "tsc --noEmit"
   },

@@ -6,6 +6,10 @@ TestResults/
 # This machine's settings and secrets
 .env
 
+# The start-up task's log (scripts/boot.ts)
+start.log
+start.log.1
+
 .idea/
 .vscode/
 *.user

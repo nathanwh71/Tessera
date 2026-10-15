@@ -22,7 +22,7 @@ The thirty ***stories*** in `docs/user-stories/user-stories.md` ***fix*** what *
 | N-18 to N-20, tiles that cost less | ***Built*** and ***tested***: a ***tile*** ***carries*** `max-age` and a ***weak*** `ETag`, and Nginx ***keeps*** it, ***answers*** 304, and ***packs*** it with gzip (ADR 0008) |
 | N-21 to N-28, steady when the database is not | ***Built*** and ***tested***: 503 with `Retry-After`, ***grants*** ***seen*** ***within*** `Catalogue.RefreshSeconds`, ***one*** ***query*** for a ***crowd***, `/health`, and ***queries*** ***served*** in the ***order*** they ***arrive***. ***While*** the ***database*** is ***down***, Nginx ***serves*** every ***tile*** it ***holds***. The ***service*** and the ***database*** ***start*** in ***any*** ***order*** |
 | US-36 Clean places | ***Built*** and ***tested***: ***eight*** filters, ***stop*** ***rules*** and a ***log*** for ***each*** ***run*** of `npm run etl` (ADR 0009) |
-| S-07, S-30 and N-29, Nginx guards the door | ***Built*** and ***tested***: Nginx ***answers*** the ***office***'s ***network*** ***alone***, ***caps*** ***each*** ***machine*** at 100 ***tiles*** a ***second*** with a burst of 300 (ADR 0007), and ***shares*** ***requests*** ***between*** ***two*** ***copies*** of the ***service***, either of which can ***carry*** them all (ADR 0008) |
+| S-07, S-30 and N-29, Nginx guards the door | ***Built*** and ***tested***: Nginx ***answers*** the ***office***'s ***network*** ***alone***, ***caps*** ***each*** ***machine*** at 100 ***tiles*** a ***second*** with a burst of 300 (ADR 0007), and ***shares*** ***requests*** ***between*** ***two*** ***copies*** of the ***service***, either of which can ***carry*** them all (ADR 0008); a start-up ***task*** ***starts*** them ***again*** ***after*** the ***machine*** ***restarts***, and ***needs*** a ***first*** ***run*** on the ***office*** ***machine*** |
 
 ## What you need
 
@@ -47,6 +47,7 @@ The thirty ***stories*** in `docs/user-stories/user-stories.md` ***fix*** what *
 | `dotnet run --project tests/Tessera.Etl.Tests` | ***Runs*** the ***pipeline***'s ***tests***, ***one*** of them on a geodatabase GDAL ***builds*** |
 | `npm run publish` | ***Grants*** the ***nine*** ***layers*** to the ***service***, which ***serves*** them ***within*** `Catalogue.RefreshSeconds`, 30 by ***default*** (US-24 c5, N-23) |
 | `npm run office-port` | ***Checks*** that WSL2 ***uses*** ***mirrored*** ***networking***, and ***prints*** the ***steps*** that ***open*** ***port*** 80 to the ***office*** (US-35) |
+| `npm run boot-task` | ***Prints*** the PowerShell that ***makes*** ***Windows*** ***run*** `npm start` when the ***office*** ***machine*** ***switches*** on, with its ***output*** in `start.log` ***beside*** `package.json` (N-29) |
 | `npm run e2e` | ***Runs*** the ***map***'s ***browser*** ***tests***, then the Nginx ***checks***, ***against*** a ***database*** and an Nginx of their ***own*** |
 
 ***Copy*** `.env.example` to `.env` and ***give*** ***each*** ***password*** a ***value*** ***before*** `npm start`. Git ***ignores*** `.env`, so no ***password*** ***reaches*** the repository.
@@ -149,7 +150,7 @@ The ***service*** is ***one*** ***program***, with ***each*** ***module*** a ***
 | `tests/` | ***Unit***, ***property*** and ***integration*** ***tests*** of the ***service***, and the ***pipeline***'s ***tests*** |
 | `db/` | The ***packaged*** ***database***: PostgreSQL 18 with PostGIS 3.6, the ***role*** ***script***, the ***seed*** ***scripts*** in `db/seed`, and, ***beside*** ***each*** ***script*** `npm run etl` ***writes***, its ***log*** in `db/seed-logs` |
 | `data/` | The ***seed***'s ***source***: 900 ***places*** in longitude and latitude, and `macau.pipeline.json`, which ***cleans*** them into a ***seed*** ***script*** |
-| `scripts/` | The ***scripts***, in TypeScript with zx (ADR 0002): `start.ts`, `publish.ts`, `inspect.ts`, `office-port.ts`, the ***test*** and ***build*** ***runners***, and the Nginx ***checks*** in `scripts/lib/edge.ts` |
+| `scripts/` | The ***scripts***, in TypeScript with zx (ADR 0002): `start.ts`, `boot.ts` and `boot-task.ts`, `publish.ts`, `inspect.ts`, `office-port.ts`, the ***test*** and ***build*** ***runners***, and the Nginx ***checks*** in `scripts/lib/edge.ts` |
 | `docs/` | The ***stories*** and the ***architecture*** ***decision*** ***records*** |
 
 ## The documents
