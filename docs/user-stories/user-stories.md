@@ -206,7 +206,7 @@ The ***places*** ***arrive*** as ***files*** the ***data*** ***publisher*** ***o
 **Critical to success**
 
 - **A grant is a publication.** The ***seed*** ***creates*** the ***tables***; the ***data*** ***publisher*** ***alone*** ***publishes*** them.
-- **A script is the record.** A ***committed*** ***script*** ***never*** ***changes***; ***new*** ***data*** ***goes*** in a ***new*** ***script***, so the journal and the repository agree.
+- **A script is the record.** A ***committed*** ***script***'s SQL ***never*** ***changes***; ***new*** ***data*** ***goes*** in a ***new*** ***script***, so the journal and the repository agree.
 - **The tile format converts, not the table.** A vector ***tile*** can ***hold*** ***positions*** ***only*** ***inside*** its Web Mercator ***square***, so the ***conversion*** ***belongs*** to the ***tile*** ***format*** (US-07). ***Each*** ***tile*** ***query*** ***finds*** its ***places*** by the ***tile***'s ***box***, ***converted*** to ***degrees***, so the spatial index ***applies***.
 - **The schema is the group.** A ***layer***'s id, such as `food.cafes`, ***names*** its ***group***, so a ***client*** ***knows*** a ***layer***'s ***group*** from its ***name*** ***alone***.
 - **Typed, indexed, analysed.** An untyped ***column*** is not ***published*** (US-03), and ***without*** an index and ***fresh*** ***statistics*** every ***tile*** ***reads*** the ***whole*** ***table***.

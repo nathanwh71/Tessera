@@ -76,7 +76,7 @@ public static class SeedScript
         return Result.Success<string, string>(string.Join('\n',
         [
             $"-- Made by 'npm run etl' from {pipelineFile}. DbUp runs this script once (ADR 0009).",
-            "-- Never change it after it has run: DbUp would not run it again. Write a new script instead.",
+            "-- Never change its SQL after it has run: DbUp would not run it again. Write a new script instead.",
             .. schemas.Select(schema => $"CREATE SCHEMA IF NOT EXISTS \"{schema}\";"),
             .. parts.SelectMany(part => new[]
             {

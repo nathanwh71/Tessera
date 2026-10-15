@@ -28,7 +28,7 @@ public sealed class DatabaseTests(DatabaseFixture database) : IClassFixture<Data
                 "SELECT setconfig FROM pg_db_role_setting s JOIN pg_roles r ON r.oid = s.setrole WHERE r.rolname = 'tessera_reader'"));
 
     // US-01 test 2: the places' source matches its fingerprint byte for byte, and the release
-    // carries the script the converter made from it (ADR 0009).
+    // carries the script made from it (ADR 0009).
     [Fact]
     public void Ships_the_seed_made_from_the_places()
     {
@@ -39,7 +39,7 @@ public sealed class DatabaseTests(DatabaseFixture database) : IClassFixture<Data
         // This one is the fingerprint of data/macau-pois.geojson as it arrived on 13 October 2026.
         Assert.Equal("d9319335cc40dd25ecc8782c4cf9041cf2be53bdebd0aaa8637991b5e050e2f3", Convert.ToHexStringLower(SHA256.HashData(source)));
         Assert.StartsWith(
-            "-- Made by 'npm run convert' from data/macau-pois.geojson.",
+            "-- Made from data/macau-pois.geojson.",
             File.ReadAllText(Path.Combine(SeedScripts.Folder, "0001-macau-places.sql")),
             StringComparison.Ordinal);
     }

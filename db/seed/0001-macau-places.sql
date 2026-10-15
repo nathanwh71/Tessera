@@ -1,5 +1,5 @@
--- Made by 'npm run convert' from data/macau-pois.geojson. DbUp runs this script once (ADR 0009).
--- Never change it after it has run: DbUp would not run it again. Write a new script instead.
+-- Made from data/macau-pois.geojson. DbUp runs this script once (ADR 0009).
+-- Never change its SQL after it has run: DbUp would not run it again. Write a new script instead.
 CREATE SCHEMA IF NOT EXISTS "food";
 CREATE SCHEMA IF NOT EXISTS "outdoors";
 CREATE SCHEMA IF NOT EXISTS "culture";
