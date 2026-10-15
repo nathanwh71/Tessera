@@ -18,7 +18,8 @@
 //
 // Each step's decision comes from a pure function in lib/plan.ts; this file only runs commands.
 import { resolve } from 'node:path';
-import { $, sleep, type ProcessPromise } from 'zx';
+import { setTimeout as delay } from 'node:timers/promises';
+import { $, type ProcessPromise } from 'zx';
 import { waitForDatabase, waitForHealth } from './lib/database.ts';
 import { databaseUrl, nginxArguments, readStartSettings, runArguments } from './lib/plan.ts';
 import { keepRunning } from './lib/supervise.ts';
@@ -68,6 +69,11 @@ await $({ env: { ...process.env, TESSERA_PUBLISHER_DATABASE_URL: databaseUrl('te
 
 // N-29: each copy runs until told to stop; lib/supervise.ts starts one again when it stops.
 let stopping = false;
+// Ctrl+C aborts this, which cuts short any wait before a restart, so the script ends at once
+// rather than up to 30 seconds later, when the wait would have run out.
+const stopped = new AbortController();
+// Waits before a restart, or less if Ctrl+C comes first; an aborted wait simply ends early.
+const wait = (milliseconds: number): Promise<void> => delay(milliseconds, undefined, { signal: stopped.signal }).catch(() => undefined);
 const copiesNow = new Map<string, ProcessPromise>();
 const reader = databaseUrl('tessera_reader', settings.readerPassword, settings.database);
 const runCopy = (port: string) => keepRunning(`port ${port}`, {
@@ -78,7 +84,7 @@ const runCopy = (port: string) => keepRunning(`port ${port}`, {
     return ended.exitCode === null ? `signal ${ended.signal}` : `code ${ended.exitCode}`;
   },
   stopping: () => stopping,
-  wait: sleep,
+  wait,
   now: Date.now,
   say: line => console.error(line),
 });
@@ -86,10 +92,23 @@ const runCopy = (port: string) => keepRunning(`port ${port}`, {
 // Ctrl+C stops both copies and then this script; Nginx and the database keep running in Docker.
 process.on('SIGINT', () => {
   stopping = true;
-  // A copy may end just as the signal goes, and the kill then fails; .catch drops that failure,
-  // which changes nothing. zx throws at once, before .catch, for a copy it already knows has ended.
-  for (const copy of copiesNow.values()) void copy.kill().catch(() => undefined);
+  stopped.abort();
+  for (const copy of copiesNow.values()) stopCopy(copy);
 });
+
+/**
+ * Stops one copy, whatever state it is in. A copy waiting out its restart delay has already ended,
+ * and zx then throws at once rather than return a promise, so the try catches that; a copy that ends
+ * just as the signal goes makes the kill fail later, and .catch drops that. Either way the copy is
+ * stopped, and an error here would end the script before it stopped the other copy.
+ */
+function stopCopy(copy: ProcessPromise): void {
+  try {
+    void copy.kill().catch(() => undefined);
+  } catch {
+    // The copy had ended already: nothing to stop.
+  }
+}
 
 console.log(`Starting two copies of the service, on ports ${settings.servicePorts.join(' and ')}, behind Nginx on port ${settings.httpPort}.`);
 const copies = settings.servicePorts.map(runCopy);
