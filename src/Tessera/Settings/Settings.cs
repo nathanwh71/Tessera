@@ -1,9 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using CSharpFunctionalExtensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Npgsql;
 
 // The Settings module: every setting the service and the seed read, with its default and its
 // limits (US-00, ADR 0003). ASP.NET Core reads tessera.json and the environment, fills these records
@@ -117,23 +115,6 @@ public sealed record AreaSettings : IValidatableObject
             : [new ValidationResult("The box must run west to east and south to north.")];
 }
 
-/// <summary>The database's connection, from the URL in <see cref="Variable"/>, checked at start-up.</summary>
-public sealed class DatabaseConnection : IValidatableObject
-{
-    /// <summary>The environment variable that held the URL, named in any problem.</summary>
-    public string Variable { get; set; } = TesseraSettings.ReaderDatabase;
-
-    public string? Url { get; set; }
-
-    /// <summary>Npgsql's connection string, or empty text while the URL fails the check.</summary>
-    public string Text => TesseraSettings.ConnectionString(Url).GetValueOrDefault("");
-
-    public IEnumerable<ValidationResult> Validate(ValidationContext context) =>
-        TesseraSettings.ConnectionString(Url) is { IsFailure: true } refused
-            ? [new ValidationResult($"{Variable}: {refused.Error}")]
-            : [];
-}
-
 /// <summary>
 /// Reads tessera.json and the environment through ASP.NET Core's own configuration, binds each
 /// section to its record, and checks every value when the program starts (US-00 c4).
@@ -156,23 +137,18 @@ public static class TesseraSettings
             .AddEnvironmentVariables();
 
     /// <summary>
-    /// Binds each section to its record, with the record's own limits, and the database URL from
-    /// <paramref name="databaseVariable"/>. A key the service does not read is refused, since it is
-    /// most often a misspelling. A misspelt section name passes unseen: its keys bind to nothing, so
-    /// the section keeps its defaults.
+    /// Binds each section to its record, with the record's own limits. A key the service does not
+    /// read is refused, since it is most often a misspelling. A misspelt section name passes unseen:
+    /// its keys bind to nothing, so the section keeps its defaults. The database's URL is the Sql
+    /// module's to read (DatabaseConnections.Register), since only Sql knows the database client.
     /// </summary>
-    public static void Register(IServiceCollection services, IConfiguration configuration, string databaseVariable)
+    public static void Register(IServiceCollection services)
     {
         Section<DatabaseSettings>(services, "Database");
         Section<TileSettings>(services, "Tiles");
         Section<MapSettings>(services, "Map");
         Section<CatalogueSettings>(services, "Catalogue");
         Section<AreaSettings>(services, "Area");
-        services.AddOptions<DatabaseConnection>()
-            .Configure(connection =>
-                (connection.Variable, connection.Url) = (databaseVariable, configuration[databaseVariable]))
-            .ValidateDataAnnotations()
-            .ValidateOnStart();
     }
 
     private static void Section<T>(IServiceCollection services, string name) where T : class =>
@@ -194,26 +170,4 @@ public static class TesseraSettings
         AggregateException many => many.InnerExceptions.SelectMany(Problems),
         _ => [error.Message],
     };
-
-    /// <summary>
-    /// Turns <c>postgresql://user:password@host:port/database</c> into Npgsql's connection string;
-    /// with no port, PostgreSQL's usual 5432. A password may hold any character, so a character such
-    /// as '@' arrives percent-encoded, here %40.
-    /// </summary>
-    public static Result<string, string> ConnectionString(string? url)
-    {
-        if (string.IsNullOrEmpty(url))
-            return Result.Failure<string, string>("missing or empty");
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme is not ("postgresql" or "postgres")
-            || uri.UserInfo.Split(':', 2) is not [{ Length: > 0 } user, var password] || uri.AbsolutePath.Length < 2)
-            return Result.Failure<string, string>("expected postgresql://user:password@host:port/database");
-        return Result.Success<string, string>(new NpgsqlConnectionStringBuilder
-        {
-            Host = uri.Host,
-            Port = uri.IsDefaultPort || uri.Port < 0 ? 5432 : uri.Port,
-            Database = Uri.UnescapeDataString(uri.AbsolutePath[1..]),
-            Username = Uri.UnescapeDataString(user),
-            Password = Uri.UnescapeDataString(password),
-        }.ConnectionString);
-    }
 }

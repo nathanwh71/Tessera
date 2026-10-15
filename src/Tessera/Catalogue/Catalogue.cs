@@ -23,7 +23,11 @@ namespace Tessera.Catalogue;
 /// <param name="Order">The quoted primary key, which fixes the order of features; empty for a view.</param>
 public sealed record Layer(
     string Id, string Table, string Geometry, int Srid, string GeometryType,
-    ImmutableArray<string> Properties, ImmutableArray<string> Order);
+    ImmutableArray<string> Properties, ImmutableArray<string> Order)
+{
+    /// <summary>What the tile query needs of this layer (Queries.Tile).</summary>
+    public TileSource Source => new(Id, Table, Geometry, Srid, Properties, Order);
+}
 
 /// <summary>One row of <see cref="Queries.Layers"/>; Dapper fills it by matching column names.</summary>
 public sealed record CatalogueRow(

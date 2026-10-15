@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Tessera.Settings;
+using Tessera.Sql;
 
 namespace Tessera.UnitTests;
 
@@ -21,7 +22,8 @@ public sealed class SettingsTests
         builder.Configuration
             .AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(json)))
             .AddInMemoryCollection(new Dictionary<string, string?>(environment ?? []) { [TesseraSettings.ReaderDatabase] = url });
-        TesseraSettings.Register(builder.Services, builder.Configuration, TesseraSettings.ReaderDatabase);
+        TesseraSettings.Register(builder.Services);
+        DatabaseConnections.Register(builder.Services, builder.Configuration, TesseraSettings.ReaderDatabase);
         return builder.Build();
     }
 

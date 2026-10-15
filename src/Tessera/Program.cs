@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Tessera;
 using Tessera.Seeding;
 using Tessera.Settings;
+using Tessera.Sql;
 
 // The program's starting point. One program does both jobs (ADR 0001):
 //   Tessera                  serves tiles and the map, behind Nginx (ADR 0008)
@@ -42,7 +43,8 @@ static int Seed()
 {
     var builder = Host.CreateApplicationBuilder();
     TesseraSettings.AddFile(builder.Configuration);
-    TesseraSettings.Register(builder.Services, builder.Configuration, TesseraSettings.PublisherDatabase);
+    TesseraSettings.Register(builder.Services);
+    DatabaseConnections.Register(builder.Services, builder.Configuration, TesseraSettings.PublisherDatabase);
     using var host = builder.Build();
     try
     {

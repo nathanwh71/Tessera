@@ -49,7 +49,7 @@ public sealed class PoolTests(DatabaseFixture database) : IClassFixture<Database
         {
             var (x, y) = TileOf(113.54, 22.19, zoom);
             var mine = zoom;
-            asks.Add(reader.Single<byte[]>(Queries.Tile(layer, new Tiles.TileAddress(zoom, x, y), Limits), TestContext.Current.CancellationToken)
+            asks.Add(reader.Single<byte[]>(Queries.Tile(layer.Source, zoom, x, y, Limits), TestContext.Current.CancellationToken)
                 .ContinueWith(_ => finished.Enqueue(mine), TaskScheduler.Default));
             // Long enough for each request to join the queue before the next; far shorter than one query.
             await Task.Delay(50, TestContext.Current.CancellationToken);
@@ -68,7 +68,7 @@ public sealed class PoolTests(DatabaseFixture database) : IClassFixture<Database
         await using var reader = Database.Open(database.Reader, OneConnection);
         var layer = await Layer(reader, "stage.queue_hold");
         var (x, y) = TileOf(113.54, 22.19, 0);
-        var hold = reader.Single<byte[]>(Queries.Tile(layer, new Tiles.TileAddress(0, x, y), Limits), TestContext.Current.CancellationToken);
+        var hold = reader.Single<byte[]>(Queries.Tile(layer.Source, 0, x, y, Limits), TestContext.Current.CancellationToken);
         await Task.Delay(300, TestContext.Current.CancellationToken);
 
         var clock = System.Diagnostics.Stopwatch.StartNew();
@@ -90,7 +90,7 @@ public sealed class PoolTests(DatabaseFixture database) : IClassFixture<Database
         await using var reader = Database.Open(database.Reader, OneConnection);
         var layer = await Layer(reader, "stage.queue_hold");
         var (x, y) = TileOf(113.54, 22.19, 0);
-        var hold = reader.Single<byte[]>(Queries.Tile(layer, new Tiles.TileAddress(0, x, y), Limits), TestContext.Current.CancellationToken);
+        var hold = reader.Single<byte[]>(Queries.Tile(layer.Source, 0, x, y, Limits), TestContext.Current.CancellationToken);
         await Task.Delay(300, TestContext.Current.CancellationToken);
 
         using var leave = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
@@ -99,7 +99,7 @@ public sealed class PoolTests(DatabaseFixture database) : IClassFixture<Database
         var (x1, y1) = TileOf(113.54, 22.19, 1);
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            reader.Single<byte[]>(Queries.Tile(layer, new Tiles.TileAddress(1, x1, y1), Limits), leave.Token));
+            reader.Single<byte[]>(Queries.Tile(layer.Source, 1, x1, y1, Limits), leave.Token));
         Assert.True(clock.Elapsed < TimeSpan.FromSeconds(1), $"took {clock.Elapsed}");
         await hold;
     }

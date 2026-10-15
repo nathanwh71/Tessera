@@ -1,0 +1,63 @@
+using System.ComponentModel.DataAnnotations;
+using CSharpFunctionalExtensions;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
+using Tessera.Settings;
+
+// The database's address, as the environment gives it (US-00 c4). It lives in Sql, the one module
+// that knows the database client, Npgsql (ADR 0001, rule 3).
+
+namespace Tessera.Sql;
+
+/// <summary>The database's connection, from the URL in <see cref="Variable"/>, checked at start-up.</summary>
+public sealed class DatabaseConnection : IValidatableObject
+{
+    /// <summary>The environment variable that held the URL, named in any problem.</summary>
+    public string Variable { get; set; } = TesseraSettings.ReaderDatabase;
+
+    public string? Url { get; set; }
+
+    /// <summary>Npgsql's connection string, or empty text while the URL fails the check.</summary>
+    public string Text => DatabaseConnections.ConnectionString(Url).GetValueOrDefault("");
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext context) =>
+        DatabaseConnections.ConnectionString(Url) is { IsFailure: true } refused
+            ? [new ValidationResult($"{Variable}: {refused.Error}")]
+            : [];
+}
+
+public static class DatabaseConnections
+{
+    /// <summary>
+    /// Reads the database URL from <paramref name="variable"/>, such as DATABASE_URL, and checks it
+    /// when the program starts, with every other setting (TesseraSettings.Check).
+    /// </summary>
+    public static void Register(IServiceCollection services, IConfiguration configuration, string variable) =>
+        services.AddOptions<DatabaseConnection>()
+            .Configure(connection => (connection.Variable, connection.Url) = (variable, configuration[variable]))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+    /// <summary>
+    /// Turns <c>postgresql://user:password@host:port/database</c> into Npgsql's connection string;
+    /// with no port, PostgreSQL's usual 5432. A password may hold any character, so a character such
+    /// as '@' arrives percent-encoded, here %40.
+    /// </summary>
+    public static Result<string, string> ConnectionString(string? url)
+    {
+        if (string.IsNullOrEmpty(url))
+            return Result.Failure<string, string>("missing or empty");
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme is not ("postgresql" or "postgres")
+            || uri.UserInfo.Split(':', 2) is not [{ Length: > 0 } user, var password] || uri.AbsolutePath.Length < 2)
+            return Result.Failure<string, string>("expected postgresql://user:password@host:port/database");
+        return Result.Success<string, string>(new NpgsqlConnectionStringBuilder
+        {
+            Host = uri.Host,
+            Port = uri.IsDefaultPort || uri.Port < 0 ? 5432 : uri.Port,
+            Database = Uri.UnescapeDataString(uri.AbsolutePath[1..]),
+            Username = Uri.UnescapeDataString(user),
+            Password = Uri.UnescapeDataString(password),
+        }.ConnectionString);
+    }
+}

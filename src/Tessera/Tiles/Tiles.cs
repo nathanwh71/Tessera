@@ -71,7 +71,7 @@ public sealed class TileServer(
         if (TileAddress.Of(z, x, y, settings.MinZoom, settings.MaxZoom) is not { } tile)
             return Problems.NotFound("No tile has those coordinates.");
 
-        var built = await read(Queries.Tile(found, tile, settings), cancel).ConfigureAwait(false);
+        var built = await read(Queries.Tile(found.Source, tile.Z, tile.X, tile.Y, settings), cancel).ConfigureAwait(false);
         return built.Match(
             bytes => new TileResult(bytes ?? [], CacheControl(settings.CacheSeconds)),
             // A withdrawn grant gives 42501: the layer has left, so 404 (US-03 c6). A column a seed script

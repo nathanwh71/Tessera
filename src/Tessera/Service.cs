@@ -28,7 +28,8 @@ public static class TesseraService
         var builder = WebApplication.CreateBuilder();
         TesseraSettings.AddFile(builder.Configuration);
         builder.Configuration.AddInMemoryCollection(overrides ?? new Dictionary<string, string?>());
-        TesseraSettings.Register(builder.Services, builder.Configuration, TesseraSettings.ReaderDatabase);
+        TesseraSettings.Register(builder.Services);
+        DatabaseConnections.Register(builder.Services, builder.Configuration, TesseraSettings.ReaderDatabase);
         builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = Problems.Shape);
 
         builder.Services.AddSingleton(services => Database.Open(

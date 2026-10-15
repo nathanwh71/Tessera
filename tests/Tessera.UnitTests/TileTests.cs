@@ -33,7 +33,7 @@ public sealed class TileTests
     // to the query fails this test until someone reads the new text and copies it over the old file.
     [Fact]
     public void Matches_the_approved_tile_query() =>
-        Assert.Equal(Approved, Queries.Tile(Cafes, new TileAddress(15, 27154, 14280), Limits).Text.ReplaceLineEndings().TrimEnd());
+        Assert.Equal(Approved, Queries.Tile(Cafes.Source, 15, 27154, 14280, Limits).Text.ReplaceLineEndings().TrimEnd());
 
     // S-01 c1: whatever tile a request names, the text stays the approved text; the numbers travel as
     // parameters alone.
@@ -43,13 +43,13 @@ public sealed class TileTests
         var z = level % 23;
         var size = 1L << z;
         var tile = new TileAddress(z, (int)(column % size), (int)(row % size));
-        return Queries.Tile(Cafes, tile, Limits).Text.ReplaceLineEndings().TrimEnd() == Approved;
+        return Queries.Tile(Cafes.Source, tile.Z, tile.X, tile.Y, Limits).Text.ReplaceLineEndings().TrimEnd() == Approved;
     }
 
     [Fact]
     public void Sends_the_layer_and_the_tile_as_parameters()
     {
-        var query = Queries.Tile(Cafes, new TileAddress(15, 27154, 14280), Limits);
+        var query = Queries.Tile(Cafes.Source, 15, 27154, 14280, Limits);
 
         Assert.DoesNotContain("food.cafes", query.Text, StringComparison.Ordinal);
         Assert.Equal(new { layer = "food.cafes", resolution = 4096, z = 15, x = 27154, y = 14280, buffer = 64, margin = 0.015625, srid = 4326, limit = 10000 }.ToString(), query.Parameters?.ToString());
