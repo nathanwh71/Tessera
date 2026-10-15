@@ -104,6 +104,25 @@ export async function checkEdge(base: string, stopFirst: () => Promise<void>, st
   // Another office machine is not slowed by the first one's limit.
   assert.equal((await ask(tile, {}, 'GET', '127.0.0.5')).status, 200);
 
+  // N-24: twenty requests at once for one tile that takes two seconds to build all get it in about
+  // two. Without Nginx's lock, twenty queries would share the two copies' eight connections and
+  // take three rounds, six seconds or more.
+  const crowdTile = `${base}/food.slow_cafes/0/0/0.pbf`;
+  const began = Date.now();
+  const crowd = await Promise.all(Array.from({ length: 20 }, () => ask(crowdTile, { 'Accept-Encoding': 'identity' })));
+  const took = Date.now() - began;
+  assert.ok(crowd.every(answer => answer.status === 200), `statuses ${crowd.map(answer => answer.status).join(',')}`);
+  assert.ok(took >= 1800 && took < 4000, `twenty requests took ${took} ms`);
+
+  // S-30: one machine may have 32 requests in hand at once. Forty at once for a slow tile leave
+  // eight or more refused with 429, and the rest receive the tile.
+  const many = new Agent({ keepAlive: false, maxSockets: 64 });
+  const forty = await Promise.all(Array.from({ length: 40 }, () => ask(`${base}/food.slow_cafes/1/1/0.pbf`, {}, 'GET', '127.0.0.7', many)));
+  many.destroy();
+  const refused = forty.filter(answer => answer.status === 429).length;
+  assert.ok(refused >= 8, `${refused} of 40 refused`);
+  assert.equal(forty.filter(answer => answer.status === 200).length, 40 - refused);
+
   // N-29: with the first copy stopped, the second serves a tile Nginx never held, and /health
   // still says UP. Nginx tries the stopped copy, meets a refused connection, and moves on.
   await stopFirst();
@@ -126,5 +145,5 @@ export async function checkEdge(base: string, stopFirst: () => Promise<void>, st
   assert.equal(never.status, 503);
   assert.equal(never.headers['content-type'], 'application/problem+json');
   assert.equal(never.headers['retry-after'], '5');
-  console.log('Nginx checks passed: the office-only rule, the limit for each visitor, kept tiles, 304, gzip, HEAD, malformed addresses, a second copy taking over, and tiles served with both copies down.');
+  console.log('Nginx checks passed: the office-only rule, the limit for each visitor, the cap on requests at once, one query for a crowd, kept tiles, 304, gzip, HEAD, malformed addresses, a second copy taking over, and tiles served with both copies down.');
 }
