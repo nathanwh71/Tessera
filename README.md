@@ -130,7 +130,7 @@ The ***pipeline*** ***file*** ***builds*** the ***same*** ***chain*** from its *
 
 ## What is where
 
-The ***service*** is ***one*** ***program*** in ***one*** ***project***, with a ***folder*** for ***each*** ***module*** (ADR 0001). It ***borrows*** what ***libraries*** do ***well***: ASP.NET Core ***reads*** its ***settings***, ***writes*** its ***problem*** ***documents*** and ***answers*** `/health`; Dapper and Npgsql ***talk*** to the ***database***; CSharpFunctionalExtensions ***gives*** `Result` (ADR 0004); DbUp ***runs*** the ***seed*** ***scripts*** (ADR 0009); Nginx ***keeps***, ***packs*** and ***guards*** (ADR 0008).
+The ***service*** is ***one*** ***program***, with ***each*** ***module*** a ***project*** of its ***own*** in a ***folder*** of `src/Tessera`; the ***compiler*** ***keeps*** ***each*** ***module*** to the ***neighbours*** its ***project*** ***file*** ***names*** (ADR 0001). It ***borrows*** what ***libraries*** do ***well***: ASP.NET Core ***reads*** its ***settings***, ***writes*** its ***problem*** ***documents*** and ***answers*** `/health`; Dapper and Npgsql ***talk*** to the ***database***; CSharpFunctionalExtensions ***gives*** `Result` (ADR 0004); DbUp ***runs*** the ***seed*** ***scripts*** (ADR 0009); Nginx ***keeps***, ***packs*** and ***guards*** (ADR 0008).
 
 | Folder | What it holds |
 |---|---|
@@ -140,8 +140,9 @@ The ***service*** is ***one*** ***program*** in ***one*** ***project***, with a 
 | `src/Tessera/Seeding` | The `seed` ***command***: DbUp ***runs*** ***each*** ***new*** ***script*** in `db/seed` ***once*** |
 | `src/Tessera/Tiles` | The ***tile*** ***route*** and its ***answers*** |
 | `src/Tessera/Map` | ***Serving*** the ***map***'s ***page***, with the ***area*** ***written*** in, and its ***files*** |
+| `src/Tessera/Problems` | The ***shape*** of every ***problem*** ***document*** |
 | `tools/Tessera.Etl` | The ***pipeline*** that ***cleans*** a ***file*** of ***places*** into a ***seed*** ***script***; the ***service*** ***never*** ***runs*** it (ADR 0009) |
-| `src/Tessera` | `Program.cs`, the ***two*** ***commands***; `Service.cs`, the ***service*** ***put*** ***together*** and `/health`; `Problems.cs` |
+| `src/Tessera` | `Program.cs`, the ***two*** ***commands***; `Service.cs`, the ***service*** ***put*** ***together*** and `/health`; `Directory.Build.props`, the ***rules*** every ***module*** ***project*** ***shares*** |
 | `nginx/` | Nginx's ***file***, which `npm start` and the ***browser*** ***tests*** ***run*** (ADR 0008) |
 | `web/` | The ***map***: TypeScript, React, MapLibre GL JS, react-elmish, Valibot and Tailwind CSS (ADR 0006) |
 | `tests/` | ***Unit***, ***property*** and ***integration*** ***tests*** of the ***service***, and the ***pipeline***'s ***tests*** |

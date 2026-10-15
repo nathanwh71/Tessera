@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Tiles: the tile route and its answers (US-07, N-18). -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="CSharpFunctionalExtensions" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Catalogue/Tessera.Catalogue.csproj" />
+    <ProjectReference Include="../Settings/Tessera.Settings.csproj" />
+    <ProjectReference Include="../Sql/Tessera.Sql.csproj" />
+    <ProjectReference Include="../Problems/Tessera.Problems.csproj" />
+  </ItemGroup>
+</Project>

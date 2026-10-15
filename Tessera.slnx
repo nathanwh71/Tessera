@@ -1,6 +1,13 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Tessera/Tessera.csproj" />
+    <Project Path="src/Tessera/Problems/Tessera.Problems.csproj" />
+    <Project Path="src/Tessera/Settings/Tessera.Settings.csproj" />
+    <Project Path="src/Tessera/Sql/Tessera.Sql.csproj" />
+    <Project Path="src/Tessera/Catalogue/Tessera.Catalogue.csproj" />
+    <Project Path="src/Tessera/Seeding/Tessera.Seeding.csproj" />
+    <Project Path="src/Tessera/Tiles/Tessera.Tiles.csproj" />
+    <Project Path="src/Tessera/Map/Tessera.Map.csproj" />
   </Folder>
   <Folder Name="/tools/">
     <Project Path="tools/Tessera.Etl/Tessera.Etl.csproj" />

@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Catalogue: the list of layers, read from the database through Sql (US-03, N-23). -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="CSharpFunctionalExtensions" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Sql/Tessera.Sql.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Map: the map's page, with the area written in, and its files (US-23, ADR 0006). -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Settings/Tessera.Settings.csproj" />
+    <ProjectReference Include="../Problems/Tessera.Problems.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,19 @@
+<Project>
+  <!-- The settings every project in the solution shares, from the folder above. -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <!--
+    The service's modules, one project each (ADR 0001). The compiler guards the borders:
+    - A project sees only the projects it names. DisableTransitiveProjectReferences stops a module
+      seeing, say, Settings through Sql, so each reference below is a decision someone made.
+    - A circle of references fails the build.
+    - A type marked internal stays inside its project; the two test projects may see inside.
+  -->
+  <PropertyGroup>
+    <DisableTransitiveProjectReferences>true</DisableTransitiveProjectReferences>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Tessera.UnitTests" />
+    <InternalsVisibleTo Include="Tessera.IntegrationTests" />
+  </ItemGroup>
+</Project>

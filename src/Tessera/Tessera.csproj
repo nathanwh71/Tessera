@@ -1,18 +1,22 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
-  <!-- The whole service in one project, a folder for each module (ADR 0001). -->
+  <!--
+    The program: Program.cs and Service.cs, which put the modules together (ADR 0001). Each module
+    is a project of its own, in a folder here, so this project compiles none of their files and
+    names each one below.
+  -->
   <PropertyGroup>
     <!-- The map's files go out as Vite built them; the SDK's static-web-assets pipeline stays off. -->
     <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
+    <DefaultItemExcludes>$(DefaultItemExcludes);Catalogue/**;Map/**;Problems/**;Seeding/**;Settings/**;Sql/**;Tiles/**</DefaultItemExcludes>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Npgsql" />
-    <PackageReference Include="Dapper" />
-    <PackageReference Include="CSharpFunctionalExtensions" />
-    <PackageReference Include="dbup-postgresql" />
-  </ItemGroup>
-  <ItemGroup>
-    <InternalsVisibleTo Include="Tessera.UnitTests" />
-    <InternalsVisibleTo Include="Tessera.IntegrationTests" />
+    <ProjectReference Include="Catalogue/Tessera.Catalogue.csproj" />
+    <ProjectReference Include="Map/Tessera.Map.csproj" />
+    <ProjectReference Include="Problems/Tessera.Problems.csproj" />
+    <ProjectReference Include="Seeding/Tessera.Seeding.csproj" />
+    <ProjectReference Include="Settings/Tessera.Settings.csproj" />
+    <ProjectReference Include="Sql/Tessera.Sql.csproj" />
+    <ProjectReference Include="Tiles/Tessera.Tiles.csproj" />
   </ItemGroup>
   <ItemGroup>
     <!-- tessera.json sits beside the program, where the service looks for it (ADR 0003). -->

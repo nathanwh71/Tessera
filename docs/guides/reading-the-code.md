@@ -14,8 +14,8 @@
 
 ### Step 2 · How the service is put together
 
-- **Open:** `src/Tessera/Service.cs`.
-- **Look for:** ***two*** ***halves***. ***Before*** `builder.Build()`, the ***code*** ***fills*** the ***table*** of ***services***: the ***settings***, the ***database*** ***pool***, the ***list*** of ***layers***, the ***health*** ***check***. ***After*** it, the ***code*** ***lays*** the ***pipeline*** every ***request*** ***passes*** ***through***, in ***order***: the ***error*** ***handlers***, the ***map***'s ***headers***, `/health`, the ***tiles***, the ***map***.
+- **Open:** `src/Tessera/Service.cs`, then `src/Tessera/Tessera.csproj` and ***one*** ***module***'s ***project*** ***file***, such as `src/Tessera/Tiles/Tessera.Tiles.csproj`.
+- **Look for:** ***two*** ***halves***. ***Before*** `builder.Build()`, the ***code*** ***fills*** the ***table*** of ***services***: the ***settings***, the ***database*** ***pool***, the ***list*** of ***layers***, the ***health*** ***check***. ***After*** it, the ***code*** ***lays*** the ***pipeline*** every ***request*** ***passes*** ***through***, in ***order***: the ***error*** ***handlers***, the ***map***'s ***headers***, `/health`, the ***tiles***, the ***map***. Then the ***project*** ***files***: the ***program*** ***names*** every ***module***, and ***each*** ***module*** ***names*** ***only*** the ***modules*** it may ***use***, so the ***compiler*** ***refuses*** ***any*** ***other*** (ADR 0001).
 - **Check yourself:** what does `/health` ***answer*** ***while*** the ***list*** of ***layers*** is ***still*** ***loading***?
 
 ### Step 3 · Where the settings come from

@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Seeding: the seed command; DbUp is the database's one other door (ADR 0009). -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="dbup-postgresql" />
+    <PackageReference Include="CSharpFunctionalExtensions" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Sql/Tessera.Sql.csproj" />
+  </ItemGroup>
+</Project>
