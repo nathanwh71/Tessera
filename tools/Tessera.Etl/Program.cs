@@ -24,7 +24,7 @@ if (!File.Exists(pipelineFile))
 var read = PipelineFile.Read(File.ReadAllText(pipelineFile), AreaFromSettings("tessera.json"));
 if (read.IsFailure)
     return Fail(2, [.. read.Error]);
-var pipeline = read.Value;
+var (pipeline, tables) = read.Value;
 
 var source = Path.GetFullPath(pipeline.Source);
 if (!File.Exists(source) && !Directory.Exists(source))
@@ -40,8 +40,9 @@ var reports = ImmutableArray.CreateBuilder<TableReport>();
 var parts = ImmutableArray.CreateBuilder<(TablePlan, string)>();
 try
 {
-    foreach (var table in pipeline.Tables)
+    foreach (var plan in tables)
     {
+        var table = plan.Table;
         Console.WriteLine($"{table.Table}: extracting{(table.Layer is { } layer ? $" {layer}" : "")}...");
         var extracted = Path.Combine(work, $"{table.Table}.extracted.geojson");
         var extract = await Gdal.Run(SeedScript.ExtractArguments(source, extracted, table), folders);
@@ -49,12 +50,12 @@ try
             return Finish(1, $"{table.Table}: extraction failed. {extract.Error}");
 
         var (rows, columns) = GeoJson.Read(File.ReadAllText(extracted));
-        var report = Cleaning.Clean(table, rows, pipeline.Area, pipeline.StopWhen);
+        var report = Cleaning.Clean(plan, rows, pipeline.StopWhen);
         reports.Add(report);
-        Console.WriteLine($"{table.Table}: read {report.Read}, kept {report.Kept.Length}, dropped {report.Dropped}.");
         if (report.Stop is { } stop)
             return Finish(1, $"stopped. {stop} No script written.");
 
+        Console.WriteLine($"{table.Table}: read {report.Read}, kept {report.Kept.Length}, dropped {report.Dropped}.");
         var cleaned = Path.Combine(work, $"{table.Table}.cleaned.geojson");
         File.WriteAllText(cleaned, GeoJson.Write(report.Kept, columns));
         var load = await Gdal.Run(SeedScript.LoadArguments(cleaned, table), folders);

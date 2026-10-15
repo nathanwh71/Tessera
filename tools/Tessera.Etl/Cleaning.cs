@@ -4,14 +4,14 @@ using System.Text;
 
 namespace Tessera.Etl;
 
-/// <summary>What happened to one table: the rows read, each filter's outcome in turn, and why it stopped, if it did.</summary>
-public sealed record TableReport(
-    TablePlan Table,
-    int Read,
-    ImmutableArray<(string Filter, Outcome Outcome)> Steps,
-    ImmutableArray<Row> Kept,
-    string? Stop)
+/// <summary>
+/// What happened to one table: its filters' names in order, the rows read, the chain's outcome,
+/// and why the table stops the run, if it does.
+/// </summary>
+public sealed record TableReport(TablePlan Table, ImmutableArray<string> Filters, int Read, Outcome Outcome, string? Stop)
 {
+    public ImmutableArray<Row> Kept => Outcome.Rows;
+
     public int Dropped => Read - Kept.Length;
 }
 
@@ -22,32 +22,24 @@ public sealed record TableReport(
 public static class Cleaning
 {
     /// <summary>
-    /// Runs the table's filters in the order the pipeline file gives them, each on the rows the one
-    /// before it kept. The first filter that stops ends the table. Then the table's stop rules,
-    /// or the pipeline's, or the defaults, judge what is left.
+    /// Runs the table's chain of filters (see <see cref="Chain"/>), which ends at the first filter
+    /// that stops. Then the table's stop rules, or the pipeline's, or the defaults, judge what is left.
     /// </summary>
-    public static TableReport Clean(TablePlan table, ImmutableArray<Row> rows, Area? area, StopWhen? pipelineRules)
+    public static TableReport Clean(CleaningPlan plan, ImmutableArray<Row> rows, StopWhen? pipelineRules)
     {
-        var steps = ImmutableArray.CreateBuilder<(string, Outcome)>();
-        var current = rows;
-        foreach (var step in table.Filters.IsDefault ? [] : table.Filters)
-        {
-            var outcome = Filters.For(step, area)(current);
-            steps.Add((step.Filter, outcome));
-            if (outcome.Stop is { } stop) return new TableReport(table, rows.Length, steps.ToImmutable(), outcome.Rows, stop);
-            current = outcome.Rows;
-        }
+        var outcome = plan.Chain(rows);
+        if (outcome.Stop is { } stop) return new TableReport(plan.Table, plan.Filters, rows.Length, outcome, stop);
 
-        var rules = table.StopWhen ?? pipelineRules ?? PipelineFile.Defaults;
-        var dropped = rows.Length - current.Length;
+        var rules = plan.Table.StopWhen ?? pipelineRules ?? PipelineFile.Defaults;
+        var dropped = rows.Length - outcome.Rows.Length;
         var percent = rows.Length == 0 ? 0 : 100.0 * dropped / rows.Length;
         string? broken =
-            rules.RowsUnder is { } least && current.Length < least
-                ? $"only {current.Length} rows remain, fewer than the {least} required"
+            rules.RowsUnder is { } least && outcome.Rows.Length < least
+                ? $"only {outcome.Rows.Length} rows remain, fewer than the {least} required"
             : rules.DroppedOverPercent is { } most && percent > most
                 ? $"{dropped} of {rows.Length} rows were dropped ({percent.ToString("0.#", CultureInfo.InvariantCulture)} %), more than the {most.ToString(CultureInfo.InvariantCulture)} % allowed"
             : null;
-        return new TableReport(table, rows.Length, steps.ToImmutable(), current, broken is null ? null : $"{table.Table}: {broken}.");
+        return new TableReport(plan.Table, plan.Filters, rows.Length, outcome, broken is null ? null : $"{plan.Table.Table}: {broken}.");
     }
 
     /// <summary>
@@ -66,10 +58,20 @@ public static class Cleaning
             text.AppendLine();
             text.AppendLine($"== {report.Table.Table}{(report.Table.Layer is { } layer ? $", from {layer}" : "")}{(report.Table.Where is { } where ? $", where {where}" : "")}");
             text.AppendLine($"Read {report.Read} rows.");
-            foreach (var (filter, outcome) in report.Steps)
-                text.AppendLine($"  {filter}: kept {outcome.Rows.Length}, fixed {outcome.Fixed}, dropped {outcome.Dropped}{(outcome.Stop is null ? "" : ", stopped")}");
-            text.AppendLine($"Kept {report.Kept.Length} of {report.Read}; dropped {report.Dropped}.");
-            foreach (var line in report.Steps.SelectMany(step => step.Outcome.Log))
+            // Each filter's counts come from the joined log, whose lines name their filter. The rows
+            // kept after a filter are those read less every row dropped up to and including it.
+            var keptSoFar = report.Read;
+            foreach (var filter in report.Filters.Distinct())
+            {
+                var lines = report.Outcome.Log.Where(line => line.Filter == filter).ToList();
+                var dropped = lines.Count(line => line.Act == Act.Dropped);
+                keptSoFar -= dropped;
+                var stopped = lines.Any(line => line.Act == Act.Stopped);
+                text.AppendLine($"  {filter}: {(stopped ? "stopped" : $"kept {keptSoFar}")}, fixed {lines.Count(line => line.Act == Act.Fixed)}, dropped {dropped}");
+                if (stopped) break;
+            }
+            text.AppendLine(report.Outcome.Stop is null ? $"Kept {report.Kept.Length} of {report.Read}; dropped {report.Dropped}." : "Stopped; nothing kept.");
+            foreach (var line in report.Outcome.Log)
                 text.AppendLine($"  {line}");
         }
         text.AppendLine();

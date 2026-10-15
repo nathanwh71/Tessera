@@ -45,6 +45,8 @@ The filters, which ***run*** in the ***order*** the ***pipeline*** ***file*** **
 
 A ***row*** that ***fails*** is ***dropped*** and logged, or, when its filter ***says*** `"onFail": "stop"`, ***ends*** the ***run***. ***After*** its filters, a ***table*** ***stops*** the ***run*** when more than `droppedOverPercent` of its ***rows*** were ***dropped***, 10 by ***default***, or ***fewer*** than `rowsUnder` ***remain***, 1 by ***default***.
 
+***Each*** filter is a ***function*** from a ***table***'s ***rows*** to an outcome: the ***rows*** it ***kept***, a ***log*** ***line*** for ***each*** ***row*** it ***fixed*** or ***dropped***, and, perhaps, a ***reason*** to ***stop***. Filters ***join*** with `>>`, an operator that C# 14's extension ***members*** ***add*** to the filter ***type***: `a >> b` ***runs*** `a`, then `b` on the ***rows*** `a` ***kept***, ***ends*** at the ***first*** ***stop***, and ***joins*** the ***two*** logs. The ***pipeline*** ***file***'s ***list*** of filters ***folds*** into ***one*** such ***chain***, and ***code*** may ***build*** the ***same*** ***chain*** by ***hand*** from ***each*** filter's ***named*** `Create` ***function***. ***Each*** filter ***lives*** in a ***file*** of its ***own*** in `tools/Tessera.Etl/Filters/`, with a ***record*** of its ***own*** ***settings***, so the ***pipeline*** ***file*** ***refuses*** a ***setting*** that ***belongs*** to another filter. The ***script*** ***takes*** its ***columns*** from the ***cleaned*** ***rows***, so a filter may ***add*** a ***column*** or ***remove*** ***one***.
+
 ***Each*** ***choice*** GDAL is ***asked*** to ***make***:
 
 - **Longitude and latitude, flat.** Extraction ***stores*** every ***shape*** in EPSG:4326, ***whatever*** ***system*** the ***source*** ***uses***, and ***drops*** heights and ***measures*** (`-dim XY`), which a ***flat*** ***tile*** ***cannot*** ***carry***.
@@ -63,6 +65,7 @@ A ***row*** that ***fails*** is ***dropped*** and logged, or, when its filter **
 | Option | Why not |
 |---|---|
 | Python, with GeoPandas and Shapely | Rich ***cleaning***, but a ***third*** ***runtime*** and its ***packages*** ***beside*** .NET and Node.js, and a ***second*** ***language*** for the ***back*** ***end*** |
+| One `switch` on the filter's name, with one record of settings shared by every filter | A ***new*** filter ***touches*** ***four*** ***places*** in ***one*** ***file***, and a ***setting*** meant for ***one*** filter ***passes*** unseen on every ***other*** |
 | `ogr2ogr` alone, straight to SQL | No ***place*** for ***cleaning*** beyond a `-where`, and no ***log*** of what was ***left*** out |
 | GDAL's own .NET bindings in place of `ogr2ogr` | ***Native*** ***libraries*** to ***match*** to ***each*** ***machine***; `ogr2ogr` as a ***program*** is ***one*** ***install***, or ***one*** Docker ***image*** |
 | Run `ogr2ogr` straight into the database | No ***script*** to ***review*** or ***commit***, and ***nothing*** ***records*** what ***ran*** |

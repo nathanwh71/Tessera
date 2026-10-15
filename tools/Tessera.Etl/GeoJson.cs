@@ -65,9 +65,27 @@ public static class GeoJson
         _ => value.GetRawText(),
     };
 
-    /// <summary>The rows as a FeatureCollection, with each row's columns in <paramref name="columns"/>' order.</summary>
-    public static string Write(ImmutableArray<Row> rows, ImmutableArray<string> columns)
+    /// <summary>
+    /// The columns to write, taken from the kept rows themselves, so a filter that adds a column
+    /// reaches the script and one that removes a column leaves no empty one behind. The source's
+    /// columns come first, in their order; new ones follow, by the first row that holds them, and
+    /// by name within that row, since a row keeps no order of its own among its values. A
+    /// column no kept row holds is left out; an empty source column stays, since each row still
+    /// holds its key, with null.
+    /// </summary>
+    public static ImmutableArray<string> Columns(ImmutableArray<Row> rows, ImmutableArray<string> sourceColumns)
     {
+        var held = rows.SelectMany(row => row.Values.Keys).ToHashSet(StringComparer.Ordinal);
+        var added = rows.SelectMany(row => row.Values.Keys.Order(StringComparer.Ordinal))
+            .Where(column => !sourceColumns.Contains(column))
+            .Distinct();
+        return [.. sourceColumns.Where(held.Contains), .. added];
+    }
+
+    /// <summary>The rows as a FeatureCollection, with the columns <see cref="Columns"/> picks.</summary>
+    public static string Write(ImmutableArray<Row> rows, ImmutableArray<string> sourceColumns)
+    {
+        var columns = Columns(rows, sourceColumns);
         using var buffer = new MemoryStream();
         using (var writer = new Utf8JsonWriter(buffer))
         {

@@ -1,3 +1,5 @@
+using Tessera.Etl.Filters;
+
 namespace Tessera.Etl.Tests;
 
 /// <summary>The pipeline file, the stop rules, the log, and GDAL's arguments: each checked without running GDAL.</summary>
@@ -20,12 +22,31 @@ public sealed class PipelineTests
     [Fact]
     public void Reads_a_pipeline_and_takes_the_area_from_the_settings()
     {
-        var pipeline = PipelineFile.Read(Good, Macau).Value;
+        var (pipeline, tables) = PipelineFile.Read(Good, Macau).Value;
 
         Assert.Equal(Macau, pipeline.Area);
-        var table = Assert.Single(pipeline.Tables);
-        Assert.Equal(("food.cafes", "Cafes"), (table.Table, table.Layer));
-        Assert.Equal([OnFail.Stop, OnFail.Drop], table.Filters.Select(step => step.OnFail));
+        var table = Assert.Single(tables);
+        Assert.Equal(("food.cafes", "Cafes"), (table.Table.Table, table.Table.Layer));
+        Assert.Equal(["insideArea", "requireFields"], table.Filters);
+        // The chain stops at a place outside the area, since the file says "onFail": "stop".
+        Assert.NotNull(table.Chain([FilterTests.Place(1, 0.5, 51.5, ("name", "Far"))]).Stop);
+    }
+
+    // Each filter reads its own settings, so one that belongs to another filter is refused.
+    [Fact]
+    public void Refuses_a_setting_that_belongs_to_another_filter()
+    {
+        var read = PipelineFile.Read(Good.Replace("{ \"filter\": \"insideArea\", \"onFail\": \"stop\" }", "{ \"filter\": \"insideArea\", \"metres\": 25 }", StringComparison.Ordinal), Macau);
+
+        Assert.Equal("food.cafes: insideArea: 'metres' is not a setting; its settings are onFail.", Assert.Single(read.Error));
+    }
+
+    [Fact]
+    public void Refuses_a_filter_that_lacks_a_setting_it_needs()
+    {
+        var read = PipelineFile.Read(Good.Replace(", \"fields\": [\"name\"]", "", StringComparison.Ordinal), Macau);
+
+        Assert.Equal("food.cafes: requireFields: needs fields.", Assert.Single(read.Error));
     }
 
     [Fact]
@@ -33,7 +54,9 @@ public sealed class PipelineTests
     {
         var read = PipelineFile.Read(Good.Replace("\"fields\"", "\"feilds\"", StringComparison.Ordinal), Macau);
 
-        Assert.Contains("feilds", Assert.Single(read.Error), StringComparison.Ordinal);
+        Assert.Equal(
+            ["food.cafes: requireFields: 'feilds' is not a setting; its settings are fields, onFail.", "food.cafes: requireFields: needs fields."],
+            read.Error);
     }
 
     [Fact]
@@ -51,11 +74,16 @@ public sealed class PipelineTests
         Assert.Contains(problems, problem => problem.StartsWith("output:", StringComparison.Ordinal));
         Assert.Contains(problems, problem => problem.Contains("schema.table", StringComparison.Ordinal));
         Assert.Contains(problems, problem => problem.Contains("'dropDuplicates' is no filter", StringComparison.Ordinal));
-        Assert.Contains(problems, problem => problem.Contains("metres above 0", StringComparison.Ordinal));
-        Assert.Contains(problems, problem => problem.Contains("insideArea needs an area", StringComparison.Ordinal));
+        Assert.Contains("Food.Cafes: dropNearDuplicates: needs metres.", problems);
+        Assert.Contains(problems, problem => problem.Contains("insideArea: needs an area", StringComparison.Ordinal));
     }
 
-    private static TablePlan Cafes(StopWhen? rules = null, params FilterStep[] steps) => new("food.cafes", "Cafes", null, false, [.. steps], rules);
+    private static TablePlan Cafes(StopWhen? rules = null) => new("food.cafes", "Cafes", StopWhen: rules);
+
+    private static CleaningPlan Plan(StopWhen? rules, params (string Name, Filter Filter)[] filters) =>
+        new(Cafes(rules), [.. filters.Select(filter => filter.Name)], filters.Select(filter => filter.Filter).Aggregate(Chain.Keep, (a, b) => a >> b));
+
+    private static readonly (string, Filter) RequireName = (RequireFields.Name, RequireFields.Create(["name"]));
 
     private static ImmutableArray<Row> Ten(int named) =>
         [.. Enumerable.Range(1, 10).Select(number => FilterTests.Place(number, 113.55, 22.19, ("name", number <= named ? $"Place {number}" : null)))];
@@ -63,7 +91,7 @@ public sealed class PipelineTests
     [Fact]
     public void Stops_a_table_that_drops_more_than_ten_per_cent_by_default()
     {
-        var report = Cleaning.Clean(Cafes(null, new FilterStep("requireFields", Fields: ["name"])), Ten(named: 8), Macau, pipelineRules: null);
+        var report = Cleaning.Clean(Plan(null, RequireName), Ten(named: 8), pipelineRules: null);
 
         Assert.Equal("food.cafes: 2 of 10 rows were dropped (20 %), more than the 10 % allowed.", report.Stop);
     }
@@ -71,35 +99,34 @@ public sealed class PipelineTests
     [Fact]
     public void Lets_a_table_set_its_own_rules()
     {
-        var steps = new FilterStep("requireFields", Fields: ["name"]);
-
-        Assert.Null(Cleaning.Clean(Cafes(new StopWhen(DroppedOverPercent: 25), steps), Ten(named: 8), Macau, null).Stop);
+        Assert.Null(Cleaning.Clean(Plan(new StopWhen(DroppedOverPercent: 25), RequireName), Ten(named: 8), null).Stop);
         Assert.Equal("food.cafes: only 8 rows remain, fewer than the 9 required.",
-            Cleaning.Clean(Cafes(new StopWhen(DroppedOverPercent: 50, RowsUnder: 9), steps), Ten(named: 8), Macau, null).Stop);
+            Cleaning.Clean(Plan(new StopWhen(DroppedOverPercent: 50, RowsUnder: 9), RequireName), Ten(named: 8), null).Stop);
     }
 
     [Fact]
     public void Runs_filters_in_order_and_ends_at_the_first_stop()
     {
-        var table = Cafes(new StopWhen(DroppedOverPercent: 100),
-            new FilterStep("requireFields", OnFail.Stop, Fields: ["name"]),
-            new FilterStep("tidyText"));
+        var plan = Plan(new StopWhen(DroppedOverPercent: 100),
+            (RequireFields.Name, RequireFields.Create(["name"], OnFail.Stop)),
+            (TidyText.Name, TidyText.Create()));
 
-        var report = Cleaning.Clean(table, Ten(named: 9), Macau, null);
+        var report = Cleaning.Clean(plan, Ten(named: 9), null);
 
         Assert.Equal("requireFields stopped the run at row 10: name is missing.", report.Stop);
-        Assert.Single(report.Steps);
+        Assert.All(report.Outcome.Log, line => Assert.Equal(RequireFields.Name, line.Filter));
     }
 
     [Fact]
     public void Logs_each_filter_and_each_row_it_touched()
     {
-        var pipeline = PipelineFile.Read(Good, Macau).Value;
-        var report = Cleaning.Clean(Cafes(new StopWhen(DroppedOverPercent: 50), new FilterStep("requireFields", Fields: ["name"])), Ten(named: 9), Macau, null);
+        var pipeline = PipelineFile.Read(Good, Macau).Value.Pipeline;
+        var report = Cleaning.Clean(Plan(new StopWhen(DroppedOverPercent: 50), (TidyText.Name, TidyText.Create()), RequireName), Ten(named: 9), null);
 
         var log = Cleaning.Log("data/macau.pipeline.json", pipeline, [report], "wrote it.", new DateTimeOffset(2026, 10, 15, 13, 0, 0, TimeSpan.FromHours(8)));
 
         Assert.Contains("Tessera ETL log, 2026-10-15 13:00:00 +08:00", log, StringComparison.Ordinal);
+        Assert.Contains("  tidyText: kept 10, fixed 0, dropped 0", log, StringComparison.Ordinal);
         Assert.Contains("  requireFields: kept 9, fixed 0, dropped 1", log, StringComparison.Ordinal);
         Assert.Contains("  Row 10: dropped by requireFields: name is missing", log, StringComparison.Ordinal);
         Assert.EndsWith("Result: wrote it.\n", log.ReplaceLineEndings("\n"), StringComparison.Ordinal);

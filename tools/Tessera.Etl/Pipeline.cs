@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using CSharpFunctionalExtensions;
@@ -13,33 +14,30 @@ namespace Tessera.Etl;
 public sealed record Pipeline(
     string Source,
     string Output,
-    Area? Area,
-    StopWhen? StopWhen,
-    ImmutableArray<TablePlan> Tables);
+    ImmutableArray<TablePlan> Tables,
+    Area? Area = null,
+    StopWhen? StopWhen = null);
 
 /// <summary>
 /// One table: its name as schema.table; the layer to read from the source, such as a feature class
 /// of a geodatabase; an optional filter on the source's rows; whether its shapes are lines or areas,
-/// which may mix single and multiple parts; and its cleaning filters, run in the order given.
+/// which may mix single and multiple parts; and its cleaning filters, run in the order given. Each
+/// filter is an object that names it, with its own settings beside the name, such as
+/// <c>{ "filter": "insideArea", "onFail": "stop" }</c>.
 /// </summary>
 public sealed record TablePlan(
     string Table,
-    string? Layer,
-    string? Where,
-    bool Lines,
-    ImmutableArray<FilterStep> Filters,
-    StopWhen? StopWhen);
+    string? Layer = null,
+    string? Where = null,
+    bool Lines = false,
+    ImmutableArray<JsonObject> Filters = default,
+    StopWhen? StopWhen = null);
 
-/// <summary>
-/// One cleaning filter and its settings. <c>OnFail</c> says what to do with a row the filter
-/// cannot pass: drop it, or stop the whole run. Only the settings a filter reads need a value.
-/// </summary>
-public sealed record FilterStep(
-    string Filter,
-    OnFail OnFail = OnFail.Drop,
-    ImmutableArray<string>? Fields = null,
-    string? Field = null,
-    double? Metres = null);
+/// <summary>A table ready to clean: its plan, its filters' names in order, and the one filter they chain into.</summary>
+public sealed record CleaningPlan(TablePlan Table, ImmutableArray<string> Filters, Filter Chain);
+
+/// <summary>A pipeline file read and checked, with each table's filters built and chained.</summary>
+public sealed record Plan(Pipeline Pipeline, ImmutableArray<CleaningPlan> Tables);
 
 /// <summary>What a filter does with a row it cannot pass: drop it, or stop the whole run.</summary>
 public enum OnFail
@@ -63,10 +61,13 @@ public static class PipelineFile
     public static readonly StopWhen Defaults = new(DroppedOverPercent: 10, RowsUnder: 1);
 
     // camelCase in the file, as JSON usually is. A key the records lack stops the read, so a
-    // misspelt setting cannot pass unseen and leave a filter at its default.
+    // misspelt setting cannot pass unseen and leave a filter at its default; so does a setting a
+    // record needs, such as requireFields' fields, when the file leaves it out.
     internal static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web)
     {
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
+        RespectRequiredConstructorParameters = true,
+        RespectNullableAnnotations = true,
         PropertyNameCaseInsensitive = false,
         ReadCommentHandling = JsonCommentHandling.Skip,
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
@@ -79,11 +80,11 @@ public static class PipelineFile
     private static readonly Regex ScriptName = new(@"(^|/)\d{4}-[a-z0-9-]+\.sql$");
 
     /// <summary>
-    /// Reads and checks a pipeline file's text. Every fault is named at once, so one failed run
-    /// shows everything to fix. <paramref name="areaFromSettings"/> stands in when the file names
-    /// no area of its own.
+    /// Reads and checks a pipeline file's text, and builds each table's chain of filters. Every
+    /// fault is named at once, so one failed run shows everything to fix.
+    /// <paramref name="areaFromSettings"/> stands in when the file names no area of its own.
     /// </summary>
-    public static Result<Pipeline, ImmutableArray<string>> Read(string json, Area? areaFromSettings)
+    public static Result<Plan, ImmutableArray<string>> Read(string json, Area? areaFromSettings)
     {
         Pipeline? read;
         try
@@ -92,16 +93,52 @@ public static class PipelineFile
         }
         catch (JsonException error)
         {
-            return Result.Failure<Pipeline, ImmutableArray<string>>([$"The pipeline file is not valid: {error.Message}"]);
+            return Result.Failure<Plan, ImmutableArray<string>>([$"The pipeline file is not valid: {error.Message}"]);
         }
         if (read is null || read.Tables.IsDefault)
-            return Result.Failure<Pipeline, ImmutableArray<string>>(["The pipeline file needs source, output and tables."]);
+            return Result.Failure<Plan, ImmutableArray<string>>(["The pipeline file needs source, output and tables."]);
 
         var pipeline = read with { Area = read.Area ?? areaFromSettings };
-        var problems = Problems(pipeline).ToImmutableArray();
+        var tables = pipeline.Tables.Select(table => Build(table, pipeline.Area)).ToImmutableArray();
+        var problems = Problems(pipeline)
+            .Concat(tables.Where(table => table.IsFailure).SelectMany(table => table.Error))
+            .ToImmutableArray();
         return problems.IsEmpty
-            ? Result.Success<Pipeline, ImmutableArray<string>>(pipeline)
-            : Result.Failure<Pipeline, ImmutableArray<string>>(problems);
+            ? Result.Success<Plan, ImmutableArray<string>>(new Plan(pipeline, [.. tables.Select(table => table.Value)]))
+            : Result.Failure<Plan, ImmutableArray<string>>(problems);
+    }
+
+    /// <summary>
+    /// Builds a table's filters from the file, in order, and chains them with <c>&gt;&gt;</c>
+    /// (<see cref="Chain"/>). Each object names its filter in "filter"; the rest are its settings.
+    /// </summary>
+    private static Result<CleaningPlan, ImmutableArray<string>> Build(TablePlan table, Area? area)
+    {
+        var problems = ImmutableArray.CreateBuilder<string>();
+        var names = ImmutableArray.CreateBuilder<string>();
+        var chain = Chain.Keep;
+        foreach (var step in table.Filters.IsDefault ? [] : table.Filters)
+        {
+            var name = step["filter"]?.GetValueKind() == JsonValueKind.String ? step["filter"]!.GetValue<string>() : "";
+            if (Filters.All.Find(name) is not { } kind)
+            {
+                problems.Add($"{table.Table}: '{name}' is no filter; the filters are {string.Join(", ", Filters.All.Kinds.Select(known => known.Name))}.");
+                continue;
+            }
+            var settings = step.DeepClone().AsObject();
+            settings.Remove("filter");
+            var built = kind.Build(settings, area);
+            if (built.IsFailure)
+            {
+                problems.AddRange(built.Error.Select(problem => $"{table.Table}: {problem}"));
+                continue;
+            }
+            names.Add(name);
+            chain >>= built.Value;
+        }
+        return problems.Count == 0
+            ? Result.Success<CleaningPlan, ImmutableArray<string>>(new CleaningPlan(table, names.ToImmutable(), chain))
+            : Result.Failure<CleaningPlan, ImmutableArray<string>>(problems.ToImmutable());
     }
 
     private static IEnumerable<string> Problems(Pipeline pipeline)
@@ -123,8 +160,6 @@ public static class PipelineFile
             var parts = (table.Table ?? "").Split('.');
             if (parts.Length != 2 || !parts.All(PlainName.IsMatch))
                 yield return $"{table.Table}: write the table as schema.table, in lower-case letters, digits and _.";
-            foreach (var problem in (table.Filters.IsDefault ? [] : table.Filters).SelectMany(step => Filters.Problems(step, pipeline.Area)))
-                yield return $"{table.Table}: {problem}";
         }
     }
 }

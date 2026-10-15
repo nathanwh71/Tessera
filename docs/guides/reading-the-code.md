@@ -56,8 +56,8 @@
 
 ### Step 9 · How the places enter the database
 
-- **Open:** `data/macau.pipeline.json`, then `tools/Tessera.Etl/Program.cs` and `Filters.cs`, `db/seed/0001-macau-places.sql` (the ***first*** ***lines*** ***alone***), `src/Tessera/Seeding/SeedScripts.cs`, and ADR 0009.
-- **Look for:** GDAL extracts ***each*** ***table*** to GeoJSON, the ***pipeline*** ***file***'s filters ***clean*** its ***rows*** in ***turn***, and GDAL ***writes*** the ***cleaned*** ***rows*** as SQL; DbUp ***runs*** ***each*** ***new*** ***script*** ***once*** and ***records*** it in `tessera.schemaversions`; `npm run publish` ***grants*** the ***tables***.
+- **Open:** `data/macau.pipeline.json`, then `tools/Tessera.Etl/Program.cs`, `Chain.cs` and ***one*** filter in `Filters/`, such as `InsideArea.cs`, `db/seed/0001-macau-places.sql` (the ***first*** ***lines*** ***alone***), `src/Tessera/Seeding/SeedScripts.cs`, and ADR 0009.
+- **Look for:** GDAL extracts ***each*** ***table*** to GeoJSON, the ***pipeline*** ***file***'s filters, ***joined*** into ***one*** with `>>`, ***clean*** its ***rows*** in ***turn***, and GDAL ***writes*** the ***cleaned*** ***rows*** as SQL; DbUp ***runs*** ***each*** ***new*** ***script*** ***once*** and ***records*** it in `tessera.schemaversions`; `npm run publish` ***grants*** the ***tables***.
 - **Check yourself:** you ***find*** a ***wrong*** ***address*** in a ***script*** that has ***run***. What do you ***change***?
 
 ## Part B · The frontend: the page opens and draws a tile

@@ -32,3 +32,13 @@
 ## New packages
 
 NetTopologySuite 2.6.0 and NetTopologySuite.IO.GeoJSON4STJ 4.0.0, for the ***pipeline*** ***alone***; the ***service*** ***loads*** neither. The ***automatic*** ***build*** ***installs*** Ubuntu's GDAL for the ***pipeline***'s ***tests***.
+
+## Later the same day: filters that chain
+
+The ***maintainer*** ***asked*** for filters he can ***build*** as ***functions*** and ***chain***. ***Three*** ***changes*** ***followed***, with no ***change*** to what a ***run*** ***writes***: on the Macau ***places*** the ***script*** ***came*** out ***byte*** for ***byte*** the ***same***, and on the ***test*** geodatabase the ***log*** ***came*** out ***line*** for ***line*** the ***same***.
+
+- **`>>` joins filters.** C# 14's extension ***members*** ***add*** the operator to the filter ***type***. `a >> b` ***runs*** `a`, then `b` on what `a` ***kept***, ***stops*** at the ***first*** ***stop***, and ***joins*** the logs. The ***pipeline*** ***file***'s ***list*** ***folds*** into ***one*** ***chain*** the ***same*** ***way***.
+- **One file for each filter.** ***Each*** ***holds*** its ***name***, its ***description***, a ***record*** of its ***own*** ***settings***, its ***checks*** and a ***named*** `Create` ***function***. A ***new*** filter is ***one*** ***file*** and ***one*** ***line*** in `Filters/All.cs`. A ***setting*** meant for another filter, or a ***missing*** ***one***, is ***refused*** in ***plain*** ***words***, such as 'insideArea: 'metres' is not a ***setting***; its ***settings*** are onFail.'
+- **Columns from the cleaned rows.** A filter may ***now*** ***add*** a ***column***, which ***reaches*** the ***script***, or ***remove*** ***one***, which ***leaves*** no ***empty*** ***column*** ***behind***.
+
+The ***tests*** ***grew*** from 25 to 31: ***four*** of ***chaining*** and ***columns***, and ***two*** of ***each*** filter's ***own*** ***settings***.

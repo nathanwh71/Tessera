@@ -106,6 +106,21 @@ A ***table*** of a geodatabase ***names*** its ***feature*** ***class*** as `lay
 
 Filters ***run*** in the ***order*** ***listed***, ***each*** on the ***rows*** the ***one*** ***before*** ***kept***. A ***row*** that ***fails*** is ***dropped***, or, with `"onFail": "stop"`, ***ends*** the ***whole*** ***run***. A ***table*** ***also*** ***stops*** the ***run*** when more than `droppedOverPercent` of its ***rows*** were ***dropped***, 10 by ***default***, or ***fewer*** than `rowsUnder` ***remain***, 1 by ***default***; `stopWhen` ***sets*** them for the ***whole*** ***file*** or for ***one*** ***table***. A ***stopped*** ***run*** ***writes*** no ***script***, but ***always*** ***writes*** its ***log***. The ***area*** ***comes*** from `tessera.json`, or from the ***pipeline***'s ***own*** `area`. `lines: true` ***stores*** ***lines*** and ***areas*** as many-part ***shapes***, so ***one*** ***table*** ***holds*** both ***kinds***.
 
+**Adding a filter.** ***Each*** filter is ***one*** ***file*** in `tools/Tessera.Etl/Filters/`. It ***holds*** the filter's ***name***, what it does, a ***record*** of its ***own*** ***settings***, its ***checks***, and a `Create` ***function*** that ***returns*** the filter: a ***function*** from a ***table***'s ***rows*** to the ***rows*** it ***keeps*** and a ***log*** of what it did. A ***new*** filter is ***one*** ***new*** ***file***, ***modelled*** on `InsideArea.cs`, and ***one*** ***line*** in `Filters/All.cs`. ***Each*** filter ***reads*** ***only*** its ***own*** ***settings***, so the ***pipeline*** ***file*** ***refuses*** a ***setting*** that ***belongs*** to another filter, or ***one*** that is ***missing***.
+
+**Filters in code.** Filters ***join*** with `>>`, which ***runs*** the ***left*** ***one***, then the ***right*** ***one*** on the ***rows*** it ***kept***, and ***stops*** at the ***first*** ***stop***:
+
+```csharp
+var cleanCafes =
+    DropEmptyShapes.Create(OnFail.Stop)
+    >> SwapCoordinates.Create(macau)
+    >> InsideArea.Create(macau, OnFail.Stop)
+    >> TidyText.Create()
+    >> RequireFields.Create(["id", "name"]);
+```
+
+The ***pipeline*** ***file*** ***builds*** the ***same*** ***chain*** from its ***list***. A filter may ***also*** ***add*** or ***remove*** a ***column***: the ***script*** ***takes*** its ***columns*** from the ***cleaned*** ***rows***.
+
 ## How the database keeps the service safe
 
 ***Tessera*** ***follows*** pg_tileserv's ***rule***: the ***database*** ***decides*** what the ***map*** ***shows***. The ***service*** ***signs*** in as `tessera_reader`, a ***role*** that may ***only*** ***read***, and a ***table*** ***becomes*** a ***layer*** ***only*** when that ***role*** is ***granted*** it. The ***seed*** ***signs*** in as `tessera_publisher`, which ***owns*** the ***tables*** but ***never*** ***grants*** them on its ***own***; ***publishing*** is the ***publisher***'s ***own*** ***act***.
