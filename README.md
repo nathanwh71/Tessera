@@ -165,6 +165,7 @@ The _service_ is _one_ _program_, with _each_ ***module*** a _project_ of its _o
 - `docs/adr/0007-limits-in-nginx.md`: why Nginx _answers_ the _office_ _alone_ and _caps_ _each_ _machine_, and why the _service_ _keeps_ no _resilience_ _library_
 - `docs/adr/0008-nginx-in-front.md`: why Nginx _stands_ in _front_, and what it does in _place_ of the _service_
 - `docs/adr/0009-seed-with-dbup.md`: why the _places_ _arrive_ as SQL _scripts_ that DbUp _runs_ _once_
+- `docs/guides/delivery-plan.md`: _Parts_ A and B rebuilt in _four_ iterations, from 19 _October_ to the _release_ of 7 December 2026, and what _follows_
 - `docs/guides/reading-the-code.md`: _fifteen_ _steps_ _through_ the backend and the _map_, in the _order_ a _tile_ _travels_
 - `docs/guides/reading-the-frontend.md`: _fifteen_ _steps_ _through_ the _map_ _alone_, from the _page_ that _starts_ to the _tests_ that _state_ its _rules_
 - `docs/guides/reading-the-scripts.md`: _eleven_ _steps_ _through_ the TypeScript _scripts_, from the _rules_ they _keep_ to the _tests_ that _check_ Nginx
