@@ -9,7 +9,7 @@
 import type { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 import { type GroupKey, GROUP_KEYS } from "../design";
 import type { Level, LngLat } from "../shared";
-import { clusterLabel, pinLabel } from "./labels";
+import { NAMED_IN_CLUSTER, clusterLabel, pinLabel } from "./labels";
 import { levelOf } from "./levels";
 import { pointOf } from "./places";
 import { LAYER, SOURCE } from "./style";
@@ -98,13 +98,13 @@ export function nameClusters(map: MapLibreMap, names: ClusterNames, done: () => 
 		.map((f): unknown => f.properties["cluster_id"])
 		.filter((id): id is number => typeof id === "number" && !names.has(id));
 	if (ids.length === 0) return;
-	// Asks for ten leaves from the first, the most the label names (NAMED_IN_CLUSTER in labels.ts);
-	// the two numbers must change together. A cluster may vanish before its names arrive, when the
+	// Asks for as many leaves, from the first, as the label names (NAMED_IN_CLUSTER, in labels.ts),
+	// so the two can never disagree. A cluster may vanish before its names arrive, when the
 	// places change and MapLibre renumbers its clusters; the label then keeps its count alone until
 	// the next rest, so a failure is ignored.
 	void Promise.all(
 		[...new Set(ids)].map((id) =>
-			source.getClusterLeaves(id, 10, 0).then((leaves) => names.set(id, leaves.map((l) => String(l.properties?.["name"] ?? "")))),
+			source.getClusterLeaves(id, NAMED_IN_CLUSTER, 0).then((leaves) => names.set(id, leaves.map((l) => String(l.properties?.["name"] ?? "")))),
 		),
 	).then(done, () => undefined);
 }
