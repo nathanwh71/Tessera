@@ -101,6 +101,7 @@
 ## What to read alongside
 
 - `docs/guides/reading-the-frontend.md`: _fifteen_ _steps_ _through_ the _map_ _alone_, in more depth than _Part_ B _above_.
+- `docs/guides/reading-the-scripts.md`: _eleven_ _steps_ _through_ the _scripts_ that _start_, _test_ and _set_ _up_ Tessera.
 - `docs/guides/reading-the-harder-files.md`: the _one_ _idea_ _behind_ `Settings.cs`, `Database.cs` and `Catalogue.cs`.
 - ADR 0001 for the _modules_, ADR 0004 for the ***functional style***, ADR 0005 for clustering in the _browser_, ADR 0006 for the _contract_ _between_ the _map_ and the _service_, ADR 0008 for Nginx, and ADR 0009 for the _seed_.
 - The _user_ _stories_: _each_ _step_ _above_ _names_ the _ones_ it _serves_.

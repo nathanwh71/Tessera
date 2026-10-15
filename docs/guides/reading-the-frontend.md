@@ -123,4 +123,4 @@
 
 - ADR 0004 for the ***functional style***, ADR 0005 for clustering in the _browser_, and ADR 0006 for the _contract_ _between_ the _map_ and the _service_.
 - The _stories_ of _Part_ B in `docs/user-stories/user-stories.md`: US-23 and UI-09 to UI-19.
-- `docs/guides/reading-the-code.md`: its _Part_ B is the _short_ _version_ of this _guide_, and its _Part_ A _follows_ a _tile_ _through_ the backend.
+- `docs/guides/reading-the-scripts.md` for the _scripts_ that _build_ and _test_ the _map_, and `docs/guides/reading-the-code.md`: its _Part_ B is the _short_ _version_ of this _guide_, and its _Part_ A _follows_ a _tile_ _through_ the backend.
