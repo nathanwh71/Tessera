@@ -5,7 +5,12 @@
 # The Nginx image fills in ${TESSERA_HTTPPORT}, ${TESSERA_OFFICE_NETWORK}, and the two copies'
 # ports, ${TESSERA_SERVICE_PORT} and ${TESSERA_SECOND_SERVICE_PORT}, when it starts.
 
-# 64 MB of tiles on disk; a tile no one asks for in ten minutes goes first.
+# 64 MB of tiles on disk; a tile no one asks for in ten minutes goes first. The office's places make
+# far fewer tiles than that, so the store rarely fills, yet it stays small beside the machine's disk.
+# keys_zone=tiles:10m keeps the tiles' names in 10 MB of memory, room for about 80,000 of them.
+# levels=1:2 spreads the files over two levels of folders, so no one folder holds thousands.
+# use_temp_path=off writes each tile straight into the store's own folder, saving a copy between
+# folders.
 proxy_cache_path /var/cache/nginx/tiles levels=1:2 keys_zone=tiles:10m max_size=64m inactive=10m use_temp_path=off;
 
 # S-07: $office is 1 for an address inside the office's network, or for this machine itself, and 0
@@ -25,10 +30,15 @@ map $remote_addr $visitor {
 # 100 tiles a second for each visitor, with room for a burst of 300: one fresh view of nine layers
 # asks for about a hundred tiles at once. 10 MB holds about 160,000 addresses.
 limit_req_zone $visitor zone=visitor:10m rate=100r/s;
+# The count of requests each visitor has open at once, by the same key, so this machine is exempt
+# here too; the cap itself is in the server block.
 limit_conn_zone $visitor zone=connections:10m;
 
 # N-29: two copies of the service share the requests in turn. Passive health check: after 3 failed
 # requests in 10 seconds Nginx rests a copy for 10 seconds, and sends its requests to the other.
+# keepalive 16 keeps up to 16 idle connections to the copies open for reuse, so a tile skips the
+# work of opening a new connection. The number caps idle connections, not traffic: past 16, Nginx
+# opens new ones as before, so a small number serves one office.
 upstream tessera {
     server 127.0.0.1:${TESSERA_SERVICE_PORT} max_fails=3 fail_timeout=10s;
     server 127.0.0.1:${TESSERA_SECOND_SERVICE_PORT} max_fails=3 fail_timeout=10s;
@@ -50,16 +60,29 @@ server {
     limit_req_status 429;
     error_page 429 = @busy;
 
+    # N-20: tiles and the map's files travel packed with gzip. gzip_proxied any packs answers that
+    # come from the service, which Nginx would otherwise pass on as they are. Level 1 is the fastest:
+    # a tile shrinks nearly as much as at level 9, for a fraction of the work. gzip_vary adds
+    # 'Vary: Accept-Encoding', so a cache along the way never hands a packed copy to a client
+    # that cannot unpack it. gzip_types lists the kinds worth packing; images are packed already.
     gzip on;
     gzip_proxied any;
     gzip_comp_level 1;
     gzip_vary on;
     gzip_types application/vnd.mapbox-vector-tile application/problem+json application/json text/css text/javascript application/javascript;
 
+    # HTTP/1.1 with an empty Connection header lets the upstream's keepalive reuse connections;
+    # Nginx would otherwise speak HTTP/1.0 to the copies and close each connection after one answer.
     proxy_http_version 1.1;
     proxy_set_header Connection "";
+    # The service sees the name the browser asked for, not the upstream's name, 'tessera'.
     proxy_set_header Host $host;
+    # A copy on this same machine accepts a connection in far less than a second, so one that has
+    # not done so is down, and the request moves to the other copy at once.
     proxy_connect_timeout 1s;
+    # Longer than the service's own worst case, 3 seconds' wait for a connection and a 10-second
+    # query (Database settings), so the service answers its own 503 first, and only a copy that
+    # hangs meets this limit.
     proxy_read_timeout 15s;
     # A request that meets a copy that crashed or hangs goes to the other copy. Only a crash or a hang
     # counts against a copy; a 503 from a database outage, which both copies share, does not.
@@ -70,7 +93,8 @@ server {
         limit_req zone=visitor burst=300 nodelay;
         proxy_pass http://tessera;
         proxy_cache tiles;
-        # Many people asking for one new tile at once cost one query (N-24).
+        # Many people asking for one new tile at once cost one query (N-24). The others wait as long
+        # as the first request may take, 15 seconds, the same as proxy_read_timeout.
         proxy_cache_lock on;
         proxy_cache_lock_timeout 15s;
         # A tile already held is served while the service or the database cannot answer, and an
@@ -79,9 +103,14 @@ server {
         proxy_cache_background_update on;
         # A browser that leaves does not cancel a tile others may be waiting for.
         proxy_ignore_client_abort on;
+        # HIT, MISS or STALE on each tile, so the edge checks (scripts/lib/edge.ts) and a maintainer
+        # can see whether a tile came from the store (N-19).
         add_header X-Cache-Status $upstream_cache_status always;
     }
 
+    # Everything else, the map's page and files and /health, passes straight to the service: the
+    # tile store and the rate for tiles are for tiles alone, while the cap on requests at once and
+    # gzip still apply.
     location / {
         proxy_pass http://tessera;
     }
@@ -89,6 +118,7 @@ server {
     # Nginx refuses a malformed address itself, such as one that climbs above the root or holds a
     # stray '%' (S-06); the answer is a problem document that never repeats the address.
     error_page 400 /malformed;
+    # internal: only Nginx's own error_page reaches /malformed; a browser that asks for it gets 404.
     location = /malformed {
         internal;
         default_type application/problem+json;

@@ -2,7 +2,10 @@
 // function reads only its parameters, so node --test checks it with no Windows and no WSL2
 // (ADR 0002, rule 1).
 
-/** The task's name in Windows' Task Scheduler. */
+/**
+ * The task's name in Windows' Task Scheduler. One constant, since the steps that register, start
+ * and remove the task must all name the same task.
+ */
 export const taskName = 'Tessera';
 
 /** The log the task writes, beside package.json. */
@@ -25,6 +28,7 @@ export const heading = (now: Date): string => `\n=== Started by the start-up tas
 export function linuxPath(path: string): string {
   return path.split(':')
     .filter(folder => folder.startsWith('/') && !folder.startsWith('/mnt/') && !folder.includes(' ') && !folder.includes('node_modules'))
+    // Each folder once: a folder listed twice only lengthens the line Windows must pass.
     .filter((folder, index, all) => all.indexOf(folder) === index)
     .join(':');
 }
@@ -58,6 +62,11 @@ const quoted = (text: string): string => `'${text.replaceAll("'", "''")}'`;
  * The PowerShell that registers the task. It runs at start-up, a minute after Windows, whether or
  * not anyone signs in; it may run for ever; and Windows starts it again, up to three times, a
  * minute apart, if it fails. Windows needs the account's password to run it with no one signed in.
+ *
+ * The minute's delay lets Windows bring up WSL2 and the network first, so Ubuntu and Docker start
+ * on a machine that is ready for them. -StartWhenAvailable runs a start missed while the machine
+ * was off or busy as soon as it can. The two battery settings keep a laptop on battery from
+ * skipping or stopping the task, since Windows otherwise does both to save power.
  */
 export function registerSteps(place: BootPlace): readonly string[] {
   return [

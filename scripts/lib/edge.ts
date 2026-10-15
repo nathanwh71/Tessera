@@ -7,6 +7,7 @@ import { Agent, request } from 'node:http';
 import { connect } from 'node:net';
 import { gunzipSync } from 'node:zlib';
 
+/** One answer, read whole, so a check can compare its status, headers and exact bytes. */
 type Answer = { readonly status: number; readonly headers: Record<string, string | string[] | undefined>; readonly body: Buffer };
 
 // node:http, not fetch, because fetch unpacks gzip by itself and hides the bytes on the wire.
@@ -43,12 +44,14 @@ export async function checkEdge(base: string, stopFirst: () => Promise<void>, st
   const first = await ask(tile, { 'Accept-Encoding': 'identity' });
   assert.equal(first.status, 200);
   assert.equal(first.headers['content-type'], 'application/vnd.mapbox-vector-tile');
+  // 60 seconds is Tiles.CacheSeconds' default, and Nginx keeps the tile for as long as it allows.
   assert.equal(first.headers['cache-control'], 'public, max-age=60');
   const second = await ask(tile, { 'Accept-Encoding': 'identity' });
   assert.equal(second.headers['x-cache-status'], 'HIT');
   assert.deepEqual(second.body, first.body);
 
-  // N-19 c2: a browser that sends the tag back gets 304 and no body.
+  // N-19 c2: a browser that sends the tag back gets 304 and no body. The tag is weak, 'W/',
+  // because the packed and the plain bytes are the same tile (N-19 c1), and gzip keeps a weak tag.
   const tag = String(first.headers['etag']);
   assert.match(tag, /^W\//);
   const unchanged = await ask(tile, { 'If-None-Match': tag });
@@ -92,7 +95,8 @@ export async function checkEdge(base: string, stopFirst: () => Promise<void>, st
 
   // S-30: one visitor asking for 600 tiles as fast as eight connections allow passes the burst of
   // 300 and meets 429, which asks it to wait a second. The flood comes from an address of its own,
-  // so the limit it meets touches no other check.
+  // so the limit it meets touches no other check. Eight connections stay well under the cap of 32
+  // at once, so only the rate limit can answer 429 here.
   const flood = new Agent({ keepAlive: true, maxSockets: 8 });
   const answers = await Promise.all(Array.from({ length: 600 }, () => ask(tile, {}, 'GET', '127.0.0.6', flood)));
   flood.destroy();
@@ -115,7 +119,10 @@ export async function checkEdge(base: string, stopFirst: () => Promise<void>, st
   assert.ok(took >= 1800 && took < 4000, `twenty requests took ${took} ms`);
 
   // S-30: one machine may have 32 requests in hand at once. Forty at once for a slow tile leave
-  // eight or more refused with 429, and the rest receive the tile.
+  // eight or more refused with 429, and the rest receive the tile. Without keep-alive, and with room
+  // for 64 sockets, each request holds a connection of its own, so Nginx counts all forty at once.
+  // The tile, 1/1/0, is one no check has asked for, so every request waits on the slow query
+  // rather than meeting a kept copy; the address, 127.0.0.7, has met no limit yet.
   const many = new Agent({ keepAlive: false, maxSockets: 64 });
   const forty = await Promise.all(Array.from({ length: 40 }, () => ask(`${base}/food.slow_cafes/1/1/0.pbf`, {}, 'GET', '127.0.0.7', many)));
   many.destroy();
@@ -124,7 +131,9 @@ export async function checkEdge(base: string, stopFirst: () => Promise<void>, st
   assert.equal(forty.filter(answer => answer.status === 200).length, 40 - refused);
 
   // N-29: with the first copy stopped, the second serves a tile Nginx never held, and /health
-  // still says UP. Nginx tries the stopped copy, meets a refused connection, and moves on.
+  // still says UP. Nginx tries the stopped copy, meets a refused connection, and moves on. The copies
+  // take turns (round robin), so six fresh tiles send at least three to the stopped copy: enough to
+  // meet it, and to reach max_fails=3, after which Nginx rests it.
   await stopFirst();
   for (let attempt = 0; attempt < 6; attempt++) {
     const fresh = await ask(`${base}/food.cafes/22/1/${attempt}.pbf`, { 'Accept-Encoding': 'identity' });

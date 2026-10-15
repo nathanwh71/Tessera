@@ -19,6 +19,11 @@ import { waitForDatabase, waitForHealth } from './lib/database.ts';
 import { checkEdge } from './lib/edge.ts';
 import { nginxArguments } from './lib/plan.ts';
 
+/**
+ * The containers' names differ from npm start's tessera-db and tessera-nginx, so a test run never
+ * stops or removes the office's own; the database keeps the usual name, tessera, as the service
+ * expects.
+ */
 const container = 'tessera-e2e';
 const nginx = 'tessera-e2e-nginx';
 const name = 'tessera';
@@ -47,6 +52,7 @@ const nginxPort = await freePort();
 // this machine, so the checks can ask from inside the office and from outside it.
 const officeNetwork = '127.0.0.4/30';
 const url = (user: string, password: string) => `postgresql://${user}:${password}@127.0.0.1:${databasePort}/${name}`;
+/** The program npm run build writes, in Release, so the tests meet the build the office runs. */
 const service = resolve('src/Tessera/bin/Release/net10.0/Tessera.dll');
 
 await $`docker build --quiet --tag ${container} db`;
@@ -62,6 +68,8 @@ try {
   await $({ env: { ...process.env, TESSERA_PUBLISHER_DATABASE_URL: url('tessera_publisher', publisher) } })`dotnet ${service} seed`;
   // A layer that takes two seconds to build any tile, for the checks of a crowd and of the cap on
   // requests at once (N-24, S-30). The pause runs once for each query, not once for each place.
+  // The grant repeats scripts/publish.ts's, since that script names npm start's container,
+  // tessera-db, and this run's database lives in tessera-e2e.
   const slow = 'CREATE VIEW food.slow_cafes AS SELECT c.fid, c.geom, c.name FROM (SELECT pg_sleep(2)) AS pause CROSS JOIN food.cafes AS c;';
   const grant = `${slow} GRANT USAGE ON SCHEMA food, outdoors, culture, transport TO tessera_reader; GRANT SELECT ON ALL TABLES IN SCHEMA food, outdoors, culture, transport TO tessera_reader;`;
   await $({ env: { ...process.env, PGPASSWORD: publisher } })`docker exec --env PGPASSWORD ${container} psql --quiet --host 127.0.0.1 --username tessera_publisher --dbname ${name} --command ${grant}`;

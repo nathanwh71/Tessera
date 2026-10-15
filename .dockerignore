@@ -1,7 +1,15 @@
+# The files Docker leaves out when it sends the repository to a build as its context. Today no
+# image builds from the repository's root: db/Dockerfile builds from db/ alone. This file guards
+# any later image that does, so the build stays small and no secret enters an image.
+
+# Build output: each image builds its own, so a copy from this machine only slows the build.
 **/bin/
 **/obj/
+# Git's history: no image needs it, and it is the largest folder in the repository.
 .git/
+# This machine's passwords: anything in a build's context can end up in an image layer.
 .env
+# Tests, documents and raw places: the running service needs none of them.
 tests/
 docs/
 data/

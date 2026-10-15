@@ -1,18 +1,24 @@
+# The files Git never tracks: what a build or a test writes, this machine's secrets, and each
+# person's own editor files. Each can be made again, or belongs to one machine alone.
+
+# Build and test output: every build writes it afresh, so a tracked copy would only go stale.
 bin/
 obj/
 out/
 TestResults/
 
-# This machine's settings and secrets
+# This machine's settings and secrets: a password in Git reaches everyone who clones it (US-00 c4)
 .env
 
-# The start-up task's log (scripts/boot.ts)
+# The start-up task's log (scripts/boot.ts): it belongs to one machine, and grows each start
 start.log
 start.log.1
 
+# Each person's editor settings and swap files: they suit one person, not the project
 .idea/
 .vscode/
 *.user
 *.swp
 
+# npm's downloaded packages: npm ci fetches them again from package-lock.json
 node_modules/

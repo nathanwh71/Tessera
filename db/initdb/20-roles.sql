@@ -27,6 +27,10 @@ ALTER ROLE tessera_reader SET default_transaction_read_only = on;
 
 CREATE ROLE tessera_publisher LOGIN PASSWORD :'publisher_password';
 
--- The publisher makes a schema for each group of layers, so it needs CREATE on the database.
+-- Every role may connect today, through PUBLIC's default CONNECT. The grant names both roles all
+-- the same, so they keep their way in if an administrator later revokes CONNECT from PUBLIC.
+-- GRANT needs the database's name written out, so format builds each statement from
+-- current_database(), %I quotes the name, and \gexec runs the result.
 SELECT format('GRANT CONNECT ON DATABASE %I TO tessera_reader, tessera_publisher', current_database()) \gexec
+-- The publisher makes a schema for each group of layers, so it needs CREATE on the database.
 SELECT format('GRANT CREATE ON DATABASE %I TO tessera_publisher', current_database()) \gexec

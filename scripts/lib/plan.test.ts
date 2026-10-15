@@ -19,6 +19,7 @@ test('runs nginx on the machine\'s network, with both ports filled in', () => {
   assert.ok(args.includes('/srv/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro'));
 });
 
+// Every required variable set, so each test below changes only the one setting it checks.
 const office = { TESSERA_DB_PASSWORD: 'a', TESSERA_READER_PASSWORD: 'b', TESSERA_PUBLISHER_PASSWORD: 'c', TESSERA_HTTPPORT: '80', TESSERA_OFFICE_NETWORK: '192.168.10.0/24' };
 
 // S-07: the office's network must be a real range, and never one that lets in the world.
@@ -35,6 +36,7 @@ test('puts the two copies on ports 7800 and 7801 unless told otherwise', () => {
   assert.deepEqual(result.ok ? result.value.servicePorts : [], ['7800', '7801']);
   const moved = readStartSettings({ ...office, TESSERA_SERVICE_PORT: '8100' });
   assert.deepEqual(moved.ok ? moved.value.servicePorts : [], ['8100', '8101']);
+  // 80 needs root, 65535 leaves no port for the second copy, and 'abc' is no port at all.
   for (const bad of ['80', '65535', 'abc']) assert.equal(readStartSettings({ ...office, TESSERA_SERVICE_PORT: bad }).ok, false, bad);
 });
 

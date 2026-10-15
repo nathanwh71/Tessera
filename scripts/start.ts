@@ -23,6 +23,8 @@ import { waitForDatabase, waitForHealth } from './lib/database.ts';
 import { databaseUrl, nginxArguments, readStartSettings, runArguments } from './lib/plan.ts';
 import { keepRunning } from './lib/supervise.ts';
 
+// Fixed names, so each start finds the containers and the data an earlier start left, and
+// npm run publish finds the database by the same name.
 const container = 'tessera-db';
 const volume = 'tessera-data';
 const nginx = 'tessera-nginx';
@@ -42,6 +44,9 @@ await $`node scripts/build.ts`;
 // The database image is db/Dockerfile: the same image the tests start (US-01).
 await $`docker build --quiet --tag ${container} db`;
 
+// The database container is kept, not made afresh: a running one is left alone, and a stopped one
+// starts again with its data and passwords. docker run would refuse a second container of the
+// same name, so it runs only on the first start.
 const running = (await $`docker ps --quiet --filter name=^${container}$`).stdout.trim() !== '';
 if (!running) {
   const exists = (await $`docker ps --all --quiet --filter name=^${container}$`).stdout.trim() !== '';
@@ -81,6 +86,7 @@ const runCopy = (port: string) => keepRunning(`port ${port}`, {
 // Ctrl+C stops both copies and then this script; Nginx and the database keep running in Docker.
 process.on('SIGINT', () => {
   stopping = true;
+  // A copy may have stopped already, and zx refuses to kill it twice; that refusal changes nothing.
   for (const copy of copiesNow.values()) void copy.kill().catch(() => undefined);
 });
 
@@ -97,4 +103,5 @@ const health = await waitForHealth(`http://127.0.0.1:${settings.httpPort}/health
 console.log(health === 'up'
   ? `Tessera is ready: http://127.0.0.1:${settings.httpPort}/`
   : 'The service has not said UP within a minute; it keeps trying. Read its log above.');
+// The script stays alive while the copies run, so Ctrl+C here stops them both.
 await Promise.all(copies);

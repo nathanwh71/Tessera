@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { dockerSteps, heading, largestLog, linuxPath, needsRoll, registerSteps, taskArgument } from './boot.ts';
 
+// A made-up machine, with Node.js under nvm as many installs have it, so each test reads plain paths.
 const place = { distro: 'Ubuntu-24.04', repo: '/home/ana/tessera', node: '/home/ana/.nvm/versions/node/v26.11.1/bin/node', path: '/usr/bin:/bin' };
 
 test('keeps the Linux folders, once each, and drops those from Windows and npm', () => {

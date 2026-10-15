@@ -1,5 +1,9 @@
+# The automatic build on GitHub. It builds the map and the service and runs every test on a clean
+# machine, so a change that works only on the maintainer's laptop fails here first (US-00 c1, c3).
+
 name: build
 
+# Each push to main, and each pull request before it merges, gets the same checks.
 on:
   push:
     branches: [main]
@@ -7,16 +11,24 @@ on:
 
 jobs:
   build:
+    # A fixed Ubuntu, not ubuntu-latest, so the runner changes only when this line does, and the
+    # office machine runs Ubuntu 24.04 too (US-35).
     runs-on: ubuntu-24.04
     steps:
+      # Fetches the repository onto the runner; every later step reads it.
       - uses: actions/checkout@v4
+      # global.json names the .NET SDK, so the runner builds with the same SDK as the laptop.
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
+      # Node.js 26 runs the .ts scripts directly by stripping their types (ADR 0002, package.json's
+      # engines).
       - uses: actions/setup-node@v4
         with:
           node-version: 26
-      # The map builds first, so the service's build copies web/dist inside it (US-23 c4).
+      # The map builds first, so the service's build copies web/dist inside it (US-23 c4). npm ci
+      # installs exactly what package-lock.json names; --no-audit and --no-fund drop two reports
+      # that change nothing and slow the step.
       - run: npm ci --no-audit --no-fund
         working-directory: web
       - run: npm test
@@ -25,9 +37,14 @@ jobs:
         working-directory: web
       # The integration tests need no database service here: Testcontainers builds the packaged
       # database from db/Dockerfile on the runner's own Docker.
+      # Release, as npm run build makes it: every later step runs this one build with --no-build,
+      # rather than building again. Each test project is a program of its own (global.json picks
+      # Microsoft.Testing.Platform), so dotnet run starts it and it runs its tests.
       - run: dotnet build --configuration Release
       - run: dotnet run --project tests/Tessera.UnitTests --configuration Release --no-build
       - run: dotnet run --project tests/Tessera.IntegrationTests --configuration Release --no-build
+      # The scripts' own tools, then the scripts' checks: tsc refuses a type error before a run
+      # meets it, and node --test runs the pure functions' tests (ADR 0002, rule 1).
       - run: npm ci
       - run: npm run typecheck
       - run: npm run test:scripts

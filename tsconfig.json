@@ -1,21 +1,34 @@
 {
   // Node.js 26 runs each .ts file directly by stripping its types, so tsc only checks them (ADR 0002).
   "compilerOptions": {
+    // The JavaScript and the module rules of Node.js 26 itself, so tsc checks the code as Node
+    // will run it: ES modules, found by the rules Node uses.
     "target": "es2024",
     "module": "nodenext",
     "moduleResolution": "nodenext",
+    // Every strict check, so a mistake with null or a missing type fails here, not in a run.
     "strict": true,
+    // tsc writes no JavaScript: Node runs the .ts files themselves.
     "noEmit": true,
     // Node.js strips types but compiles nothing, so syntax that produces code, such as enum or
     // namespace, is refused here before it reaches a run (ADR 0002, rule 4).
     "erasableSyntaxOnly": true,
+    // An import used only for types must say 'import type', so Node can drop it whole when it
+    // strips the types; otherwise it would try to load a value that is not there.
     "verbatimModuleSyntax": true,
+    // Node loads each import by the path written, '.ts' and all, so the imports keep '.ts' and
+    // tsc leaves those paths as they are.
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": false,
+    // Two stricter checks: a value read from a list or a record may be undefined, and an optional
+    // property may be left out but never set to undefined. Each catches a mistake strict misses.
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
+    // The scripts run on Node alone, so only Node's own types load, and tsc skips checking the
+    // libraries' type files, which their authors have checked already.
     "types": ["node"],
     "skipLibCheck": true
   },
+  // The scripts alone: web/ has its own tsconfig.json for the map.
   "include": ["scripts/**/*.ts"]
 }

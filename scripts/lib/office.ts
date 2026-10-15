@@ -29,6 +29,8 @@ export function networkingSteps(mode: string): readonly string[] {
  * The firewall steps that let the office in on `port`, and the check from another office machine.
  * Mirrored networking passes traffic through Hyper-V's own firewall as well as Windows', so both
  * need a rule. Each rule opens the one port, and the Windows rule only on the office's own networks.
+ * The -VMCreatorId, {40E0AC32-...}, is the fixed id Windows gives WSL's virtual machines, so the
+ * Hyper-V rule opens the port to WSL alone, not to every virtual machine on the computer.
  */
 export function firewallSteps(port: string): readonly string[] {
   return [

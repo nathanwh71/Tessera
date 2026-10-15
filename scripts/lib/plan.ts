@@ -22,8 +22,12 @@ export type DatabasePlace = {
 
 /**
  * Reads the start-up settings, naming every missing variable at once, so one failed start tells
- * the maintainer everything to fix. The result is the map's own Result type (ADR 0006), shared
+ * the maintainer everything to fix. The result is the map's own ***Result*** type (ADR 0006), shared
  * so the scripts and the map say "failed" one way.
+ *
+ * The first copy listens on 7800 unless told otherwise, the port every story names for the
+ * service, and the second on the next port. A port below 1024 needs root on Linux, and the second
+ * copy needs room for port + 1, so the first must lie between 1024 and 65534.
  */
 export function readStartSettings(environment: Readonly<Record<string, string | undefined>>): Result<StartSettings, readonly string[]> {
   const required = ['TESSERA_DB_PASSWORD', 'TESSERA_READER_PASSWORD', 'TESSERA_PUBLISHER_PASSWORD', 'TESSERA_HTTPPORT', 'TESSERA_OFFICE_NETWORK'] as const;
@@ -88,6 +92,11 @@ export function readDatabasePlace(environment: Readonly<Record<string, string | 
  * 127.0.0.1, so only this machine reaches the database; the office reaches the service alone.
  * The volume keeps the data when the container goes. Each argument stays one word, however many
  * spaces a password holds, since the script passes the list as it is, not as one line of text.
+ *
+ * --restart unless-stopped brings the database back after a crash, a reboot or a restart of
+ * Docker, unless someone stopped it on purpose. The volume mounts at /var/lib/postgresql, not
+ * /var/lib/postgresql/data: from PostgreSQL 18 the image keeps each version's data in a folder of
+ * its own below it, so a later upgrade finds the old data on the same volume.
  */
 export function runArguments(settings: StartSettings, container: string, volume: string): readonly string[] {
   return [
@@ -103,7 +112,7 @@ export function runArguments(settings: StartSettings, container: string, volume:
 }
 
 /**
- * A database URL for a role. encodeURIComponent writes each character a URL would misread, such
+ * A database URL for a ***role***. encodeURIComponent writes each character a URL would misread, such
  * as '@' in a password, as '%' and two hexadecimal digits.
  */
 export function databaseUrl(user: string, password: string, database: DatabasePlace): string {
@@ -112,10 +121,11 @@ export function databaseUrl(user: string, password: string, database: DatabasePl
 
 /**
  * The arguments for "docker run" that start Nginx in front of the two copies of the service
- * (ADR 0008, N-29). Nginx shares
- * the machine's own network, so it reaches the service at 127.0.0.1 and opens the office port
- * itself; it runs as root inside its container, so port 80 needs no change to Ubuntu. The image
- * fills the ports and the office's network into the template when it starts (S-07).
+ * (ADR 0008, N-29). Nginx shares the machine's own network, so it reaches the service at
+ * 127.0.0.1 and opens the office port itself; it runs as root inside its container, so port 80
+ * needs no change to Ubuntu. The image fills the ports and the office's network into the template
+ * when it starts (S-07). --restart unless-stopped brings Nginx back after a reboot or a restart
+ * of Docker, so the office reaches the service again with no one at the machine.
  */
 export function nginxArguments(container: string, httpPort: string, servicePorts: readonly [string, string], officeNetwork: string, template: string): readonly string[] {
   return [
@@ -129,5 +139,9 @@ export function nginxArguments(container: string, httpPort: string, servicePorts
   ];
 }
 
-/** The Nginx image both the start-up script and the browser tests run. */
+/**
+ * The Nginx image both the start-up script and the browser tests run, so the tests check the Nginx
+ * the office runs. The tag fixes the version at 1.29, so a new Nginx arrives only when this line
+ * changes; Alpine keeps the image small.
+ */
 export const nginxImage = 'nginx:1.29-alpine';
