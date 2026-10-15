@@ -2,34 +2,34 @@
 
 | | |
 |---|---|
-| Status | <span style="color:grey">Accepted</span> |
-| Date | 13 <span style="color:grey">October</span> 2026 |
-| Decider | The <span style="color:grey">maintainer</span> |
-| Covers | Every <span style="color:grey">line</span> of the <span style="color:grey">back</span> <span style="color:grey">end</span>, in C# 14 on .NET 10, in `nathanwh71/Tessera`; the <span style="color:grey">map</span> and the <span style="color:grey">scripts</span> <span style="color:grey">follow</span> the <span style="color:grey">same</span> <span style="color:grey">style</span> in TypeScript 6 |
-| Related | ADR 0001, <span style="color:grey">rule</span> 6; ADR 0002, <span style="color:grey">rules</span> 1 and 2 |
+| Status | _Accepted_ |
+| Date | 13 _October_ 2026 |
+| Decider | The _maintainer_ |
+| Covers | Every _line_ of the _back_ _end_, in C# 14 on .NET 10, in `nathanwh71/Tessera`; the _map_ and the _scripts_ _follow_ the _same_ _style_ in TypeScript 6 |
+| Related | ADR 0001, _rule_ 6; ADR 0002, _rules_ 1 and 2 |
 
 ## Decision
 
-Tessera's <span style="color:grey">code</span> is <span style="color:grey">written</span> in a ***functional style***: immutable <span style="color:grey">values</span>, ***pure functions*** and <span style="color:grey">referential</span> transparency. An <span style="color:grey">expected</span> <span style="color:grey">failure</span> is a `Result<T, E>`, from the CSharpFunctionalExtensions <span style="color:grey">library</span>, and <span style="color:grey">never</span> an exception. A <span style="color:grey">value</span> that may be <span style="color:grey">missing</span> is a ***nullable type***, `T?`, which the <span style="color:grey">compiler</span> <span style="color:grey">checks</span>.
+Tessera's _code_ is _written_ in a ***functional style***: immutable _values_, ***pure functions*** and _referential_ transparency. An _expected_ _failure_ is a `Result<T, E>`, from the CSharpFunctionalExtensions _library_, and _never_ an exception. A _value_ that may be _missing_ is a ***nullable type***, `T?`, which the _compiler_ _checks_.
 
 ## Why
 
-- **Code the maintainer reads at a glance.** The <span style="color:grey">maintainer</span> <span style="color:grey">comes</span> from F#, and will <span style="color:grey">read</span> and <span style="color:grey">change</span> this <span style="color:grey">code</span> for <span style="color:grey">years</span>. Immutable <span style="color:grey">values</span> and `Result` ***pipelines*** <span style="color:grey">read</span> the <span style="color:grey">way</span> an F# <span style="color:grey">programmer</span> <span style="color:grey">thinks</span>.
-- **A library, not code of our own.** CSharpFunctionalExtensions <span style="color:grey">gives</span> `Result` with `Map`, `Bind`, `MapError`, `Match`, `Ensure` and `Combine`, and `from … in … select` <span style="color:grey">chains</span> its <span style="color:grey">steps</span>. It is widely <span style="color:grey">used</span>, with 38.9 million <span style="color:grey">downloads</span>, so Tessera <span style="color:grey">need</span> not <span style="color:grey">write</span> or <span style="color:grey">test</span> a `Result` of its <span style="color:grey">own</span>.
-- **The compiler watches for missing values.** With `Nullable` on and every <span style="color:grey">warning</span> an <span style="color:grey">error</span>, the <span style="color:grey">compiler</span> <span style="color:grey">makes</span> <span style="color:grey">each</span> <span style="color:grey">caller</span> <span style="color:grey">decide</span> what <span style="color:grey">happens</span> when a `T?` is <span style="color:grey">missing</span>.
-- **Tests without a database.** A <span style="color:grey">pure</span> <span style="color:grey">function</span> <span style="color:grey">reads</span> <span style="color:grey">only</span> its ***parameters***, so FsCheck and xUnit <span style="color:grey">test</span> it with no <span style="color:grey">database</span>, no <span style="color:grey">network</span> and no <span style="color:grey">clock</span>.
+- **Code the maintainer reads at a glance.** The _maintainer_ _comes_ from F#, and will _read_ and _change_ this _code_ for _years_. Immutable _values_ and `Result` ***pipelines*** _read_ the _way_ an F# _programmer_ _thinks_.
+- **A library, not code of our own.** CSharpFunctionalExtensions _gives_ `Result` with `Map`, `Bind`, `MapError`, `Match`, `Ensure` and `Combine`, and `from … in … select` _chains_ its _steps_. It is widely _used_, with 38.9 million _downloads_, so Tessera _need_ not _write_ or _test_ a `Result` of its _own_.
+- **The compiler watches for missing values.** With `Nullable` on and every _warning_ an _error_, the _compiler_ _makes_ _each_ _caller_ _decide_ what _happens_ when a `T?` is _missing_.
+- **Tests without a database.** A _pure_ _function_ _reads_ _only_ its ***parameters***, so FsCheck and xUnit _test_ it with no _database_, no _network_ and no _clock_.
 
 ## The three habits
 
-**Immutability.** Every <span style="color:grey">value</span> is a <span style="color:grey">positional</span> `record` or a `readonly record struct`. Every <span style="color:grey">collection</span> is an `ImmutableArray` or an `ImmutableDictionary`. A `with` <span style="color:grey">expression</span> <span style="color:grey">makes</span> a <span style="color:grey">changed</span> <span style="color:grey">copy</span>; no <span style="color:grey">field</span> <span style="color:grey">changes</span> <span style="color:grey">after</span> <span style="color:grey">construction</span>.
+**Immutability.** Every _value_ is a _positional_ `record` or a `readonly record struct`. Every _collection_ is an `ImmutableArray` or an `ImmutableDictionary`. A `with` _expression_ _makes_ a _changed_ _copy_; no _field_ _changes_ _after_ _construction_.
 
-**Pure functions.** <span style="color:grey">Decisions</span> <span style="color:grey">live</span> in `static` <span style="color:grey">functions</span> that <span style="color:grey">take</span> <span style="color:grey">values</span> and <span style="color:grey">return</span> <span style="color:grey">values</span>: <span style="color:grey">quoting</span> a <span style="color:grey">name</span>, <span style="color:grey">building</span> the ***tile query***'s <span style="color:grey">text</span>, <span style="color:grey">checking</span> a ***tile***'s <span style="color:grey">address</span>. An <span style="color:grey">expected</span> <span style="color:grey">failure</span> <span style="color:grey">returns</span> as a `Result`; no <span style="color:grey">function</span> <span style="color:grey">throws</span> for <span style="color:grey">one</span>.
+**Pure functions.** _Decisions_ _live_ in `static` _functions_ that _take_ _values_ and _return_ _values_: _quoting_ a _name_, _building_ the ***tile query***'s _text_, _checking_ a ***tile***'s _address_. An _expected_ _failure_ _returns_ as a `Result`; no _function_ _throws_ for _one_.
 
-**Referential transparency.** A <span style="color:grey">function</span> <span style="color:grey">reads</span> <span style="color:grey">only</span> its <span style="color:grey">parameters</span>. The <span style="color:grey">clock</span>, the <span style="color:grey">environment</span>, the <span style="color:grey">settings</span> and the <span style="color:grey">database</span> <span style="color:grey">reach</span> it as <span style="color:grey">values</span> <span style="color:grey">passed</span> in, <span style="color:grey">never</span> <span style="color:grey">through</span> `DateTime.Now`, a `static` <span style="color:grey">field</span> or a <span style="color:grey">hidden</span> <span style="color:grey">service</span>. The <span style="color:grey">same</span> <span style="color:grey">inputs</span> <span style="color:grey">give</span> the <span style="color:grey">same</span> <span style="color:grey">output</span>.
+**Referential transparency.** A _function_ _reads_ _only_ its _parameters_. The _clock_, the _environment_, the _settings_ and the _database_ _reach_ it as _values_ _passed_ in, _never_ _through_ `DateTime.Now`, a `static` _field_ or a _hidden_ _service_. The _same_ _inputs_ _give_ the _same_ _output_.
 
 ## Early returns where they read better
 
-A <span style="color:grey">chain</span> of `Bind` <span style="color:grey">steps</span> <span style="color:grey">suits</span> <span style="color:grey">work</span> that <span style="color:grey">passes</span> <span style="color:grey">one</span> <span style="color:grey">value</span> along. A <span style="color:grey">route</span> that <span style="color:grey">refuses</span> for <span style="color:grey">several</span> <span style="color:grey">reasons</span> <span style="color:grey">reads</span> <span style="color:grey">better</span> <span style="color:grey">top</span> to <span style="color:grey">bottom</span>, <span style="color:grey">one</span> `if` and <span style="color:grey">one</span> `return` for <span style="color:grey">each</span> <span style="color:grey">refusal</span>. The <span style="color:grey">tile</span> <span style="color:grey">route</span> in `src/Tessera/Tiles/Tiles.cs` does this:
+A _chain_ of `Bind` _steps_ _suits_ _work_ that _passes_ _one_ _value_ along. A _route_ that _refuses_ for _several_ _reasons_ _reads_ _better_ _top_ to _bottom_, _one_ `if` and _one_ `return` for _each_ _refusal_. The _tile_ _route_ in `src/Tessera/Tiles/Tiles.cs` does this:
 
 ```csharp
 if (catalogue() is not { } layers)
@@ -40,41 +40,41 @@ if (TileAddress.Of(z, x, y, settings.MinZoom, settings.MaxZoom) is not { } tile)
     return Problems.NotFound("No tile has those coordinates.");
 ```
 
-The <span style="color:grey">database</span>'s <span style="color:grey">answer</span> then <span style="color:grey">arrives</span> as a `Result`, and `Match` <span style="color:grey">turns</span> <span style="color:grey">each</span> <span style="color:grey">case</span> into an <span style="color:grey">answer</span>.
+The _database_'s _answer_ then _arrives_ as a `Result`, and `Match` _turns_ _each_ _case_ into an _answer_.
 
 ## Types that say what a value is
 
-F# <span style="color:grey">makes</span> <span style="color:grey">illegal</span> <span style="color:grey">states</span> unrepresentable with its <span style="color:grey">types</span>, and Tessera <span style="color:grey">follows</span> it where the <span style="color:grey">gain</span> is <span style="color:grey">real</span>.
+F# _makes_ _illegal_ _states_ unrepresentable with its _types_, and Tessera _follows_ it where the _gain_ is _real_.
 
 | Tool | Where Tessera uses it | What the compiler then refuses |
 |---|---|---|
-| A record in place of a long list of arguments | `TileAddress(Z, X, Y)` <span style="color:grey">names</span> the <span style="color:grey">three</span> <span style="color:grey">numbers</span> of a <span style="color:grey">tile</span> | <span style="color:grey">Arguments</span> <span style="color:grey">swapped</span> by <span style="color:grey">mistake</span>, which <span style="color:grey">compile</span> <span style="color:grey">because</span> they <span style="color:grey">share</span> a <span style="color:grey">type</span> |
-| A branded type in TypeScript | The <span style="color:grey">map</span>'s `Level` and `MapZoom`: a ***web-map level*** and MapLibre's <span style="color:grey">zoom</span> <span style="color:grey">differ</span> by <span style="color:grey">one</span> | <span style="color:grey">One</span> <span style="color:grey">passed</span> where the <span style="color:grey">other</span> <span style="color:grey">belongs</span>, as F#'s <span style="color:grey">units</span> of <span style="color:grey">measure</span> would <span style="color:grey">refuse</span> |
+| A record in place of a long list of arguments | `TileAddress(Z, X, Y)` _names_ the _three_ _numbers_ of a _tile_ | _Arguments_ _swapped_ by _mistake_, which _compile_ _because_ they _share_ a _type_ |
+| A branded type in TypeScript | The _map_'s `Level` and `MapZoom`: a ***web-map level*** and MapLibre's _zoom_ _differ_ by _one_ | _One_ _passed_ where the _other_ _belongs_, as F#'s _units_ of _measure_ would _refuse_ |
 
-<span style="color:grey">Wrap</span> <span style="color:grey">only</span> a <span style="color:grey">value</span> that <span style="color:grey">travels</span> <span style="color:grey">between</span> <span style="color:grey">functions</span> and could be mistaken for another; wrapping every <span style="color:grey">number</span> <span style="color:grey">adds</span> noise and <span style="color:grey">catches</span> <span style="color:grey">nothing</span>.
+_Wrap_ _only_ a _value_ that _travels_ _between_ _functions_ and could be mistaken for another; wrapping every _number_ _adds_ noise and _catches_ _nothing_.
 
 ## The map and the scripts
 
-The <span style="color:grey">map</span>, in TypeScript 6, <span style="color:grey">keeps</span> a `Result` <span style="color:grey">type</span> of its <span style="color:grey">own</span>, in `web/src/shared/result.ts`, whose <span style="color:grey">functions</span> <span style="color:grey">take</span> the <span style="color:grey">result</span> <span style="color:grey">last</span>, as F#'s do: `map`, `flatMap`, `fold` and `defaultWith`. `parseJson` <span style="color:grey">turns</span> `JSON.parse`'s <span style="color:grey">throw</span> into a `Result` <span style="color:grey">once</span>, so no <span style="color:grey">other</span> <span style="color:grey">code</span> <span style="color:grey">needs</span> a `try`.
+The _map_, in TypeScript 6, _keeps_ a `Result` _type_ of its _own_, in `web/src/shared/result.ts`, whose _functions_ _take_ the _result_ _last_, as F#'s do: `map`, `flatMap`, `fold` and `defaultWith`. `parseJson` _turns_ `JSON.parse`'s _throw_ into a `Result` _once_, so no _other_ _code_ _needs_ a `try`.
 
-JavaScript's pipe operator is a <span style="color:grey">proposal</span> at <span style="color:grey">stage</span> 2 of 4, and TypeScript <span style="color:grey">cannot</span> <span style="color:grey">read</span> it, so <span style="color:grey">two</span> <span style="color:grey">functions</span> in `web/src/shared/pipe.ts` <span style="color:grey">stand</span> in for F#'s operators: `pipe` for `|>`, and `flow` for `>>`. <span style="color:grey">Three</span> <span style="color:grey">rules</span> <span style="color:grey">keep</span> a <span style="color:grey">chain</span> readable: <span style="color:grey">steps</span> <span style="color:grey">run</span> in the <span style="color:grey">order</span> <span style="color:grey">written</span>, <span style="color:grey">each</span> <span style="color:grey">joined</span> <span style="color:grey">function</span> has a <span style="color:grey">name</span>, and a direct <span style="color:grey">call</span> <span style="color:grey">serves</span> where it <span style="color:grey">reads</span> <span style="color:grey">better</span>, which for `pipe` <span style="color:grey">means</span> a <span style="color:grey">chain</span> of <span style="color:grey">fewer</span> than <span style="color:grey">three</span> <span style="color:grey">steps</span>.
+JavaScript's pipe operator is a _proposal_ at _stage_ 2 of 4, and TypeScript _cannot_ _read_ it, so _two_ _functions_ in `web/src/shared/pipe.ts` _stand_ in for F#'s operators: `pipe` for `|>`, and `flow` for `>>`. _Three_ _rules_ _keep_ a _chain_ readable: _steps_ _run_ in the _order_ _written_, _each_ _joined_ _function_ has a _name_, and a direct _call_ _serves_ where it _reads_ _better_, which for `pipe` _means_ a _chain_ of _fewer_ than _three_ _steps_.
 
 ## Options considered
 
 | Option | Why not |
 |---|---|
-| An `Option<T>` and a `Result<T, E>` of Tessera's own | <span style="color:grey">Two</span> <span style="color:grey">types</span> to <span style="color:grey">write</span> and <span style="color:grey">test</span>, for what a <span style="color:grey">library</span> and the <span style="color:grey">compiler</span>'s <span style="color:grey">nullable</span> <span style="color:grey">checks</span> <span style="color:grey">already</span> <span style="color:grey">give</span> |
-| LanguageExt | A <span style="color:grey">large</span> <span style="color:grey">library</span> with a <span style="color:grey">style</span> of its <span style="color:grey">own</span>, for the <span style="color:grey">two</span> or <span style="color:grey">three</span> <span style="color:grey">functions</span> Tessera <span style="color:grey">needs</span> |
-| Exceptions for expected failures | A <span style="color:grey">caller</span> <span style="color:grey">cannot</span> <span style="color:grey">see</span> from a <span style="color:grey">function</span>'s <span style="color:grey">type</span> that it may <span style="color:grey">fail</span> |
+| An `Option<T>` and a `Result<T, E>` of Tessera's own | _Two_ _types_ to _write_ and _test_, for what a _library_ and the _compiler_'s _nullable_ _checks_ _already_ _give_ |
+| LanguageExt | A _large_ _library_ with a _style_ of its _own_, for the _two_ or _three_ _functions_ Tessera _needs_ |
+| Exceptions for expected failures | A _caller_ _cannot_ _see_ from a _function_'s _type_ that it may _fail_ |
 
 ## Consequences
 
-- <span style="color:grey">Absence</span> has <span style="color:grey">one</span> <span style="color:grey">form</span>, `T?`, and the <span style="color:grey">compiler</span> <span style="color:grey">checks</span> it; it <span style="color:grey">lacks</span> `Map` and `Bind`, so a <span style="color:grey">chain</span> that may <span style="color:grey">find</span> <span style="color:grey">nothing</span> <span style="color:grey">uses</span> an <span style="color:grey">early</span> <span style="color:grey">return</span> <span style="color:grey">instead</span>.
-- C# 14 has no <span style="color:grey">closed</span> <span style="color:grey">unions</span>, so `Match` <span style="color:grey">takes</span> the <span style="color:grey">place</span> of F#'s <span style="color:grey">exhaustive</span> `match`.
-- <span style="color:grey">Each</span> wrapper <span style="color:grey">type</span> <span style="color:grey">costs</span> a <span style="color:grey">little</span> <span style="color:grey">code</span> at the <span style="color:grey">edge</span>, where a <span style="color:grey">plain</span> <span style="color:grey">number</span> <span style="color:grey">arrives</span> and is wrapped <span style="color:grey">once</span>.
+- _Absence_ has _one_ _form_, `T?`, and the _compiler_ _checks_ it; it _lacks_ `Map` and `Bind`, so a _chain_ that may _find_ _nothing_ _uses_ an _early_ _return_ _instead_.
+- C# 14 has no _closed_ _unions_, so `Match` _takes_ the _place_ of F#'s _exhaustive_ `match`.
+- _Each_ wrapper _type_ _costs_ a _little_ _code_ at the _edge_, where a _plain_ _number_ _arrives_ and is wrapped _once_.
 
 ## When to revisit
 
-- C# <span style="color:grey">settles</span> <span style="color:grey">closed</span> <span style="color:grey">unions</span>; a <span style="color:grey">refusal</span> or a <span style="color:grey">page</span> <span style="color:grey">state</span> may then <span style="color:grey">become</span> a <span style="color:grey">union</span>, and the <span style="color:grey">compiler</span> can <span style="color:grey">check</span> every `switch`.
-- JavaScript's pipe operator <span style="color:grey">reaches</span> <span style="color:grey">stage</span> 3. Then <span style="color:grey">weigh</span> `x |> f(%)` <span style="color:grey">against</span> `pipe`. The operator <span style="color:grey">follows</span> the Hack <span style="color:grey">style</span>, with `%` for the <span style="color:grey">value</span>, not F#'s, so `pipe` may <span style="color:grey">still</span> <span style="color:grey">read</span> closer to F#.
-- A <span style="color:grey">second</span> <span style="color:grey">maintainer</span> <span style="color:grey">joins</span> who <span style="color:grey">reads</span> <span style="color:grey">idiomatic</span> C# <span style="color:grey">better</span> than F#-style C#.
+- C# _settles_ _closed_ _unions_; a _refusal_ or a _page_ _state_ may then _become_ a _union_, and the _compiler_ can _check_ every `switch`.
+- JavaScript's pipe operator _reaches_ _stage_ 3. Then _weigh_ `x |> f(%)` _against_ `pipe`. The operator _follows_ the Hack _style_, with `%` for the _value_, not F#'s, so `pipe` may _still_ _read_ closer to F#.
+- A _second_ _maintainer_ _joins_ who _reads_ _idiomatic_ C# _better_ than F#-style C#.
