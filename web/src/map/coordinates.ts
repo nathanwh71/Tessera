@@ -1,4 +1,4 @@
-// map/coordinates.ts: the point under the pointer, in words (UI-19, criterion 8). A pure function of
+// map/coordinates.ts: the point under the pointer, in words (UI-19, criterion 7). A pure function of
 // the map module, which reads only its input; ScaleBar.tsx shows what it writes.
 
 import type { LngLat } from "../shared";

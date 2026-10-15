@@ -1,11 +1,12 @@
 // map/landing.ts: the pins' landing as the page opens (UI-15, criterion 6), as a pure state machine
-// of the map module. MapCanvas.tsx sends each event here and draws the stage it gets back.
+// of the map module. useLanding, in canvas-hooks.ts, sends each event here, and MapCanvas.tsx draws
+// the stage it gets back.
 //
 // A state machine is a value that says which stage something is at, and a function that moves it on
 // when an event happens. This one reads only its inputs and changes nothing outside itself
 // (ADR 0004), so every path through the landing is tested with values alone, including the two a
 // browser test rarely reaches: a visitor who moves the map before the first places arrive, and a
-// map whose places never come. The component keeps the timers and the drawing.
+// map whose places never come. useLanding keeps the timers, and MapCanvas.tsx the drawing.
 
 import { type GroupKey, dropDelays, dropMs } from "../design";
 

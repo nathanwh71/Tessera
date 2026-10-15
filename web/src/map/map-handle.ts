@@ -1,7 +1,7 @@
 // map/map-handle.ts: the map's ports, the functions through which the update function moves the map,
 // as MapLibre, the library that draws the map, carries them out (US-23, UI-09, UI-10). main.tsx makes
-// one handle and hands it to the page; the update calls its ports, and MapCanvas.tsx attaches the map
-// to it once MapLibre has started. It is one of the two files the architecture test lets hold
+// one handle and hands it to the page; the update calls its ports, and useMapLibre, in canvas-hooks.ts,
+// attaches the map to it once MapLibre has started. It is one of the two files the architecture test lets hold
 // changing state.
 //
 // The ports exist before the map does: /food.cafes.html asks to frame the area before MapLibre has

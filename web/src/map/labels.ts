@@ -14,7 +14,7 @@ import { CLUSTER_RADIUS_PX } from "./style";
 export const NAMED_IN_CLUSTER = 10;
 
 /**
- * A cluster's label (UI-10, criterion 5): its number, the names of its first places, and that zooming
+ * A cluster's label (UI-10, criterion 4): its number, the names of its first places, and that zooming
  * in shows them, such as '3 places: A, B, C. Zoom in to see them.'
  */
 export function clusterLabel(total: number, names: readonly string[]): string {

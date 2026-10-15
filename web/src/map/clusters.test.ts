@@ -60,7 +60,7 @@ describe("UI-10 clusters", () => {
 		expect(clustersAt(level(15), pair(distance * 0.4))).toBe(1);
 	});
 
-	it("keeps every place apart from level 16 (UI-17, criterion 6)", () => {
+	it("keeps every place apart from level 16 (UI-17, criterion 5)", () => {
 		expect(clustersAt(level(16), pair(1))).toBe(2);
 	});
 

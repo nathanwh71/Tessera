@@ -6,8 +6,8 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
 	testDir: "e2e",
-	// `npm run measure` sets TESSERA_MEASURE and runs the measurements in place of the tests
-	// (scripts/measure.ts); the tests never run them.
+	// `TESSERA_MEASURE=1 npm run e2e` runs the measurements in place of the tests, so a plain run
+	// never waits on them; a measurement prints numbers rather than passing or failing.
 	testMatch: process.env["TESSERA_MEASURE"] === undefined ? "**/*.spec.ts" : "**/*.measure.ts",
 	// The map draws with WebGL, the browser's 3D drawing, in software here, with no graphics card, so
 	// tests run one after another and wait for the map.

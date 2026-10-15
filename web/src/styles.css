@@ -1,5 +1,6 @@
 /*
-  styles.css: the page's one theme, Material 3 as design/README.md sets it (UI-15).
+  styles.css: the page's one theme, Material 3 as UI-15 sets it, so every part of the
+  page shares one look.
 
   Every colour the page uses lives in the @theme block below. Code that cannot read CSS, such as
   MapLibre's paint and the canvas pins, reads these variables at run time (design/theme.ts), so
@@ -15,8 +16,8 @@
 /*
   Material Symbols, rounded (UI-15, criterion 2), cut down to the two icons the map draws, 'add' and
   'remove', at its one setting: fill 0, weight 400, grade 0, size 24. The whole font is 5.4 MB; this
-  one is under 3 kB, which matters with a thousand visitors. `npm run icons` cuts it again from the
-  package, and must run whenever the map draws a new icon.
+  one is under 3 kB, which matters with a thousand visitors. No script in this build cuts it, so a new icon
+  needs the font cut again by hand from the material-symbols package, or the icon shows as its name.
 */
 @font-face {
   font-family: "Material Symbols Rounded";
@@ -31,7 +32,7 @@
   /* Tailwind's own palette goes, so no class can bring a colour from outside these roles. */
   --color-*: initial;
 
-  /* Material 3 colour roles, built from the seed #1F5FA8 (design/tokens.css). */
+  /* Material 3 colour roles, built from the seed #1F5FA8 by Material's colour rules (UI-15). */
   --color-primary: #1F5FA8; /* 5.8:1 on surface-low, as text */
   --color-on-primary: #FFFFFF; /* 6.4:1 on primary */
   --color-primary-container: #D6E3FF;

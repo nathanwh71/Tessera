@@ -1,6 +1,6 @@
 // e2e/drag.measure.ts: measures a drag over the busiest street, with every layer on, at level 17,
-// where the most pins and their invisible names sit in view. It is a measurement, not a test: `npm
-// run measure` runs it (scripts/measure.ts), and it prints what it saw rather than passing or failing
+// where the most pins and their invisible names sit in view. It is a measurement, not a test:
+// `TESSERA_MEASURE=1 npm run e2e` runs it (playwright.config.ts), and it prints what it saw rather than passing or failing
 // on a number, since the machine it runs on sets the numbers.
 //
 // It records two things while the pointer drags the map for about two seconds:

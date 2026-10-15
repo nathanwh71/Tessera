@@ -40,7 +40,7 @@ export const levelOf = flow(mapZoom, toLevel, clampZoom);
 export const NAMES_FROM_LEVEL = level(16);
 
 /**
- * UI-17, criterion 6: places stay in clusters, one mark for several places close together, below
+ * UI-17, criterion 5: places stay in clusters, one mark for several places close together, below
  * level 16, so the last level that clusters is 15.
  */
 export const LAST_CLUSTER_LEVEL = level(15);

@@ -2,7 +2,8 @@
 // page's invisible overlay (UI-10, UI-11). MapLibre draws on a canvas, a bitmap that the keyboard and
 // a screen reader, the program that reads a page aloud, cannot reach; so the page lays a picture with
 // its name over each pin and a button over each cluster, one mark for several places close together.
-// MapCanvas.tsx calls these functions each time the map moves or rests; they ask MapLibre where each
+// useMapLibre, in canvas-hooks.ts, calls these functions each time the map moves or rests, and
+// MapCanvas.tsx calls openCluster when a cluster's button is pressed; they ask MapLibre where each
 // one is, and change nothing.
 
 import type { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";

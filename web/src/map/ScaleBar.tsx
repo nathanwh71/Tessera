@@ -48,7 +48,7 @@ export function ScaleBar({ level, latitude, units, onToggleUnits }: ScaleBarProp
 }
 
 /**
- * The point under the mouse pointer, latitude first, beside the scale bar (UI-19, criteria 8 to 10).
+ * The point under the mouse pointer, latitude first, beside the scale bar (UI-19, criteria 7 to 9).
  * It shows only while the pointer is over the map, and a screen reader, the program that reads a page
  * aloud, skips it, since it follows the pointer alone and a screen reader has none.
  */

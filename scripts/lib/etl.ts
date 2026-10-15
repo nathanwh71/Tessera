@@ -3,7 +3,7 @@
 // no GDAL (ADR 0002, rule 1).
 import { err, ok, type Result } from '../../web/src/shared/result.ts';
 
-/** The pipeline's project, beside the service's; Release, so it builds once for every run. */
+/** The pipeline's project, beside the service's, so one solution builds both. */
 export const etlProject = 'tools/Tessera.Etl';
 
 /** Reads the command line: one pipeline file, ending in .json. */
@@ -14,7 +14,10 @@ export function readEtlArguments(args: readonly string[]): Result<string, string
   return ok(file);
 }
 
-/** What dotnet needs to build the pipeline, if it has changed, and run it on the file. */
+/**
+ * What dotnet needs to build the pipeline, if it has changed, and run it on the file. Release, as
+ * CI builds it, so a run after a Release build starts at once rather than building again.
+ */
 export const dotnetArguments = (file: string): readonly string[] =>
   ['run', '--project', etlProject, '--configuration', 'Release', '--', file];
 

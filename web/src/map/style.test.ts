@@ -107,7 +107,7 @@ describe("UI-11 names", () => {
 });
 
 describe("UI-17 names that never overlap", () => {
-	it("gives every place layer four anchors and optional text", () => {
+	it("gives the names four anchors, and lets a name give way while its pin stays", () => {
 		const anchors = symbol(LAYER.names).layout?.["text-variable-anchor-offset"];
 		// MapLibre names the side of the text that touches the place: 'left' puts the name on the right.
 		expect(Array.isArray(anchors) && anchors.filter((a) => typeof a === "string")).toEqual(["left", "right", "bottom", "top"]);

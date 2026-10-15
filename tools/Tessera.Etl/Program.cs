@@ -11,8 +11,8 @@ using Tessera.Etl;
 // Transform: the pipeline file's filters clean each table's rows, in the order it lists them.
 // Load:    ogr2ogr writes the cleaned rows as SQL, and the tables join into one numbered script.
 //
-// Every run writes a log beside the scripts' folder, in db/seed-logs/, of what each filter did to
-// each row. A run stops, and writes no script, when a filter set to stop finds a bad row, or when
+// Every run that reaches the source writes a log beside the scripts' folder, in db/seed-logs/, of
+// what each filter did to each row; a wrong command or pipeline file stops before that, with no log. A run stops, and writes no script, when a filter set to stop finds a bad row, or when
 // a table breaks its stop rules. It ends with an exit code: 0 when it wrote the script, 1 when it
 // stopped or failed, 2 when the command or the pipeline file is wrong.
 

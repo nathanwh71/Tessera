@@ -2,8 +2,8 @@
 // one file that wires its events (ADR 0005).
 // It holds what every map MapLibre draws shares: its start-up options, its images, the wiring of its
 // events, and the feed of loaded places into the clustered source (a source is the data a map layer
-// draws from; a cluster is one mark for several places close together). MapCanvas.tsx calls each
-// function once as the map starts. This is the shell of side effects, work that reaches outside the
+// draws from; a cluster is one mark for several places close together). useMapLibre, in
+// canvas-hooks.ts, calls each function once as the map starts. This is the shell of side effects, work that reaches outside the
 // program, around the pure functions of style.ts and places.ts; it holds no rule of its own, and it
 // is one of the two files the architecture test lets hold changing state.
 

@@ -1,5 +1,5 @@
 // testing/contrast.ts: the contrast ratio of WCAG 2.2, the web's accessibility standard, which says
-// how far text must stand out from its background. Pure functions of the design module, which read
+// how far text must stand out from its background. Pure functions of the testing module, which read
 // only their inputs; only design.test.ts calls them, to check the theme's colours for UI-12 and
 // UI-15.
 
