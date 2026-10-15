@@ -616,7 +616,7 @@ All ***three*** ***stories*** ***follow*** ***one*** ***idea***: a ***tile*** th
 
 1. **The header follows the setting.** A ***pure*** ***function*** ***turns*** 60 into `public, max-age=60` and 0 into `no-cache`; the ***settings*** ***check*** ***refuses*** -1.
 2. **Through the real service.** A ***tile*** ***carries*** `public, max-age=60`; a 404 ***carries*** `no-store`.
-3. **The map asks once.** In a ***browser*** ***test***, ***panning*** ***away*** from a ***tile*** and ***back*** ***within*** the ***minute*** ***sends*** ***one*** ***request*** for it, not ***two***. Not yet ***written***.
+3. **The map asks once.** In a ***browser*** ***test***, the ***map*** ***pans*** ***away*** from the ***home*** ***view*** and ***back*** ***within*** the ***minute***, and ***asks*** for ***each*** of the ***home*** ***view***'s ***tiles*** ***once***, not ***twice***.
 
 **Open to talk**
 
@@ -792,7 +792,7 @@ All ***three*** ***stories*** ***follow*** ***one*** ***idea***: a ***tile*** th
 
 **Tests to write first**
 
-1. **Twenty requests, one query.** ***Through*** Nginx, ***twenty*** ***requests*** at ***once*** for a ***view*** that ***sleeps*** ***three*** ***seconds*** all ***answer*** 200 in ***about*** ***three***, on a ***pool*** of ***four***. Not yet ***written***.
+1. **Twenty requests, one query.** ***Through*** Nginx, ***twenty*** ***requests*** at ***once*** for a ***tile*** of a ***view*** that ***sleeps*** ***two*** ***seconds*** all ***answer*** 200 in ***under*** ***four***. ***Without*** the ***lock***, ***twenty*** ***queries*** would ***share*** the ***two*** ***copies***' ***eight*** ***connections*** and ***some*** would ***answer*** 503.
 
 ### Step 24 · N-25 Tell a watcher the service is well
 
@@ -930,6 +930,7 @@ All ***three*** ***stories*** ***follow*** ***one*** ***idea***: a ***tile*** th
 
 1. **A flood meets the limit.** ***Through*** Nginx, ***one*** ***address*** ***asks*** for 600 ***kept*** ***tiles*** over ***eight*** ***connections***: at ***least*** 300 ***answer*** 200, the ***rest*** 429 with `Retry-After: 1`.
 2. **Others pass.** ***Straight*** ***after*** the flood, another ***office*** ***address*** ***gets*** 200.
+3. **Thirty-two at once.** ***Through*** Nginx, forty ***requests*** at ***once*** from ***one*** ***address***, for a ***tile*** that ***takes*** ***two*** ***seconds*** to ***build***, ***leave*** at ***least*** ***eight*** ***answered*** 429 and the ***rest*** 200.
 
 **Open to talk**
 
@@ -966,6 +967,7 @@ All ***three*** ***stories*** ***follow*** ***one*** ***idea***: a ***tile*** th
 1. **The wait, purely.** The ***restart*** ***waits*** 1, 1, 2, 4, 8 and 16 ***seconds*** ***after*** 0 to 5 ***quick*** ***failures***, and ***never*** more than 30.
 2. **One copy stopped.** ***Through*** Nginx, with the ***first*** ***copy*** ***stopped***, ***six*** ***tiles*** Nginx ***never*** ***held*** ***answer*** 200, and `/health` ***says*** `UP`.
 3. **Both stopped.** Then, with the ***second*** ***copy*** ***stopped*** ***too***, a ***kept*** ***tile*** ***still*** ***arrives***, and a ***tile*** ***never*** ***kept*** ***answers*** 503.
+4. **The restart, with fakes.** `scripts/lib/supervise.ts` ***drives*** ***fake*** ***copies*** on a ***fake*** ***clock***: it ***waits*** 1, 2, 4 and 8 ***seconds*** ***after*** ***quick*** ***failures***, a ***second*** ***again*** ***after*** a ***copy*** that ***ran*** for a ***minute***, and ***starts*** ***nothing*** ***once*** ***told*** to ***stop***.
 
 **Open to talk**
 
@@ -1044,13 +1046,13 @@ A tick ***means*** the ***story*** ***meets*** the ***test*** in ***full***; 'Pa
 | 20 | N-21 ***One*** ***settings*** ***file*** | ✓ ***after*** US-00, N-18 | ✓ | ***Partly***: for the ***maintainer*** | ✓ | ✓ 2 | ✓ |
 | 21 | N-22 503 and the ***query*** ***limit*** | ✓ ***after*** N-21, US-07 | ✓ | ✓ | ✓ | ✓ 2 | ✓ |
 | 22 | N-23 ***Grants*** ***without*** a ***restart*** | ✓ ***after*** US-03, N-22 | ✓ | ✓ | ✓ | ✓ 2 | ✓ |
-| 23 | N-24 ***One*** ***query*** for a ***crowd*** | ✓ ***after*** N-19 | ✓ | ✓ | ✓ | ✓ 1 | ***Partly***: its ***test*** is not yet ***written*** |
+| 23 | N-24 ***One*** ***query*** for a ***crowd*** | ✓ ***after*** N-19 | ✓ | ✓ | ✓ | ✓ 1 | ✓ |
 | 24 | N-25 `/health` | ✓ ***after*** N-22, N-23 | ✓ | ***Partly***: for the ***maintainer*** | ✓ | ✓ 1 | ✓ |
 | 25 | N-26 ***Order*** of ***arrival*** | ✓ ***after*** N-22, N-25 | ✓ | ***Partly***: for the ***maintainer*** | ✓ | ✓ 1 | ✓ |
 | 26 | N-28 ***Kept*** ***tiles*** ***while*** it ***hangs*** | ✓ ***after*** N-19, N-22 | ✓ | ✓ | ✓ | ✓ 2 | ✓ |
 | 27 | S-07 ***Office*** ***machines*** ***alone*** | ✓ ***after*** US-35 | ✓ | ***Partly***: for the ***maintainer*** | ✓ | ✓ 1 | ✓ |
-| 28 | S-30 A ***cap*** for ***each*** ***visitor*** | ✓ ***after*** S-07, N-19 | ✓ | ✓ | ✓ | ✓ 2 | ***Partly***: the ***cap*** on ***requests*** at ***once*** has no ***test*** |
-| 29 | N-29 ***Two*** ***copies*** | ✓ ***after*** N-25, N-28 | ✓ | ✓ | ✓ | ✓ 2 | ***Partly***: the ***restart*** in `npm start` is ***checked*** by ***hand*** |
+| 28 | S-30 A ***cap*** for ***each*** ***visitor*** | ✓ ***after*** S-07, N-19 | ✓ | ✓ | ✓ | ✓ 2 | ✓ |
+| 29 | N-29 ***Two*** ***copies*** | ✓ ***after*** N-25, N-28 | ✓ | ✓ | ✓ | ✓ 2 | ✓ |
 | 30 | US-36 ***Clean*** ***places*** | ✓ ***after*** US-24 | ✓ | ✓ | ✓ | ✓ 3 | ✓ |
 
 The thirty ***stories*** ***come*** to 52 ***points***: 13 for the ***service***, 16 for the ***map***, 4 for ***Part*** C, 11 for ***Part*** D, 5 for ***Part*** E and 3 for ***Part*** F. ***Some*** ***criteria*** ***name*** a ***later*** ***story***: US-03 for its ***problem*** ***documents*** (US-07), US-07 for the 400 of S-06, and UI-09 for a ***click*** on a cluster (UI-10). ***Each*** such ***criterion*** ***holds*** ***once*** that ***story*** is ***built***, and the ***later*** ***story***'s ***tests*** ***prove*** it.

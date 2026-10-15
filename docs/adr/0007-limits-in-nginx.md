@@ -43,7 +43,7 @@ Nginx ***answers*** ***office*** ***machines*** ***alone*** and ***caps*** what 
 - `npm start` ***refuses*** to ***start*** ***without*** `TESSERA_OFFICE_NETWORK`, or with a ***range*** wider than `/8`.
 - A ***visitor*** ***past*** the ***limit*** ***sees*** ***tiles*** ***missing*** until the ***rate*** ***catches*** ***up***; MapLibre ***asks*** for them ***again*** when the ***view*** ***next*** ***moves***.
 - The ***office*** ***rule*** ***allows*** ***one*** ***range***. A ***second*** ***range***, such as a VPN's, ***needs*** ***one*** more ***line*** in `nginx/default.conf.template`.
-- The ***edge*** ***checks*** ***prove*** the ***office*** ***rule*** and the ***rate***; the ***cap*** on ***requests*** at ***once*** has no ***test***, ***since*** ***kept*** ***tiles*** ***answer*** ***too*** ***fast*** to ***hold*** 33 at ***once***.
+- The ***edge*** ***checks*** ***prove*** all ***three*** ***rules***: the ***office*** ***rule***, the ***rate***, and the ***cap*** on ***requests*** at ***once***, the ***last*** with forty ***requests*** for a ***tile*** that ***takes*** ***two*** ***seconds*** to ***build***.
 
 ## When to revisit
 
