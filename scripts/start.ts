@@ -20,7 +20,8 @@
 import { resolve } from 'node:path';
 import { $, sleep, type ProcessPromise } from 'zx';
 import { waitForDatabase, waitForHealth } from './lib/database.ts';
-import { databaseUrl, nginxArguments, readStartSettings, restartDelay, runArguments } from './lib/plan.ts';
+import { databaseUrl, nginxArguments, readStartSettings, runArguments } from './lib/plan.ts';
+import { keepRunning } from './lib/supervise.ts';
 
 const container = 'tessera-db';
 const volume = 'tessera-data';
@@ -60,25 +61,22 @@ if (notReady !== undefined) {
 // DbUp runs each seed script it has not run before, and none twice, so this runs at every start.
 await $({ env: { ...process.env, TESSERA_PUBLISHER_DATABASE_URL: databaseUrl('tessera_publisher', settings.publisherPassword, settings.database) } })`dotnet ${program} seed`;
 
-// N-29: each copy runs until told to stop. One that stops on its own starts again after
-// restartDelay; a copy that ran for a minute counts as healthy, so its next failure waits a second.
+// N-29: each copy runs until told to stop; lib/supervise.ts starts one again when it stops.
 let stopping = false;
 const copiesNow = new Map<string, ProcessPromise>();
 const reader = databaseUrl('tessera_reader', settings.readerPassword, settings.database);
-async function keepRunning(port: string): Promise<void> {
-  let quickFailures = 0;
-  while (!stopping) {
-    const began = Date.now();
+const runCopy = (port: string) => keepRunning(`port ${port}`, {
+  start: async () => {
     const copy = $({ nothrow: true, stdio: 'inherit', env: { ...process.env, DATABASE_URL: reader, Urls: `http://127.0.0.1:${port}` } })`dotnet ${program}`;
     copiesNow.set(port, copy);
     const ended = await copy;
-    if (stopping) return;
-    quickFailures = Date.now() - began > 60_000 ? 1 : quickFailures + 1;
-    const wait = restartDelay(quickFailures);
-    console.error(`The copy on port ${port} stopped (${ended.exitCode ?? ended.signal}); starting it again in ${wait / 1000} s.`);
-    await sleep(wait);
-  }
-}
+    return ended.exitCode === null ? `signal ${ended.signal}` : `code ${ended.exitCode}`;
+  },
+  stopping: () => stopping,
+  wait: sleep,
+  now: Date.now,
+  say: line => console.error(line),
+});
 
 // Ctrl+C stops both copies and then this script; Nginx and the database keep running in Docker.
 process.on('SIGINT', () => {
@@ -87,7 +85,7 @@ process.on('SIGINT', () => {
 });
 
 console.log(`Starting two copies of the service, on ports ${settings.servicePorts.join(' and ')}, behind Nginx on port ${settings.httpPort}.`);
-const copies = settings.servicePorts.map(keepRunning);
+const copies = settings.servicePorts.map(runCopy);
 
 // A container left from an earlier start may hold old ports, so Nginx starts afresh each time.
 await $({ nothrow: true, quiet: true })`docker rm --force ${nginx}`;
