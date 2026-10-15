@@ -166,6 +166,7 @@ The _service_ is _one_ _program_, with _each_ ***module*** a _project_ of its _o
 - `docs/adr/0008-nginx-in-front.md`: why Nginx _stands_ in _front_, and what it does in _place_ of the _service_
 - `docs/adr/0009-seed-with-dbup.md`: why the _places_ _arrive_ as SQL _scripts_ that DbUp _runs_ _once_
 - `docs/guides/reading-the-code.md`: _fifteen_ _steps_ _through_ the backend and the _map_, in the _order_ a _tile_ _travels_
+- `docs/guides/reading-the-frontend.md`: _fifteen_ _steps_ _through_ the _map_ _alone_, from the _page_ that _starts_ to the _tests_ that _state_ its _rules_
 - `docs/guides/reading-the-harder-files.md`: the _one_ _idea_ _behind_ _each_ of `Settings.cs`, `Database.cs` and `Catalogue.cs`, for _readers_ _new_ to ASP.NET Core
 
 
