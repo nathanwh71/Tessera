@@ -1,4 +1,4 @@
-# The packaged database (US-01). The service, the import and the tests all start this one image, so
+# The packaged database (US-01). The service, its seed and the tests all start this one image, so
 # a test meets the shipped roles, never a hand-made copy.
 FROM postgis/postgis:18-3.6
 
