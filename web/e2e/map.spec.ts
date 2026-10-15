@@ -107,6 +107,29 @@ test.describe("US-23 open the map of the area", () => {
 	});
 });
 
+test.describe("N-18 a browser keeps a tile", () => {
+	// N-18 test 3. Playwright sees every request the page makes, its web workers' included, where
+	// MapLibre fetches tiles; a request the browser answers from its own cache counts too, so the
+	// test is the stricter for it: the map must not ask again at all.
+	test("asks once for a tile when the visitor pans away and back within the minute", async ({ page }) => {
+		const asked = new Map<string, number>();
+		page.on("request", (r) => {
+			const path = new URL(r.url()).pathname;
+			if (TILE.test(path)) asked.set(path, (asked.get(path) ?? 0) + 1);
+		});
+
+		await openMap(page);
+		const home = [...asked.keys()];
+		expect(home.length).toBeGreaterThan(0);
+		// Coloane, far enough south that none of the home view's tiles stays in sight.
+		await view(page, 15, { lng: 113.565, lat: 22.125 });
+		expect(asked.size).toBeGreaterThan(home.length);
+		await view(page, 15, { lng: 113.55, lat: 22.19 });
+
+		expect(home.map((path) => asked.get(path))).toEqual(home.map(() => 1));
+	});
+});
+
 test.describe("UI-09 levels", () => {
 	test("moves one level per button, and says so in the labels", async ({ page }) => {
 		await openMap(page);
