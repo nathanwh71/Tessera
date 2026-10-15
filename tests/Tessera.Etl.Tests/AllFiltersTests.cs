@@ -4,8 +4,9 @@ using Tessera.Etl.Filters;
 namespace Tessera.Etl.Tests;
 
 /// <summary>
-/// The compiler checks each filter's own file, but not the one line that lists it in Filters/All.cs.
-/// These tests do: a filter left out would compile, yet a pipeline file naming it would be refused.
+/// The compiler checks each <b><i>filter</i></b>'s own file, but not the one line that lists it in
+/// Filters/All.cs. These tests do: a filter left out would compile, yet a
+/// <b><i>pipeline file</i></b> naming it would be refused.
 /// </summary>
 public sealed class AllFiltersTests
 {
@@ -20,6 +21,8 @@ public sealed class AllFiltersTests
     [Fact]
     public void Lists_every_filter_declared_in_the_filters_folder()
     {
+        // The eight filters of US-36. A fixed count also fails when a filter's file and its line
+        // in All.cs vanish together, which the two checks below would let pass.
         Assert.Equal(8, Declared.Count);
         Assert.All(Declared, kind => Assert.Contains(kind, All.Kinds));
         Assert.Equal(Declared.Count, All.Kinds.Length);

@@ -10,7 +10,10 @@ namespace Tessera.Etl;
 /// </summary>
 public sealed record Row(int Number, Geometry? Shape, ImmutableDictionary<string, object?> Values)
 {
-    /// <summary>The value in <paramref name="column"/>, or null when the row has none.</summary>
+    /// <summary>
+    /// The value in <paramref name="column"/>, or null when the row has none: a missing column
+    /// and an empty one mean the same to a <b><i>filter</i></b>, a step that checks or mends rows.
+    /// </summary>
     public object? Value(string column) => Values.TryGetValue(column, out var value) ? value : null;
 }
 
@@ -25,6 +28,10 @@ public enum Act
 /// <summary>One line of the log: a row's number, what happened to it, and why.</summary>
 public sealed record LogLine(int Row, string Filter, Act Act, string Detail)
 {
+    /// <summary>
+    /// The line as the log file writes it. One fixed form lets a publisher search the log, and
+    /// lets the tests match a line in full.
+    /// </summary>
     public override string ToString() => $"Row {Row}: {Act.ToString().ToLowerInvariant()} by {Filter}: {Detail}";
 }
 
@@ -40,7 +47,8 @@ public sealed record Outcome(ImmutableArray<Row> Rows, ImmutableArray<LogLine> L
 }
 
 /// <summary>
-/// A filter takes every row of one table and returns an <see cref="Outcome"/>. Each is a pure
-/// function: it reads only its rows and its settings, so a test can check it with no files (ADR 0004).
+/// A filter takes every row of one table and returns an <see cref="Outcome"/>. Each is a
+/// <b><i>pure function</i></b>: it reads only its rows and its settings, so a test can check it
+/// with no files (ADR 0004).
 /// </summary>
 public delegate Outcome Filter(ImmutableArray<Row> rows);

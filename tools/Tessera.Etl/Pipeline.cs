@@ -8,8 +8,10 @@ using CSharpFunctionalExtensions;
 namespace Tessera.Etl;
 
 /// <summary>
-/// The pipeline file: where the places come from, which script to write, the area they must sit in,
-/// when to stop, and one entry for each table to make. An example is data/macau.pipeline.json.
+/// The <b><i>pipeline file</i></b>: where the places come from, which <b><i>seed script</i></b> to
+/// write, the area they must sit in, when to stop, and one entry for each table to make. A
+/// publisher describes a run in this file rather than in code, so new data needs no new program
+/// (US-24, US-36). An example is data/macau.pipeline.json.
 /// </summary>
 public sealed record Pipeline(
     string Source,
@@ -19,9 +21,11 @@ public sealed record Pipeline(
     StopWhen? StopWhen = null);
 
 /// <summary>
-/// One table: its name as schema.table; the layer to read from the source, such as a feature class
-/// of a geodatabase; an optional filter on the source's rows; whether its shapes are lines or areas,
-/// which may mix single and multiple parts; and its cleaning filters, run in the order given. Each
+/// One table: its name as <b><i>schema</i></b>.table, a schema being a named folder of tables; the
+/// <b><i>layer</i></b> to read from the source, such as a feature class of a
+/// <b><i>geodatabase</i></b>; an optional filter on the source's rows; whether its shapes are lines
+/// or areas, which may mix single and multiple parts; and its cleaning <b><i>filters</i></b>, run
+/// in the order given. Each
 /// filter is an object that names it, with its own settings beside the name, such as
 /// <c>{ "filter": "insideArea", "onFail": "stop" }</c>.
 /// </summary>
@@ -33,10 +37,17 @@ public sealed record TablePlan(
     ImmutableArray<JsonObject> Filters = default,
     StopWhen? StopWhen = null);
 
-/// <summary>A table ready to clean: its plan, its filters' names in order, and the one filter they chain into.</summary>
+/// <summary>
+/// A table ready to clean: its plan, its filters' names in order, and the one filter they chain
+/// into. The filters are built while the file is read, so a bad setting is found before GDAL runs.
+/// The names stay beside the chain, since the log counts each filter by name.
+/// </summary>
 public sealed record CleaningPlan(TablePlan Table, ImmutableArray<string> Filters, Filter Chain);
 
-/// <summary>A pipeline file read and checked, with each table's filters built and chained.</summary>
+/// <summary>
+/// A pipeline file read and checked, with each table's filters built and chained. A run starts
+/// only from a Plan, so it never starts from a file with a fault in it (US-36, criterion 5).
+/// </summary>
 public sealed record Plan(Pipeline Pipeline, ImmutableArray<CleaningPlan> Tables);
 
 /// <summary>What a filter does with a row it cannot pass: drop it, or stop the whole run.</summary>
@@ -55,9 +66,17 @@ public sealed record StopWhen(double? DroppedOverPercent = null, int? RowsUnder 
 /// <summary>The box every place should sit in, in degrees, as tessera.json's Area holds it.</summary>
 public sealed record Area(double MinLongitude, double MinLatitude, double MaxLongitude, double MaxLatitude);
 
+/// <summary>
+/// Reads and checks a pipeline file before any work starts, so a mistake in it costs a second,
+/// not a half-finished run.
+/// </summary>
 public static class PipelineFile
 {
-    /// <summary>Stop when more than 10 % of a table's rows are dropped, or when none remain.</summary>
+    /// <summary>
+    /// The <b><i>stop rules</i></b> when the file sets none: stop when more than 10 % of a table's
+    /// rows are dropped, or when none remain. Stopping is the default, so a publisher who accepts
+    /// more loss must say so in the file (US-36, criterion 3).
+    /// </summary>
     public static readonly StopWhen Defaults = new(DroppedOverPercent: 10, RowsUnder: 1);
 
     // camelCase in the file, as JSON usually is. A key the records lack stops the read, so a
@@ -69,6 +88,7 @@ public static class PipelineFile
         RespectRequiredConstructorParameters = true,
         RespectNullableAnnotations = true,
         PropertyNameCaseInsensitive = false,
+        // Comments may stand in the file, so a publisher can note why a table has its filters.
         ReadCommentHandling = JsonCommentHandling.Skip,
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
     };
@@ -125,6 +145,8 @@ public static class PipelineFile
                 problems.Add($"{table.Table}: '{name}' is no filter; the filters are {string.Join(", ", Filters.All.Kinds.Select(known => known.Name))}.");
                 continue;
             }
+            // A copy: a JsonObject changes in place, and taking out "filter" must leave the plan
+            // as the file wrote it.
             var settings = step.DeepClone().AsObject();
             settings.Remove("filter");
             var built = kind.Build(settings, area);
@@ -141,6 +163,12 @@ public static class PipelineFile
             : Result.Failure<CleaningPlan, ImmutableArray<string>>(problems.ToImmutable());
     }
 
+    /// <summary>
+    /// The faults in the file as a whole, beyond its filters. Each rule guards a later step: GDAL
+    /// needs a source, DbUp runs scripts by numbered name (ADR 0009), the area box must not be
+    /// empty, and each table must have one plain name of its own, so that SQL and a tile's address
+    /// read it unquoted.
+    /// </summary>
     private static IEnumerable<string> Problems(Pipeline pipeline)
     {
         if (string.IsNullOrWhiteSpace(pipeline.Source))

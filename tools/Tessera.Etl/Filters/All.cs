@@ -3,11 +3,15 @@ using System.Collections.Immutable;
 namespace Tessera.Etl.Filters;
 
 /// <summary>
-/// Every filter a pipeline file may name. A new filter is one new file beside these, declaring its
-/// Kind, and one more line here.
+/// Every <b><i>filter</i></b> a <b><i>pipeline file</i></b> may name. A new filter is one new file
+/// beside these, declaring its Kind, and one more line here.
 /// </summary>
 public static class All
 {
+    /// <summary>
+    /// The filters in the order US-36 lists them, which is also the order an error message lists
+    /// them in when a pipeline file names one that does not exist.
+    /// </summary>
     public static readonly ImmutableArray<FilterKind> Kinds =
     [
         DropEmptyShapes.Kind,
@@ -20,5 +24,9 @@ public static class All
         DropNearDuplicates.Kind,
     ];
 
+    /// <summary>
+    /// The filter a pipeline file names, or null. The match is exact, case included, as JSON keys
+    /// are, so 'insidearea' is refused rather than quietly read as 'insideArea'.
+    /// </summary>
     public static FilterKind? Find(string name) => Kinds.FirstOrDefault(kind => kind.Name == name);
 }

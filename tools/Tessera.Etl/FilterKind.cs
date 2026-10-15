@@ -6,8 +6,9 @@ using CSharpFunctionalExtensions;
 namespace Tessera.Etl;
 
 /// <summary>
-/// One kind of filter, as a pipeline file names it: its name, what it does, and how it builds a
-/// <see cref="Filter"/> from the settings the file gives it. Each filter's own file declares one.
+/// One kind of <b><i>filter</i></b>, as a <b><i>pipeline file</i></b> names it: its name, what it
+/// does, and how it builds a <see cref="Filter"/> from the settings the file gives it. Each
+/// filter's own file declares one, so a new filter touches no other file but Filters/All.cs.
 /// </summary>
 public sealed record FilterKind(
     string Name,
@@ -53,6 +54,8 @@ public sealed record FilterKind(
     /// </summary>
     private static IEnumerable<string> Unknown<TSettings>(JsonObject settings)
     {
+        // A record's longest public constructor is the one its parameter list declares; any other
+        // public one would be written by hand and take fewer.
         var parameters = typeof(TSettings).GetConstructors().MaxBy(constructor => constructor.GetParameters().Length)?.GetParameters() ?? [];
         var known = parameters.Select(parameter => JsonNamingPolicy.CamelCase.ConvertName(parameter.Name!)).ToList();
         foreach (var (key, _) in settings)

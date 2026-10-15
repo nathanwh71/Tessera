@@ -8,20 +8,37 @@ namespace Tessera.Etl.Filters;
 /// </summary>
 public static class SwapCoordinates
 {
+    /// <summary>
+    /// The name a <b><i>pipeline file</i></b> uses; the log and the tests name the
+    /// <b><i>filter</i></b> by it too, so one constant keeps all three alike.
+    /// </summary>
     public const string Name = "swapCoordinates";
 
+    /// <summary>
+    /// No settings, not even onFail: this filter only mends rows and never fails one, so a
+    /// shape it cannot mend passes on for insideArea to judge.
+    /// </summary>
     public sealed record Settings;
 
+    /// <summary>
+    /// The kind Filters/All.cs lists, so a pipeline file may name this filter. NeedsArea refuses
+    /// the filter when there is no area, so <c>area!</c> never meets a null.
+    /// </summary>
     public static readonly FilterKind Kind = FilterKind.Of<Settings>(Name,
         "a shape outside the area that falls inside it with longitude and latitude swapped is swapped back",
         FilterKind.NeedsArea, (_, area) => Create(area!));
 
+    /// <summary>
+    /// Builds the filter from plain values, so a test can make one without a pipeline file.
+    /// </summary>
     public static Filter Create(Area area) => rows =>
     {
         var box = Judge.Box(area);
         return Judge.Changes(rows, Name, row =>
         {
             if (row.Shape is null || row.Shape.IsEmpty || Judge.Inside(row.Shape, box)) return null;
+            // Apply changes a shape in place, so it works on a copy: the row read must stay as it
+            // was, since rows are never changed, only replaced (ADR 0004).
             var turned = row.Shape.Copy();
             turned.Apply(new SwapAxes());
             return Judge.Inside(turned, box) ? (row with { Shape = turned }, "swapped longitude and latitude") : null;
@@ -31,10 +48,20 @@ public static class SwapCoordinates
     /// <summary>Swaps each point's two numbers, so (latitude, longitude) becomes (longitude, latitude).</summary>
     private sealed class SwapAxes : IEntireCoordinateSequenceFilter
     {
+        /// <summary>
+        /// Never done early: every part of the shape must turn, or the shape would tear.
+        /// </summary>
         public bool Done => false;
 
+        /// <summary>
+        /// True, so NetTopologySuite forgets the box it kept for the shape; otherwise the Inside
+        /// test just after, and insideArea later, would read the old, unswapped box.
+        /// </summary>
         public bool GeometryChanged => true;
 
+        /// <summary>
+        /// The step NetTopologySuite calls once for each run of points in the shape.
+        /// </summary>
         public void Filter(CoordinateSequence sequence)
         {
             for (var i = 0; i < sequence.Count; i++)

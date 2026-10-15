@@ -8,11 +8,14 @@ namespace Tessera.Etl;
 
 /// <summary>
 /// Reads and writes GeoJSON, the text form of places that sits between the steps: GDAL extracts
-/// each table to GeoJSON, the filters clean its rows, and GDAL loads the cleaned GeoJSON into SQL.
+/// each table to GeoJSON, the <b><i>filters</i></b> clean its rows, and GDAL loads the cleaned
+/// GeoJSON into SQL.
 /// </summary>
 public static class GeoJson
 {
-    // NetTopologySuite's converter turns a GeoJSON geometry into a shape and back.
+    // NetTopologySuite's converter turns a GeoJSON geometry into a shape and back. These options
+    // stand apart from the pipeline file's strict ones: GDAL writes the GeoJSON, so no key in it
+    // can be a publisher's typing mistake.
     private static readonly JsonSerializerOptions Shapes = new() { Converters = { new GeoJsonConverterFactory() } };
 
     /// <summary>
@@ -82,7 +85,11 @@ public static class GeoJson
         return [.. sourceColumns.Where(held.Contains), .. added];
     }
 
-    /// <summary>The rows as a FeatureCollection, with the columns <see cref="Columns"/> picks.</summary>
+    /// <summary>
+    /// The rows as a FeatureCollection, with the columns <see cref="Columns"/> picks, for GDAL to
+    /// load. Every row writes every column, null where it holds none, so GDAL sees one set of
+    /// columns and makes one table.
+    /// </summary>
     public static string Write(ImmutableArray<Row> rows, ImmutableArray<string> sourceColumns)
     {
         var columns = Columns(rows, sourceColumns);
@@ -107,6 +114,8 @@ public static class GeoJson
                         case long whole: writer.WriteNumberValue(whole); break;
                         case double fraction: writer.WriteNumberValue(fraction); break;
                         case bool flag: writer.WriteBooleanValue(flag); break;
+                        // Any other value a filter set is written as raw JSON. Read keeps lists and
+                        // objects as text, so they meet the string case above, not this one.
                         case var other: writer.WriteRawValue(other.ToString() ?? "null"); break;
                     }
                 }

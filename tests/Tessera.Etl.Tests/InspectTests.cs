@@ -5,7 +5,8 @@ namespace Tessera.Etl.Tests;
 /// <summary>
 /// npm run inspect is a TypeScript script (scripts/inspect.ts, ADR 0002); its own tests check its
 /// parts. This test checks the one thing they cannot: the starting file it prints for a real
-/// geodatabase passes this pipeline's own reader, so the maintainer's first run does not fail.
+/// <b><i>geodatabase</i></b> passes this <b><i>pipeline</i></b>'s own reader, so the
+/// maintainer's first run does not fail.
 /// </summary>
 public sealed class InspectTests
 {
@@ -24,6 +25,8 @@ public sealed class InspectTests
         var gdb = Path.Combine(folder, "places.gdb");
         var fixtures = Path.Combine(AppContext.BaseDirectory, "fixtures");
         string[] folders = [folder, fixtures];
+        // .Value throws when GDAL fails, so a broken build of the geodatabase stops the test here,
+        // with GDAL's own message, rather than later with a puzzling one.
         (await Gdal.Run(["-f", "OpenFileGDB", gdb, Path.Combine(fixtures, "cafes.geojson"), "-nln", "Cafes"], folders)).Value.ToString();
         (await Gdal.Run(["-f", "OpenFileGDB", "-update", gdb, Path.Combine(fixtures, "parks.geojson"), "-nln", "Parks", "-nlt", "MULTIPOLYGON"], folders)).Value.ToString();
 

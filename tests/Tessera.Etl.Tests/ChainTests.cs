@@ -2,9 +2,15 @@ using Tessera.Etl.Filters;
 
 namespace Tessera.Etl.Tests;
 
-/// <summary>Filters joined with <c>&gt;&gt;</c>, and columns that filters add or remove.</summary>
+/// <summary>
+/// <b><i>Filters</i></b> joined with <c>&gt;&gt;</c>, and columns that filters add or remove: a
+/// chain must behave as its filters do one after another, and the script must hold the columns
+/// the last filter left (US-36, criterion 1).
+/// </summary>
 public sealed class ChainTests
 {
+    // The same area and the same way to make a place as FilterTests, so a chain is checked on
+    // the very rows each filter was checked on alone.
     private static readonly Area Macau = FilterTests.Macau;
 
     private static Row Place(int number, double longitude, double latitude, params (string, object?)[] values) =>

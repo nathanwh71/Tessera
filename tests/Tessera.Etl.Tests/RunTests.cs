@@ -3,12 +3,15 @@ using System.Diagnostics;
 namespace Tessera.Etl.Tests;
 
 /// <summary>
-/// Whole runs of the pipeline, from a file geodatabase that GDAL builds from the fixtures: seven
+/// Whole runs of the <b><i>pipeline</i></b>, from a file <b><i>geodatabase</i></b> that GDAL
+/// builds from the fixtures (US-36, test 3): seven
 /// cafés with one fault each, and two parks, one an area whose edge crosses itself. The runs use the
 /// machine's ogr2ogr, or GDAL's Docker image when it has none.
 /// </summary>
 public sealed class RunTests
 {
+    // Builds a file geodatabase in `folder` from the two fixtures, like a publisher's source.
+    // .Value throws when GDAL fails, so a broken build stops the test here, with GDAL's message.
     private static async Task<string> Geodatabase(string folder)
     {
         var gdb = Path.Combine(folder, "places.gdb");
@@ -19,6 +22,9 @@ public sealed class RunTests
         return gdb;
     }
 
+    // A pipeline file for the fixtures, with the cafés' filters a test gives. It allows 60 % loss,
+    // since four of the seven cafés carry a fault that drops them (57 %), well above the default
+    // 10 %. The area stands in the file, as no tessera.json sits in the test's folder.
     private static string Pipeline(string gdb, string cafesFilters, string parksFilters = """{ "filter": "repairShapes" }""") => $$"""
         {
           "source": "{{gdb}}",

@@ -4,14 +4,24 @@ using System.Text;
 
 namespace Tessera.Etl;
 
+// The transform step of the pipeline, and the log of a whole run (US-36). The two sit together
+// because the log reports what the transform decided. Both are pure: the program reads the files
+// and runs GDAL; this file only decides, so the tests check every rule with no files (ADR 0004).
+
 /// <summary>
-/// What happened to one table: its filters' names in order, the rows read, the chain's outcome,
-/// and why the table stops the run, if it does.
+/// What happened to one table: its <b><i>filters</i></b>' names in order, the rows read, the
+/// chain's outcome, and why the table stops the run, if it does. The program needs all of it
+/// twice: to decide whether to write the script, and to write the log.
 /// </summary>
 public sealed record TableReport(TablePlan Table, ImmutableArray<string> Filters, int Read, Outcome Outcome, string? Stop)
 {
+    /// <summary>The rows the filters kept: these, and only these, reach the script.</summary>
     public ImmutableArray<Row> Kept => Outcome.Rows;
 
+    /// <summary>
+    /// The rows lost, counted from the rows read, so the count stays right whichever filter dropped
+    /// them; the <b><i>stop rules</i></b> and the log both report it.
+    /// </summary>
     public int Dropped => Read - Kept.Length;
 }
 
@@ -23,7 +33,8 @@ public static class Cleaning
 {
     /// <summary>
     /// Runs the table's chain of filters (see <see cref="Chain"/>), which ends at the first filter
-    /// that stops. Then the table's stop rules, or the pipeline's, or the defaults, judge what is left.
+    /// that stops. Then the table's stop rules, or the pipeline's, or the defaults, judge what is
+    /// left: the rule closest to the table wins, so one table may allow more loss than the rest.
     /// </summary>
     public static TableReport Clean(CleaningPlan plan, ImmutableArray<Row> rows, StopWhen? pipelineRules)
     {
@@ -45,6 +56,8 @@ public static class Cleaning
     /// <summary>
     /// The log of a run, as plain text: the source, then for each table the rows read, a count for
     /// each filter, and one line for each row a filter fixed, dropped or stopped at; then the result.
+    /// A dropped row leaves no trace in the script, so this log is the publisher's only account of
+    /// what was left out and why (US-36, criterion 4).
     /// </summary>
     public static string Log(string pipelineFile, Pipeline pipeline, ImmutableArray<TableReport> reports, string result, DateTimeOffset when)
     {
@@ -60,6 +73,8 @@ public static class Cleaning
             text.AppendLine($"Read {report.Read} rows.");
             // Each filter's counts come from the joined log, whose lines name their filter. The rows
             // kept after a filter are those read less every row dropped up to and including it.
+            // Distinct, since lines carry only a filter's name: a filter listed twice gets one
+            // line, with the counts of both its runs.
             var keptSoFar = report.Read;
             foreach (var filter in report.Filters.Distinct())
             {
@@ -68,6 +83,7 @@ public static class Cleaning
                 keptSoFar -= dropped;
                 var stopped = lines.Any(line => line.Act == Act.Stopped);
                 text.AppendLine($"  {filter}: {(stopped ? "stopped" : $"kept {keptSoFar}")}, fixed {lines.Count(line => line.Act == Act.Fixed)}, dropped {dropped}");
+                // The filters after a stop never ran, so they get no line of counts.
                 if (stopped) break;
             }
             text.AppendLine(report.Outcome.Stop is null ? $"Kept {report.Kept.Length} of {report.Read}; dropped {report.Dropped}." : "Stopped; nothing kept.");

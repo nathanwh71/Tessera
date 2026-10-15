@@ -4,7 +4,8 @@ using CSharpFunctionalExtensions;
 namespace Tessera.Etl;
 
 /// <summary>
-/// GDAL's arguments for each step, and the joining of its SQL into one script for DbUp (ADR 0009).
+/// GDAL's arguments for each step, and the joining of its SQL into one <b><i>seed script</i></b>
+/// for DbUp (ADR 0009).
 /// Every function here is pure, so the tests check each choice without running GDAL.
 /// </summary>
 public static class SeedScript
@@ -34,8 +35,12 @@ public static class SeedScript
     /// database. Each choice:
     /// - PG_USE_COPY NO writes INSERT statements; DbUp sends a script as plain SQL and cannot feed COPY.
     /// - CREATE_SCHEMA OFF, because the script makes each schema once, at its head.
+    /// - GEOMETRY_NAME geom names the shape column as the shipped script, 0001-macau-places.sql,
+    ///   names it, so every table looks alike to a person reading the database.
     /// - FID fid: GDAL numbers the rows 1, 2, 3 in the file's order, and the number is the primary
     ///   key, which fixes the order of features in a tile (US-24 test 2).
+    /// - EPSG:4326 again, so the script declares the column's <b><i>SRID</i></b>, the number that
+    ///   names its coordinate system, as 4326 (US-24, criterion 2).
     /// - PROMOTE_TO_MULTI, for lines and areas, stores one part and many parts in one column type.
     /// - DROP_TABLE stays at GDAL's default, IF_EXISTS, so a new script replaces the table whole.
     /// </summary>
@@ -56,6 +61,10 @@ public static class SeedScript
         ];
     }
 
+    /// <summary>
+    /// The table's <b><i>schema</i></b> and name, which GDAL and the SQL take apart. The split is
+    /// safe: the pipeline file's check has already refused any name not written schema.table.
+    /// </summary>
     public static (string Schema, string Name) SchemaAndName(TablePlan table)
     {
         var parts = table.Table.Split('.');
@@ -69,6 +78,8 @@ public static class SeedScript
     /// </summary>
     public static Result<string, string> Join(string pipelineFile, ImmutableArray<(TablePlan Table, string Sql)> parts)
     {
+        // A table with no rows is refused (US-24, criterion 3). When every part has rows,
+        // FirstOrDefault gives an empty pair whose Table is null, so the pattern does not match.
         if (parts.FirstOrDefault(part => !part.Sql.Contains("INSERT INTO", StringComparison.Ordinal)) is { Table: not null } empty)
             return Result.Failure<string, string>($"{empty.Table.Table}: GDAL wrote no rows.");
 

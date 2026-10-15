@@ -2,14 +2,20 @@ using Tessera.Etl.Filters;
 
 namespace Tessera.Etl.Tests;
 
-/// <summary>Each filter alone, built by its named constructor: what it keeps, fixes and drops, and when it stops.</summary>
+/// <summary>
+/// Each <b><i>filter</i></b> alone, built by its named constructor: what it keeps, fixes and
+/// drops, and when it stops. Each is a pure function, so these tests need no files (US-36, test 1).
+/// </summary>
 public sealed class FilterTests
 {
+    // Makes shapes with SRID 4326, longitude and latitude, as the pipeline reads them.
     private static readonly GeometryFactory Shapes = new(new PrecisionModel(), 4326);
 
     // The area: Macau's box, as tessera.json holds it.
     internal static readonly Area Macau = new(113.52, 22.10, 113.61, 22.22);
 
+    // A point place with the given values. Internal, so the chain and pipeline tests build their
+    // rows the same way.
     internal static Row Place(int number, double longitude, double latitude, params (string Column, object? Value)[] values) =>
         new(number, Shapes.CreatePoint(new Coordinate(longitude, latitude)),
             values.ToImmutableDictionary(value => value.Column, value => value.Value, StringComparer.Ordinal));

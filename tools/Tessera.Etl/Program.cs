@@ -2,7 +2,8 @@ using System.Collections.Immutable;
 using System.Text.Json;
 using Tessera.Etl;
 
-// Turns a file of places into a seed script for DbUp, cleaning it on the way (ADR 0009, US-24):
+// Turns a file of places into a seed script for DbUp, cleaning it on the way (ADR 0009, US-24,
+// US-36):
 //
 //   npm run etl -- data/macau.pipeline.json
 //
@@ -11,10 +12,12 @@ using Tessera.Etl;
 // Transform: the pipeline file's filters clean each table's rows, in the order it lists them.
 // Load:    ogr2ogr writes the cleaned rows as SQL, and the tables join into one numbered script.
 //
-// Every run that reaches the source writes a log beside the scripts' folder, in db/seed-logs/, of
-// what each filter did to each row; a wrong command or pipeline file stops before that, with no log. A run stops, and writes no script, when a filter set to stop finds a bad row, or when
-// a table breaks its stop rules. It ends with an exit code: 0 when it wrote the script, 1 when it
-// stopped or failed, 2 when the command or the pipeline file is wrong.
+// Every run that passes its checks writes a log beside the scripts' folder, in db/seed-logs/, of
+// what each filter did to each row; a wrong command, pipeline file, source or script name stops
+// before that, with no log, since no row has been read. A run stops, and writes no script, when a
+// filter set to stop finds a bad row, or when a table breaks its stop rules. It ends with an exit
+// code, so npm and other scripts can tell the outcomes apart: 0 when it wrote the script, 1 when
+// it stopped or failed, 2 when a check fails before any row is read.
 
 if (args is not [var pipelineFile])
     return Fail(2, "Usage: npm run etl -- PIPELINE.json");
@@ -26,6 +29,8 @@ if (read.IsFailure)
     return Fail(2, [.. read.Error]);
 var (pipeline, tables) = read.Value;
 
+// A full path, since Gdal mounts each folder at the same path inside Docker, and a relative path
+// would point elsewhere in there.
 var source = Path.GetFullPath(pipeline.Source);
 if (!File.Exists(source) && !Directory.Exists(source))
     return Fail(2, $"{pipeline.Source}: no such file or folder.");
@@ -34,7 +39,11 @@ if (File.Exists(pipeline.Output))
     return Fail(2, $"{pipeline.Output} already exists. Give new data a new script, with the next number.");
 
 var logFile = Path.Combine($"{Path.GetDirectoryName(pipeline.Output)}-logs", Path.ChangeExtension(Path.GetFileName(pipeline.Output), ".log"));
+// A fresh folder for the GeoJSON between the steps, kept out of the repository and deleted at the
+// end, however the run ends.
 var work = Directory.CreateTempSubdirectory("tessera-etl-").FullName;
+// The folders GDAL's Docker image must see: the source's, to read it, and the work folder, for the
+// GeoJSON. The SQL comes back on standard output, so the scripts' folder needs no mount.
 var folders = new[] { Path.GetDirectoryName(source)!, work };
 var reports = ImmutableArray.CreateBuilder<TableReport>();
 var parts = ImmutableArray.CreateBuilder<(TablePlan, string)>();
@@ -77,7 +86,9 @@ finally
     Directory.Delete(work, recursive: true);
 }
 
-// Writes the log, prints the result and returns the exit code.
+// Writes the log, prints the result and returns the exit code. Every success, stop and
+// failure after the checks comes through here, so a stopped run leaves a log as surely as a
+// finished one (US-36, criterion 4).
 int Finish(int code, string result)
 {
     Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(logFile))!);
@@ -87,13 +98,16 @@ int Finish(int code, string result)
     return code;
 }
 
+// Prints the problems and returns the exit code, with no log: Fail serves the checks before any
+// row is read, so a log would have nothing to report.
 static int Fail(int code, params string[] problems)
 {
     foreach (var problem in problems) Console.Error.WriteLine(problem);
     return code;
 }
 
-// The area's box from tessera.json's Area section, when the file is here, so a pipeline need not repeat it.
+// The area's box from tessera.json's Area section, when the file is here, so a pipeline need not
+// repeat it.
 static Area? AreaFromSettings(string settingsFile)
 {
     if (!File.Exists(settingsFile)) return null;

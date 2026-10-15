@@ -6,7 +6,11 @@ using NetTopologySuite.Geometries;
 
 namespace Tessera.Etl;
 
-/// <summary>The parts every filter shares: passing or failing rows, and the small measures they use.</summary>
+/// <summary>
+/// The parts every <b><i>filter</i></b> shares: passing or failing rows, and the small measures
+/// they use. Sharing them keeps each filter to a few lines, and makes every filter log, drop and
+/// stop in the same way.
+/// </summary>
 public static class Judge
 {
     /// <summary>
@@ -25,6 +29,8 @@ public static class Judge
                 kept.Add(row);
                 continue;
             }
+            // A stop hands back the rows it was given, unjudged: the run ends and writes no script,
+            // so nothing uses them as kept rows, and the log says 'nothing kept'.
             if (onFail == OnFail.Stop)
             {
                 log.Add(new LogLine(row.Number, filter, Act.Stopped, reason));
@@ -51,13 +57,20 @@ public static class Judge
         return new Outcome(changed, log.ToImmutable(), null);
     }
 
-    /// <summary>The area's box, as NetTopologySuite measures it.</summary>
+    /// <summary>
+    /// The area's box, as NetTopologySuite's Envelope, a box it can test against a shape's own box
+    /// in four comparisons, before the slower test of the shape itself.
+    /// </summary>
     public static Envelope Box(Area area) => new(area.MinLongitude, area.MaxLongitude, area.MinLatitude, area.MaxLatitude);
 
     /// <summary>True when any part of the shape touches the box: a road may run out of the area.</summary>
     public static bool Inside(Geometry? shape, Envelope box) =>
         shape is { IsEmpty: false } && box.Intersects(shape.EnvelopeInternal) && shape.Intersects(shape.Factory.ToGeometry(box));
 
+    /// <summary>
+    /// True for no value, or text of spaces alone: such a value shows nothing on the map, so
+    /// requireFields treats it as missing.
+    /// </summary>
     public static bool IsBlank(object? value) => value is null || value is string text && string.IsNullOrWhiteSpace(text);
 
     /// <summary>A value as text, for comparing ids and names; numbers keep their exact digits.</summary>
@@ -69,6 +82,7 @@ public static class Judge
         _ => value.ToString(),
     };
 
+    // Any run of white space, tabs and line breaks included: each shows as a gap in a label.
     private static readonly Regex Spaces = new(@"\s+");
 
     /// <summary>

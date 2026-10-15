@@ -1,10 +1,10 @@
 namespace Tessera.Etl;
 
 /// <summary>
-/// Joins filters into one, as F#'s <c>&gt;&gt;</c> joins functions: <c>a &gt;&gt; b</c> runs
-/// <c>a</c>, then <c>b</c> on the rows <c>a</c> kept. A stop ends the chain at once, and the logs
-/// join in order. <see cref="Keep"/> starts a chain, so a list of filters folds into one:
-/// <c>filters.Aggregate(Chain.Keep, (a, b) =&gt; a &gt;&gt; b)</c>.
+/// Joins <b><i>filters</i></b> into one, as F#'s <c>&gt;&gt;</c> joins functions:
+/// <c>a &gt;&gt; b</c> runs <c>a</c>, then <c>b</c> on the rows <c>a</c> kept. A stop ends the
+/// chain at once, and the logs join in order. <see cref="Keep"/> starts a chain, so a list of
+/// filters folds into one: <c>filters.Aggregate(Chain.Keep, (a, b) =&gt; a &gt;&gt; b)</c>.
 /// </summary>
 public static class Chain
 {

@@ -14,6 +14,9 @@ public static class Gdal
     /// <summary>GDAL's own image, for a machine with no ogr2ogr of its own; the tag fixes the version.</summary>
     public const string Image = "ghcr.io/osgeo/gdal:alpine-small-3.11.4";
 
+    // Whether this machine has its own ogr2ogr. Lazy asks once, at the first run, and every later
+    // run reuses the answer. Waiting on .Result here is safe: a console program has no UI thread,
+    // so the task never needs the very thread that waits for it.
     private static readonly Lazy<bool> Local = new(() => Start("ogr2ogr", ["--version"]).Result.IsSuccess);
 
     /// <summary>
@@ -23,6 +26,8 @@ public static class Gdal
     public static Task<Result<string, string>> Run(IReadOnlyList<string> arguments, IReadOnlyList<string> folders) =>
         Program("ogr2ogr", arguments, folders);
 
+    // Picks where a GDAL program runs: here, or in GDAL's image with each folder mounted at its own
+    // path. It takes the program's name so that the choice lives in one place, apart from Run.
     private static Task<Result<string, string>> Program(string program, IReadOnlyList<string> arguments, IReadOnlyList<string> folders) =>
         Local.Value
             ? Start(program, arguments)

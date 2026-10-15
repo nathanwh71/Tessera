@@ -2,11 +2,17 @@ using Tessera.Etl.Filters;
 
 namespace Tessera.Etl.Tests;
 
-/// <summary>The pipeline file, the stop rules, the log, and GDAL's arguments: each checked without running GDAL.</summary>
+/// <summary>
+/// The <b><i>pipeline file</i></b>, the <b><i>stop rules</i></b>, the log, and GDAL's arguments:
+/// each checked without running GDAL, so they run fast and on any machine (US-24, test 5).
+/// </summary>
 public sealed class PipelineTests
 {
+    // Macau's box, as tessera.json holds it, standing in for the settings file's area.
     private static readonly Area Macau = new(113.52, 22.10, 113.61, 22.22);
 
+    // A pipeline file with no fault. Each refusal test below changes one key in it, so the one
+    // change is the only fault the reader can find.
     private const string Good = """
         {
           "source": "data/macau.gdb",
@@ -78,13 +84,20 @@ public sealed class PipelineTests
         Assert.Contains(problems, problem => problem.Contains("insideArea: needs an area", StringComparison.Ordinal));
     }
 
+    // One table for the tests below, with the stop rules a test gives it.
     private static TablePlan Cafes(StopWhen? rules = null) => new("food.cafes", "Cafes", StopWhen: rules);
 
+    // A cleaning plan built by hand, as PipelineFile.Read would build it, so the stop rules are
+    // checked without a pipeline file.
     private static CleaningPlan Plan(StopWhen? rules, params (string Name, Filter Filter)[] filters) =>
         new(Cafes(rules), [.. filters.Select(filter => filter.Name)], filters.Select(filter => filter.Filter).Aggregate(Chain.Keep, (a, b) => a >> b));
 
+    // The filter the stop-rule tests drop rows with, since dropping by a missing name is easy to
+    // count.
     private static readonly (string, Filter) RequireName = (RequireFields.Name, RequireFields.Create(["name"]));
 
+    // Ten places, the first `named` of them with a name. With ten rows, each unnamed row is ten
+    // per cent of the table, so one row crosses the default limit of 10 % (US-36, test 2).
     private static ImmutableArray<Row> Ten(int named) =>
         [.. Enumerable.Range(1, 10).Select(number => FilterTests.Place(number, 113.55, 22.19, ("name", number <= named ? $"Place {number}" : null)))];
 
