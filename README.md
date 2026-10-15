@@ -156,6 +156,7 @@ The ***service*** is ***one*** ***program*** in ***one*** ***project***, with a 
 - `docs/adr/0002-scripts-in-typescript-with-zx.md`: why the ***scripts*** are TypeScript on Node.js 26
 - `docs/adr/0003-settings-file.md`: why ***settings*** ***live*** in `tessera.json` and the ***environment***, and every ***key***
 - `docs/adr/0004-functional-style.md`: why the ***code*** is ***functional***, with `Result` and ***nullable*** ***types***
+- `docs/adr/0005-cluster-in-the-browser.md`: why the ***map*** clusters the ***places*** ***itself***, from the ***tiles*** it has ***loaded***
 - `docs/adr/0006-the-map-and-the-service.md`: why the ***map*** ***lives*** in `web/`, and the ***contract*** ***between*** the ***map*** and the ***service***
 - `docs/adr/0007-limits-in-nginx.md`: why Nginx ***answers*** the ***office*** ***alone*** and ***caps*** ***each*** ***machine***, and why the ***service*** ***keeps*** no ***resilience*** ***library***
 - `docs/adr/0008-nginx-in-front.md`: why Nginx ***stands*** in ***front***, and what it does in ***place*** of the ***service***
