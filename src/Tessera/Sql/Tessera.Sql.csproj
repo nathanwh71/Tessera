@@ -4,6 +4,7 @@
     PrivateAssets keeps Npgsql and Dapper from the compiler of any project that names Sql, while
     their files still reach the finished service. "all" would keep the files out too, and the
     service would fail as it starts.
+    The shared framework gives configuration and options, through which the database's URL is read.
   -->
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />

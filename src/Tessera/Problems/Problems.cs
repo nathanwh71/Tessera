@@ -3,15 +3,19 @@ using Microsoft.AspNetCore.Http;
 namespace Tessera;
 
 /// <summary>
-/// Every error the service answers is a problem document, a short report in JSON in the shape
-/// RFC 9457 sets (US-07 c5). ASP.NET Core writes them; this class picks the status and adds two
-/// headers to each.
+/// Every error the service answers is a <b><i>problem document</i></b>, a short report in JSON in the
+/// shape RFC 9457 sets (US-07 c5), so every client reads every error the same way. ASP.NET Core
+/// writes them; this class picks the status and adds two headers to each.
 /// </summary>
 public static class Problems
 {
     /// <summary>The seconds a client should wait after a 503 before it asks again (N-22).</summary>
     public const int RetryAfterSeconds = 5;
 
+    /// <summary>
+    /// 404: no such <b><i>layer</i></b>, <b><i>tile</i></b> or page (US-07 c4). The detail is
+    /// optional, since the status alone often says enough.
+    /// </summary>
     public static IResult NotFound(string? detail = null) =>
         TypedResults.Problem(detail, statusCode: StatusCodes.Status404NotFound);
 
@@ -19,12 +23,17 @@ public static class Problems
     public static IResult Unavailable(string detail) =>
         TypedResults.Problem(detail, statusCode: StatusCodes.Status503ServiceUnavailable);
 
+    /// <summary>
+    /// 500: the fault is the service's own (N-22 c4). It carries no detail, so a stranger learns
+    /// nothing of the service's insides; the log holds the cause.
+    /// </summary>
     public static IResult Fault() => TypedResults.Problem(statusCode: StatusCodes.Status500InternalServerError);
 
     /// <summary>
     /// Shapes every problem document, whether a route, a crash or an unknown address made it. No
-    /// browser keeps one (N-18 c3); a 503 asks the client to wait five seconds; and the body says
-    /// 'about:blank' and carries no trace id.
+    /// browser keeps one (N-18 c3); a 503 asks the client to wait five seconds (N-22 c1). The type
+    /// says 'about:blank', so the title is the status's own phrase, such as 'Not Found' (US-07 c5),
+    /// and the body carries no trace id, which would tell a stranger of the service's insides.
     /// </summary>
     public static void Shape(ProblemDetailsContext context)
     {

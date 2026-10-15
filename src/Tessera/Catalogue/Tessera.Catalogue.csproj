@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- Catalogue: the list of layers, read from the database through Sql (US-03, N-23). -->
+  <!-- The shared framework gives BackgroundService and logging, which the live list runs on. -->
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="CSharpFunctionalExtensions" />

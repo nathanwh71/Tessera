@@ -6,17 +6,30 @@
     Nullable stays on, so the compiler checks every value that may be null at a module's edge.
     TreatWarningsAsErrors turns each warning into an error, so a forgotten null stops the build.
   -->
+  <!--
+    global.json, which JSON lets hold no comment, pins the SDK at 10.0.100, the one that builds
+    net10.0, and lets it roll forward to a newer feature band with fixes, never to .NET 11. It also
+    names Microsoft.Testing.Platform as the test runner, the one xunit.v3 runs on.
+  -->
   <PropertyGroup>
+    <!-- .NET 10, a release with long-term support, so the service stays on one platform for years. -->
     <TargetFramework>net10.0</TargetFramework>
     <LangVersion>14</LangVersion>
     <Nullable>enable</Nullable>
+    <!-- The common namespaces, such as System.Linq, come in without a using line in every file. -->
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Code-style rules run in every build, not only in the editor, so CI and the editor agree. -->
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <!-- The compiler checks each `///` comment that exists; CS1591 stays off, so a member may go without one. -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <!-- Each package's version lives once, in Directory.Packages.props, so no two projects disagree. -->
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!--
+      No culture data: numbers and dates read and print the same on every machine, so a setting
+      such as 22.19 never turns into 22,19, and the release is smaller.
+    -->
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 </Project>

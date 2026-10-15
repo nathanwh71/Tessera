@@ -4,23 +4,31 @@ using Dapper;
 using Npgsql;
 using Tessera.Settings;
 
+// The door to PostgreSQL: the query a module hands over, the reasons the database may refuse it, and
+// the one class that sends every query through the pool (ADR 0001, rule 4). Every failure comes back
+// as a value, never an exception, so each caller must decide what it means (ADR 0004).
+
 namespace Tessera.Sql;
 
 /// <summary>
-/// A query ready to send: the SQL text, and the values that travel beside it as bound parameters
-/// (S-01). The database never reads a parameter as SQL, so no value from a request can change what
-/// a query does. Every text lives in Queries.cs.
+/// A query ready to send: the SQL text, and the values that travel beside it as bound
+/// <b><i>parameters</i></b> (S-01). The database never reads a parameter as SQL, so no value from a
+/// request can change what a query does: <b><i>SQL injection</i></b>, SQL hidden in a request, has no
+/// way in. Every text lives in Queries.cs.
 /// </summary>
 public sealed record Query(string Text, object? Parameters = null);
 
 /// <summary>Why the database refused a query: its SQLSTATE code, five characters, and its message.</summary>
 public sealed record DatabaseError(string SqlState, string Message)
 {
-    /// <summary>The table, or its grant, has gone: 42501 or 42P01 (US-03 c6).</summary>
+    /// <summary>The table, or its <b><i>grant</i></b>, has gone: 42501 or 42P01 (US-03 c6).</summary>
     public bool IsMissingTable =>
         SqlState is PostgresErrorCodes.InsufficientPrivilege or PostgresErrorCodes.UndefinedTable;
 
-    /// <summary>The query names a column a seed script has dropped since the list of layers was read: 42703.</summary>
+    /// <summary>
+    /// The query names a column a <b><i>seed script</i></b> has dropped since the list of
+    /// <b><i>layers</i></b> was read: 42703.
+    /// </summary>
     public bool IsMissingColumn => SqlState is PostgresErrorCodes.UndefinedColumn;
 
     /// <summary>
@@ -36,21 +44,29 @@ public sealed record DatabaseError(string SqlState, string Message)
 
 /// <summary>
 /// The one door to PostgreSQL. A database can fail at any moment, so this class turns each failure
-/// into a <see cref="Result{T, E}"/>, a value that holds the answer or the reason, rather than letting
-/// an exception escape (ADR 0004).
+/// into a <b><i>Result</i></b> (<see cref="Result{T, E}"/>), a value that holds the answer or the
+/// reason, rather than letting an exception escape (ADR 0004).
 /// </summary>
 /// <remarks>
-/// A pool keeps a few connections open for requests to share. When every one is busy, Npgsql lends
-/// the next free one to the request that has waited longest (N-26). The health check's ping shares
-/// the pool too, so a pool busy for more than a second makes /health say DOWN (N-26 c3).
+/// A <b><i>connection pool</i></b> keeps a few connections open for requests to share. When every
+/// one is busy, Npgsql lends the next free one to the request that has waited longest (N-26). The
+/// health check's ping shares the pool too, so a pool busy for more than a second makes /health say
+/// DOWN (N-26 c3).
 /// </remarks>
 public sealed class Database : IAsyncDisposable
 {
+    /// <summary>Npgsql's data source: the pool every query borrows a connection from.</summary>
     private readonly NpgsqlDataSource _source;
 
+    /// <summary>
+    /// Private, so only <see cref="Open"/> builds one, and every pool keeps the limits of N-22.
+    /// </summary>
     private Database(NpgsqlDataSource source) => _source = source;
 
-    /// <summary>The longest a ping may take, from connecting to the answer.</summary>
+    /// <summary>
+    /// The longest a ping may take, from connecting to the answer: one second, so <c>/health</c>
+    /// answers within one (N-25, N-26 c3).
+    /// </summary>
     private static readonly TimeSpan PingLimit = TimeSpan.FromSeconds(1);
 
     /// <summary>Opens the pool within the given limits, or the defaults.</summary>
@@ -76,13 +92,17 @@ public sealed class Database : IAsyncDisposable
     }
 
     /// <summary>
-    /// Runs a query and turns each row into a <typeparamref name="T"/>, matching columns to fields by name.
+    /// Runs a query and turns each row into a <typeparamref name="T"/>, matching columns to fields by
+    /// name, so a record such as CatalogueRow needs no code of its own to read a row.
     /// </summary>
     public Task<Result<ImmutableArray<T>, DatabaseError>> Rows<T>(Query query, CancellationToken cancel = default) =>
         Run(async connection =>
             (await connection.QueryAsync<T>(Command(query, cancel)).ConfigureAwait(false)).ToImmutableArray(), cancel);
 
-    /// <summary>Runs a query that returns one value, or null for none.</summary>
+    /// <summary>
+    /// Runs a query that returns one value, or null for none, such as an empty <b><i>tile</i></b>.
+    /// T must be a class, so null can stand for 'no row'.
+    /// </summary>
     public Task<Result<T?, DatabaseError>> Single<T>(Query query, CancellationToken cancel = default) where T : class =>
         Run(connection => connection.QuerySingleOrDefaultAsync<T>(Command(query, cancel)), cancel);
 
@@ -102,6 +122,8 @@ public sealed class Database : IAsyncDisposable
             await PingOnce(limit.Token).WaitAsync(PingLimit, stop).ConfigureAwait(false);
             return true;
         }
+        // A cancel from the caller's own token is no fault of the database, so it escapes and the
+        // caller stops; every other failure, a timeout included, means 'not well'.
         catch (Exception error)
             when (error is TimeoutException or OperationCanceledException or NpgsqlException
                 && !stop.IsCancellationRequested)
@@ -116,12 +138,19 @@ public sealed class Database : IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// One ping, which throws on failure rather than returning a Result, since Ping wants only
+    /// 'answered or not' and treats every failure alike.
+    /// </summary>
     private async Task PingOnce(CancellationToken limit)
     {
         await using var connection = await _source.OpenConnectionAsync(limit).ConfigureAwait(false);
         await connection.ExecuteScalarAsync<int>(Command(Queries.Ping, limit)).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Closes the pool's connections as the program stops, so the database frees them at once.
+    /// </summary>
     public ValueTask DisposeAsync() => _source.DisposeAsync();
 
     // The cancellation token reaches the wait for a connection too, so a request that gives up leaves
@@ -149,6 +178,8 @@ public sealed class Database : IAsyncDisposable
         _ => new DatabaseError(PostgresErrorCodes.ConnectionFailure, error.Message),
     };
 
+    // Bundles the text, the parameters and the cancel token for Dapper, so no query leaves without
+    // all three.
     private static CommandDefinition Command(Query query, CancellationToken cancel) =>
         new(query.Text, query.Parameters, cancellationToken: cancel);
 }

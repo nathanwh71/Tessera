@@ -19,7 +19,7 @@ return args switch
 };
 
 // Serves until told to stop. The service starts whether or not the database answers yet, so the two
-// may start in either order; until the list of layers loads, tiles answer 503 (N-23 c4).
+// may start in either order; until the list of layers loads, tiles answer 503 (N-23 c3).
 static async Task<int> Serve()
 {
     Microsoft.AspNetCore.Builder.WebApplication app;
@@ -27,6 +27,8 @@ static async Task<int> Serve()
     {
         app = TesseraService.Build();
     }
+    // The three ways a settings check fails: a value outside its limits, several problems at once,
+    // and a key the binder cannot place. Any other exception is a fault, and escapes.
     catch (Exception error)
         when (error is OptionsValidationException or AggregateException or InvalidOperationException)
     {
@@ -76,6 +78,8 @@ static int Fail(IEnumerable<string> problems)
     return 1;
 }
 
+// Any other command shows the two the program knows, so a mistyped word teaches rather than fails
+// in silence.
 static int Usage()
 {
     Console.Error.WriteLine("Usage: Tessera                   serve tiles and the map");

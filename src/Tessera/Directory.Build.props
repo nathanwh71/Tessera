@@ -1,5 +1,8 @@
 <Project>
-  <!-- The settings every project in the solution shares, from the folder above. -->
+  <!--
+    The settings every project in the solution shares, from the folder above. MSBuild reads only
+    the nearest Directory.Build.props, so this file must import the one above it by hand.
+  -->
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
 
   <!--

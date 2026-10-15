@@ -8,13 +8,17 @@ using Tessera.Settings;
 namespace Tessera.Sql;
 
 /// <summary>
-/// What the tile query needs to know of a layer. Every name but the id is already quoted for SQL.
-/// The Catalogue module builds one from each layer, so Sql needs nothing of Catalogue's (ADR 0001).
+/// What the <b><i>tile</i></b> query needs to know of a <b><i>layer</i></b>. Every name but the id is
+/// already quoted for SQL. The Catalogue <b><i>module</i></b> builds one from each layer, so Sql needs
+/// nothing of Catalogue's (ADR 0001).
 /// </summary>
-/// <param name="Id">The layer's id, schema and name, such as <c>food.cafes</c>.</param>
+/// <param name="Id">
+/// The layer's id: its <b><i>schema</i></b>, the named folder that holds the table, and its name, such
+/// as <c>food.cafes</c>.
+/// </param>
 /// <param name="Table">The quoted table, such as <c>"food"."cafes"</c>.</param>
 /// <param name="Geometry">The quoted column that holds each place's shape.</param>
-/// <param name="Srid">The number of the layer's coordinate system.</param>
+/// <param name="Srid">The layer's <b><i>SRID</i></b>, the number of its coordinate system.</param>
 /// <param name="Properties">The quoted columns each tile carries beside the shape (US-07).</param>
 /// <param name="Order">The quoted primary key, which fixes the order of features; empty for a view.</param>
 public sealed record TileSource(string Id, string Table, string Geometry, int Srid, ImmutableArray<string> Properties, ImmutableArray<string> Order);
@@ -24,7 +28,7 @@ public static class Queries
     /// <summary>
     /// Wraps a table, schema or column name in double quotes, doubling any quote inside, so the
     /// database reads it as one name and never as part of a command (S-01 c3): <c>x; DROP TABLE cafes</c>
-    /// stays one odd name.
+    /// stays one odd name, and <b><i>SQL injection</i></b>, SQL hidden in a request, finds no way in.
     /// </summary>
     public static string Quote(string name) => $"\"{name.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
 
@@ -34,7 +38,8 @@ public static class Queries
     public static readonly Query Ping = new("SELECT 1");
 
     /// <summary>
-    /// Every table and view with a typed geometry column that the signed-in role may read (US-03).
+    /// Every table and view with a typed geometry column that the signed-in <b><i>role</i></b> may read
+    /// (US-03).
     /// </summary>
     /// <remarks>
     /// The database keeps the guest list, so the query asks it. pg_class lists tables ('r', 'p') and
@@ -78,10 +83,14 @@ public static class Queries
     /// <summary>One tile of one layer, built inside the database (US-07).</summary>
     /// <remarks>
     /// The WHERE clause turns the tile's square into the layer's own coordinate system, never the
-    /// table's shapes into the tile's, so the spatial index applies and the tile reads only its own
-    /// rows. The margin widens the square by the buffer, so a symbol near an edge shows on both
-    /// tiles. ST_AsMVTGeom moves each shape into the tile's grid; ST_AsMVT packs the rows into one
-    /// vector tile. Features come out in key order, so the same name wins a clash every time.
+    /// table's shapes into the tile's, so the <b><i>spatial index</i></b> applies and the tile reads
+    /// only its own rows (US-07). The margin widens the square by the buffer, so a symbol near an edge
+    /// shows on both tiles. ST_AsMVTGeom moves each shape into the tile's grid and, with its last
+    /// argument true, clips it at the buffer, so a tile carries no more than it can draw. ST_AsMVT
+    /// packs the rows into one <b><i>vector tile</i></b>, told that the column <c>tessera_shape</c>
+    /// holds the shape: a name no table of places is likely to share. Features come out in key
+    /// order, so the same name wins a clash every time. LIMIT caps the features at
+    /// <c>Tiles.MaxFeatures</c>, so a crowded square stays small and quick to build.
     /// </remarks>
     public static Query Tile(TileSource layer, int z, int x, int y, TileSettings limits)
     {
@@ -110,7 +119,9 @@ public static class Queries
     }
 
     /// <summary>
-    /// The schema of the seed's journal, the table where DbUp records each script it has run (ADR 0009).
+    /// The schema of the seed's <b><i>journal</i></b>, the table where DbUp records each script it has
+    /// run (ADR 0009). DbUp makes the table but not its schema, so the seed sends this first. It lives
+    /// here since every SQL text sits in this file (S-01 c2); IF NOT EXISTS lets it run at every start.
     /// </summary>
     public static Query JournalSchema(string schema) => new($"CREATE SCHEMA IF NOT EXISTS {schema}");
 }

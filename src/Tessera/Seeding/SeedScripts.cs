@@ -6,20 +6,26 @@ using Tessera.Sql;
 namespace Tessera.Seeding;
 
 /// <summary>
-/// Loads the places with DbUp: it runs each new SQL script in the seed folder once, in the order of
-/// the scripts' names, and records each one in a journal table, so it never runs twice (ADR 0009).
+/// Loads the places with DbUp: it runs each new <b><i>seed script</i></b>, a SQL file of places, once,
+/// in the order of the scripts' names, and records each one in a <b><i>journal</i></b> table, so it
+/// never runs twice (ADR 0009).
 /// The command <c>Tessera seed</c> runs it, signed in as tessera_publisher (US-24).
 /// </summary>
 /// <remarks>
 /// <c>npm run etl</c> writes the scripts from the places' own files, cleaning them on the way.
-/// A script that replaces a table drops it first, and its grants go with it, so the new table
-/// waits for the publisher's grant, as every table does (US-24 c5).
+/// A script that replaces a table drops it first, and its <b><i>grants</i></b> go with it, so the new
+/// table waits for the publisher's grant, as every table does (US-24 c5).
 /// </remarks>
 public static class SeedScripts
 {
-    /// <summary>Where DbUp records each script it has run: tessera.schemaversions.</summary>
+    /// <summary>
+    /// Where DbUp records each script it has run: tessera.schemaversions. The journal keeps a
+    /// <b><i>schema</i></b>, a named folder of tables, of its own, apart from the four schemas of
+    /// places, so the record of the seed never mixes with the places it loaded.
+    /// </summary>
     public const string JournalSchema = "tessera";
 
+    /// <summary>The journal's table, by DbUp's usual name, so a reader who knows DbUp finds it.</summary>
     public const string JournalTable = "schemaversions";
 
     /// <summary>The scripts the release carries, beside the program.</summary>

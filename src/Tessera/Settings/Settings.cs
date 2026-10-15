@@ -10,24 +10,37 @@ using Microsoft.Extensions.Options;
 namespace Tessera.Settings;
 
 /// <summary>
-/// The limits on the service's use of the database (N-22). A pool keeps a few connections open for
-/// requests to share, since opening a fresh one for each request is slow.
+/// The limits on the service's use of the database (N-22). A <b><i>connection pool</i></b> keeps a few
+/// connections open for requests to share, since opening a fresh one for each request is slow.
 /// </summary>
 public sealed record DatabaseSettings
 {
-    /// <summary>The most connections the pool holds open at once.</summary>
+    /// <summary>
+    /// The most connections the pool holds open at once. Four let <b><i>tiles</i></b> build side by
+    /// side yet keep the database's load small: two copies of the service hold eight in all (N-24).
+    /// The cap of 1000 catches a slip of the keyboard.
+    /// </summary>
     [Range(1, 1000)]
     public int PoolSize { get; init; } = 4;
 
-    /// <summary>How long a connection lives before the pool replaces it.</summary>
+    /// <summary>
+    /// How long a connection lives before the pool replaces it, so no connection grows old holding
+    /// the server's memory; an hour makes the cost of a fresh one small.
+    /// </summary>
     [Range(1, int.MaxValue)]
     public int ConnectionLifetimeSeconds { get; init; } = 3600;
 
-    /// <summary>The longest a query may run before the database cancels it; 0 means no limit.</summary>
+    /// <summary>
+    /// The longest a query may run before the database cancels it, so a runaway query cannot hold a
+    /// connection for ever, and its request answers 503 (N-22 c2); 0 means no limit.
+    /// </summary>
     [Range(0, int.MaxValue)]
     public int QueryTimeoutSeconds { get; init; } = 10;
 
-    /// <summary>The longest a request waits to open a connection or to borrow a free one.</summary>
+    /// <summary>
+    /// The longest a request waits to open a connection or to borrow a free one; past it, the request
+    /// answers 503 rather than waiting on, so the browser tries again later (N-22 c2).
+    /// </summary>
     [Range(1, 600)]
     public int ConnectionWaitSeconds { get; init; } = 3;
 }
@@ -45,9 +58,17 @@ public sealed record TileSettings : IValidatableObject
     [Range(0, int.MaxValue)]
     public int Buffer { get; init; } = 256;
 
+    /// <summary>
+    /// The most features one tile carries (US-07), so a crowded square at a low zoom level stays
+    /// small and quick to build.
+    /// </summary>
     [Range(1, int.MaxValue)]
     public int MaxFeatures { get; init; } = 10_000;
 
+    /// <summary>
+    /// The zoom levels served. 22 matches the map's last level (UI-09); 30 is the ceiling, since level
+    /// 31 would overflow the 32-bit number that counts a level's columns (TileAddress).
+    /// </summary>
     [Range(0, 30)]
     public int MinZoom { get; init; }
 
@@ -58,6 +79,9 @@ public sealed record TileSettings : IValidatableObject
     [Range(0, int.MaxValue)]
     public int CacheSeconds { get; init; } = 60;
 
+    /// <summary>
+    /// Refuses a range that serves no level at all, so the slip shows at start (US-00 c4).
+    /// </summary>
     public IEnumerable<ValidationResult> Validate(ValidationContext context) =>
         MaxZoom >= MinZoom ? [] : [new ValidationResult("MaxZoom must not be below MinZoom.")];
 }
@@ -69,8 +93,8 @@ public sealed record MapSettings
 }
 
 /// <summary>
-/// How often the service rereads the list of tables it may read, so a table granted later appears
-/// without a restart (N-23). 0 means it reads the list once.
+/// How often the service rereads the list of tables it may read, so a table <b><i>granted</i></b>
+/// later appears without a restart (N-23). 0 means it reads the list once.
 /// </summary>
 public sealed record CatalogueSettings
 {
@@ -84,6 +108,9 @@ public sealed record CatalogueSettings
 /// </summary>
 public sealed record AreaSettings : IValidatableObject
 {
+    /// <summary>
+    /// The area's name, which the page receives with the box; empty, it would name nothing.
+    /// </summary>
     [Required(AllowEmptyStrings = false)]
     public string Name { get; init; } = "Macau";
 
@@ -105,10 +132,15 @@ public sealed record AreaSettings : IValidatableObject
     [Range(-85.06, 85.06)]
     public double HomeLatitude { get; init; } = 22.19;
 
-    /// <summary>The zoom level the map opens at, from 0, the whole world, to 22.</summary>
+    /// <summary>
+    /// The zoom level the map opens at, from 0, the whole world, to 22, the map's last level (UI-09).
+    /// </summary>
     [Range(0, 22)]
     public double HomeLevel { get; init; } = 15;
 
+    /// <summary>
+    /// Refuses a box turned inside out, so a swapped pair of values shows at start, not as an empty map.
+    /// </summary>
     public IEnumerable<ValidationResult> Validate(ValidationContext context) =>
         MinLongitude < MaxLongitude && MinLatitude < MaxLatitude
             ? []
@@ -116,15 +148,20 @@ public sealed record AreaSettings : IValidatableObject
 }
 
 /// <summary>
-/// Reads tessera.json and the environment through ASP.NET Core's own configuration, binds each
-/// section to its record, and checks every value when the program starts (US-00 c4).
+/// Reads tessera.json, the <b><i>settings file</i></b>, and each <b><i>environment variable</i></b>
+/// through ASP.NET Core's own configuration, binds each section to its record, and checks every
+/// value when the program starts (US-00 c4).
 /// </summary>
 public static class TesseraSettings
 {
     /// <summary>The database URL the service reads tiles with; pg_tileserv uses the same name.</summary>
     public const string ReaderDatabase = "DATABASE_URL";
 
-    /// <summary>The database URL the seed writes places with.</summary>
+    /// <summary>
+    /// The database URL the seed writes places with. It signs in as a second <b><i>role</i></b>,
+    /// tessera_publisher, so the service never holds the right to write while it serves tiles
+    /// (ADR 0001).
+    /// </summary>
     public const string PublisherDatabase = "TESSERA_PUBLISHER_DATABASE_URL";
 
     /// <summary>
@@ -140,7 +177,8 @@ public static class TesseraSettings
     /// Binds each section to its record, with the record's own limits. A key the service does not
     /// read is refused, since it is most often a misspelling. A misspelt section name passes unseen:
     /// its keys bind to nothing, so the section keeps its defaults. The database's URL is the Sql
-    /// module's to read (DatabaseConnections.Register), since only Sql knows the database client.
+    /// <b><i>module</i></b>'s to read (DatabaseConnections.Register), since only Sql knows the
+    /// database client.
     /// </summary>
     public static void Register(IServiceCollection services)
     {
@@ -151,6 +189,10 @@ public static class TesseraSettings
         Section<AreaSettings>(services, "Area");
     }
 
+    /// <summary>
+    /// Binds one section by the rules Register sets out: an unknown key refused, and every limit
+    /// checked as the program starts, so one failed start names every problem (US-00 c4).
+    /// </summary>
     private static void Section<T>(IServiceCollection services, string name) where T : class =>
         services.AddOptions<T>()
             .BindConfiguration(name, binder => binder.ErrorOnUnknownConfiguration = true)

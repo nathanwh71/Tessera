@@ -16,8 +16,8 @@ using IResult = Microsoft.AspNetCore.Http.IResult;
 namespace Tessera.Tiles;
 
 /// <summary>
-/// One tile's address: zoom level z, column x and row y. Level 0 is one square of the world; each
-/// level splits every square into four, so level z has 2^z columns and 2^z rows.
+/// One <b><i>tile</i></b>'s address: zoom level z, column x and row y. Level 0 is one square of the
+/// world; each level splits every square into four, so level z has 2^z columns and 2^z rows.
 /// </summary>
 public sealed record TileAddress(int Z, int X, int Y)
 {
@@ -35,25 +35,33 @@ public sealed record TileAddress(int Z, int X, int Y)
 public delegate Task<Result<byte[]?, DatabaseError>> TileReader(Query query, CancellationToken cancel);
 
 /// <summary>Answers a tile request from the database (US-07).</summary>
-/// <param name="catalogue">Gives the list of layers as it stands, or null before the first load (N-23).</param>
+/// <param name="catalogue">
+/// Gives the <b><i>catalogue</i></b>, the list of <b><i>layers</i></b>, as it stands, or null before
+/// the first load (N-23).
+/// </param>
 /// <param name="read">Runs the tile query.</param>
 /// <param name="settings">The tile's limits and how long a browser and Nginx may keep it.</param>
 /// <param name="layerChanged">Asks for the list of layers again; null in a test that needs no list.</param>
 public sealed class TileServer(
     Func<LayerCatalogue?> catalogue, TileReader read, TileSettings settings, Action? layerChanged = null)
 {
+    /// <summary>
+    /// The registered media type of a <b><i>vector tile</i></b>, which map libraries such as
+    /// MapLibre expect (US-07 c1).
+    /// </summary>
     public const string ContentType = "application/vnd.mapbox-vector-tile";
 
     /// <summary>
-    /// <c>public, max-age=N</c> lets a browser, and Nginx, keep the tile N seconds; with 0, <c>no-cache</c>
-    /// makes each check first (N-18).
+    /// <c>public, max-age=N</c> lets a browser, and Nginx, keep the tile in its <b><i>cache</i></b> N
+    /// seconds; with 0, <c>no-cache</c> makes each check first (N-18).
     /// </summary>
     public static string CacheControl(int seconds) => seconds > 0 ? $"public, max-age={seconds}" : "no-cache";
 
     /// <summary>
     /// The tile's ETag, the label a browser sends back to ask 'is mine still good?' (N-19). It comes from
-    /// a hash of the bytes, so equal bytes give an equal tag; it is weak, <c>W/"…"</c>, because one tag
-    /// covers the plain and the gzip form.
+    /// a hash of the bytes, so equal bytes give an equal tag; it is a <b><i>weak ETag</i></b>,
+    /// <c>W/"…"</c>, because one tag covers the plain and the gzip form (N-20 c4). Sixteen of the hash's
+    /// 32 bytes keep the tag short, yet two different tiles still never share one in practice.
     /// </summary>
     public static string Tag(byte[] bytes) => $"W/\"{Convert.ToHexStringLower(SHA256.HashData(bytes).AsSpan(0, 16))}\"";
 
@@ -72,6 +80,8 @@ public sealed class TileServer(
             return Problems.NotFound("No tile has those coordinates.");
 
         var built = await read(Queries.Tile(found.Source, tile.Z, tile.X, tile.Y, settings), cancel).ConfigureAwait(false);
+        // An empty tile is still a tile: 200 with no bytes, so the map draws nothing there, and the
+        // browser and Nginx keep the empty answer like any other.
         return built.Match(
             bytes => new TileResult(bytes ?? [], CacheControl(settings.CacheSeconds)),
             // A withdrawn grant gives 42501: the layer has left, so 404 (US-03 c6). A column a seed script
@@ -101,10 +111,15 @@ public sealed class TileServer(
     }
 }
 
+/// <summary>
+/// Adds the tile routes to the web service; Service.cs calls it, so the program needs to know nothing
+/// of how a tile is built.
+/// </summary>
 public static class TileRoutes
 {
     /// <summary>
-    /// Adds <c>/{layer}/{z}/{x}/{y}.pbf</c>, and the same with <c>.mvt</c>, for GET and HEAD (US-07).
+    /// Adds <c>/{layer}/{z}/{x}/{y}.pbf</c>, the ending pg_tileserv uses, so its clients work unchanged,
+    /// and the same with <c>.mvt</c>, the format's own name, which gives the same bytes (US-07 c1, c2).
     /// </summary>
     public static IEndpointRouteBuilder MapTiles(
         this IEndpointRouteBuilder routes, LiveCatalogue catalogue, Database database, TileSettings settings)
@@ -113,6 +128,8 @@ public static class TileRoutes
         var rereading = 0;
         void Reread()
         {
+            // The reread runs on its own, with no cancel token, so this request answers 503 at once
+            // and the reread finishes even after the browser has gone.
             if (Interlocked.Exchange(ref rereading, 1) == 0)
                 _ = Task.Run(async () =>
                 {
@@ -128,6 +145,7 @@ public static class TileRoutes
         }
 
         var server = new TileServer(() => catalogue.Current, database.Single<byte[]>, settings, Reread);
+        // HEAD asks for the headers alone, as a watcher or Nginx checking a tag may.
         string[] read = [HttpMethods.Get, HttpMethods.Head];
         routes.MapMethods("/{layer}/{z:int}/{x:int}/{y:int}.pbf", read, server.Answer);
         routes.MapMethods("/{layer}/{z:int}/{x:int}/{y:int}.mvt", read, server.Answer);

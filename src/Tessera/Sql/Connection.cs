@@ -13,20 +13,31 @@ namespace Tessera.Sql;
 /// <summary>The database's connection, from the URL in <see cref="Variable"/>, checked at start-up.</summary>
 public sealed class DatabaseConnection : IValidatableObject
 {
-    /// <summary>The environment variable that held the URL, named in any problem.</summary>
+    /// <summary>The <b><i>environment variable</i></b> that held the URL, named in any problem.</summary>
     public string Variable { get; set; } = TesseraSettings.ReaderDatabase;
 
+    /// <summary>
+    /// The URL as the environment gave it; null when the variable is missing, so the check can say so.
+    /// </summary>
     public string? Url { get; set; }
 
     /// <summary>Npgsql's connection string, or empty text while the URL fails the check.</summary>
     public string Text => DatabaseConnections.ConnectionString(Url).GetValueOrDefault("");
 
+    /// <summary>
+    /// Refuses a missing or malformed URL and names its variable, so the service will not start
+    /// without a database it can reach (US-00 c4).
+    /// </summary>
     public IEnumerable<ValidationResult> Validate(ValidationContext context) =>
         DatabaseConnections.ConnectionString(Url) is { IsFailure: true } refused
             ? [new ValidationResult($"{Variable}: {refused.Error}")]
             : [];
 }
 
+/// <summary>
+/// Reads and checks the database's URL. It lives in Sql, not Settings, since only Sql may name
+/// Npgsql, whose connection string the URL becomes (ADR 0001, rule 4).
+/// </summary>
 public static class DatabaseConnections
 {
     /// <summary>
@@ -48,6 +59,7 @@ public static class DatabaseConnections
     {
         if (string.IsNullOrEmpty(url))
             return Result.Failure<string, string>("missing or empty");
+        // PostgreSQL's own tools accept both 'postgresql' and 'postgres', so a URL copied from them reads.
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme is not ("postgresql" or "postgres")
             || uri.UserInfo.Split(':', 2) is not [{ Length: > 0 } user, var password] || uri.AbsolutePath.Length < 2)
             return Result.Failure<string, string>("expected postgresql://user:password@host:port/database");

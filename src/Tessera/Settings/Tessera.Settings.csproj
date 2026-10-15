@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- Settings: every setting, its default and its limits (ADR 0003). It names no other module. -->
+  <!-- The shared framework gives configuration and options, which bind and check every setting. -->
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
