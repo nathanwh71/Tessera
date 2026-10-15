@@ -110,7 +110,7 @@ describe("UI-15 icons", () => {
 		expect(withSvg.toSorted()).toEqual([join("design", "components.tsx"), join("map", "MapControls.tsx")]);
 		// An image file, Font Awesome or the older Material Icons font would each bring icons from outside
 		// Material Symbols (UI-15, criterion 2).
-		expect(FILES.filter(({ text }) => /<img\b|font-awesome|material-icons(?!-)/.test(text)).map((f) => f.file)).toEqual([]);
+		expect(FILES.filter(({ text }) => /<img\b|font-awesome|material-icons/.test(text)).map((f) => f.file)).toEqual([]);
 	});
 });
 
