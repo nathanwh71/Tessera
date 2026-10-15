@@ -52,7 +52,6 @@ ADR 0008 ***records*** why Nginx ***stands*** in ***front***, and what it does i
 | The passive health check, for now | It ***needs*** a ***second*** ***copy*** of the ***service***; ADR 0008 ***says*** how to ***add*** ***one*** |
 | The compiler's proof that only `Sql` writes SQL (S-01 c2) | Every SQL ***text*** ***still*** ***lives*** in `Queries.cs`, and every ***value*** ***still*** ***travels*** as a ***parameter***; a ***reviewer***, not the ***compiler***, ***keeps*** the ***rule*** |
 | The compiler's guard on the module borders (ADR 0001) | The ***folders*** ***keep*** the ***modules*** ***apart***; ***one*** ***project*** is easier to ***read*** |
-| One settings file for both builds (ADR 0006 rule 5) | The Java ***build*** is ***archived***; its ***own*** ***file*** ***stays*** as it was |
 
 ## Checked
 

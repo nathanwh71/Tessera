@@ -1,10 +1,10 @@
 # Every comment now speaks to a school student, and the browser tests run on every push
 
-14 ***October*** 2026, ***afternoon***. Every ***comment*** in `src/` ***now*** ***reads*** for a ***school*** ***student*** of ***computer*** ***science***, as the Java ***build***'s ***comments*** do, and no ***code*** ***changed*** with them. The ***automatic*** ***build*** ***now*** ***runs*** the ***browser*** ***tests*** too. ***Reading*** every ***file*** ***closely*** ***turned*** up ***one*** ***real*** ***fault***, ***now*** ***fixed***.
+14 ***October*** 2026, ***afternoon***. Every ***comment*** in `src/` ***now*** ***reads*** for a ***school*** ***student*** of ***computer*** ***science***, and no ***code*** ***changed*** with them. The ***automatic*** ***build*** ***now*** ***runs*** the ***browser*** ***tests*** ***too***. ***Reading*** every ***file*** ***closely*** ***turned*** ***up*** ***one*** ***real*** ***fault***, ***now*** ***fixed***.
 
 ## The comments
 
-All 27 files in `src/` ***changed*** their ***comments***, under the Java ***pass***'s ***five*** ***rules***.
+All 27 ***files*** in `src/` ***changed*** their ***comments***, ***under*** ***five*** ***rules***.
 
 - **Each file opens** by ***naming*** its ***module***, its ***story*** and what ***calls*** it.
 - **Each term** is ***explained*** at its ***first*** ***use*** in a ***file***: a ***record***, a ***transaction***, a ***connection*** ***pool***, an ETag, gzip, a ***lock***, and so on.

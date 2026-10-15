@@ -58,7 +58,7 @@ public static class TesseraService
         {
             ResponseWriter = (context, report) =>
             {
-                // The words the Java build uses. DOWN outranks OUT_OF_SERVICE, the state while the first
+                // The usual health-check words. DOWN outranks OUT_OF_SERVICE, the state while the first
                 // list of layers loads. The answer names no fault, so a stranger learns nothing more.
                 var status = report.Status != HealthStatus.Healthy ? "DOWN"
                     : catalogue.Current is null ? "OUT_OF_SERVICE"

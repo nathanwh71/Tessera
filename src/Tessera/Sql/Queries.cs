@@ -12,7 +12,7 @@ public static class Queries
 {
     /// <summary>
     /// Wraps a table, schema or column name in double quotes, doubling any quote inside, so the
-    /// database reads it as one name and never as part of a command (S-02): <c>x; DROP TABLE cafes</c>
+    /// database reads it as one name and never as part of a command (S-01 c3): <c>x; DROP TABLE cafes</c>
     /// stays one odd name.
     /// </summary>
     public static string Quote(string name) => $"\"{name.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
@@ -30,8 +30,8 @@ public static class Queries
     /// views ('v', 'm'), never functions (US-03 c5). A typed geometry column keeps its SRID, the number
     /// of its coordinate system, in atttypmod; an untyped one gives 0 and is left out. DISTINCT ON keeps
     /// each table's first geometry column. columns lists the other columns of simple types, which a
-    /// tile carries; keycolumns lists the primary key, which fixes the order of features (ADR 0006
-    /// rule 7). Both travel as JSON text, since Dapper cannot fill a list from a database array.
+    /// tile carries; keycolumns lists the primary key, which fixes the order of features (US-24
+    /// test 2). Both travel as JSON text, since Dapper cannot fill a list from a database array.
     /// </remarks>
     public static readonly Query Layers = new("""
         SELECT DISTINCT ON (n.nspname, c.relname)
@@ -76,7 +76,7 @@ public static class Queries
     {
         // Each property the tile carries, after its shape, such as ', "name", "type"'.
         var properties = string.Concat(layer.Properties.Select(name => $", {name}"));
-        // A table's key fixes the order of features (ADR 0006 rule 7); a view has no key, so no order.
+        // A table's key fixes the order of features (US-24 test 2); a view has no key, so no order.
         var order = layer.Order.IsDefaultOrEmpty
             ? ""
             : "\n  ORDER BY " + string.Join(", ", layer.Order.Select(name => $"t.{name}"));

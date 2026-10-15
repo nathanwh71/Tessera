@@ -28,6 +28,10 @@ jobs:
       - run: dotnet build --configuration Release
       - run: dotnet run --project tests/Tessera.UnitTests --configuration Release --no-build
       - run: dotnet run --project tests/Tessera.IntegrationTests --configuration Release --no-build
+      # The ETL's tests build a geodatabase with GDAL and run the pipeline on it (ADR 0009). Ubuntu's
+      # own GDAL serves; without it the pipeline would pull GDAL's Docker image.
+      - run: sudo apt-get update && sudo apt-get install --yes --no-install-recommends gdal-bin
+      - run: dotnet run --project tests/Tessera.Etl.Tests --configuration Release --no-build
       - run: npm ci
       - run: npm run typecheck
       - run: npm run test:scripts

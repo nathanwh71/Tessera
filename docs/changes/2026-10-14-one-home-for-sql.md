@@ -40,7 +40,7 @@ A ***letter***, a digit, `-`, `.`, `_` or `~` ***never*** ***needs*** encoding (
 |---|---|
 | `Result.Collect` ***joins*** ***results*** that ***ran*** ***side*** by ***side*** and ***keeps*** every refusal, so `SettingsReader` ***lost*** its ***two*** `Errors` ***overloads*** and its ***throwing*** `Value` | `src/Tessera.Kernel/Result.cs`, `src/Tessera.Settings/SettingsReader.cs` |
 | `Only_match_takes_option_result_and_page_apart`: no ***code*** ***outside*** `Tessera.Kernel` may ***name*** `Some`, `None`, `Ok` or `Refused`, and ***none*** ***outside*** `Page` may ***name*** `Shown`, `Off` or `Missing`; a `switch` or an `is` on them ***fails*** the ***build***. The ***test*** ***counts*** its ***seven*** ***cases*** ***first***, ***since*** a ***rule*** over no ***types*** would ***pass*** for ***nothing*** | `tests/Tessera.ArchitectureTests/BorderTests.cs`, ADR 0004 |
-| The ***scripts*** ***use*** `web/src/shared/result.ts` in ***place*** of their ***own*** `Checked<T>` (ADR 0006); `TESSERA_DB_HOST`, `TESSERA_DB_PORT` and `TESSERA_DB_NAME` ***place*** the database, with ***defaults*** for the ***container*** on this ***machine***; `lib/database.ts` ***holds*** the ***one*** ***wait*** for the database, so `npm run publish` ***waits*** too | `scripts/`, `.env.example`, README |
+| The scripts use `web/src/shared/result.ts` in place of their own `Checked<T>` (ADR 0004); `TESSERA_DB_HOST`, `TESSERA_DB_PORT` and `TESSERA_DB_NAME` place the database, with defaults for the container on this machine; `lib/database.ts` holds the one wait for the database, so `npm run publish` waits too | `scripts/`, `.env.example`, README |
 
 ## Part C built
 
@@ -52,11 +52,11 @@ A ***letter***, a digit, `-`, `.`, `_` or `~` ***never*** ***needs*** encoding (
 | N-19 | `TileTag.Of`: a ***weak*** `ETag` from the ***first*** ***half*** of a SHA-256 hash of the bytes; `If-None-Match` ***answers*** 304 with no ***body***; `TileCache` ***keeps*** each ***built*** tile for `CacheSeconds` ***within*** `Tiles.CacheMegabytes` (64), ***behind*** ***one*** ***lock***, the ***copy*** ***used*** ***longest*** ago ***going*** ***first***; `TileServer` ***takes*** the query ***runner*** as a ***function***, so a ***test*** double ***counts*** the queries | `Tiles.TileCache`, `Tiles.TileServer` |
 | N-20 | A ***kept*** tile ***holds*** its gzip-packed ***form***, ***made*** ***once***, and ***sends*** it with `Content-Encoding: gzip` and `Vary: Accept-Encoding` when the browser ***accepts*** it; the ***map***'s ***files***, the ***page*** and ***problem*** ***documents*** ***travel*** ***through*** .NET's ***response*** compression; ***one*** ***weak*** ***tag*** ***covers*** both ***forms*** | `Tiles.TilePack`, `Service.TesseraService` |
 
-A ***level***-0 tile of the ***cafés*** ***shrank*** from 31,037 bytes to 11,037 packed. The ***map***'s 20 browser ***tests*** ***passed*** ***against*** the packed ***service***. ***One*** ***test*** the ***stories*** ***name*** ***stays*** ***unwritten***: 'the ***map*** ***asks*** ***once***' is a browser ***test***, and the browser ***tests*** are the ***map***'s ***own***, ***shared*** with the Java ***build*** (ADR 0006). ***Still*** ***open***: ***whether*** a ***crowd*** ***asking*** for ***one*** ***unbuilt*** tile ***shares*** ***one*** query.
+A level-0 ***tile*** of the cafés ***shrank*** from 31,037 ***bytes*** to 11,037 ***packed***. The ***map***'s 20 ***browser*** ***tests*** ***passed*** ***against*** the ***packed*** ***service***. ***One*** ***test*** the ***stories*** ***name*** ***stays*** ***unwritten***: 'the map asks once' is a ***browser*** ***test***, and the ***browser*** ***tests*** are the ***map***'s ***own*** (ADR 0006). ***Still*** ***open***: ***whether*** a ***crowd*** ***asking*** for ***one*** ***unbuilt*** ***tile*** ***shares*** ***one*** ***query***.
 
 ## One build
 
-At the ***end*** of the ***day*** the maintainer ***chose*** this ***build*** as the ***one*** to ***carry*** on and ***archived*** `nathanwh71/JTessera`. ADR 0006 is ***amended***: the ***map*** ***lives*** in this repository's `web/`, and the ***plan*** for a repository of its own ***lapses*** while there is ***one*** ***build***.
+At the ***end*** of the ***day*** the ***maintainer*** ***settled*** on ***one*** ***build***. ADR 0006 is ***amended***: the ***map*** ***lives*** in this repository's `web/`, and the ***plan*** for a repository of its ***own*** ***lapses***.
 
 ## Tests
 

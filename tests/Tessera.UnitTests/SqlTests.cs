@@ -4,7 +4,7 @@ using Tessera.Sql;
 
 namespace Tessera.UnitTests;
 
-/// <summary>S-02: a name is quoted one way, so no name can end its quotes early and smuggle in SQL.</summary>
+/// <summary>S-01 c3: a name is quoted one way, so no name can end its quotes early and smuggle in SQL.</summary>
 public sealed class SqlTests
 {
     [Fact]

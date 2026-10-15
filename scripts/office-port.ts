@@ -3,12 +3,12 @@
 //
 //   npm run office-port
 //
-// WSL2 gives Ubuntu a private network, so the office sees the Windows machine alone. Windows must
-// pass port 80 on to Ubuntu, and its firewall must let the office in. Both need an administrator,
-// so this script prints the commands for one to run, rather than running them itself.
-// The steps need a first run on the office machine; nothing here has run there yet (US-35).
+// Tessera needs WSL2's mirrored networking, so Ubuntu shares the Windows machine's address and
+// Nginx sees each office machine's own address (S-07, S-30). The script checks the mode, then
+// prints the firewall steps. Both need Windows and an administrator, so it prints them for one to
+// run, rather than running them itself.
 import { $ } from 'zx';
-import { officePortSteps } from './lib/office.ts';
+import { firewallSteps, networkingSteps } from './lib/office.ts';
 
 const port = process.env['TESSERA_HTTPPORT'] || '80';
 const inWsl = (await $({ nothrow: true })`grep -qi microsoft /proc/version`).exitCode === 0;
@@ -17,5 +17,8 @@ if (!inWsl) {
   process.exit(1);
 }
 
-const address = (await $`hostname -I`).stdout.trim().split(' ')[0] ?? '';
-console.log(officePortSteps(address, port).join('\n'));
+// wslinfo comes with WSL 2.0 and later; an older WSL has no mirrored networking, so 'unknown' fits.
+const mode = (await $({ nothrow: true, quiet: true })`wslinfo --networking-mode`).stdout;
+const switchFirst = networkingSteps(mode);
+console.log([...switchFirst, ...(switchFirst.length > 0 ? ['Once it is mirrored:'] : []), ...firewallSteps(port)].join('\n'));
+process.exit(switchFirst.length > 0 ? 1 : 0);

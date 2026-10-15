@@ -24,7 +24,7 @@ public static class Problems
     /// <summary>
     /// Shapes every problem document, whether a route, a crash or an unknown address made it. No
     /// browser keeps one (N-18 c3); a 503 asks the client to wait five seconds; and the body says
-    /// 'about:blank' and carries no trace id, as the Java build's does.
+    /// 'about:blank' and carries no trace id.
     /// </summary>
     public static void Shape(ProblemDetailsContext context)
     {

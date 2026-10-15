@@ -116,7 +116,7 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         Assert.Equal(first.Headers.ETag, second.Headers.ETag);
     }
 
-    // ADR 0006 rule 7: HEAD gets a tile's headers and no body, as in the Java build.
+    // HEAD gets a tile's headers and no body.
     [Fact]
     public async Task Answers_head_with_the_headers_alone()
     {
@@ -210,7 +210,7 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
 
         Assert.Equal(HttpStatusCode.NotFound, answer.StatusCode);
         Assert.Equal("application/problem+json", answer.Content.Headers.ContentType?.MediaType);
-        // ADR 0006 rule 7: no detail, as in the Java build.
+        // No detail, so a stranger learns nothing more.
         Assert.DoesNotContain("detail", await answer.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
     }
 
@@ -219,7 +219,7 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
     {
         using var answer = await Get("/food.cafes/1/5/0.pbf");
 
-        // ADR 0006 rule 7: a tile that does not exist is not found, in both builds.
+        // A tile that does not exist is not found.
         Assert.Equal(HttpStatusCode.NotFound, answer.StatusCode);
         Assert.Equal("application/problem+json", answer.Content.Headers.ContentType?.MediaType);
     }

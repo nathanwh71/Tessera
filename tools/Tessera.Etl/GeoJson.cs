@@ -1,0 +1,106 @@
+using System.Collections.Immutable;
+using System.Text;
+using System.Text.Json;
+using NetTopologySuite.Geometries;
+using NetTopologySuite.IO.Converters;
+
+namespace Tessera.Etl;
+
+/// <summary>
+/// Reads and writes GeoJSON, the text form of places that sits between the steps: GDAL extracts
+/// each table to GeoJSON, the filters clean its rows, and GDAL loads the cleaned GeoJSON into SQL.
+/// </summary>
+public static class GeoJson
+{
+    // NetTopologySuite's converter turns a GeoJSON geometry into a shape and back.
+    private static readonly JsonSerializerOptions Shapes = new() { Converters = { new GeoJsonConverterFactory() } };
+
+    /// <summary>
+    /// The rows of a FeatureCollection, numbered from 1 in the file's order, and its columns in the
+    /// order they first appear, so the cleaned file keeps them in that order.
+    /// </summary>
+    public static (ImmutableArray<Row> Rows, ImmutableArray<string> Columns) Read(string json)
+    {
+        using var document = JsonDocument.Parse(json);
+        var rows = ImmutableArray.CreateBuilder<Row>();
+        var columns = new List<string>();
+        var number = 0;
+        foreach (var feature in document.RootElement.GetProperty("features").EnumerateArray())
+        {
+            number++;
+            var shape = feature.TryGetProperty("geometry", out var geometry) && geometry.ValueKind == JsonValueKind.Object
+                ? geometry.Deserialize<Geometry>(Shapes)
+                : null;
+            var values = ImmutableDictionary.CreateBuilder<string, object?>(StringComparer.Ordinal);
+            // GDAL writes a text field named id as the feature's own id, outside its properties;
+            // it comes back here as the id column, first, as it stood in the source.
+            if (feature.TryGetProperty("id", out var id))
+            {
+                if (!columns.Contains("id")) columns.Insert(0, "id");
+                values["id"] = Value(id);
+            }
+            if (feature.TryGetProperty("properties", out var properties) && properties.ValueKind == JsonValueKind.Object)
+            {
+                foreach (var property in properties.EnumerateObject())
+                {
+                    if (!columns.Contains(property.Name)) columns.Add(property.Name);
+                    values[property.Name] = Value(property.Value);
+                }
+            }
+            rows.Add(new Row(number, shape, values.ToImmutable()));
+        }
+        return (rows.ToImmutable(), [.. columns]);
+    }
+
+    // A JSON value as the plain .NET value a filter compares: text, a whole number, a number with a
+    // fraction, true or false, or null. A list or an object stays as its JSON text.
+    private static object? Value(JsonElement value) => value.ValueKind switch
+    {
+        JsonValueKind.String => value.GetString(),
+        // Boxed apart: 'a ? long : double' would make the whole number a double too.
+        JsonValueKind.Number => value.TryGetInt64(out var whole) ? (object)whole : value.GetDouble(),
+        JsonValueKind.True => true,
+        JsonValueKind.False => false,
+        JsonValueKind.Null => null,
+        _ => value.GetRawText(),
+    };
+
+    /// <summary>The rows as a FeatureCollection, with each row's columns in <paramref name="columns"/>' order.</summary>
+    public static string Write(ImmutableArray<Row> rows, ImmutableArray<string> columns)
+    {
+        using var buffer = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(buffer))
+        {
+            writer.WriteStartObject();
+            writer.WriteString("type", "FeatureCollection");
+            writer.WriteStartArray("features");
+            foreach (var row in rows)
+            {
+                writer.WriteStartObject();
+                writer.WriteString("type", "Feature");
+                writer.WriteStartObject("properties");
+                foreach (var column in columns)
+                {
+                    writer.WritePropertyName(column);
+                    switch (row.Value(column))
+                    {
+                        case null: writer.WriteNullValue(); break;
+                        case string text: writer.WriteStringValue(text); break;
+                        case long whole: writer.WriteNumberValue(whole); break;
+                        case double fraction: writer.WriteNumberValue(fraction); break;
+                        case bool flag: writer.WriteBooleanValue(flag); break;
+                        case var other: writer.WriteRawValue(other.ToString() ?? "null"); break;
+                    }
+                }
+                writer.WriteEndObject();
+                writer.WritePropertyName("geometry");
+                if (row.Shape is null) writer.WriteNullValue();
+                else JsonSerializer.Serialize(writer, row.Shape, Shapes);
+                writer.WriteEndObject();
+            }
+            writer.WriteEndArray();
+            writer.WriteEndObject();
+        }
+        return Encoding.UTF8.GetString(buffer.ToArray());
+    }
+}

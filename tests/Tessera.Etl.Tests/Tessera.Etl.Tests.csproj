@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Tests of the ETL pipeline (ADR 0009): pure tests of each filter and rule, and one run from a
+       geodatabase that GDAL builds from the fixtures. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../tools/Tessera.Etl/Tessera.Etl.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="System.Collections.Immutable" />
+    <Using Include="NetTopologySuite.Geometries" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Places with one fault of each kind, from which a test builds a geodatabase. -->
+    <None Include="fixtures/**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

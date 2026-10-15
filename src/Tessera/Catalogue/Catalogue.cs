@@ -33,7 +33,7 @@ public sealed record CatalogueRow(
 /// <summary>The list of layers at one moment. Once built it never changes; a refresh builds a new one.</summary>
 public sealed record LayerCatalogue(ImmutableDictionary<string, Layer> Layers)
 {
-    /// <summary>Turns a row into a layer, quoting every name on the way in (S-02).</summary>
+    /// <summary>Turns a row into a layer, quoting every name on the way in (S-01 c3).</summary>
     public static Layer ToLayer(CatalogueRow row) => new(
         $"{row.Schema}.{row.Name}",
         $"{Queries.Quote(row.Schema)}.{Queries.Quote(row.Name)}",

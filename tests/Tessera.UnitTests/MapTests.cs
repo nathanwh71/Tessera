@@ -25,9 +25,9 @@ public sealed class MapTests
         Assert.Equal([113.52, 22.10, 113.61, 22.22], block.RootElement.GetProperty("bounds").EnumerateArray().Select(number => number.GetDouble()));
     }
 
-    // ADR 0006 fixes the block's shape word for word; this is the text the Java build writes.
+    // ADR 0006 fixes the block's shape word for word; this is the text it shows.
     [Fact]
-    public void Matches_the_java_builds_block() =>
+    public void Matches_the_block_in_adr_0006() =>
         Assert.Contains(
             """{"name":"Macau","bounds":[113.52,22.1,113.61,22.22],"home":{"center":{"lng":113.55,"lat":22.19},"zoom":15}}""",
             MapRoutes.Render(Html, Macau), StringComparison.Ordinal);

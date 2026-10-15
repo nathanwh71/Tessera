@@ -1,21 +1,54 @@
-# Nginx stands in front of the service (ADR 0008). It keeps each tile for as long as the service's
-# Cache-Control header allows, packs answers with gzip, answers 304 when a browser's copy is still
-# good, and serves the tiles it holds while the service or the database is down.
-# The Nginx image fills in ${TESSERA_HTTPPORT} and ${TESSERA_SERVICE_PORT} when it starts.
+# Nginx stands in front of the service (ADR 0008). It answers office machines alone and caps what
+# each may ask (S-07, S-30, ADR 0007). It keeps each tile for as long as the service's Cache-Control
+# header allows, packs answers with gzip, answers 304 when a browser's copy is still good, and
+# serves the tiles it holds while the service or the database is down.
+# The Nginx image fills in ${TESSERA_HTTPPORT}, ${TESSERA_OFFICE_NETWORK}, and the two copies'
+# ports, ${TESSERA_SERVICE_PORT} and ${TESSERA_SECOND_SERVICE_PORT}, when it starts.
 
 # 64 MB of tiles on disk; a tile no one asks for in ten minutes goes first.
 proxy_cache_path /var/cache/nginx/tiles levels=1:2 keys_zone=tiles:10m max_size=64m inactive=10m use_temp_path=off;
 
+# S-07: $office is 1 for an address inside the office's network, or for this machine itself, and 0
+# for any other. A request from outside gets 403 (see the server block).
+geo $office {
+    default 0;
+    127.0.0.1 1;
+    ${TESSERA_OFFICE_NETWORK} 1;
+}
+
+# S-30: each office machine is counted by its own address. This machine's own requests, such as
+# npm start's health check, have an empty key, and Nginx counts nothing for an empty key.
+map $remote_addr $visitor {
+    127.0.0.1 "";
+    default $binary_remote_addr;
+}
+# 100 tiles a second for each visitor, with room for a burst of 300: one fresh view of nine layers
+# asks for about a hundred tiles at once. 10 MB holds about 160,000 addresses.
+limit_req_zone $visitor zone=visitor:10m rate=100r/s;
+limit_conn_zone $visitor zone=connections:10m;
+
+# N-29: two copies of the service share the requests in turn. Passive health check: after 3 failed
+# requests in 10 seconds Nginx rests a copy for 10 seconds, and sends its requests to the other.
 upstream tessera {
-    # Passive health check: after 3 failed requests in 10 seconds Nginx rests the server for 10
-    # seconds. Nginx ignores both numbers while the group holds a single server, so they take effect
-    # when a second copy of the service joins on its own line.
     server 127.0.0.1:${TESSERA_SERVICE_PORT} max_fails=3 fail_timeout=10s;
+    server 127.0.0.1:${TESSERA_SECOND_SERVICE_PORT} max_fails=3 fail_timeout=10s;
     keepalive 16;
 }
 
 server {
     listen ${TESSERA_HTTPPORT};
+
+    # S-07: a machine outside the office gets 403, before any other rule runs.
+    if ($office = 0) {
+        return 403;
+    }
+    error_page 403 = @forbidden;
+
+    # S-30: at most 32 requests at once from one visitor. Past either limit, the answer is 429.
+    limit_conn connections 32;
+    limit_conn_status 429;
+    limit_req_status 429;
+    error_page 429 = @busy;
 
     gzip on;
     gzip_proxied any;
@@ -28,10 +61,13 @@ server {
     proxy_set_header Host $host;
     proxy_connect_timeout 1s;
     proxy_read_timeout 15s;
-    # Only a crash or a hang counts against a server; a 503 from a database outage does not.
+    # A request that meets a copy that crashed or hangs goes to the other copy. Only a crash or a hang
+    # counts against a copy; a 503 from a database outage, which both copies share, does not.
     proxy_next_upstream error timeout;
 
     location ~ \.(pbf|mvt)$ {
+        # S-30: past the burst, a visitor's tiles answer 429 until the rate catches up.
+        limit_req zone=visitor burst=300 nodelay;
         proxy_pass http://tessera;
         proxy_cache tiles;
         # Many people asking for one new tile at once cost one query (N-24).
@@ -58,6 +94,19 @@ server {
         default_type application/problem+json;
         add_header Cache-Control no-store always;
         return 400 '{"type":"about:blank","title":"Bad Request","status":400}';
+    }
+
+    # Each refusal is a problem document that names no address, as every error is (US-07).
+    location @forbidden {
+        default_type application/problem+json;
+        add_header Cache-Control no-store always;
+        return 403 '{"type":"about:blank","title":"Forbidden","status":403}';
+    }
+    location @busy {
+        default_type application/problem+json;
+        add_header Cache-Control no-store always;
+        add_header Retry-After 1 always;
+        return 429 '{"type":"about:blank","title":"Too Many Requests","status":429}';
     }
 
     # With the service down and no copy held, the browser gets the service's own kind of answer:

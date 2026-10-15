@@ -11,9 +11,9 @@ namespace Tessera.Seeding;
 /// The command <c>Tessera seed</c> runs it, signed in as tessera_publisher (US-24).
 /// </summary>
 /// <remarks>
-/// <c>npm run convert</c> writes the scripts from the places' own files. A script that replaces a
-/// table drops it first, and its grants go with it, so the new table waits for the publisher's
-/// grant, as every table does (US-24 c5).
+/// <c>npm run etl</c> writes the scripts from the places' own files, cleaning them on the way.
+/// A script that replaces a table drops it first, and its grants go with it, so the new table
+/// waits for the publisher's grant, as every table does (US-24 c5).
 /// </remarks>
 public static class SeedScripts
 {

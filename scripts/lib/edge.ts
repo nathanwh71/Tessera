@@ -1,16 +1,19 @@
-// Checks what Nginx adds in front of the service (ADR 0008): kept tiles, 304, gzip, and tiles
-// served while the service is down. scripts/e2e.ts runs these after the browser tests.
+// Checks what Nginx adds in front of the service (ADR 0008): the office-only rule and the limits
+// for each visitor, kept tiles, 304, gzip, a second copy that takes over when the first stops, and
+// tiles served while both copies are down.
+// scripts/e2e.ts runs these after the browser tests, with the office set to 127.0.0.4/30.
 import assert from 'node:assert/strict';
-import { request } from 'node:http';
+import { Agent, request } from 'node:http';
 import { connect } from 'node:net';
 import { gunzipSync } from 'node:zlib';
 
 type Answer = { readonly status: number; readonly headers: Record<string, string | string[] | undefined>; readonly body: Buffer };
 
 // node:http, not fetch, because fetch unpacks gzip by itself and hides the bytes on the wire.
-function ask(url: string, headers: Record<string, string> = {}, method = 'GET'): Promise<Answer> {
+// `from` is the address the request leaves from, so a check can play an office machine or a stranger.
+function ask(url: string, headers: Record<string, string> = {}, method = 'GET', from?: string, agent?: Agent): Promise<Answer> {
   return new Promise((done, fail) => {
-    const sent = request(url, { method, headers }, answer => {
+    const sent = request(url, { method, headers, ...(from === undefined ? {} : { localAddress: from }), ...(agent === undefined ? {} : { agent }) }, answer => {
       const parts: Buffer[] = [];
       answer.on('data', (part: Buffer) => parts.push(part));
       answer.on('end', () => done({ status: answer.statusCode ?? 0, headers: answer.headers, body: Buffer.concat(parts) }));
@@ -32,8 +35,8 @@ function raw(base: string, target: string): Promise<string> {
   });
 }
 
-/** Runs every check against Nginx at `base`; `stopService` stops the service for the last two. */
-export async function checkEdge(base: string, stopService: () => Promise<void>): Promise<void> {
+/** Runs every check against Nginx at `base`; `stopFirst` and `stopSecond` stop each copy of the service. */
+export async function checkEdge(base: string, stopFirst: () => Promise<void>, stopSecond: () => Promise<void>): Promise<void> {
   const tile = `${base}/food.cafes/0/0/0.pbf`;
 
   // N-19: the first request builds the tile; the second comes from Nginx's store.
@@ -58,7 +61,7 @@ export async function checkEdge(base: string, stopService: () => Promise<void>):
   assert.match(String(packed.headers['vary']), /Accept-Encoding/);
   assert.deepEqual(gunzipSync(packed.body), first.body);
 
-  // ADR 0006 rule 7: HEAD gets the headers alone.
+  // HEAD gets the headers alone.
   const head = await ask(tile, {}, 'HEAD');
   assert.equal(head.status, 200);
   assert.equal(head.body.length, 0);
@@ -80,9 +83,42 @@ export async function checkEdge(base: string, stopService: () => Promise<void>):
     assert.doesNotMatch(answer.split('\r\n\r\n')[1] ?? '', /food\.cafes/, target);
   }
 
-  // With the service down, a kept tile still arrives, and a tile never kept asks the browser to
+  // S-07: a machine outside the office gets 403 as a problem document; one inside gets the tile.
+  const stranger = await ask(tile, {}, 'GET', '127.0.0.2');
+  assert.equal(stranger.status, 403);
+  assert.equal(stranger.headers['content-type'], 'application/problem+json');
+  assert.equal(stranger.headers['cache-control'], 'no-store');
+  assert.equal((await ask(tile, {}, 'GET', '127.0.0.5')).status, 200);
+
+  // S-30: one visitor asking for 600 tiles as fast as eight connections allow passes the burst of
+  // 300 and meets 429, which asks it to wait a second. The flood comes from an address of its own,
+  // so the limit it meets touches no other check.
+  const flood = new Agent({ keepAlive: true, maxSockets: 8 });
+  const answers = await Promise.all(Array.from({ length: 600 }, () => ask(tile, {}, 'GET', '127.0.0.6', flood)));
+  flood.destroy();
+  const busy = answers.filter(answer => answer.status === 429);
+  assert.ok(busy.length > 0, 'no request met the limit');
+  assert.ok(answers.filter(answer => answer.status === 200).length >= 300, 'the burst of 300 did not pass');
+  assert.equal(busy[0]?.headers['content-type'], 'application/problem+json');
+  assert.equal(busy[0]?.headers['retry-after'], '1');
+  // Another office machine is not slowed by the first one's limit.
+  assert.equal((await ask(tile, {}, 'GET', '127.0.0.5')).status, 200);
+
+  // N-29: with the first copy stopped, the second serves a tile Nginx never held, and /health
+  // still says UP. Nginx tries the stopped copy, meets a refused connection, and moves on.
+  await stopFirst();
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const fresh = await ask(`${base}/food.cafes/22/1/${attempt}.pbf`, { 'Accept-Encoding': 'identity' });
+    assert.equal(fresh.status, 200, `tile ${attempt} with one copy stopped`);
+    assert.equal(fresh.headers['x-cache-status'], 'MISS');
+  }
+  const health = await ask(`${base}/health`);
+  assert.equal(health.status, 200);
+  assert.match(health.body.toString(), /"UP"/);
+
+  // With both copies down, a kept tile still arrives, and a tile never kept asks the browser to
   // try again shortly, as a problem document.
-  await stopService();
+  await stopSecond();
   const kept = await ask(tile, { 'Accept-Encoding': 'identity' });
   assert.equal(kept.status, 200);
   assert.deepEqual(kept.body, first.body);
@@ -90,5 +126,5 @@ export async function checkEdge(base: string, stopService: () => Promise<void>):
   assert.equal(never.status, 503);
   assert.equal(never.headers['content-type'], 'application/problem+json');
   assert.equal(never.headers['retry-after'], '5');
-  console.log('Nginx checks passed: kept tiles, 304, gzip, HEAD, malformed addresses, and tiles served with the service down.');
+  console.log('Nginx checks passed: the office-only rule, the limit for each visitor, kept tiles, 304, gzip, HEAD, malformed addresses, a second copy taking over, and tiles served with both copies down.');
 }

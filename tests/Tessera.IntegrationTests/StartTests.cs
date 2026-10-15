@@ -40,7 +40,7 @@ public sealed class StartTests
     {
         var (code, errors) = await Run();
 
-        // The port defaults to pg_tileserv's 7800 (ADR 0006 rule 5); the database has no default.
+        // The port defaults to pg_tileserv's 7800 (ADR 0003); the database has no default.
         Assert.Equal(1, code);
         Assert.Contains("DATABASE_URL", errors, StringComparison.Ordinal);
     }

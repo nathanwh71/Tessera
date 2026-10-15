@@ -5,10 +5,10 @@ namespace Tessera.IntegrationTests;
 
 /// <summary>
 /// N-26: queries wait for a connection in the order they arrive, and the health check's ping gives
-/// up after a second in the same queue (ADR 0006 rule 7).
+/// up after a second in the same queue.
 /// </summary>
 /// <remarks>
-/// The Java build keeps the order with a gate in front of its pool. The .NET build relies on
+/// The service needs no code of its own for the order: it relies on
 /// Npgsql's pool, which hands each freed connection to the request that has waited longest; these
 /// tests prove that it does, so a later Npgsql that changed it would fail the build.
 /// </remarks>

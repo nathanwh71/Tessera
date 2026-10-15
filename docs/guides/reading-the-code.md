@@ -27,7 +27,7 @@
 ### Step 4 · What Nginx does before the service sees a request
 
 - **Open:** `nginx/default.conf.template`, and ADR 0008.
-- **Look for:** the `location` for ***tiles***. Nginx ***keeps*** ***each*** ***tile***, ***answers*** 304, ***packs*** with gzip, ***refuses*** a ***malformed*** ***address***, and ***serves*** ***kept*** ***tiles*** ***while*** the ***service*** is ***down***. The ***service*** ***never*** does these ***jobs***.
+- **Look for:** ***first*** the `geo` ***block*** and the `if` that ***refuses*** a ***machine*** ***outside*** the ***office***, and the ***limits*** for ***each*** ***visitor*** (ADR 0007); then the `upstream` ***group*** of ***two*** ***copies***; then the `location` for ***tiles***. Nginx ***keeps*** ***each*** ***tile***, ***answers*** 304, ***packs*** with gzip, ***refuses*** a ***malformed*** ***address***, ***passes*** a ***request*** to the ***other*** ***copy*** when ***one*** ***fails***, and ***serves*** ***kept*** ***tiles*** ***while*** both are ***down***. The ***service*** ***never*** does these ***jobs***.
 - **Check yourself:** ***ask*** for the ***same*** ***tile*** ***twice*** with `curl -I`. What does `X-Cache-Status` ***say*** ***each*** ***time***?
 
 ### Step 5 · The tile route
@@ -56,8 +56,8 @@
 
 ### Step 9 · How the places enter the database
 
-- **Open:** `scripts/lib/convert.ts`, `db/seed/0001-macau-places.sql` (the ***first*** ***lines*** ***alone***), `src/Tessera/Seeding/SeedScripts.cs`, and ADR 0009.
-- **Look for:** GDAL ***turns*** a ***file*** of ***places*** into SQL; DbUp ***runs*** ***each*** ***new*** ***script*** ***once*** and ***records*** it in `tessera.schemaversions`; `npm run publish` ***grants*** the ***tables***.
+- **Open:** `data/macau.pipeline.json`, then `tools/Tessera.Etl/Program.cs` and `Filters.cs`, `db/seed/0001-macau-places.sql` (the ***first*** ***lines*** ***alone***), `src/Tessera/Seeding/SeedScripts.cs`, and ADR 0009.
+- **Look for:** GDAL extracts ***each*** ***table*** to GeoJSON, the ***pipeline*** ***file***'s filters ***clean*** its ***rows*** in ***turn***, and GDAL ***writes*** the ***cleaned*** ***rows*** as SQL; DbUp ***runs*** ***each*** ***new*** ***script*** ***once*** and ***records*** it in `tessera.schemaversions`; `npm run publish` ***grants*** the ***tables***.
 - **Check yourself:** you ***find*** a ***wrong*** ***address*** in a ***script*** that has ***run***. What do you ***change***?
 
 ## Part B · The frontend: the page opens and draws a tile

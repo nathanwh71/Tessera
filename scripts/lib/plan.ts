@@ -8,7 +8,8 @@ export type StartSettings = {
   readonly readerPassword: string;
   readonly publisherPassword: string;
   readonly httpPort: string;
-  readonly servicePort: string;
+  readonly servicePorts: readonly [string, string];
+  readonly officeNetwork: string;
   readonly database: DatabasePlace;
 };
 
@@ -25,18 +26,49 @@ export type DatabasePlace = {
  * so the scripts and the map say "failed" one way.
  */
 export function readStartSettings(environment: Readonly<Record<string, string | undefined>>): Result<StartSettings, readonly string[]> {
-  const required = ['TESSERA_DB_PASSWORD', 'TESSERA_READER_PASSWORD', 'TESSERA_PUBLISHER_PASSWORD', 'TESSERA_HTTPPORT'] as const;
+  const required = ['TESSERA_DB_PASSWORD', 'TESSERA_READER_PASSWORD', 'TESSERA_PUBLISHER_PASSWORD', 'TESSERA_HTTPPORT', 'TESSERA_OFFICE_NETWORK'] as const;
   const missing = required.filter(name => !environment[name]);
-  return missing.length > 0
-    ? err(missing.map(name => `${name}: missing or empty`))
+  const network = environment['TESSERA_OFFICE_NETWORK'] ?? '';
+  const firstPort = environment['TESSERA_SERVICE_PORT'] || '7800';
+  const problems = [
+    ...missing.map(name => `${name}: missing or empty`),
+    ...(network === '' || isOfficeNetwork(network) ? [] : [`TESSERA_OFFICE_NETWORK: '${network}' is not a network such as 192.168.10.0/24, with a prefix from 8 to 32`]),
+    ...(/^\d+$/.test(firstPort) && Number(firstPort) >= 1024 && Number(firstPort) < 65535 ? [] : [`TESSERA_SERVICE_PORT: '${firstPort}' is not a port from 1024 to 65534`]),
+  ];
+  return problems.length > 0
+    ? err(problems)
     : ok({
       ownerPassword: environment['TESSERA_DB_PASSWORD'] ?? '',
       readerPassword: environment['TESSERA_READER_PASSWORD'] ?? '',
       publisherPassword: environment['TESSERA_PUBLISHER_PASSWORD'] ?? '',
       httpPort: environment['TESSERA_HTTPPORT'] ?? '',
-      servicePort: environment['TESSERA_SERVICE_PORT'] || '7800',
+      servicePorts: [firstPort, String(Number(firstPort) + 1)],
+      officeNetwork: network,
       database: readDatabasePlace(environment),
     });
+}
+
+/**
+ * How long to wait before starting a copy of the service again (N-29). The first restart waits a
+ * second; each quick failure after it doubles the wait, up to 30 seconds, so a copy that cannot
+ * start, such as one with a broken setting, does not spin. A copy that ran for a minute starts the
+ * count again at one.
+ */
+export function restartDelay(quickFailures: number): number {
+  return Math.min(30_000, 1000 * 2 ** Math.max(0, quickFailures - 1));
+}
+
+/**
+ * True for an IPv4 network written as an address, a slash and a prefix, such as 192.168.10.0/24:
+ * the prefix counts the leading bits every office address shares. A prefix below 8 would let in
+ * more than sixteen million addresses, so the check refuses it, and with it /0, which lets in all.
+ */
+export function isOfficeNetwork(text: string): boolean {
+  const parts = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\/(\d{1,2})$/.exec(text);
+  if (parts === null) return false;
+  const [, ...numbers] = parts.map(Number);
+  const prefix = numbers[4] ?? -1;
+  return numbers.slice(0, 4).every(octet => octet <= 255) && prefix >= 8 && prefix <= 32;
 }
 
 /**
@@ -79,16 +111,19 @@ export function databaseUrl(user: string, password: string, database: DatabasePl
 }
 
 /**
- * The arguments for "docker run" that start Nginx in front of the service (ADR 0008). Nginx shares
+ * The arguments for "docker run" that start Nginx in front of the two copies of the service
+ * (ADR 0008, N-29). Nginx shares
  * the machine's own network, so it reaches the service at 127.0.0.1 and opens the office port
  * itself; it runs as root inside its container, so port 80 needs no change to Ubuntu. The image
- * fills the two ports into the template when it starts.
+ * fills the ports and the office's network into the template when it starts (S-07).
  */
-export function nginxArguments(container: string, httpPort: string, servicePort: string, template: string): readonly string[] {
+export function nginxArguments(container: string, httpPort: string, servicePorts: readonly [string, string], officeNetwork: string, template: string): readonly string[] {
   return [
     '--detach', '--name', container, '--restart', 'unless-stopped', '--network', 'host',
     '--env', `TESSERA_HTTPPORT=${httpPort}`,
-    '--env', `TESSERA_SERVICE_PORT=${servicePort}`,
+    '--env', `TESSERA_SERVICE_PORT=${servicePorts[0]}`,
+    '--env', `TESSERA_SECOND_SERVICE_PORT=${servicePorts[1]}`,
+    '--env', `TESSERA_OFFICE_NETWORK=${officeNetwork}`,
     '--volume', `${template}:/etc/nginx/templates/default.conf.template:ro`,
     nginxImage,
   ];

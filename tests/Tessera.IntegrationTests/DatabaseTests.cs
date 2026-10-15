@@ -27,16 +27,16 @@ public sealed class DatabaseTests(DatabaseFixture database) : IClassFixture<Data
             await database.OwnerValue<string[]>(
                 "SELECT setconfig FROM pg_db_role_setting s JOIN pg_roles r ON r.oid = s.setrole WHERE r.rolname = 'tessera_reader'"));
 
-    // US-01 test 2: the places' source matches nathanwh71/JTessera byte for byte, and the release
+    // US-01 test 2: the places' source matches its fingerprint byte for byte, and the release
     // carries the script the converter made from it (ADR 0009).
     [Fact]
-    public void Ships_the_seed_made_from_jtessera()
+    public void Ships_the_seed_made_from_the_places()
     {
         var root = CommonDirectoryPath.GetGitDirectory().DirectoryPath;
         var source = File.ReadAllBytes(Path.Combine(root, "data", "macau-pois.geojson"));
 
         // SHA-256 turns a file into a 64-digit fingerprint; one changed byte changes the fingerprint.
-        // This one is the fingerprint of data/macau-pois.geojson in nathanwh71/JTessera on 13 October 2026.
+        // This one is the fingerprint of data/macau-pois.geojson as it arrived on 13 October 2026.
         Assert.Equal("d9319335cc40dd25ecc8782c4cf9041cf2be53bdebd0aaa8637991b5e050e2f3", Convert.ToHexStringLower(SHA256.HashData(source)));
         Assert.StartsWith(
             "-- Made by 'npm run convert' from data/macau-pois.geojson.",
