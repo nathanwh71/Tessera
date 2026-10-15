@@ -25,6 +25,8 @@ const scripts = (): Map<string, number> =>
 	);
 
 describe("the page's files, split for the cache", () => {
+	// A full build takes several seconds, far past the test runner's usual 5-second limit, so the
+	// build may take up to a minute.
 	beforeAll(async () => {
 		await build({ root: ROOT, logLevel: "silent", build: { outDir: OUT, emptyOutDir: true } });
 	}, 60_000);
@@ -35,6 +37,8 @@ describe("the page's files, split for the cache", () => {
 	});
 
 	it("keeps the page's own code small, so a deploy re-sends little", () => {
+		// 250 kB leaves the page's own code room to grow, while a deploy re-sends at most a quarter of
+		// MapLibre's 1 MB; vite.config.ts relies on this limit.
 		expect(scripts().get("index")).toBeLessThan(250_000);
 	});
 });

@@ -15,13 +15,20 @@ import { App } from ".";
 
 vi.mock("maplibre-gl", async () => (await import("../testing/fake-maplibre")).fakeMapLibre);
 
+/**
+ * Draws the whole page over Macau, on a made-up origin so the tests can spot it in each ***tile***
+ * address, and hands back the fake map the page made, so a test can read what the page asked of it.
+ */
 function page(openLayer?: LayerId) {
 	const handle = createMapHandle();
 	const view = render(<App area={MACAU} origin="http://tessera.test" map={handle} {...(openLayer === undefined ? {} : { openLayer })} />);
 	return { ...view, handle, map: () => FakeMap.made.at(-1) };
 }
 
-/** What the Tab key visits, in order: every control not disabled or hidden. */
+/**
+ * What the Tab key visits, in order: every control not disabled or hidden. jsdom cannot press Tab,
+ * so this reads the same rule from the page: in document order, every element focus can reach.
+ */
 function tabOrder(root: HTMLElement): string[] {
 	return [...root.querySelectorAll<HTMLElement>("button, a[href], input, [tabindex]")]
 		.filter((e) => e.tabIndex >= 0 && !e.hasAttribute("disabled"))
@@ -52,6 +59,8 @@ describe("US-23 open the map of the area", () => {
 		await waitFor(() => expect(map()?.calls.some((c) => c.name === "fitBounds")).toBe(true));
 		const frame = map()?.calls.find((c) => c.name === "fitBounds");
 		expect(frame?.args[0]).toEqual([...MACAU.bounds]);
+		// The map frames a layer no closer than level 18 (map/map.ts), MapLibre's zoom 17, so a few
+		// cafés never fill the screen.
 		expect(frame?.args[1]).toMatchObject({ maxZoom: 17 });
 	});
 
@@ -60,12 +69,15 @@ describe("US-23 open the map of the area", () => {
 		const body = new Blob([JSON.stringify({ type: "about:blank", title: "Not Found", status: 404, detail: "No layer 'food.cafes' is published." })]);
 		act(() => map()?.fire("error", { sourceId: "tiles:food.cafes", error: { status: 404, statusText: "Not Found", url: "x", body } }));
 		expect((await screen.findByRole("alert")).textContent).toBe("No layer 'food.cafes' is published.");
+		// The whole page has its landmarks, so the landmark rule runs too (testing/axe.ts).
 		expect(await violations(container, { region: true })).toEqual([]);
 	});
 
 	it("leaves other errors, such as a missing image, to MapLibre", async () => {
 		const { map } = page();
 		act(() => map()?.fire("error", { error: new Error("image 'x' missing") }));
+		// The page reads a failed tile's answer in a step that finishes later, so a wrong alert could
+		// appear only after a moment; the test waits that moment before it looks.
 		await new Promise((resolve) => setTimeout(resolve, 10));
 		expect(screen.queryByRole("alert")).toBeNull();
 	});

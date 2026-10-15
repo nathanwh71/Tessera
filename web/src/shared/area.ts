@@ -11,6 +11,7 @@ import { type Result, defaultWith, flatMap } from "./result";
 
 /** The area as the page carries it, in the `tessera-area` script block the service writes. */
 export interface Area {
+	/** The area's name, such as 'Macau', which heads the page and its tab for a screen reader. */
 	readonly name: string;
 	/** West, south, east, north, in degrees of WGS 84, the longitude and latitude system GPS uses. */
 	readonly bounds: Bounds;

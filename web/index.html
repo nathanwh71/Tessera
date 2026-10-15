@@ -1,12 +1,19 @@
 <!doctype html>
+<!--
+  index.html: the shell of the page (US-23). Vite, the build tool, builds the page from it, and the
+  service serves the result at / and at /{layer}.html. React draws everything inside #root.
+-->
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<!-- A stand-in until main.tsx learns the area and names it, such as 'Map of Macau'. -->
 		<title>Map</title>
 	</head>
 	<body>
+		<!-- The element React draws the page into (main.tsx); the page has no other content. -->
 		<div id="root"></div>
+		<!-- The page's code. Vite swaps this path for the built, hashed files when it builds. -->
 		<script type="module" src="/src/main.tsx"></script>
 	</body>
 </html>

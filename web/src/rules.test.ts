@@ -16,10 +16,14 @@ const FILES = readdirSync(SRC, { recursive: true, encoding: "utf8" })
 	.filter((f) => /\.(ts|tsx|css)$/.test(f) && !/\.test\.tsx?$/.test(f) && !f.startsWith("testing"))
 	.map((f) => ({ file: f, text: readFileSync(join(SRC, f), "utf8") }));
 
+/** The stylesheet, and its @theme block: the one place a colour may be written. */
 const STYLES = readFileSync(join(SRC, "styles.css"), "utf8");
 const THEME = /@theme static \{[\s\S]*?\n\}/.exec(STYLES)?.[0] ?? "";
 
-/** The text with its comments blanked out, line breaks kept, since a comment draws nothing. */
+/**
+ * The text with its comments blanked out, line breaks kept, since a comment draws nothing. A '//'
+ * after ':', '"' or "'" belongs to an address such as 'http://', not a comment, so it stays.
+ */
 const withoutComments = (text: string): string =>
 	text.replaceAll(/\/\*[\s\S]*?\*\//g, (c) => c.replaceAll(/[^\n]/g, " ")).replaceAll(/(?<![:"'])\/\/.*$/gm, "");
 
@@ -30,6 +34,7 @@ const LINES = FILES.flatMap(({ file, text }) =>
 		.map((line, i) => ({ where: `${file}:${i + 1}`, line })),
 );
 
+/** Colours CSS knows by name, which would slip past a search for '#' and rgb(). */
 const NAMED_COLOURS = ["white", "black", "red", "green", "blue", "grey", "gray", "yellow", "orange", "purple", "pink", "brown"];
 
 describe("UI-15 one theme of colours", () => {
@@ -83,6 +88,8 @@ describe("UI-15 calm motion", () => {
 });
 
 describe("UI-15 icons", () => {
+	// Every icon name Material Symbols has, read from the list in its package's types, so a name the
+	// font lacks fails here rather than showing as its own text on the page.
 	const SYMBOLS = new Set(
 		[...readFileSync(join(SRC, "..", "node_modules", "material-symbols", "index.d.ts"), "utf8").matchAll(/^\s*"([a-z0-9_]+)",?$/gm)].map((m) => m[1]),
 	);
@@ -91,6 +98,8 @@ describe("UI-15 icons", () => {
 	it("draws every icon from Material Symbols", () => {
 		const names = tsx.flatMap(({ text }) => [...text.matchAll(/\b(?:name|icon)="([a-z0-9_]+)"/g)].map((m) => m[1] ?? ""));
 		const ternaries = tsx.flatMap(({ text }) => [...text.matchAll(/\?\s*"([a-z_]+)"\s*:\s*"([a-z_]+)"/g)].flatMap((m) => [m[1] ?? "", m[2] ?? ""]));
+		// A ternary picks among strings of every kind, such as class names; only 'add' and 'remove', the
+		// zoom icons that MapControls.tsx picks by direction, are icons.
 		const used = [...names, ...ternaries.filter((n) => ["add", "remove"].includes(n))];
 		expect(used).toEqual(expect.arrayContaining(["add", "remove"]));
 		expect(used.filter((n) => !SYMBOLS.has(n))).toEqual([]);
@@ -99,6 +108,8 @@ describe("UI-15 icons", () => {
 	it("draws no icon any other way: the only drawings are the group shapes and the compass", () => {
 		const withSvg = tsx.filter(({ text }) => text.includes("<svg")).map(({ file }) => relative(".", file));
 		expect(withSvg.toSorted()).toEqual([join("design", "components.tsx"), join("map", "MapControls.tsx")]);
+		// An image file, Font Awesome or the older Material Icons font would each bring icons from outside
+		// Material Symbols (UI-15, criterion 2).
 		expect(FILES.filter(({ text }) => /<img\b|font-awesome|material-icons(?!-)/.test(text)).map((f) => f.file)).toEqual([]);
 	});
 });

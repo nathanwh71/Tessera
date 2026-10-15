@@ -58,13 +58,20 @@ export async function view(page: Page, level: number, center: { lng: number; lat
 	await settle(page);
 }
 
-/** The features, points with their properties, that MapLibre has drawn on the given layers of its style. */
+/**
+ * The features, points with their properties, that MapLibre has drawn on the given ***layers*** of
+ * its style. A test reads what was drawn, not what the page asked for, since only the drawing proves
+ * what a visitor sees.
+ */
 export async function drawn(page: Page, layers: readonly string[]): Promise<{ id: string; layer: string; group: string }[]> {
 	return page.evaluate((ids) => {
 		const map = window.__tesseraMap;
 		if (map === undefined) return [];
+		// MapLibre refuses a query that names a layer its style lacks, such as 'names' on a page with
+		// no names, so only the layers present are asked.
 		const present = ids.filter((id) => map.getLayer(id) !== undefined);
 		return map.queryRenderedFeatures({ layers: present }).map((f) => ({
+			// A place carries its own `id`; a cluster carries `cluster_id` instead.
 			id: String(f.properties["id"] ?? f.properties["cluster_id"] ?? ""),
 			layer: f.layer.id,
 			group: String(f.properties["group"] ?? ""),
@@ -72,7 +79,10 @@ export async function drawn(page: Page, layers: readonly string[]): Promise<{ id
 	}, layers);
 }
 
-/** Where a place sits on screen, in page pixels. */
+/**
+ * Where a place sits on screen, in page pixels. The mouse clicks in page pixels while MapLibre
+ * measures from the map's own box, so the box's corner is added.
+ */
 export async function onScreen(page: Page, at: { lng: number; lat: number }): Promise<{ x: number; y: number }> {
 	return page.evaluate(({ lng, lat }) => {
 		const map = window.__tesseraMap;

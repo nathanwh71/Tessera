@@ -8,11 +8,16 @@ type Listener = (...args: unknown[]) => void;
 
 /** The fake map: every method the page calls, each doing as little as keeps the page running. */
 export class FakeMap {
+	/** Every fake map made, newest last; the page makes its own, and a test reaches it here. */
 	static readonly made: FakeMap[] = [];
 	/** True makes the next map fail to start, as MapLibre does in a browser with no WebGL; it resets itself. */
 	static failNext = false;
 	readonly options: Record<string, unknown>;
 	readonly calls: { readonly name: string; readonly args: readonly unknown[] }[] = [];
+	/**
+	 * The page turns rotation off by touch and by keyboard, since the map never turns (UI-19,
+	 * criterion 6); these stand-ins let it.
+	 */
 	readonly touchZoomRotate = { disableRotation: (): void => undefined };
 	readonly keyboard = { disableRotation: (): void => undefined };
 	readonly #container: HTMLElement;
@@ -54,6 +59,10 @@ export class FakeMap {
 		this.#listeners.set(event, (this.#listeners.get(event) ?? []).filter((l) => l !== listener));
 		return this;
 	}
+	/**
+	 * The page waits once for 'load' alone (map/maplibre.ts), so that event fires at once, after the
+	 * current step; the fake never loads anything else to wait for.
+	 */
 	once(event: string, ...rest: unknown[]): this {
 		const listener = rest.at(-1);
 		if (event === "load" && typeof listener === "function") queueMicrotask(() => (listener as Listener)());
@@ -92,6 +101,7 @@ export class FakeMap {
 	queryRenderedFeatures(): [] {
 		return [];
 	}
+	/** Macau's home view, level 15 as MapLibre's zoom 14, the view the page opens on. */
 	getCenter(): { lng: number; lat: number } {
 		return { lng: 113.55, lat: 22.19 };
 	}
@@ -107,10 +117,17 @@ export class FakeMap {
 	project(): { x: number; y: number } {
 		return { x: 0, y: 0 };
 	}
+	/**
+	 * A removed map forgets what it was asked, as the real one drops its state, so a test reads only
+	 * the calls of the map still on the page.
+	 */
 	remove(): void {
 		this.calls.length = 0;
 	}
 }
 
-/** The module the page imports as "maplibre-gl", faked. */
+/**
+ * The module the page imports as "maplibre-gl", faked. `setWorkerUrl` does nothing, since the fake
+ * starts no worker, the background script that cuts ***tiles***.
+ */
 export const fakeMapLibre = { Map: FakeMap, setWorkerUrl: (): void => undefined };

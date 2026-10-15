@@ -11,6 +11,8 @@ describe("US-23 c3 one model, one pure update", () => {
 	it("starts from one model and changes it only through the update's handlers", () => {
 		const [model] = init({ ports: { fitBounds: vi.fn(), jumpTo: vi.fn() }, area: MACAU });
 		const handler = update.toggleUnits;
+		// The last argument carries helpers a handler may use to send further messages; toggleUnits
+		// uses none, so an empty stand-in serves.
 		const [change] = handler({ name: "toggleUnits" }, model, { ports: { fitBounds: vi.fn(), jumpTo: vi.fn() }, area: MACAU }, {} as never);
 		expect(change).toEqual({ units: "imperial" });
 		// ADR 0004, immutability: the update returned a change and left the old model as it was.

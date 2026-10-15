@@ -8,6 +8,11 @@
 */
 
 @import "tailwindcss";
+/*
+  Roboto (UI-15, criterion 2), served from the page's own files rather than a font service on the
+  internet, which the office may not reach. Weights 400 and 500 are the two the type scale uses;
+  latin-ext adds the accented letters of Portuguese place names in Macau.
+*/
 @import "@fontsource/roboto/latin-400.css";
 @import "@fontsource/roboto/latin-500.css";
 @import "@fontsource/roboto/latin-ext-400.css";
@@ -16,13 +21,15 @@
 /*
   Material Symbols, rounded (UI-15, criterion 2), cut down to the two icons the map draws, 'add' and
   'remove', at its one setting: fill 0, weight 400, grade 0, size 24. The whole font is 5.4 MB; this
-  one is under 3 kB, which matters with a thousand visitors. No script in this build cuts it, so a new icon
-  needs the font cut again by hand from the material-symbols package, or the icon shows as its name.
+  one is under 3 kB, which matters with a thousand visitors. No script in this build cuts it, so a
+  new icon needs the font cut again by hand from the material-symbols package, or the icon shows as
+  its name.
 */
 @font-face {
   font-family: "Material Symbols Rounded";
   font-style: normal;
   font-weight: 400;
+  /* Wait for the font rather than show the icon's name, such as 'add', as plain text meanwhile. */
   font-display: block;
   src: url("./assets/fonts/material-symbols-rounded-subset.woff2") format("woff2");
 }
@@ -127,6 +134,7 @@
 }
 
 @layer base {
+  /* The map fills the window (US-23, criterion 1), so the page and its root take its full height. */
   html,
   body,
   #root {
@@ -140,6 +148,7 @@
     font-family: var(--font-sans);
   }
 
+  /* Browsers give buttons a font of their own; these take the page's, as Material's type scale asks. */
   button {
     font: inherit;
     color: inherit;
@@ -238,6 +247,8 @@
     opacity: 0;
     transform: translate(-50%, calc(-100% - 16px));
     filter: drop-shadow(0 1px 2px color-mix(in srgb, var(--color-shadow) 30%, transparent));
+    /* The fall takes the full 300 ms; the fade-in ends sooner, at 200 ms, so a pin is solid before
+       it lands. */
     transition:
       transform var(--motion-medium) var(--ease-emphasized-decelerate),
       opacity var(--motion-exit) linear;

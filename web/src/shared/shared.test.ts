@@ -42,6 +42,8 @@ describe("RFC 9457 problem documents", () => {
 	});
 
 	it("carries a problem as a value, never as an exception to throw", () => {
+		// An exception class for problems, or a helper that describes one thrown, would bring back the
+		// throwing that ADR 0004 replaces with values, so neither name may appear.
 		expect(Object.keys(shared)).not.toContain("ProblemError");
 		expect(Object.keys(shared)).not.toContain("describeFailure");
 	});

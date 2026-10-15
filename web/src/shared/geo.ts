@@ -27,7 +27,10 @@ export interface View {
 	readonly zoom: Level;
 }
 
-/** A box on the map: west, south, east, north. */
+/**
+ * A box on the map: west, south, east, north, the order GeoJSON and MapLibre use, so a box passes
+ * to either unchanged.
+ */
 export type Bounds = readonly [west: number, south: number, east: number, north: number];
 
 /** The lowest web-map level (UI-09). */
@@ -35,12 +38,19 @@ export const MIN_ZOOM = level(0);
 /** The highest web-map level (UI-09). */
 export const MAX_ZOOM = level(22);
 
-/** The level, held within 0 to 22: a value outside the range becomes the nearest end. */
+/**
+ * The level, held within 0 to 22: a value outside the range becomes the nearest end. A zoom button
+ * or a cluster may ask for a step past the end, and the map should stop there rather than refuse
+ * (UI-09, criterion 1).
+ */
 export function clampZoom(zoom: number): Level {
 	return level(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom)));
 }
 
-/** A number of degrees from `-most` to `most`, such as a longitude, from -180 to 180. */
+/**
+ * A number of degrees from `-most` to `most`, such as a longitude, from -180 to 180. It must be
+ * finite, since Infinity and NaN, 'not a number', are numbers to JavaScript yet name no place.
+ */
 const degrees = (most: number) => v.pipe(v.number(), v.finite(), v.minValue(-most), v.maxValue(most));
 
 /** A position in degrees: a longitude from -180 to 180 and a latitude from -90 to 90. */
@@ -55,5 +65,8 @@ export const BoundsSchema = v.pipe(
 	v.check(([west, south, east, north]) => west < east && south < north),
 );
 
-/** Reads a box; null for anything else. */
+/**
+ * Reads a box; null for anything else. A caller needs only to know whether it has a box, not why it
+ * has none, so null serves where a ***Result*** would carry a reason nobody reads.
+ */
 export const readBounds = (value: unknown): Bounds | null => (v.is(BoundsSchema, value) ? value : null);

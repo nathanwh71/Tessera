@@ -11,9 +11,9 @@ export type Result<T, E = string> =
 	| { readonly ok: true; readonly value: T }
 	| { readonly ok: false; readonly error: E };
 
-/** A success. */
+/** A success. Its error type is `never`, so it fits a Result of any error type. */
 export const ok = <T>(value: T): Result<T, never> => ({ ok: true, value });
-/** A failure, and why. */
+/** A failure, and why. Its value type is `never`, so it fits a Result of any value type. */
 export const err = <E>(error: E): Result<never, E> => ({ ok: false, error });
 
 // Each function below takes its step first and the result last, as F#'s do, so it can stand in a

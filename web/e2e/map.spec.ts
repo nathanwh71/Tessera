@@ -8,16 +8,32 @@ import AxeBuilder from "@axe-core/playwright";
 import { type Page, expect, test } from "@playwright/test";
 import { BUSIEST, drawn, onScreen, openMap, settle, view } from "./map-page";
 
+/**
+ * The nine ***layers*** of US-24, written out again rather than imported from src/layers, so the test
+ * checks the page against the story and not against itself.
+ */
 const LAYERS = ["food.cafes", "food.restaurants", "food.markets", "outdoors.parks", "outdoors.playgrounds", "culture.museums", "culture.libraries", "transport.trains", "transport.buses"];
+/**
+ * A ***tile*** address, `/{layer}/{z}/{x}/{y}.pbf` (US-23, criterion 7), which tells a tile request
+ * apart from a request for the page or its files.
+ */
 const TILE = /^\/(food|outdoors|culture|transport)\.[a-z]+\/\d+\/\d+\/\d+\.pbf$/;
 
-/** The faults axe, a library that checks a page against the web's accessibility rules, finds on the page. */
+/**
+ * The faults axe, a library that checks a page against the web's accessibility rules, finds on the
+ * page. Here, in a real browser, every rule runs, including the colour contrast and landmark rules
+ * that jsdom cannot judge (src/testing/axe.ts).
+ */
 async function axe(page: Page): Promise<string[]> {
 	const result = await new AxeBuilder({ page }).analyze();
 	return result.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`);
 }
 
-/** Every request the page makes, and every error or warning the browser's console logs, while it opens. */
+/**
+ * Every request the page makes, and every error or warning the browser's console logs, while it
+ * opens: the requests prove the page asks only its own origin for tiles and loads no list of layers
+ * (US-23, criterion 7), and the console shows whether the security policy refused anything.
+ */
 function watch(page: Page): { paths: string[]; origins: Set<string>; console: string[] } {
 	const seen = { paths: [] as string[], origins: new Set<string>(), console: [] as string[] };
 	page.on("request", (r) => {
@@ -48,6 +64,8 @@ test.describe("US-23 open the map of the area", () => {
 		expect(others).toEqual([]);
 		const tiles = new Set(seen.paths.filter((p) => TILE.test(p)).map((p) => p.split("/")[1]));
 		expect([...tiles].toSorted()).toEqual(LAYERS.toSorted());
+		// The service's security policy, the rule that says which files a page may load, must let every
+		// file of the page through; a refusal shows only as a console message.
 		expect(seen.console.filter((m) => /Content Security Policy|Refused/.test(m))).toEqual([]);
 	});
 
@@ -64,6 +82,7 @@ test.describe("US-23 open the map of the area", () => {
 		await openMap(page, "/food.cafes.html");
 		const bounds = await page.evaluate(() => window.__tesseraMap?.getBounds().toArray().flat());
 		const [w = 0, s = 0, e = 0, n = 0] = bounds ?? [];
+		// Macau's bounds (shared/area.ts): the layer's page fits the whole area, so every café is in view.
 		expect([w <= 113.52, s <= 22.1, e >= 113.61, n >= 22.22]).toEqual([true, true, true, true]);
 		await expect.poll(async () => (await drawn(page, ["pins", "clusters"])).length).toBeGreaterThan(0);
 		await view(page, 17, BUSIEST);
@@ -83,6 +102,8 @@ test.describe("US-23 open the map of the area", () => {
 		});
 		expect(pin).not.toBeNull();
 		const at = await onScreen(page, pin ?? BUSIEST);
+		// A pin's tip marks its place, and its round head sits 25 pixels above the tip, so the click lands
+		// on the pin itself.
 		await page.mouse.click(at.x, at.y - 25);
 		await settle(page);
 		expect(await page.evaluate(() => [window.__tesseraMap?.getZoom(), window.__tesseraMap?.getCenter().toArray()])).toEqual(before);
@@ -98,6 +119,8 @@ test.describe("US-23 open the map of the area", () => {
 				body: JSON.stringify({ type: "about:blank", title: "Service Unavailable", status: 503, detail: "The list of layers has not loaded yet." }),
 			}),
 		);
+		// openMap would wait for the pins to land, which never happens while every café tile fails, so
+		// the test opens the page by hand.
 		await page.addInitScript(() => {
 			window.__tesseraTest = true;
 		});
@@ -143,11 +166,15 @@ test.describe("UI-09 levels", () => {
 
 	test("keeps the edge of the map out of view", async ({ page }) => {
 		await openMap(page);
+		// A zoom below the lowest level, over the world's top-left corner, tries to show the map's edge
+		// (UI-09, criterion 5).
 		await page.evaluate(() => window.__tesseraMap?.jumpTo({ zoom: -1, center: [-179, 84] }));
 		await settle(page);
 		const [west = 0, south = 0, east = 0, north = 0] = (await page.evaluate(() => window.__tesseraMap?.getBounds().toArray().flat())) ?? [];
 		expect(west).toBeGreaterThanOrEqual(-180);
 		expect(east).toBeLessThanOrEqual(180);
+		// Web Mercator, the flat projection web maps use, ends at 85.06 degrees north and south, where the
+		// world becomes a square; beyond it lies blank space.
 		expect(south).toBeGreaterThanOrEqual(-85.06);
 		expect(north).toBeLessThanOrEqual(85.06);
 	});
@@ -156,6 +183,8 @@ test.describe("UI-09 levels", () => {
 test.describe("UI-10 clusters", () => {
 	test("opens a cluster on a click, at least to level 16", async ({ page }) => {
 		await openMap(page);
+		// At level 13 over the middle of Macau the whole area is in view, and places this crowded
+		// stay in clusters below level 16 (UI-17, criterion 5).
 		await view(page, 13, { lng: 113.55, lat: 22.16 });
 		const cluster = await page.evaluate(() => {
 			const f = window.__tesseraMap?.queryRenderedFeatures({ layers: ["clusters"] })[0];
@@ -165,12 +194,14 @@ test.describe("UI-10 clusters", () => {
 		const at = await onScreen(page, cluster ?? BUSIEST);
 		await page.mouse.click(at.x, at.y);
 		await settle(page);
+		// MapLibre's zoom runs one below the web-map level (src/map/levels.ts).
 		const level = await page.evaluate(() => (window.__tesseraMap?.getZoom() ?? 0) + 1);
 		expect(level).toBeGreaterThanOrEqual(16);
 	});
 
 	test("names a cluster's places for screen readers", async ({ page }) => {
 		await openMap(page);
+		// The same crowded view as above, sure to hold clusters.
 		await view(page, 13, { lng: 113.55, lat: 22.16 });
 		await expect(page.getByRole("group", { name: "Places on the map" }).getByRole("button", { name: /^\d+ places: .+\. Zoom in to see them\.$/ }).first()).toBeAttached();
 	});
@@ -210,6 +241,7 @@ test.describe("UI-15 calm", () => {
 		await page.emulateMedia({ reducedMotion: "reduce" });
 		await openMap(page);
 		await expect(page.locator(".pin-drop")).toHaveCount(0);
+		// MapLibre offers no public way to read its fade time, so the test reads the private field.
 		const fade = await page.evaluate(() => (window.__tesseraMap as unknown as { _fadeDuration: number } | undefined)?._fadeDuration);
 		expect(fade).toBe(0);
 	});
@@ -219,6 +251,8 @@ test.describe("Keyboard and screen reader", () => {
 	test("reaches every control with Tab: the map, the clusters in view, the zoom buttons, then the scale bar", async ({ page }) => {
 		await openMap(page);
 		const names: string[] = [];
+		// 80 presses is far more than the controls in view, so the loop ends at the scale bar, or fails
+		// rather than running forever if focus never reaches it.
 		for (let i = 0; i < 80 && !(names.at(-1) ?? "").startsWith("Scale bar"); i += 1) {
 			await page.keyboard.press("Tab");
 			// The ARIA snapshot, what a screen reader sees of the focused control, holds its role and its
@@ -238,6 +272,8 @@ test.describe("Keyboard and screen reader", () => {
 });
 
 test.describe("UI-17 names that never overlap", () => {
+	// UI-17, test 3: names start at level 16, where they crowd most, and the places spread apart at 18
+	// and 20, so the three images cover names from crowded to roomy.
 	for (const level of [16, 18, 20]) {
 		test(`matches the approved image at level ${level} over the busiest street, collision boxes shown`, async ({ page }) => {
 			await openMap(page);
@@ -255,6 +291,7 @@ test.describe("UI-19 distance, direction and position", () => {
 		await openMap(page);
 		const bar = page.getByRole("button", { name: /^Scale bar/ });
 		await expect(bar).toHaveAccessibleName("Scale bar: 500 metres. Switch to imperial units");
+		// The text joins the bar's three figures, '0', '250' and '500 m' (UI-19, criterion 2).
 		await expect(bar).toHaveText("0250500 m");
 		await view(page, 18, { lng: 113.55, lat: 22.19 });
 		await expect(bar).toHaveText("02550 m");

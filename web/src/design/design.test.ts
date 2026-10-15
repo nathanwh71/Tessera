@@ -20,6 +20,10 @@ const TOKENS: ReadonlyMap<string, string> = new Map(
 	[...STYLES.matchAll(/(--color-[a-z-]+):\s*(#[0-9a-fA-F]{6})\s*;/g)].map((m) => [m[1] ?? "", m[2] ?? ""]),
 );
 
+/**
+ * One colour of the theme by its short name. A name the theme lacks throws, so a typing slip fails the
+ * test rather than comparing an empty string.
+ */
 function token(name: string): string {
 	const value = TOKENS.get(`--color-${name}`);
 	if (value === undefined) throw new Error(`the theme has no --color-${name}`);
@@ -79,6 +83,7 @@ describe("UI-15 and UI-12 contrast", () => {
 
 	it("measures contrast as WCAG does", () => {
 		expect(contrastRatio("#000000", "#FFFFFF")).toBeCloseTo(21, 5);
+		// A grey just under 4.5:1 checks the sum near the line that decides pass or fail.
 		expect(contrastRatio("#777777", "#FFFFFF")).toBeCloseTo(4.48, 2);
 	});
 });
@@ -105,6 +110,7 @@ describe("UI-15 the pins drop in as the page opens", () => {
 	});
 
 	it("brings the pins closer together in a crowded view, so the last starts by 600 ms", () => {
+		// 101 pins 30 ms apart would start the last at 3,000 ms, far past the 600 ms limit.
 		const delays = dropDelays(101, false);
 		expect(delays.at(-1)).toBe(DROP_SPREAD_MS);
 		expect(delays.every((d, i) => i === 0 || d >= (delays[i - 1] ?? 0))).toBe(true);

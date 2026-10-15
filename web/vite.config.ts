@@ -16,8 +16,11 @@ const groups = ["food", "outdoors", "culture", "transport"];
 export default defineConfig({
 	// The service serves the page at / and at /{layer}.html, and its assets from /assets/ (US-23).
 	base: "/",
+	// React's plugin compiles the components' JSX; Tailwind's turns styles.css and the class names
+	// into the page's stylesheet.
 	plugins: [react(), tailwindcss()],
 	build: {
+		// The service's release copies the built page from dist/ (US-23, criterion 4).
 		outDir: "dist",
 		assetsDir: "assets",
 		// Fonts and icons stay files under /assets/, never written into the page's code, so the office
@@ -46,7 +49,10 @@ export default defineConfig({
 	server: service === undefined ? {} : { proxy: Object.fromEntries(groups.map((g) => [`^/${g}\\.[a-z]+/`, service])) },
 	test: {
 		include: ["src/**/*.test.{ts,tsx}"],
+		// Most tests need values alone, and Node runs them fastest; a test that draws a component
+		// asks for jsdom, a pretend browser, in its first line.
 		environment: "node",
+		// Clears what a component test drew before the next test runs.
 		setupFiles: ["src/testing/setup.ts"],
 	},
 });

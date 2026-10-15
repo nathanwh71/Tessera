@@ -13,6 +13,8 @@ export default defineConfig({
 	// tests run one after another and wait for the map.
 	workers: 1,
 	timeout: 60_000,
+	// A screenshot may differ from the approved image in 1 pixel in 100: software drawing smooths
+	// edges a little differently from run to run, while a moved name changes far more.
 	expect: { timeout: 15_000, toHaveScreenshot: { maxDiffPixelRatio: 0.01 } },
 	// In the automatic build, the github reporter also writes each failure as an annotation, which
 	// shows on the run's page and through GitHub's API without the full log.
@@ -22,6 +24,8 @@ export default defineConfig({
 	use: {
 		...devices["Desktop Chrome"],
 		baseURL: process.env["TESSERA_BASE_URL"],
+		// One fixed window size and one device pixel per CSS pixel, so the approved images (UI-17) match
+		// on every machine, and map.spec.ts can check the map fills 1280 by 800.
 		viewport: { width: 1280, height: 800 },
 		deviceScaleFactor: 1,
 		launchOptions: {
@@ -30,6 +34,8 @@ export default defineConfig({
 			// as a build container, names it here.
 			...(process.env["CHROMIUM_PATH"] === undefined ? {} : { executablePath: process.env["CHROMIUM_PATH"] }),
 		},
+		// A trace, a recording of each step with the page as it stood, is kept only for a failing test,
+		// where it explains the failure, and not for the many that pass.
 		trace: "retain-on-failure",
 	},
 });

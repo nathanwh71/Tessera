@@ -18,6 +18,7 @@ import { GROUP_LOOKS, type GroupKey } from "./theme";
  */
 export interface IconProps {
 	readonly name: MaterialSymbol;
+	/** Material's two icon sizes; the font is cut at size 24 alone (styles.css), so 24 is the default. */
 	readonly size?: 18 | 24;
 	readonly className?: string;
 }

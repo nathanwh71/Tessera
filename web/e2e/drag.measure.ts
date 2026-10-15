@@ -1,7 +1,7 @@
 // e2e/drag.measure.ts: measures a drag over the busiest street, with every layer on, at level 17,
 // where the most pins and their invisible names sit in view. It is a measurement, not a test:
-// `TESSERA_MEASURE=1 npm run e2e` runs it (playwright.config.ts), and it prints what it saw rather than passing or failing
-// on a number, since the machine it runs on sets the numbers.
+// `TESSERA_MEASURE=1 npm run e2e` runs it (playwright.config.ts), and it prints what it saw rather
+// than passing or failing on a number, since the machine it runs on sets the numbers.
 //
 // It records two things while the pointer drags the map for about two seconds:
 // - each frame's length, from one redraw of the screen to the next; a frame longer than 16.7 ms
@@ -14,6 +14,10 @@
 import { expect, test } from "@playwright/test";
 import { BUSIEST, openMap, view } from "./map-page";
 
+/**
+ * What the test reads back from the browser once the drag ends. It drops the `stop` flag of
+ * `window.__seen`, since that flag only tells the recorder in the page when to quit.
+ */
 interface Seen {
 	readonly frames: number[];
 	readonly scripts: Record<string, number>;
@@ -21,13 +25,23 @@ interface Seen {
 	readonly longFrameMs: number;
 }
 
+/**
+ * The recorder lives on `window`, the browser's own object for the page, because each
+ * `page.evaluate` runs a fresh function in the browser: one call starts the recorder, a later one
+ * reads it, and the window is the one place both can reach.
+ */
 declare global {
 	interface Window {
 		__seen?: { frames: number[]; scripts: Record<string, number>; longFrames: number; longFrameMs: number; stop: boolean };
 	}
 }
 
+/** The middle frame length, which one stray slow frame cannot pull up as an average would. */
 const median = (values: readonly number[]): number => values.toSorted((a, b) => a - b)[Math.floor(values.length / 2)] ?? 0;
+/**
+ * The frame length that the given share of frames stay within, a percentile: 0.95 gives the 95th,
+ * which shows how bad the worst stutters are while ignoring the rare one-off.
+ */
 const share = (values: readonly number[], q: number): number => values.toSorted((a, b) => a - b)[Math.floor(values.length * q)] ?? 0;
 
 test("a drag over the busiest street, with every layer on", async ({ page }) => {
@@ -44,11 +58,15 @@ test("a drag over the busiest street, with every layer on", async ({ page }) => 
 			if (!seen.stop) requestAnimationFrame(tick);
 		};
 		requestAnimationFrame(tick);
+		// `buffered: false` skips long frames from before this point, such as the page opening, so
+		// only the drag counts.
 		new PerformanceObserver((list) => {
 			for (const entry of list.getEntries() as (PerformanceEntry & { scripts?: { sourceURL: string; duration: number }[] })[]) {
 				seen.longFrames += 1;
 				seen.longFrameMs += entry.duration;
 				for (const script of entry.scripts ?? []) {
+					// Vite names each built file with an 8-character hash of its content, such as
+					// react-Bx3k9aQz.js; the hash goes, so the time adds up under the file's plain name.
 					const file = (script.sourceURL.split("/").at(-1) ?? "other").replace(/-[\w-]{8}\.js$/, "") || "other";
 					seen.scripts[file] = (seen.scripts[file] ?? 0) + script.duration;
 				}
@@ -73,8 +91,10 @@ test("a drag over the busiest street, with every layer on", async ({ page }) => 
 		const s = window.__seen;
 		if (s === undefined) return { frames: [], scripts: {}, longFrames: 0, longFrameMs: 0 };
 		s.stop = true;
+		// The first entry runs from the recorder's start, not from one redraw to the next, so it goes.
 		return { frames: s.frames.slice(1), scripts: s.scripts, longFrames: s.longFrames, longFrameMs: s.longFrameMs };
 	});
+	// Fewer than ten frames means the recorder never ran, and the numbers would mean nothing.
 	expect(seen.frames.length).toBeGreaterThan(10);
 
 	const slow = seen.frames.filter((f) => f > 16.7).length;

@@ -12,6 +12,7 @@ import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
+/** The src/ folder, found from this file's own place so the test runs from any working folder. */
 const SRC = dirname(fileURLToPath(import.meta.url));
 
 const MAY_IMPORT = {
@@ -24,6 +25,7 @@ const MAY_IMPORT = {
 } as const satisfies Record<string, readonly string[]>;
 
 type ModuleName = keyof typeof MAY_IMPORT;
+/** True for a folder named in MAY_IMPORT; the compiler then lets the name index the list. */
 const isModule = (name: string): name is ModuleName => Object.hasOwn(MAY_IMPORT, name);
 
 /** Every TypeScript file in a module, with the relative imports it makes. */
@@ -33,6 +35,8 @@ function sources(module: string): { file: string; imports: string[] }[] {
 		.filter((f) => /\.tsx?$/.test(f))
 		.map((f) => {
 			const text = readFileSync(join(dir, f), "utf8");
+			// Only imports that start with '.' reach another folder of src/; an import by bare name,
+			// such as "react", is a package and crosses no wall between modules.
 			const imports = [...text.matchAll(/\bfrom\s+"(\.[^"]*)"/g)].map((m) => m[1] ?? "");
 			return { file: join(dir, f), imports };
 		});
@@ -57,6 +61,8 @@ describe("the modular monolith", () => {
 					.map((spec) => relative(SRC, resolve(dirname(file), spec)).split(sep))
 					.filter(([target]) => target !== module)
 					.filter(([target, ...rest]) => {
+						// A path to no module, such as ../main.tsx, reaches past every public face, so it
+						// breaks the wall too.
 						if (target === undefined || !isModule(target)) return true;
 						if (target === "testing") return !isTest(file); // testing/ serves tests alone
 						const allowed: readonly string[] = MAY_IMPORT[module];
@@ -92,13 +98,18 @@ describe("the functional core", () => {
 	it("keeps React, the DOM and MapLibre out of every update file (ADR 0004, a pure core)", () => {
 		const forbidden = /from\s+"(react|react-dom|react-dom\/client|maplibre-gl)"|\b(document|window|navigator|localStorage|fetch)\b/;
 		const breaches = updateFiles()
+			// Comments go first, since a comment may name `window` or `document` without using them.
 			.filter(({ text }) => forbidden.test(text.replaceAll(/\/\/.*$|\/\*[\s\S]*?\*\//gm, "")))
 			.map(({ file }) => file);
 		expect(breaches).toEqual([]);
 	});
 });
 
-/** Every file of code under src/, with its text, comments stripped. */
+/**
+ * Every file of code the page ships under src/, with its text, comments stripped. Tests and the
+ * testing module are left out: they may hold state and listen to events, since they drive the page
+ * rather than make it.
+ */
 function codeFiles(): { file: string; text: string }[] {
 	return readdirSync(SRC, { recursive: true, encoding: "utf8" })
 		.filter((f) => /\.tsx?$/.test(f) && !/\.test\.tsx?$/.test(f) && !f.startsWith("testing"))

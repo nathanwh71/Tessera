@@ -14,6 +14,7 @@ export const MOTION = { short: 150, exit: 200, medium: 300 } as const;
  * on.
  */
 export function prefersReducedMotion(): boolean {
+	// Tests run in Node, which has no matchMedia; there the answer is no.
 	return typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 

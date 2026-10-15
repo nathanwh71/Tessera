@@ -6,5 +6,6 @@ import { cleanup } from "@testing-library/react";
 import { afterEach } from "vitest";
 
 afterEach(() => {
+	// Most tests run in Node, which has no page to clean; only the jsdom ones draw.
 	if (typeof document !== "undefined") cleanup();
 });

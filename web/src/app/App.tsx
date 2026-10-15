@@ -15,6 +15,10 @@ import { type Message, type Model, Msg, type Props, init, update } from "../map"
 
 /** Props for the page: the inputs a component receives. */
 export interface AppProps {
+	/**
+	 * The area the service serves, read from the page as it starts (main.tsx): its name heads the
+	 * page, and its home view is where the map opens (US-23, criterion 1).
+	 */
 	readonly area: Area;
 	/**
 	 * The page's own origin, the scheme, host and port the page came from, on which every tile
@@ -38,11 +42,14 @@ export interface AppProps {
  * the function that hands it to the update, and the update makes the next model from it.
  */
 export function App({ area, origin, openLayer, map: handle, onMapReady }: AppProps): ReactNode {
+	// Made again only when an input changes, so the Elmish loop and any effect that depends on its
+	// props see one stable value, not a new object on every draw that React would take for a change.
 	const props = useMemo<Props>(() => ({ ports: handle.ports, area, ...(openLayer === undefined ? {} : { openLayer }) }), [handle, area, openLayer]);
 	const [model, dispatch] = useElmish<Props, Model, Message>({ name: "Tessera", props, init, update });
 
 	return (
 		<main className="relative h-full w-full overflow-hidden bg-surface font-sans text-on-surface">
+			{/* Hidden from sight but read aloud: a screen reader names the page by its first heading. */}
 			<h1 className="sr-only">Map of {area.name}</h1>
 			<div className="absolute inset-0 z-0">
 				<MapView.MapCanvas
@@ -66,6 +73,11 @@ export function App({ area, origin, openLayer, map: handle, onMapReady }: AppPro
 					{MapView.CANNOT_DRAW}
 				</p>
 			)}
+			{/*
+			  A failed tile's notice shows only while the map can draw: when it cannot, its own message
+			  explains the blank map, and a notice about one tile would mislead. The width leaves 112
+			  pixels on the right for the column of controls.
+			*/}
 			{model.drawable && model.notice !== null && (
 				<p role="alert" className="card absolute top-4 left-4 z-30 m-0 max-w-[min(480px,calc(100%-112px))] px-4 py-3 text-body-medium">
 					{model.notice}

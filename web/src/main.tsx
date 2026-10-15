@@ -36,9 +36,12 @@ async function start(root: HTMLElement): Promise<void> {
 	// the development server that serves the page without the service, or with one the map cannot
 	// read, opens on Macau.
 	const area = areaOf(document.getElementById("tessera-area")?.textContent ?? "");
+	// index.html can only say 'Map'; the tab and a screen reader's first words name the area too.
 	document.title = `Map of ${area.name}`;
 	const openLayer = layerFromPath(location.pathname);
 	const onMapReady = window.__tesseraTest === true ? (map: MapLibreMap) => (window.__tesseraMap = map) : undefined;
+	// StrictMode makes React, while a developer works, draw each component twice and run each effect
+	// twice, so code that changes something it should not shows up at once (ADR 0004).
 	mount(
 		root,
 		<StrictMode>
@@ -53,5 +56,6 @@ async function start(root: HTMLElement): Promise<void> {
 	);
 }
 
+// index.html always holds #root; the check satisfies the compiler, which cannot know that.
 const root = document.getElementById("root");
 if (root !== null) void start(root);

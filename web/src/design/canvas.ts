@@ -27,6 +27,7 @@ export const IMAGE_PIXEL_RATIO = 2;
 
 /** Room around a pin or a cluster for its shadow, in CSS pixels; MapLibre counts it as part of the icon. */
 export const IMAGE_MARGIN = 4;
+/** A short name for the margin, since the drawings below use it many times. */
 const MARGIN = IMAGE_MARGIN;
 
 /** The pin's size on the map in CSS pixels: 30 by 40, as in the prototype. */
@@ -35,6 +36,10 @@ export const PIN_SIZE = { width: 30, height: 40 } as const;
 /** The cluster's outer diameter and its white disc, in CSS pixels, as in the prototype. */
 const CLUSTER = { outer: 48, inner: 34 } as const;
 
+/**
+ * A blank canvas for an image of the given size in CSS pixels. The bitmap is twice as large, and the
+ * scale lets every drawing below still measure in CSS pixels, as the prototype does.
+ */
 function canvasOf(width: number, height: number): CanvasRenderingContext2D {
 	const canvas = document.createElement("canvas");
 	canvas.width = width * IMAGE_PIXEL_RATIO;
@@ -45,6 +50,7 @@ function canvasOf(width: number, height: number): CanvasRenderingContext2D {
 	return context;
 }
 
+/** The canvas's pixels in the form `map.addImage` takes, since MapLibre cannot take a canvas. */
 function imageOf(context: CanvasRenderingContext2D): MapImage {
 	const { width, height } = context.canvas;
 	return { width, height, data: context.getImageData(0, 0, width, height).data };
@@ -58,6 +64,7 @@ function imageOf(context: CanvasRenderingContext2D): MapImage {
 function shadow(context: CanvasRenderingContext2D, path: Path2D, theme: Theme, lift: 1 | 2 | 3): void {
 	context.save();
 	context.filter = `blur(${lift}px)`;
+	// 30 per cent, the strength of Material's key shadow; the dropping pins use the same (styles.css).
 	context.globalAlpha = 0.3;
 	context.translate(0, lift);
 	context.fillStyle = theme.shadow;
@@ -73,6 +80,7 @@ function shadow(context: CanvasRenderingContext2D, path: Path2D, theme: Theme, l
  * symbol layer's `icon-offset` takes back so the tip sits on the place.
  */
 export function drawPin(theme: Theme, group: GroupKey, shape: Shape): { image: MapImage; tipGap: number } {
+	// The pin's path is drawn in a 24 by 32 box (shapes.ts), so it grows to the pin's 30-pixel width.
 	const scale = PIN_SIZE.width / 24;
 	const [width, height] = [24 * scale + 2 * MARGIN, 32 * scale + 2 * MARGIN];
 	const context = canvasOf(width, height);
@@ -84,6 +92,7 @@ export function drawPin(theme: Theme, group: GroupKey, shape: Shape): { image: M
 	context.fill(pin);
 	context.fillStyle = theme.surfaceLowest;
 	context.fill(new Path2D(SHAPE_PATHS[shape]));
+	// The tip touches the bottom of the path's box, so only the margin lies below it.
 	return { image: imageOf(context), tipGap: MARGIN };
 }
 
@@ -99,6 +108,8 @@ export interface StretchMetadata {
  * corners. MapLibre stretches its middle to fit each name, keeping the corners whole.
  */
 export function drawTooltip(theme: Theme): { image: MapImage; stretch: StretchMetadata } {
+	// Material's 4-pixel corners (UI-15, criterion 4); 16 pixels leaves a middle between the corners
+	// for MapLibre to stretch.
 	const [size, corner] = [16, 4];
 	const context = canvasOf(size, size);
 	context.beginPath();
@@ -126,6 +137,7 @@ export function drawCluster(theme: Theme, counts: Readonly<Record<GroupKey, numb
 	// conic gradient, a sweep of colour around a centre, does.
 	const start = -Math.PI / 2;
 	GROUP_KEYS.filter((g) => counts[g] > 0).reduce((from, g) => {
+		// At least 1, so a cluster with no counts cannot divide by zero.
 		const to = from + (2 * Math.PI * counts[g]) / Math.max(total, 1);
 		context.beginPath();
 		context.moveTo(centre, centre);
@@ -145,6 +157,7 @@ export function drawCluster(theme: Theme, counts: Readonly<Record<GroupKey, numb
 	context.font = '500 14px "Roboto"';
 	context.textAlign = "center";
 	context.textBaseline = "middle";
+	// One pixel low: digits carry no descenders, so text centred by its box looks high to the eye.
 	context.fillText(String(total), centre, centre + 1);
 	return imageOf(context);
 }

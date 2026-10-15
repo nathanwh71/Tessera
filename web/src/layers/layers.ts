@@ -34,6 +34,8 @@ export const LAYERS = [
 	{ id: "culture.libraries", group: "culture", title: "Libraries", one: "Library" },
 	{ id: "transport.trains", group: "transport", title: "Train stations", one: "Train station" },
 	{ id: "transport.buses", group: "transport", title: "Bus stops", one: "Bus stop" },
+	// `as const` keeps each id as its exact text, from which LayerId below is built; `satisfies`
+	// still checks every entry has the four fields.
 ] as const satisfies readonly { id: string; group: GroupKey; title: string; one: string }[];
 
 /** A layer's id: one of the nine, such as `food.cafes`. */
@@ -66,6 +68,7 @@ export function groupOf(id: string): GroupKey | undefined {
  * level, column and row, for each tile, so they stay as written.
  */
 export function tileUrl(origin: string, id: LayerId): string {
+	// An origin given with a closing '/' would otherwise make '//' in the address.
 	return `${origin.replace(/\/+$/, "")}/${id}/{z}/{x}/{y}.pbf`;
 }
 
