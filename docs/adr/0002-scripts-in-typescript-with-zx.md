@@ -18,7 +18,7 @@
 
 - **One language with the map.** The ***front*** ***end*** is TypeScript, so the ***map*** and the ***scripts*** ***share*** ***one*** ***language***, ***one*** ***set*** of ***tools*** and ***one*** ***style***.
 - **Types catch mistakes before a run.** A ***missing*** variable or a ***wrong*** ***path*** ***fails*** the ***type*** ***check***, not a ***run*** on the ***office*** ***machine***.
-- **Logic you can test.** A ***pure*** ***function*** ***decides*** what to do, such as ***whether*** a ***seed*** ***script***'s ***name*** ***follows*** the ***numbering***; zx ***runs*** the ***commands*** at the ***edge***. `node --test` ***tests*** the ***decisions*** ***without*** a ***shell***.
+- **Logic you can test.** A ***pure*** ***function*** ***decides*** what to do, such as how ***long*** to ***wait*** ***before*** ***starting*** a ***stopped*** ***copy*** ***again***, or ***whether*** an ***office*** ***network*** is ***too*** wide; zx ***runs*** the ***commands*** at the ***edge***. `node --test` ***tests*** the ***decisions*** ***without*** a ***shell***.
 - **Shell where shell helps.** zx's `$` ***runs*** `docker`, `psql` and `dotnet` as a ***shell*** would, and ***quotes*** ***each*** ***value*** it ***passes***.
 - **Pinned versions.** The ***scripts*** ***run*** on TypeScript 6.0.3 and zx 8.8.5, on Node.js 26.
 
@@ -45,6 +45,6 @@
 
 ## When to revisit
 
-- Node.js ***leaves*** the ***office*** ***machine***, ***because*** the ***map***'s ***build*** no ***longer*** ***needs*** it.
+- The ***map***'s ***build*** ***stops*** ***needing*** Node.js, which may then ***leave*** the ***office*** ***machine***.
 - Node.js 26 ***enters*** ***maintenance*** on 20 ***October*** 2027; ***move*** to the ***next*** long-term ***support*** ***release*** ***before*** then.
 - A ***script*** ***grows*** into a ***program***; it then ***belongs*** in the ***back*** ***end***, in C#.

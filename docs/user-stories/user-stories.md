@@ -2,7 +2,7 @@
 
 Thirty ***user*** ***stories***, in the ***order*** you ***build*** them. ***Each*** ***builds*** ***only*** on ***stories*** ***above*** it, so you can ***build*** and ***ship*** them ***one*** at a ***time*** from the ***top***. They ***build*** ***two*** ***things***: an HTTP API that ***serves*** a ***tile*** of a ***layer***, and a ***map*** that ***shows*** those ***tiles***. ***Office*** ***machines*** ***call*** the API on ***port*** 80, in ***plain*** HTTP, and ***ask*** for ***each*** ***tile*** by ***layer*** ***name***; no ***client***, the ***map*** ***included***, ***loads*** a ***list*** of ***layers***.
 
-The ***stories*** ***say*** what ***Tessera*** must do and how to ***prove*** it. Where a ***part*** of the ***build*** does the ***work***, they ***name*** it: Nginx ***stands*** in ***front*** of the ***service*** (ADR 0008), DbUp ***loads*** the ***places*** (ADR 0009), and `tessera.json` ***holds*** the ***settings*** (ADR 0003). ***Standards*** that ***fix*** the ***data*** or the interface ***stay*** ***named***: HTTP, RFC 9457's ***problem*** ***details***, GeoJSON, WGS 84 and Web Mercator; so does Material 3, the ***design*** ***system*** of the ***map***, in the NTessera ***Project***'s `claude/design/map/`. ***One*** ***story*** ***names*** its ***platform***, ***because*** the ***office***'s ***machine*** ***fixes*** it: US-35 ***opens*** ***port*** 80 on Ubuntu 24.04 ***inside*** WSL2 on ***Windows*** 11. ***Each*** ***number***'s ***letters*** ***mark*** its ***kind***: ***US*** for the ***service***, S for ***security***, N for ***tiles*** that ***cost*** ***less*** and a ***service*** that ***stays*** steady, and UI for the ***map***.
+The ***stories*** ***say*** what ***Tessera*** must do and how to ***prove*** it. Where a ***part*** of the ***build*** does the ***work***, they ***name*** it: Nginx ***stands*** in ***front*** of the ***service*** (ADR 0008), DbUp ***loads*** the ***places*** (ADR 0009), and `tessera.json` ***holds*** the ***settings*** (ADR 0003). ***Standards*** that ***fix*** the ***data*** or the interface are ***named***: HTTP, RFC 9457's ***problem*** ***details***, GeoJSON, WGS 84 and Web Mercator; so is Material 3, the ***design*** ***system*** of the ***map***, in the NTessera ***Project***'s `claude/design/map/`. ***One*** ***story*** ***names*** its ***platform***, ***because*** the ***office***'s ***machine*** ***fixes*** it: US-35 ***opens*** ***port*** 80 on Ubuntu 24.04 ***inside*** WSL2 on ***Windows*** 11. ***Each*** ***number***'s ***letters*** ***mark*** its ***kind***: ***US*** for the ***service***, S for ***security***, N for ***tiles*** that ***cost*** ***less*** and a ***service*** that ***stays*** steady, and UI for the ***map***.
 
 The ***stories*** ***name*** **the area**, the ***place*** the ***tiles*** ***cover***, in ***place*** of Macau. Its ***name***, its ***box*** and its ***home*** ***view*** are ***settings***: the ***office*** ***sets*** them to Macau, and every ***figure*** the ***stories*** ***give*** for the ***area*** is Macau's.
 
@@ -64,7 +64,7 @@ The ***table*** at the ***end*** ***checks*** ***each*** ***story*** ***against*
 | 30 | US-36 ***Clean*** the ***places*** ***before*** they ***reach*** a ***script*** | 3 | US-24 |
 | | **All 30** | **52** | |
 
-The ***service*** ***builds*** from the ***database*** ***up***: the ***database***, then the ***layers*** in it, then the ***tiles*** ***cut*** from them. S-01 and S-06 ***follow*** the ***tile*** they ***guard***. US-35 then ***opens*** the ***service*** to the ***office***, which ***reaches*** it ***only*** ***once*** it ***serves*** ***tiles*** ***safely***. The ***map*** ***follows***: US-23 ***opens*** it, and ***each*** UI ***story*** ***teaches*** it ***one*** more ***thing*** to ***show***. UI-15 ***comes*** ***early*** ***because*** it ***sets*** ***rules*** that every ***later*** ***control*** must ***meet***. ***Part*** C ***comes*** ***next***: ***each*** of its ***stories*** ***makes*** a ***working*** ***tile*** ***cheaper***, so ***none*** is ***needed*** ***before*** the ***map*** ***works***. ***Part*** D ***comes*** ***last***: it ***keeps*** the ***service*** steady when the ***database*** is ***slow***, ***busy***, ***late*** or ***down***, and its ***settings*** ***come*** ***first*** ***within*** it, ***because*** the ***later*** ***stories*** ***read*** them. ***Part*** E ***closes*** the ***door*** to strangers, ***shares*** the ***service*** fairly, and ***runs*** a ***spare*** ***copy***; it ***comes*** ***once*** the ***service*** ***works***, ***since*** it ***guards*** what is ***already*** there. ***Part*** F ***cleans*** the ***places*** ***before*** they ***become*** a ***script***; the ***shipped*** ***places*** are ***clean***, so it ***waits*** until a ***publisher*** ***brings*** ***data*** of their ***own***.
+The ***service*** ***builds*** from the ***database*** ***up***: the ***database***, then the ***layers*** in it, then the ***tiles*** ***cut*** from them. S-01 and S-06 ***follow*** the ***tile*** they ***guard***. US-35 then ***opens*** the ***service*** to the ***office***, which ***reaches*** it ***only*** ***once*** it ***serves*** ***tiles*** ***safely***. The ***map*** ***follows***: US-23 ***opens*** it, and ***each*** UI ***story*** ***teaches*** it ***one*** more ***thing*** to ***show***. UI-15 ***comes*** ***early*** ***because*** it ***sets*** ***rules*** that every ***later*** ***control*** must ***meet***. ***Part*** C ***comes*** ***next***: ***each*** of its ***stories*** ***makes*** a ***working*** ***tile*** ***cheaper***, so ***none*** is ***needed*** ***before*** the ***map*** ***works***. ***Part*** D ***comes*** ***next***: it ***keeps*** the ***service*** steady when the ***database*** is ***slow***, ***busy***, ***late*** or ***down***, and its ***settings*** ***come*** ***first*** ***within*** it, ***because*** the ***later*** ***stories*** ***read*** them. ***Part*** E ***closes*** the ***door*** to strangers, ***shares*** the ***service*** fairly, and ***runs*** a ***spare*** ***copy***; it ***comes*** ***once*** the ***service*** ***works***, ***since*** it ***guards*** what is ***already*** there. ***Part*** F ***cleans*** the ***places*** ***before*** they ***become*** a ***script***; the ***shipped*** ***places*** are ***clean***, so it ***waits*** until a ***publisher*** ***brings*** ***data*** of their ***own***.
 
 ## Part A · The service
 
@@ -238,7 +238,7 @@ The ***places*** ***arrive*** as ***files*** the ***data*** ***publisher*** ***o
 
 **Open to talk**
 
-- ***Whether*** the `.mvt` ***ending*** is ***still*** ***needed***.
+- ***Whether*** to ***keep*** the `.mvt` ***ending***.
 - The ***tile***'s ***cap*** on ***features*** and the buffer of ***space*** ***around*** it: `Tiles.MaxFeatures`, 10,000, and `Tiles.Buffer`, 256, by ***default***.
 - ***Whether*** to ***coin*** ***Tessera***'s ***own*** `type` ***addresses***, such as ***one*** for an ***unknown*** ***layer***, or ***keep*** `about:blank`.
 
@@ -262,7 +262,7 @@ The ***places*** ***arrive*** as ***files*** the ***data*** ***publisher*** ***o
 **Acceptance criteria**
 
 1. **Given** ***any*** ***tile*** ***address***, **when** the ***tile*** ***query*** ***runs***, **then** every ***value*** ***reaches*** the ***database*** as a ***bound*** ***parameter***, and a ***property*** ***test*** ***proves*** it.
-2. **Given** ***any*** ***query***, **then** its ***text*** ***lives*** in `Queries.cs`, the ***one*** ***file*** that ***holds*** SQL, and ***only*** `Database` ***sends*** it; a ***search*** at ***each*** ***review*** ***finds*** SQL ***text*** ***nowhere*** ***else***.
+2. **Given** ***any*** ***query***, **then** its ***text*** ***lives*** in `Queries.cs`, the ***one*** ***file*** that ***holds*** SQL, and ***only*** `Database` ***sends*** it, ***save*** the ***seed***'s journal schema (ADR 0009); a ***search*** at ***each*** ***review*** ***finds*** SQL ***text*** ***nowhere*** ***else***.
 3. **Given** a ***table*** or ***column*** ***name*** in a ***query***, **then** it ***comes*** from the catalogue, ***through*** the ***one*** ***function*** that ***quotes*** ***names*** (US-03).
 4. **Given** a ***request*** for a ***layer*** ***named*** `x; DROP TABLE cafes`, **then** the ***service*** ***answers*** 404, as a ***problem*** ***document*** (US-07), and every ***table*** ***keeps*** its ***rows***.
 
@@ -297,7 +297,7 @@ The ***places*** ***arrive*** as ***files*** the ***data*** ***publisher*** ***o
 
 **Tests to write first**
 
-1. **Malformed targets are refused.** ***Raw*** ***requests***, ***written*** ***byte*** for ***byte*** ***through*** Nginx, for ***five*** ***malformed*** ***targets*** ***each*** ***get*** 400.
+1. **Malformed targets are refused.** ***Raw*** ***requests***, ***written*** ***byte*** for ***byte*** ***through*** Nginx, for ***five*** ***malformed*** or disguised ***targets*** ***each*** ***get*** 400 or 404, as a ***problem*** ***document*** that ***hides*** the ***target***.
 2. **The answer hides the target.** No 400 ***body*** ***holds*** ***any*** ***part*** of its ***target***.
 3. **A disguised address finds nothing.** The ***service*** ***answers*** an ***unknown*** ***address*** with a 404 ***problem*** ***document***.
 4. **Clean targets pass.** A ***tile*** ***request*** ***through*** Nginx ***gets*** 200.
@@ -620,7 +620,7 @@ All ***three*** ***stories*** ***follow*** ***one*** ***idea***: a ***tile*** th
 
 **Open to talk**
 
-- ***Whether*** the ***map***'s ***page*** and ***files*** ***keep*** their ***own*** ***rules***, as they do ***now***: the ***page*** `no-cache`, ***each*** ***built*** ***file*** a ***year***, ***since*** its ***name*** ***changes*** with its ***content***.
+- ***Whether*** the ***map***'s ***page*** and ***files*** ***keep*** their ***own*** ***rules***: the ***page*** `no-cache`, ***each*** ***built*** ***file*** a ***year***, ***since*** its ***name*** ***changes*** with its ***content***.
 
 **Critical to success**
 
@@ -723,7 +723,7 @@ All ***three*** ***stories*** ***follow*** ***one*** ***idea***: a ***tile*** th
 
 **Open to talk**
 
-- ***Whether*** a ***misspelt*** ***section*** ***name***, which ***now*** ***passes*** and ***leaves*** its ***section*** at the ***defaults***, should ***stop*** the ***start*** ***too***.
+- ***Whether*** a ***misspelt*** ***section*** ***name***, which ***passes*** and ***leaves*** its ***section*** at the ***defaults***, should ***stop*** the ***start*** ***too***.
 
 ### Step 21 · N-22 Ask the browser to wait when the database cannot answer
 
@@ -840,7 +840,7 @@ All ***three*** ***stories*** ***follow*** ***one*** ***idea***: a ***tile*** th
 2. **The ping behind a busy pool.** With the ***only*** ***connection*** ***held*** for ***three*** ***seconds***, the ***ping*** ***gives*** ***up*** ***within*** a ***second*** and a ***half***; ***once*** the ***hold*** ***ends***, the ***next*** ***ping*** ***answers***.
 3. **A cancelled wait.** A ***query*** ***cancelled*** ***after*** 200 ms ***leaves*** ***within*** a ***second***, not ***after*** the ***pool***'s 30.
 
-**Known limit.** A ***tile*** ***query*** ***runs*** on the ***service***'s ***stop*** ***signal***, not the ***browser***'s. When a ***person*** ***pans*** ***away*** ***before*** a ***tile*** ***arrives***, the ***map*** ***cancels*** the ***request***, but the ***query*** ***still*** ***waits*** its ***turn***, ***runs***, and ***lands*** in Nginx's ***cache***. ***Nothing*** is ***lost***: a ***person*** who ***pans*** ***back*** ***gets*** the ***tile*** at no ***cost***. On a ***busy*** ***day***, ***though***, ***abandoned*** ***queries*** ***hold*** ***connections*** that ***tiles*** ***still*** on ***screen*** ***need***. A ***load*** ***run*** at 700 ***tiles*** a ***second***, ***about*** a ***third*** of ***capacity***, ***gave*** ***up*** no ***request*** at all; ***only*** ***under*** ***overload*** did ***requests*** ***wait*** ***long*** ***enough*** to be ***given*** ***up***, and there the ***cure*** is a ***limit*** on ***load*** (ADR 0007), not a ***cancel***.
+**Known limit.** A ***tile*** ***query*** ***runs*** on the ***service***'s ***stop*** ***signal***, not the ***browser***'s. When a ***person*** ***pans*** ***away*** ***before*** a ***tile*** ***arrives***, the ***map*** ***cancels*** the ***request***, but the ***query*** ***still*** ***waits*** its ***turn***, ***runs***, and ***lands*** in Nginx's ***cache***. ***Nothing*** is ***lost***: a ***person*** who ***pans*** ***back*** ***gets*** the ***tile*** at no ***cost***. On a ***busy*** ***day***, ***though***, ***abandoned*** ***queries*** ***hold*** ***connections*** that ***tiles*** ***still*** on ***screen*** ***need***. At 700 ***tiles*** a ***second***, ***about*** a ***third*** of ***capacity***, no ***request*** is ***given*** ***up***; ***only*** ***under*** ***overload*** do ***requests*** ***wait*** ***long*** ***enough*** to be ***given*** ***up***, and there the ***cure*** is a ***limit*** on ***load*** (ADR 0007), not a ***cancel***.
 
 **Open to talk**
 
@@ -889,7 +889,7 @@ All ***three*** ***stories*** ***follow*** ***one*** ***idea***: a ***tile*** th
 
 **Acceptance criteria**
 
-1. **Given** `TESSERA_OFFICE_NETWORK`, such as `192.168.10.0/24`, **when** a ***machine*** ***inside*** it ***asks***, **then** Nginx ***answers*** as ***before***.
+1. **Given** `TESSERA_OFFICE_NETWORK`, such as `192.168.10.0/24`, **when** a ***machine*** ***inside*** it ***asks***, **then** Nginx ***answers*** it.
 2. **Given** a ***machine*** ***outside*** it, **when** it ***asks*** for ***anything***, **then** Nginx ***answers*** 403 as a ***problem*** ***document*** (US-07), with `Cache-Control: no-store`, and ***never*** ***passes*** the ***request*** to the ***service***.
 3. **Given** the ***machine*** ***Tessera*** ***runs*** on, **then** Nginx ***answers*** it ***too***, so `npm start` can ***ask*** `/health`.
 4. **Given** `TESSERA_OFFICE_NETWORK` ***missing***, ***misspelt***, or with a prefix ***below*** 8, such as `0.0.0.0/0`, which ***lets*** in every ***address***, **then** `npm start` ***refuses*** to ***start*** and ***names*** it.
@@ -923,7 +923,7 @@ All ***three*** ***stories*** ***follow*** ***one*** ***idea***: a ***tile*** th
 1. **Given** ***one*** ***office*** ***machine***, **then** Nginx ***lets*** it ***ask*** for 100 ***tiles*** a ***second***, with a burst of 300 at ***once***: ***one*** ***fresh*** ***view*** of ***nine*** ***layers*** ***asks*** for ***about*** a ***hundred***.
 2. **Given** a ***machine*** ***past*** that burst, **then** its ***extra*** ***tile*** ***requests*** ***answer*** 429 as a ***problem*** ***document***, with `Retry-After: 1` and `Cache-Control: no-store`, until its ***rate*** ***falls*** ***back*** ***within*** the ***limit***.
 3. **Given** ***one*** ***machine***, **then** Nginx ***handles*** at ***most*** 32 of its ***requests*** at ***once***, and ***answers*** the 33rd with 429.
-4. **Given** ***one*** ***machine*** at its ***limit***, **then** every ***other*** ***machine***'s ***requests*** ***pass*** as ***before***.
+4. **Given** ***one*** ***machine*** at its ***limit***, **then** every ***other*** ***machine***'s ***requests*** ***pass***.
 5. **Given** the ***machine*** ***Tessera*** ***runs*** on, **then** no ***limit*** ***applies*** to it, so its ***own*** ***checks*** ***never*** ***meet*** ***one***.
 
 **Tests to write first**
@@ -934,8 +934,8 @@ All ***three*** ***stories*** ***follow*** ***one*** ***idea***: a ***tile*** th
 
 **Open to talk**
 
-- The ***numbers***. The ***service*** ***built*** 2,400 ***tiles*** a ***second*** from the ***database*** in the ***load*** ***test*** of 14 ***October*** 2026, on ***two*** ***processors***, so 24 ***machines*** at the ***full*** ***rate*** could ***fill*** it.
-- ***Whether*** the ***map*** should ***ask*** ***again*** ***after*** a 429, as it does ***after*** a 503.
+- The ***numbers***. The ***service*** ***builds*** ***about*** 2,400 ***tiles*** a ***second*** from the ***database***, on ***two*** ***processors***, so 24 ***machines*** at the ***full*** ***rate*** could ***fill*** it.
+- ***Whether*** the ***map*** should ***ask*** ***again*** ***after*** a 429 or a 503, ***rather*** than ***wait*** for the ***view*** to ***move***.
 
 **Critical to success**
 
@@ -955,7 +955,7 @@ All ***three*** ***stories*** ***follow*** ***one*** ***idea***: a ***tile*** th
 **Acceptance criteria**
 
 1. **Given** `npm start`, **then** it ***runs*** ***two*** ***copies*** of the ***service***, on `TESSERA_SERVICE_PORT`, 7800 by ***default***, and the ***next*** ***port***, and Nginx ***shares*** the ***requests*** ***between*** them in ***turn***.
-2. **Given** ***one*** ***copy*** ***stopped*** or ***crashed***, **when** a ***request*** ***reaches*** it, **then** Nginx ***passes*** the ***request*** to the ***other*** ***copy***, and the ***visitor*** ***gets*** the ***answer*** as ***before***.
+2. **Given** ***one*** ***copy*** ***stopped*** or ***crashed***, **when** a ***request*** ***reaches*** it, **then** Nginx ***passes*** the ***request*** to the ***other*** ***copy***, and the ***visitor*** ***gets*** the ***answer***.
 3. **Given** ***three*** ***failed*** ***requests*** to ***one*** ***copy*** ***within*** ***ten*** ***seconds***, **then** Nginx ***rests*** that ***copy*** for ***ten*** ***seconds*** and ***sends*** ***everything*** to the ***other***.
 4. **Given** a ***copy*** that ***stops*** on its ***own***, **then** `npm start` ***starts*** it ***again*** ***after*** a ***second***, and ***doubles*** the ***wait*** ***after*** ***each*** ***quick*** ***failure***, ***up*** to 30 ***seconds***. A ***copy*** that ***ran*** for a ***minute*** ***counts*** as ***healthy***, and its ***next*** ***restart*** ***waits*** a ***second*** ***again***.
 5. **Given** the ***database*** ***down***, **then** neither ***copy*** is ***rested***: both ***answer*** 503 (N-22), which ***counts*** as an ***answer***, not a ***failure***.

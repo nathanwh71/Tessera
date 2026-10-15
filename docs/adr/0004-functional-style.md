@@ -6,7 +6,7 @@
 | Date | 13 ***October*** 2026 |
 | Decider | The ***maintainer*** |
 | Covers | Every ***line*** of the ***back*** ***end***, in C# 14 on .NET 10, in `nathanwh71/Tessera`; the ***map*** and the ***scripts*** ***follow*** the ***same*** ***style*** in TypeScript 6 |
-| Related | ADR 0001, ***rule*** 5; ADR 0002, ***rules*** 1 and 2 |
+| Related | ADR 0001, ***rule*** 6; ADR 0002, ***rules*** 1 and 2 |
 
 ## Decision
 
@@ -15,7 +15,7 @@
 ## Why
 
 - **Code the maintainer reads at a glance.** The ***maintainer*** ***comes*** from F#, and will ***read*** and ***change*** this ***code*** for ***years***. Immutable ***values*** and `Result` ***pipelines*** ***read*** the ***way*** an F# ***programmer*** ***thinks***.
-- **A library, not code of our own.** CSharpFunctionalExtensions ***gives*** `Result` with `Map`, `Bind`, `MapError`, `Match`, `Ensure` and `Combine`, and `from … in … select` ***chains*** its ***steps***. Its ***latest*** ***release*** ***came*** in March 2026, and it has 38.9 million ***downloads***, so ***Tessera*** ***need*** not ***write*** or ***test*** a `Result` of its ***own***.
+- **A library, not code of our own.** CSharpFunctionalExtensions ***gives*** `Result` with `Map`, `Bind`, `MapError`, `Match`, `Ensure` and `Combine`, and `from … in … select` ***chains*** its ***steps***. It is widely ***used***, with 38.9 million ***downloads***, so ***Tessera*** ***need*** not ***write*** or ***test*** a `Result` of its ***own***.
 - **The compiler watches for missing values.** With `Nullable` on and every ***warning*** an ***error***, the ***compiler*** ***makes*** ***each*** ***caller*** ***decide*** what ***happens*** when a `T?` is ***missing***.
 - **Tests without a database.** A ***pure*** ***function*** ***reads*** ***only*** its ***parameters***, so FsCheck and xUnit ***test*** it with no ***database***, no ***network*** and no ***clock***.
 

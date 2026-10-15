@@ -15,7 +15,7 @@ The ***map*** ***lives*** in this repository's `web/`. `npm run build` ***writes
 ## Why
 
 - **One repository, one history.** A ***change*** that ***touches*** the ***map*** and the ***service*** ***lands*** in ***one*** ***commit***, and ***one*** CI ***run*** ***tests*** both.
-- **The map tests itself.** Its ***unit***, ***architecture*** and ***screenshot*** ***tests*** ***run*** with `npm test` in `web/`, ***apart*** from the ***service***'s.
+- **The map tests itself.** Its ***unit*** and ***architecture*** ***tests*** ***run*** with `npm test` in `web/`, and its ***browser*** and ***screenshot*** ***tests*** with `npm run e2e`, ***apart*** from the ***service***'s.
 - **The contract is small.** The ***map*** ***needs*** ***three*** ***things*** of the ***service***, ***listed*** ***below***. A ***service*** that ***keeps*** them could ***serve*** the ***map*** ***unchanged***.
 
 ## The contract between the map and the service

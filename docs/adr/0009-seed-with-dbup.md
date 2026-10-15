@@ -75,7 +75,7 @@ A ***row*** that ***fails*** is ***dropped*** and logged, or, when its filter **
 
 ## Consequences
 
-- The ***database*** has a ***second*** ***door***. DbUp ***opens*** its ***own*** ***connections***, so ***rule*** 3 of ADR 0001, ***one*** ***gate*** to SQL, has ***two*** ***doors***. The ***seed***'s ***one*** SQL ***text*** of its ***own***, the journal's schema, ***lives*** in `Queries.cs` with every ***other***.
+- The ***database*** has a ***second*** ***door***. DbUp and the ***seed*** ***open*** their ***own*** ***connections***, so ***rule*** 4 of ADR 0001, ***one*** ***gate*** to SQL, has ***two*** ***doors***. The ***seed***'s ***one*** SQL ***text*** of its ***own***, the journal's schema, ***lives*** in `Queries.cs` with every ***other***.
 - ***Each*** ***table*** has a `fid` ***column***, which its ***tiles*** ***carry*** as a ***property***, ***beside*** ***any*** `id` from the ***source***.
 - A ***replaced*** ***table*** ***leaves*** the ***map*** until `npm run publish`. Meanwhile Nginx ***serves*** its ***kept*** ***tiles*** for ***up*** to `Tiles.CacheSeconds`.
 - A ***script*** ***never*** ***changes*** ***once*** it has ***run***. ***New*** or ***corrected*** ***data*** ***goes*** in a ***new*** ***script***, with the ***next*** ***number***.

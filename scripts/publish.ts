@@ -3,7 +3,7 @@
 //
 //   npm run publish
 //
-// The service rereads its list of layers every CatalogueRefresh seconds, 30 by default, so it
+// The service rereads its list of layers every Catalogue.RefreshSeconds, 30 seconds by default, so it
 // serves them within half a minute, with no restart (N-23).
 import { $ } from 'zx';
 import { waitForDatabase } from './lib/database.ts';
@@ -32,4 +32,4 @@ const grant = [
 // "--env PGPASSWORD" with no value copies the variable from this script's own environment, so the
 // password never appears on a command line, where any user's process list could show it.
 await $({ env: { ...process.env, PGPASSWORD: password } })`docker exec --env PGPASSWORD ${container} psql --host 127.0.0.1 --username tessera_publisher --dbname ${database.name} --command ${grant}`;
-console.log('Published the nine layers. The service serves them within CatalogueRefresh seconds (30 by default).');
+console.log('Published the nine layers. The service serves them within Catalogue.RefreshSeconds (30 seconds by default).');

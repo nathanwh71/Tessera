@@ -1,6 +1,6 @@
 # Reading the code, step by step
 
-**The short answer.** ***Read*** the ***code*** in the ***order*** a ***request*** ***travels***. ***Part*** A ***follows*** ***one*** ***tile*** from the ***office***'s ***browser***, ***through*** Nginx and the ***service***, to the ***database*** and ***back***. ***Part*** B ***follows*** the ***map***'s ***page*** as it ***opens*** in the ***browser*** and ***draws*** that ***tile***. ***Each*** ***step*** ***names*** the ***files*** to ***open***, what to ***look*** for, and ***one*** ***question*** to ***check*** yourself. ***Fifteen*** ***steps*** ***take*** an ***afternoon***; the backend is ***about*** 1,100 ***lines*** of C#, and the ***map*** ***about*** 3,200 ***lines*** of TypeScript.
+**The short answer.** ***Read*** the ***code*** in the ***order*** a ***request*** ***travels***. ***Part*** A ***follows*** ***one*** ***tile*** from the ***office***'s ***browser***, ***through*** Nginx and the ***service***, to the ***database*** and ***back***. ***Part*** B ***follows*** the ***map***'s ***page*** as it ***opens*** in the ***browser*** and ***draws*** that ***tile***. ***Each*** ***step*** ***names*** the ***files*** to ***open***, what to ***look*** for, and ***one*** ***question*** to ***check*** yourself. ***Fifteen*** ***steps*** ***take*** an ***afternoon***; the backend is ***about*** 1,200 ***lines*** of C#, and the ***map*** ***about*** 3,000 ***lines*** of TypeScript, ***beside*** their ***tests***.
 
 **Before you start.** ***Run*** `npm test` ***once***, so you ***know*** every ***part*** ***works***, then ***keep*** ***two*** terminals ***open***: ***one*** for `npm start`, ***one*** for `curl`. ***Seeing*** an ***answer*** ***arrive*** ***teaches*** ***faster*** than ***reading*** ***about*** it.
 
@@ -9,7 +9,7 @@
 ### Step 1 · How the program starts
 
 - **Open:** `src/Tessera/Program.cs`.
-- **Look for:** the `switch` on the ***arguments***. No ***argument*** ***serves*** ***tiles***; `seed` ***loads*** the ***places*** and ***stops***. Every ***failure*** ***ends*** with a ***list*** of ***problems*** and exit ***code*** 1.
+- **Look for:** the `switch` on the ***arguments***. No ***argument*** ***serves*** ***tiles***; `seed` ***loads*** the ***places*** and ***stops***. Every ***failure*** ***ends*** with a ***list*** of ***problems*** and exit ***code*** 1, or 2 for a ***command*** it does not ***understand***.
 - **Check yourself:** what does `Tessera seed` ***sign*** in as, and why not as the ***reader***?
 
 ### Step 2 · How the service is put together

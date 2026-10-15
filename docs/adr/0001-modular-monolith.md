@@ -21,7 +21,7 @@ This ***record*** ***covers*** the ***back*** ***end*** ***alone***. The ***map*
 - **One maintainer.** ***One*** ***person*** ***builds***, ***runs*** and ***repairs*** ***Tessera***, and should not have to ***remember*** which ***module*** may ***use*** which.
 - **One machine.** The ***service*** ***runs*** in Ubuntu 24.04 ***inside*** WSL2, on ***one*** ***Windows*** 11 ***machine***, ***behind*** Nginx on ***port*** 80 (US-35, ADR 0008).
 - **One program.** The ***same*** ***service*** ***serves*** the ***tiles*** (US-07) and the ***map***'s ***files*** (US-23), and ***ships*** them in ***one*** ***release***; `npm start` ***runs*** ***two*** ***copies*** of it ***behind*** Nginx (N-29).
-- **One gate to the database.** S-01 ***requires*** that every SQL ***text*** ***lives*** in ***one*** ***file*** and that ***one*** ***module*** ***sends*** it.
+- **One gate to the database.** S-01 ***requires*** that every SQL ***text*** ***lives*** in ***one*** ***file*** and that the ***service*** ***sends*** it ***through*** ***one*** ***module***.
 - **One place for the design.** The ***stories*** ***leave*** the ***design*** to the ***team*** on ***purpose***; this ***record*** ***holds*** it.
 
 ## Options considered
@@ -29,7 +29,7 @@ This ***record*** ***covers*** the ***back*** ***end*** ***alone***. The ***map*
 | Option | For | Against |
 |---|---|---|
 | A project for each module, in the folders of one service (chosen) | The ***compiler*** ***guards*** every ***border***, and the ***folders*** ***read*** as ***one*** ***program***. A ***module***'s ***file*** ***names*** its every ***neighbour***. | ***Eight*** ***project*** ***files*** to ***keep***, ***each*** a ***few*** ***lines***. |
-| One project, a folder for each module | ***One*** ***file*** to ***build***. | ***Nothing*** but ***review*** ***guards*** the ***borders***; ***two*** ***circles*** of ***modules*** ***grew*** unnoticed. |
+| One project, a folder for each module | ***One*** ***file*** to ***build***. | ***Nothing*** but ***review*** ***guards*** the ***borders***, so a ***circle*** of ***modules*** can ***grow*** unnoticed. |
 | An architecture test that reads the code | ***One*** ***project***, and a ***failing*** ***test*** for a ***break***. | A ***text*** ***test*** misses ***some*** ***routes*** ***round*** it; a ***test*** ***library***, such as ArchUnitNET, ***adds*** a ***dependency***. |
 | Separate services | The ***network*** ***enforces*** the ***borders***. | ***Several*** ***releases*** on ***one*** ***machine***, and ***network*** ***calls*** ***between*** ***parts***, for ***one*** ***maintainer*** who ***gains*** ***nothing*** from them. |
 
@@ -71,7 +71,7 @@ A ***module*** ***joins*** the ***list*** when a ***story*** ***needs*** ***one*
 | 1. **A small public face.** Each module shows only the types other modules need. | The ***compiler***: an `internal` ***type*** ***stays*** ***inside*** its ***project***. |
 | 2. **One direction.** Modules depend on one another in one direction, with no circle. | The ***compiler***: .NET ***refuses*** a ***circle*** of ***project*** ***references***. |
 | 3. **Named neighbours alone.** A module uses only the modules its project file names. | The ***compiler***: `DisableTransitiveProjectReferences`, ***set*** in `src/Tessera/Directory.Build.props`, ***stops*** a ***module*** ***seeing***, ***say***, ***Settings*** ***through*** Sql. |
-| 4. **One gate to SQL.** Every SQL text lives in `Queries.cs`, and only `Database` sends it (S-01, criterion 2). | The ***compiler***: ***only*** `Tessera.Sql` ***names*** Npgsql and Dapper, ***each*** ***marked*** `PrivateAssets="compile;contentfiles;analyzers;build"`, so no ***project*** that ***names*** Sql can ***use*** them; their ***files*** ***still*** ***reach*** the ***finished*** ***service***. `Tessera.Seeding` ***reaches*** the ***database*** ***through*** DbUp, the ***one*** ***other*** ***door*** (ADR 0009). |
+| 4. **One gate to SQL.** Every SQL text lives in `Queries.cs`, and only `Database` sends it, save the seed, which sends the journal's schema through a connection of its own (S-01, criterion 2; ADR 0009). | The ***compiler***: `Tessera.Sql` ***names*** Npgsql and Dapper, ***each*** ***marked*** `PrivateAssets="compile;contentfiles;analyzers;build"`, so no ***project*** that ***names*** Sql can ***use*** them; their ***files*** ***still*** ***reach*** the ***finished*** ***service***. `Tessera.Seeding` is the ***one*** ***other*** ***door***: it ***reaches*** Npgsql ***through*** DbUp, and ***opens*** ***one*** ***connection*** of its ***own*** to ***make*** DbUp's journal schema, with the ***text*** from `Queries.cs` (ADR 0009). |
 | 5. **One shape for errors.** Every problem document takes its shape from `Tessera.Problems`; no route writes an error body of its own (US-07). | ***Review***. |
 | 6. **Values, not shared state.** Modules pass immutable values to one another, and report an expected failure as a `Result`, never as a shared object or an exception (ADR 0004). | ***Review***. |
 
@@ -91,7 +91,7 @@ The ***tile*** ***query*** ***shows*** ***rule*** 2 at ***work***. `Queries.Tile
 
 - ***Each*** ***story*** ***begins*** with a ***decision***: which ***module*** ***owns*** the ***new*** ***code***.
 - A ***new*** ***use*** of ***one*** ***module*** by another ***needs*** a ***line*** in a ***project*** ***file***, and a ***moment***'s ***thought*** ***about*** ***whether*** it ***belongs***.
-- The ***release*** ***holds*** ***one*** ***file*** for ***each*** ***module***, ***eight*** in all, ***beside*** the ***program***.
+- The ***release*** ***holds*** ***one*** ***file*** for ***each*** ***module***, ***seven*** in all, ***beside*** the ***program***'s ***own***.
 
 ## When to revisit
 

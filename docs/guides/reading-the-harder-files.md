@@ -18,7 +18,7 @@ What surprises a newcomer:
 
 - **`services` is a table, not a set of running programs.** It is the dependency-injection ***container***: a ***table*** of 'when code asks for X, give it this'. `Register` ***fills*** the ***table***, and `Build` in `Service.cs` ***freezes*** it.
 - **The records hold no code to read JSON.** The binder ***fills*** ***each*** `init` ***property*** by its ***name***; `[Range]` and `Validate` ***carry*** the ***rules***.
-- **`DatabaseConnection` is a class with setters.** `Register` ***sets*** its ***two*** ***values*** ***after*** .NET ***creates*** it, which a ***record*** with `init` ***properties*** would ***refuse***.
+- **The database's URL is not here.** `DatabaseConnection`, in `Sql/Connection.cs`, is a ***class*** with setters: `DatabaseConnections.Register` ***sets*** its ***two*** ***values*** ***after*** .NET ***creates*** it, which a ***record*** with `init` ***properties*** would ***refuse***. It ***lives*** in `Sql`, the ***module*** ***through*** which the ***service*** ***reaches*** the ***database***.
 
 ## Database.cs: one pool, and every failure as a value
 

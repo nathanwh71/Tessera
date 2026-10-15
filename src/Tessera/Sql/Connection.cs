@@ -5,8 +5,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using Tessera.Settings;
 
-// The database's address, as the environment gives it (US-00 c4). It lives in Sql, the one module
-// that knows the database client, Npgsql (ADR 0001, rule 3).
+// The database's address, as the environment gives it (US-00 c4). It lives in Sql, the module
+// through which the service reaches the database client, Npgsql (ADR 0001, rule 4).
 
 namespace Tessera.Sql;
 

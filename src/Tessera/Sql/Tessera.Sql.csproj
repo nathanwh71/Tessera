@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!--
-    Sql: every SQL text, and the only code that holds the database client (S-01, ADR 0001 rule 3).
+    Sql: every SQL text, and the module through which the service reaches the database (S-01, ADR 0001 rule 4).
     PrivateAssets keeps Npgsql and Dapper from the compiler of any project that names Sql, while
     their files still reach the finished service. "all" would keep the files out too, and the
     service would fail as it starts.
