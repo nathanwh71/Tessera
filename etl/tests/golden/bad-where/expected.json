@@ -1,5 +1,5 @@
 {
   "code": 1,
   "stdout": "extracting 1 tables...\nThe log is in seed-logs/0002-t.log.\n",
-  "stderr": "Stopped: a.b: extraction failed. ogr2ogr failed: ERROR 1: \"nosuch\" not recognised as an available field.\nERROR 1: SetAttributeFilter(nosuch = 1) on layer 'Places' failed.\n"
+  "stderr": "ERROR 1: \"nosuch\" not recognised as an available field.\nStopped: a.b: extraction failed. GDAL could not apply the where, nosuch = 1.\n"
 }

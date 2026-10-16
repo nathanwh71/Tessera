@@ -1,6 +1,6 @@
 """The few shapely functions the pipeline calls, with plain types.
 
-shapely, the Python wrapper of the GEOS geometry library, declares many of its functions with
+shapely, the Python wrapper of the GEOS geometry library, declares some of its functions with
 loose types, which a strict type checker cannot follow. Each function here passes straight
 through to shapely, so the rest of the code sees one clear signature.
 """
@@ -11,13 +11,17 @@ from typing import Any, cast
 import numpy as np
 import shapely
 from numpy.typing import NDArray
-from shapely.geometry import GeometryCollection
-from shapely.geometry.base import BaseGeometry, BaseMultipartGeometry
+from shapely.geometry.base import BaseGeometry
 
 type Points = NDArray[np.float64]
 """A table of points, one row each, with x in the first column and y in the second."""
 
 _shapely: Any = shapely
+
+# GEOS's numbers for the types GeoJSON holds: point, line, ring, area, their many-part forms,
+# and collections. Any other type, such as a circular arc, needs GDAL to straighten it.
+_PLAIN_TYPES = frozenset(range(8))
+_MANY = frozenset(range(4, 8))
 
 
 def bounds(shapes: NDArray[np.object_]) -> NDArray[np.float64]:
@@ -30,25 +34,18 @@ def type_ids(shapes: NDArray[np.object_]) -> NDArray[np.int32]:
     return cast(NDArray[np.int32], _shapely.get_type_id(shapes))
 
 
-def points(coordinates: NDArray[np.float64]) -> NDArray[np.object_]:
+def points(coordinates: Points) -> NDArray[np.object_]:
     """A point for each row of x and y."""
     return cast(NDArray[np.object_], _shapely.points(coordinates))
 
 
-def is_many(shape: BaseGeometry) -> bool:
-    """True for a many-part shape or a collection, whose parts `parts` lists."""
-    return isinstance(shape, BaseMultipartGeometry)
-
-
-def parts(shape: BaseGeometry) -> list[BaseGeometry]:
-    """The parts of a many-part shape or a collection, in order."""
-    collection = cast("GeometryCollection[BaseGeometry]", shape)
-    return list(collection.geoms)
-
-
-def transform(shape: BaseGeometry, change: Callable[[Points], Points]) -> BaseGeometry:
-    """The shape with every point changed by `change`, which takes and gives a table of points."""
-    return cast(BaseGeometry, _shapely.transform(shape, change))
+def plain(shape: BaseGeometry) -> bool:
+    """True when the shape, and every part of it, is a type GeoJSON can hold as it is."""
+    kind = int(_shapely.get_type_id(shape))
+    if kind not in _PLAIN_TYPES:
+        return False
+    parts = cast(list[BaseGeometry], list(_shapely.get_parts(shape))) if kind in _MANY else []
+    return all(plain(part) for part in parts)
 
 
 def transform_all(shapes: Sequence[BaseGeometry | None], change: Callable[[Points], Points]) -> list[BaseGeometry | None]:
@@ -71,40 +68,12 @@ def from_wkb(blobs: Sequence[bytes | None]) -> list[BaseGeometry | None]:
     return [cast(BaseGeometry | None, shape) for shape in found]
 
 
-def from_geojson(text: str) -> BaseGeometry:
-    """A shape from a GeoJSON geometry's text."""
-    return cast(BaseGeometry, _shapely.from_geojson(text))
-
-
-def ewkb_hex(shape: BaseGeometry, srid: int) -> str:
-    """The shape as PostGIS's extended well-known binary, least significant byte first, in hex."""
-    with_srid = _shapely.set_srid(shape, srid)
-    return str(_shapely.to_wkb(with_srid, hex=True, output_dimension=2, byte_order=1, include_srid=True))
-
-
-def type_id(shape: BaseGeometry) -> int:
-    """GEOS's number for the shape's type: 0 to 7 for the types GeoJSON holds, more for curves."""
-    return int(_shapely.get_type_id(shape))
-
-
-def invalid_reason(shape: BaseGeometry) -> str:
-    """Why GEOS finds the shape invalid, such as 'Self-intersection[113.545 22.185]'."""
-    return str(_shapely.is_valid_reason(shape))
-
-
-def make_valid_ring(shape: BaseGeometry) -> BaseGeometry:
-    """GEOS's 'structure' repair, without parts that collapse to lines or points."""
-    return cast(BaseGeometry, _shapely.make_valid(shape, method="structure", keep_collapsed=False))
-
-
-def prepare(shape: BaseGeometry) -> None:
-    """Builds GEOS's index of the shape's edges, so later tests against it run faster."""
-    _shapely.prepare(shape)
-
-
-def intersects(first: BaseGeometry, second: BaseGeometry) -> bool:
-    """True when the two shapes share any point."""
-    return bool(_shapely.intersects(first, second))
+def ewkb_hex(shapes: Sequence[BaseGeometry], srid: int) -> list[str]:
+    """Each shape as PostGIS's extended well-known binary, least significant byte first, in hex."""
+    array = np.empty(len(shapes), dtype=object)
+    array[:] = list(shapes)
+    with_srid = _shapely.set_srid(array, srid)
+    return [str(text) for text in _shapely.to_wkb(with_srid, hex=True, output_dimension=2, byte_order=1, include_srid=True)]
 
 
 GEOSException: type[Exception] = cast(type[Exception], shapely.errors.GEOSException)

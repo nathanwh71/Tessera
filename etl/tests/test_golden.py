@@ -62,11 +62,14 @@ def test_words_each_fault_in_a_pipeline_file_as_recorded(case: dict[str, object]
     assert run_here(tmp_path, ["p.json"]) == (case["code"], case["stdout"], case["stderr"])
 
 
+USAGE = "usage: npm run etl -- [-h] PIPELINE.json\n"
+
+
 @pytest.mark.parametrize(
     ("arguments", "stderr"),
     [
-        ([], "Usage: npm run etl -- PIPELINE.json\n"),
-        (["a.json", "b.json"], "Usage: npm run etl -- PIPELINE.json\n"),
+        ([], USAGE + "the following arguments are required: PIPELINE.json.\n"),
+        (["a.json", "b.json"], USAGE + "unrecognized arguments: b.json.\n"),
         (["nothing.json"], "nothing.json: no such file.\n"),
     ],
 )
@@ -78,7 +81,7 @@ def test_runs_as_a_console_command(tmp_path: Path) -> None:
     command = shutil.which("tessera-etl", path=str(Path(sys.executable).parent))
     assert command is not None
     done = subprocess.run([command], cwd=tmp_path, capture_output=True, text=True, check=False)
-    assert (done.returncode, done.stderr) == (2, "Usage: npm run etl -- PIPELINE.json\n")
+    assert (done.returncode, done.stderr) == (2, USAGE + "the following arguments are required: PIPELINE.json.\n")
 
 
 SCALE = os.environ.get("TESSERA_SCALE_SOURCE")

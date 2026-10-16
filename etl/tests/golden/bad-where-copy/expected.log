@@ -2,6 +2,4 @@ Pipeline: p.json
 Source:   sources/props.geojson
 Output:   seed/0002-t.sql
 
-Result: a.b: extraction failed. ogr2ogr failed: ERROR 1: failed to prepare SQL: SELECT m."fid", m."geom", m."id", m."name", m."n", m."mixed", m."real", m."late", m."reals", m."tags", m."obj", m."words", m."flag", m."big", m."layer" FROM "props" m WHERE nosuch = 1
-ERROR 1: Terminating translation prematurely after failed
-translation of layer props (use -skipfailures to skip errors)
+Result: a.b: extraction failed. GDAL could not apply the where, nosuch = 1.

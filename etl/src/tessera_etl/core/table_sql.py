@@ -267,4 +267,4 @@ def _ewkb(shape: BaseGeometry) -> str:
     significant byte first, x and y alone, with SRID 4326 inside, since the extract put every
     shape in longitude and latitude.
     """
-    return ewkb_hex(shape, 4326)
+    return ewkb_hex([shape], 4326)[0]

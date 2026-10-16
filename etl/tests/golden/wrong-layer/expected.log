@@ -2,4 +2,4 @@ Pipeline: p.json
 Source:   sources/t.gdb
 Output:   seed/0002-t.sql
 
-Result: a.b: extraction failed. ogr2ogr failed: ERROR 1: Couldn't fetch requested layer 'Nope'!
+Result: a.b: extraction failed. Layer 'Nope' could not be opened.

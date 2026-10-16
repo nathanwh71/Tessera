@@ -2,14 +2,15 @@
 
 It reads no file and runs no program, so it is a ***pure function***: the same rows in give the
 same result out. shell/program.py does the reading and writing around it, and the tests call it
-with GeoJSON they write themselves.
+with tables they build themselves.
 """
 
 from dataclasses import dataclass
 
 from ..kernel.result import Err, Ok, Result
-from . import geojson, table_sql
-from .failure import Failure, Refused, Stopped, Unreadable
+from . import table_sql
+from .failure import Failure, Refused, Stopped
+from .geojson import Extract
 from .pipeline import CleaningPlan
 from .rows import Cleaning, Outcome
 
@@ -22,26 +23,16 @@ class Loaded:
     sql: tuple[str, ...]
 
 
-def load(plan: CleaningPlan, extract: Result[geojson.Extract, str]) -> Result[Loaded, Failure]:
+def load(plan: CleaningPlan, extract: Extract) -> Result[Loaded, Failure]:
     """Runs the table's chain of filters and stop rules on its rows, and writes them as SQL.
 
     It returns the first failure met, and does no work after it.
     """
-    match extract:
-        case Err(why):
-            return Err(Unreadable(plan.table, why))
-        case Ok(read):
-            pass
-    done = plan.chain(Cleaning.start(plan.table, read.frame))
+    done = plan.chain(Cleaning.start(plan.table, extract.frame))
     if done.stop is not None:
         return Err(Stopped(done.outcome, done.stop))
-    match table_sql.statements(plan.table, done.frame, read.absent):
+    match table_sql.statements(plan.table, done.frame, extract.absent):
         case Ok(sql):
             return Ok(Loaded(done.outcome, sql))
         case Err(why):
             return Err(Refused(done.outcome, why))
-
-
-def load_geojson(plan: CleaningPlan, text: str) -> Result[Loaded, Failure]:
-    """As `load`, from GeoJSON text, the form the C# tool read every table in."""
-    return load(plan, geojson.read(text))

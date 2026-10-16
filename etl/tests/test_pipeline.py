@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from helpers import MACAU, Place, clean, frame_of, place, table
 
-from tessera_etl.core import geojson, pipeline, report, seed_script
+from tessera_etl.core import pipeline, report, seed_script
 from tessera_etl.core.filters import require_fields, tidy_text
 from tessera_etl.core.pipeline import DEFAULTS, CleaningPlan, Plan
 from tessera_etl.core.plan import OnFail, StopWhen, TablePlan
@@ -193,10 +193,10 @@ def test_logs_each_filter_and_each_row_it_touched() -> None:
 
 def test_extracts_one_layer_flat_and_in_longitude_and_latitude() -> None:
     arguments = seed_script.extract_arguments(
-        "/data/macau.gdb", "/work/cafes.geojson", table("food.cafes", layer="Cafes", where="kind = 'cafe'")
+        "/data/macau.gdb", "/work/cafes.gpkg", table("food.cafes", layer="Cafes", where="kind = 'cafe'")
     )
 
-    assert arguments[:5] == ("-f", "GeoJSON", "/work/cafes.geojson", "/data/macau.gdb", "Cafes")
+    assert arguments[:5] == ("-f", "GPKG", "/work/cafes.gpkg", "/data/macau.gdb", "Cafes")
     assert "-resolveDomains" in arguments
     assert arguments[-2:] == ("-where", "kind = 'cafe'")
     assert arguments[arguments.index("-dim") + 1] == "XY"
@@ -216,39 +216,3 @@ def test_copies_only_a_GeoJSON_source_of_several_tables(source: str, tables: int
     # GeoJSON has no index, so a pipeline of several tables copies it once into a GeoPackage;
     # a geodatabase, or a single table, reads the source as it is.
     assert seed_script.copy_first(source, tables) is copy
-
-
-def test_copies_the_source_as_it_is_into_a_GeoPackage() -> None:
-    assert seed_script.copy_arguments("/data/places.geojson", "/work/source.gpkg") == (
-        "-f",
-        "GPKG",
-        "/work/source.gpkg",
-        "/data/places.geojson",
-    )
-
-
-def test_reads_a_features_own_id_as_the_id_column() -> None:
-    # GDAL writes a text field named id as the feature's own id, outside its properties.
-    text = (
-        '{"type":"FeatureCollection","features":[{"type":"Feature","id":"cafes-001","properties":{"name":"A"},"geometry":null}]}'
-    )
-
-    found = geojson.read(text)
-
-    assert isinstance(found, Ok)
-    assert list(found.value.frame.columns) == ["id", "name", "geometry"]
-    assert found.value.frame.at[1, "id"] == "cafes-001"
-
-
-@pytest.mark.parametrize(
-    "text",
-    [
-        '{"type":"FeatureCollection","features":[{"type":',
-        '{"type":"FeatureCollection"}',
-        '{"type":"FeatureCollection","features":{}}',
-    ],
-)
-def test_refuses_GeoJSON_that_is_no_FeatureCollection(text: str) -> None:
-    # GDAL may fail part-way and leave a file that is not a FeatureCollection; the reader says
-    # why, and the run stops with its log, rather than crashing.
-    assert isinstance(geojson.read(text), Err)
