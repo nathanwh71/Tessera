@@ -29,6 +29,11 @@ export default defineConfig({
 		viewport: { width: 1280, height: 800 },
 		deviceScaleFactor: 1,
 		launchOptions: {
+			// SwiftShader is Chrome's software drawing: the processor does the work of a graphics card,
+			// so the map draws on a machine with none, such as the automatic build's, and draws near
+			// enough the same pixels on every machine for the approved images. `--use-angle` picks it.
+			// Chrome offers WebGL through SwiftShader only with `--enable-unsafe-swiftshader`, since it
+			// widens what a hostile web page could attack; these tests open Tessera's own page alone.
 			args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
 			// A machine with Chromium, the open-source core of the Chrome browser, already in place, such
 			// as a build container, names it here.
