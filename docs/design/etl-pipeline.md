@@ -167,7 +167,7 @@ _Three_ _cases_ _go_ _through_ GDAL's ogr2ogr, with the _options_ `seed_script.e
 
 `shell/program.py` does the _reading_ and _writing_ _around_ it. argparse _reads_ its _one_ _argument_. It _runs_ the _stages_ in _order_, _turns_ _each_ `Failure` into its _message_, and _ends_ with an exit _code_: 0 when it _wrote_ the _script_, 1 when a _table_ _stopped_ or _failed_, 2 when the _command_, the _pipeline_ _file_, the _source_ or the _script_'s _name_ is _wrong_. It _refuses_ a _script_ that _already_ _exists_, _since_ DbUp _knows_ a _script_ by its _name_ and _runs_ it _once_.
 
-**Size.** The _run_ _holds_ _two_ _tables_' _rows_ at _most_: the _one_ it _cleans_ and the _next_, which it _reads_ meanwhile. _Once_ a _table_'s SQL is _written_, _only_ its `Outcome` _stays_ for the _log_. _Each_ _table_ is _cleaned_ _whole_ in _memory_, _since_ the duplicate filters _compare_ _rows_ _across_ the _table_ and the _stop_ _rules_ _count_ its losses. The _pipeline_'s README _gives_ 15 _seconds_ and 400 MB for 90,000 _places_, _nine_ _tables_ of 10,000.
+**Size.** The _run_ _holds_ _two_ _tables_' _rows_ at _most_: the _one_ it _cleans_ and the _next_, which it _reads_ meanwhile. _Once_ a _table_'s SQL is _written_, _only_ its `Outcome` _stays_ for the _log_. _Each_ _table_ is _cleaned_ _whole_ in _memory_, _since_ the duplicate filters _compare_ _rows_ _across_ the _table_ and the _stop_ _rules_ _count_ its losses. The _pipeline_'s README _gives_ 13 _seconds_ and 400 MB for 90,000 _places_, _nine_ _tables_ of 10,000.
 
 ## The files
 
