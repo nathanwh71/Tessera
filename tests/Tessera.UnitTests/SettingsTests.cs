@@ -87,7 +87,7 @@ public sealed class SettingsTests
     public void Reads_the_database_url_into_a_connection_string() =>
         Assert.Equal(
             "Host=db.office;Port=5433;Database=tessera;Username=tessera_reader;Password=s@cret",
-            Settings<DatabaseConnection>("{}").Text);
+            Settings<DatabaseConnection>("{}").Parsed.Value.Text);
 
     // US-00 test 2: started with no database URL, the service names it.
     [Theory]

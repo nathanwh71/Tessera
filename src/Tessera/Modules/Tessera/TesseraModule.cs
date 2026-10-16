@@ -40,9 +40,10 @@ public static class TesseraModule
         DatabaseConnections.Register(builder.Services, builder.Configuration, DatabaseConnections.ReaderDatabase);
 
         // One Database for the whole program, since it holds the one pool of connections that every
-        // request shares within the limits of N-22.
+        // request shares within the limits of N-22. The start-up check has refused a bad URL before
+        // anything asks for the pool, so the parsed connection string is there to take.
         builder.Services.AddSingleton(services => Database.Open(
-            services.GetRequiredService<IOptions<DatabaseConnection>>().Value.Text,
+            services.GetRequiredService<IOptions<DatabaseConnection>>().Value.Parsed.Value.Text,
             services.GetRequiredService<IOptions<DatabaseSettings>>().Value));
         // One list of layers, which every request shares, loads in the background, so the service
         // answers from its first moment (N-23 c3). Before the first load it tries every five seconds,

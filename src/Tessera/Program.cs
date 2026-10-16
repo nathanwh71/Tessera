@@ -45,11 +45,11 @@ static int Seed()
     var configuration = new ConfigurationBuilder();
     Settings.AddFile(configuration);
     var variable = DatabaseConnections.PublisherDatabase;
-    var connection = DatabaseConnections.ConnectionString(configuration.Build()[variable].AsMaybe());
+    var connection = ConnectionString.FromUrl(configuration.Build()[variable].AsMaybe());
     if (connection.IsFailure)
         return Fail([$"{variable}: {connection.Error}"]);
 
-    var ran = SeedScripts.Run(connection.Value, SeedScripts.Folder);
+    var ran = SeedScripts.Run(connection.Value.Text, SeedScripts.Folder);
     if (ran.IsFailure)
         return Fail([ran.Error]);
 
