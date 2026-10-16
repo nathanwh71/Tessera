@@ -102,8 +102,8 @@ test.describe("US-23 open the map of the area", () => {
 		});
 		expect(pin).not.toBeNull();
 		const at = await onScreen(page, pin ?? BUSIEST);
-		// A pin's tip marks its place, and its round head sits 25 pixels above the tip, so the click lands
-		// on the pin itself.
+		// A pin's tip marks its place, so the click aims 25 pixels higher, at its round head, and lands on
+		// the pin itself (`PIN_HEAD_ABOVE_TIP`, design/canvas.ts).
 		await page.mouse.click(at.x, at.y - 25);
 		await settle(page);
 		expect(await page.evaluate(() => [window.__tesseraMap?.getZoom(), window.__tesseraMap?.getCenter().toArray()])).toEqual(before);

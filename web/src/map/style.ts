@@ -23,7 +23,7 @@ import type {
 	SymbolLayerSpecification,
 	VariableAnchorOffsetCollectionSpecification,
 } from "maplibre-gl";
-import { GROUP_KEYS, type GroupKey, IMAGE_MARGIN, PIN_SIZE, type Theme } from "../design";
+import { GROUP_KEYS, type GroupKey, IMAGE_MARGIN, PIN_HEAD_ABOVE_TIP, PIN_SIZE, type Theme } from "../design";
 import { type LayerId, tileUrl } from "../layers";
 import { level } from "../shared";
 import { CLUSTER_PREFIX, PIN_PREFIX, TOOLTIP_IMAGE } from "./images";
@@ -122,7 +122,7 @@ const NAME_PADDING = TOOLTIP_PADDING.inline + 1;
  * Where a name may sit, in the order tried (UI-17, criterion 3): right of the pin, left, above, below.
  * Each pair is a MapLibre anchor (the side of the text that touches the place) and an offset in ems,
  * where one em is the text's size. Each offset puts the padded text clear of the pin's whole image,
- * shadow margin included. A name beside the pin sits at the height of its head, 25 pixels above the tip.
+ * shadow margin included. A name beside the pin sits at the height of its head (`PIN_HEAD_ABOVE_TIP`).
  */
 function nameAnchors(): VariableAnchorOffsetCollectionSpecification {
 	// Pixels to ems, to two decimals: finer steps than a hundredth of an em move nothing on screen.
@@ -132,10 +132,9 @@ function nameAnchors(): VariableAnchorOffsetCollectionSpecification {
 	const halfWidth = PIN_SIZE.width / 2 + IMAGE_MARGIN;
 	const top = PIN_SIZE.height + IMAGE_MARGIN; // the image's top edge, above the tip
 	const bottom = IMAGE_MARGIN; // the image's bottom edge, below the tip
-	const head = 25;
 	return [
-		"left", [em(halfWidth + clear), -em(head)],
-		"right", [-em(halfWidth + clear), -em(head)],
+		"left", [em(halfWidth + clear), -em(PIN_HEAD_ABOVE_TIP)],
+		"right", [-em(halfWidth + clear), -em(PIN_HEAD_ABOVE_TIP)],
 		"bottom", [0, -em(top + clear)],
 		"top", [0, em(bottom + clear)],
 	];

@@ -18,7 +18,7 @@
 import type { Map as MapLibreMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { type ReactNode, useMemo, useRef } from "react";
-import { PinShape } from "../design";
+import { PIN_HEAD_ABOVE_TIP, PinShape } from "../design";
 import type { LayerId } from "../layers";
 import type { Level, LngLat, Problem, View } from "../shared";
 import { useLanding, useLatest, useMapLibre, useStyle } from "./canvas-hooks";
@@ -76,12 +76,6 @@ export interface MapCanvasProps {
 	readonly onReady?: (map: MapLibreMap) => void;
 }
 
-/**
- * The pin's head sits 25 pixels above its tip, which marks the place (design/canvas.ts). A pin's
- * invisible picture centres on the head rather than the tip, so it covers what the eye sees.
- */
-const PIN_HEAD = 25;
-
 /** The map of the area, with the places of the layers that are on. */
 export function MapCanvas(props: MapCanvasProps): ReactNode {
 	const { visible, landed, origin, handle } = props;
@@ -130,7 +124,7 @@ export function MapCanvas(props: MapCanvasProps): ReactNode {
 							role="img"
 							aria-label={t.label}
 							className="on-point size-11"
-							style={{ left: t.x, top: t.y - PIN_HEAD }}
+							style={{ left: t.x, top: t.y - PIN_HEAD_ABOVE_TIP }}
 						/>
 					) : (
 						<button

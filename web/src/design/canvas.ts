@@ -33,6 +33,14 @@ const MARGIN = IMAGE_MARGIN;
 /** The pin's size on the map in CSS pixels: 30 by 40, as in the prototype. */
 export const PIN_SIZE = { width: 30, height: 40 } as const;
 
+/**
+ * How far the centre of a pin's round head sits above its tip, in CSS pixels: 25. In the 24 by 32
+ * box of `PIN_PATH` (shapes.ts) the head centres at y 12 and the tip at y 32, 20 units apart, and the
+ * pin draws 30 / 24 = 1.25 times that box. A name beside a pin sits at this height, and a pin's
+ * invisible picture centres here, so both line up with the head the eye sees.
+ */
+export const PIN_HEAD_ABOVE_TIP = ((32 - 12) * PIN_SIZE.width) / 24;
+
 /** The cluster's outer diameter and its white disc, in CSS pixels, as in the prototype. */
 const CLUSTER = { outer: 48, inner: 34 } as const;
 
