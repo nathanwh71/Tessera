@@ -6,8 +6,8 @@ inside a sealed, ready-made copy of a system, called an image, so a machine with
 still run GDAL's own build.
 
 The Python build reads layers with pyogrio, so it runs ogr2ogr only for the few cases pyogrio
-cannot match: a table that holds curves, and a read that fails, where ogr2ogr's own message is
-the one the C# tool printed. Every path passed in is absolute, and Docker sees each folder at
+cannot match (shell/extract.py lists them): curves, other coordinate systems, domains coded by
+text, and a read that fails, where ogr2ogr's own message is the one the C# tool printed. Every path passed in is absolute, and Docker sees each folder at
 the same path, so the arguments need no change between the two.
 """
 

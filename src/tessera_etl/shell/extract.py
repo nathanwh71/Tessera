@@ -7,10 +7,14 @@ back. The features built here hold what that text held: each value goes through 
 trip GDAL's writer gave it (core/gdal_text.py), so the cleaned rows, the script and the log come
 out the same.
 
-Two cases still run ogr2ogr, as the C# tool did:
+Four cases still run ogr2ogr, as the C# tool did:
 
 - a table holding true curves, such as a geodatabase's arcs, since the straight lines GDAL makes
   of them come from its own drawing rules, which shapely does not share;
+- a table whose shapes are in another coordinate system, since GDAL's PROJ, the library that
+  moves points between systems, may differ from pyproj's in the last digit of a number;
+- a field whose domain is coded by text rather than whole numbers, since pyogrio hands over the
+  words of whole-number codes alone;
 - a read pyogrio refuses, such as a misspelt layer or a bad `where`, since ogr2ogr's own message
   is the one the C# tool printed.
 """
@@ -181,11 +185,26 @@ def read_table(reader: Reader, table: TablePlan) -> Result[Result[Extract, str],
         return _with_ogr2ogr(reader, table)
     series = _shapes(meta, arrow)
     flat = None if series is None else _flat_lonlat(series)
-    if flat is None:
+    if flat is None or _uncoded_domain(arrow):
         return _with_ogr2ogr(reader, table)
     if reader.native:
         return Ok(Ok(geojson.rows_of(_native_features(reader, table, info, meta, arrow, flat))))
     return Ok(Ok(geojson.rows_of(_features(info, meta, arrow, flat, reader.json_columns))))
+
+
+def _uncoded_domain(arrow: pa.Table) -> bool:
+    """True when a field has a domain whose words pyogrio does not hand over.
+
+    pyogrio gives the words of a domain coded by whole numbers, as a dictionary column; a domain
+    coded by text, such as 'S' for 'Small', comes as plain text, so ogr2ogr resolves it instead.
+    """
+    schema: Any = arrow.schema
+    for name in cast(list[str], schema.names):
+        field: Any = schema.field(name)
+        metadata = cast(dict[bytes, bytes], field.metadata or {})
+        if b"GDAL:OGR:domain_name" in metadata and not bool(pa.types.is_dictionary(field.type)):
+            return True
+    return False
 
 
 def _shapes(meta: dict[str, Any], arrow: pa.Table) -> geopandas.GeoSeries | None:

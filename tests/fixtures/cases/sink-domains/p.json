@@ -1,0 +1,14 @@
+{
+  "source": "sources/sink.gdb",
+  "output": "db/seed/0017-labels.sql",
+  "stopWhen": {
+    "droppedOverPercent": 100
+  },
+  "tables": [
+    {
+      "table": "sink.labels",
+      "layer": "Labels",
+      "filters": []
+    }
+  ]
+}
