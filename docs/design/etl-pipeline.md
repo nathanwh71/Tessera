@@ -116,11 +116,14 @@ A _new_ filter is _one_ _new_ _file_ and _one_ _line_ in `Filters/All.cs`.
 
 | Edge | Where | What it runs |
 |---|---|---|
+| Copy | `SeedScript.CopyFirst`, `SeedScript.CopyArguments` | For a GeoJSON _source_ of _several_ _tables_, `ogr2ogr -f GPKG` _once_, so _each_ extract _reads_ an indexed _copy_, not the _whole_ _file_ _again_ |
 | Extract | `SeedScript.ExtractArguments`, `Gdal.Run` | `ogr2ogr -f GeoJSON` for _each_ _table_, with `-t_srs EPSG:4326`, `-nlt CONVERT_TO_LINEAR`, `-dim XY` and `-resolveDomains` (c6) |
-| Load | `SeedScript.LoadArguments`, `SeedScript.Join` | `ogr2ogr -f PGDump` on the _cleaned_ _rows_, then the _tables_ _joined_ into the _next_ _numbered_ _script_ |
-| Report | `Report.Log` | The _log_ _beside_ the _scripts_, in `db/seed-logs/`, on every _run_ (c4) |
+| Load | `SeedScript.LoadArguments`, `SeedScript.Head`, `SeedScript.Part` | `ogr2ogr -f PGDump` on the _cleaned_ _rows_, into a _file_ for _each_ _table_; then the _script_, _written_ _one_ _table_ at a _time_ in the _work_ _folder_ and _moved_ to its _place_ when _whole_ |
+| Report | `Report.Log` | The _log_ _beside_ the _scripts_, in `db/seed-logs/`, on every _run_ (c4), from _each_ _table_'s `Outcome`: its _counts_ and _log_ _lines_, _without_ its _rows_ |
 
 `Program.cs` _runs_ the _stages_ in _order_ and _ends_ with an exit _code_: 0 when it _wrote_ the _script_, 1 when a _table_ _stopped_ or GDAL _failed_, 2 when the _command_ or the _pipeline_ _file_ is _wrong_. Extract and _Load_ _use_ the _machine_'s _own_ GDAL, or GDAL's Docker _image_ when it has _none_.
+
+**Size.** The _run_ _holds_ _one_ _table_'s _rows_ at a _time_. On 90,000 _places_, _nine_ _tables_ of 10,000 _copied_ from the Macau _data_, it _took_ 20 _seconds_ and peaked at 0.44 GB; _before_ the _copy_, the outcomes and the _files_, it _took_ 50 _seconds_ and peaked at 1.2 GB. _Each_ _table_ is _still_ _cleaned_ _whole_ in _memory_, _since_ the duplicate filters _compare_ _rows_ _across_ the _table_ and the _stop_ _rules_ _count_ its losses.
 
 ## The files
 
