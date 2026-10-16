@@ -1,6 +1,5 @@
 using Common.Infrastructure;
 using Microsoft.Extensions.Options;
-using Modules.Tessera;
 using Modules.Tessera.Infrastructure.Seeding;
 using Modules.Tessera.Infrastructure.Sql;
 
@@ -37,27 +36,19 @@ static async Task<int> Serve()
     return 0;
 }
 
-// Runs the seed scripts DbUp has not yet run, and names each one. It needs no web server, only the
-// settings, so it builds a plain host to read and check them.
+// Runs the seed scripts DbUp has not yet run, and names each one. It needs one setting alone, the
+// publisher's database URL, so it reads that and nothing else: a fault in another section, such as
+// Tiles, stays the service's to report, and the seed still runs.
 static int Seed()
 {
-    var builder = Host.CreateApplicationBuilder();
-    Settings.AddFile(builder.Configuration);
-    TesseraModule.AddSettings(builder.Services);
-    DatabaseConnections.Register(builder.Services, builder.Configuration, DatabaseConnections.PublisherDatabase);
-    using var host = builder.Build();
-    try
-    {
-        Settings.Check(host.Services);
-    }
-    catch (Exception error)
-        when (error is OptionsValidationException or AggregateException or InvalidOperationException)
-    {
-        return Fail(Settings.Problems(error));
-    }
+    var configuration = new ConfigurationBuilder();
+    Settings.AddFile(configuration);
+    var variable = DatabaseConnections.PublisherDatabase;
+    var connection = DatabaseConnections.ConnectionString(configuration.Build()[variable]);
+    if (connection.IsFailure)
+        return Fail([$"{variable}: {connection.Error}"]);
 
-    var connection = host.Services.GetRequiredService<IOptions<DatabaseConnection>>().Value.Text;
-    var ran = SeedScripts.Run(connection, SeedScripts.Folder);
+    var ran = SeedScripts.Run(connection.Value, SeedScripts.Folder);
     if (ran.IsFailure)
         return Fail([ran.Error]);
 

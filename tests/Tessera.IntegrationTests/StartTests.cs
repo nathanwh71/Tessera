@@ -122,4 +122,16 @@ public sealed class StartTests
         Assert.Equal(1, code);
         Assert.Contains("TESSERA_PUBLISHER_DATABASE_URL", errors, StringComparison.Ordinal);
     }
+
+    // The seed reads the publisher's URL alone, so a fault in a section only the service reads,
+    // such as a zoom range turned inside out, is the service's to report, not the seed's.
+    [Fact]
+    public async Task Seeds_without_reading_the_services_settings()
+    {
+        var (code, errors) = await Run(
+            new Dictionary<string, string> { ["Tiles__MinZoom"] = "10", ["Tiles__MaxZoom"] = "2" }, "seed");
+
+        Assert.Equal(1, code);
+        Assert.Equal("TESSERA_PUBLISHER_DATABASE_URL: missing or empty", errors.Trim());
+    }
 }
