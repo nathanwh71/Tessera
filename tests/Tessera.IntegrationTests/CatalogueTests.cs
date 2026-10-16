@@ -25,7 +25,7 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
 
     // The stage: one of each kind US-03 names. xUnit runs this before each test, so every step may
     // run again on a stage it has already set. The test makes its own tables, as US-03 asks;
-    // the seed is GeoJSON, and holds none of these.
+    // the shipped seed script holds none of these.
     public async ValueTask InitializeAsync() => await database.Owner(""""
         CREATE SCHEMA IF NOT EXISTS stage;
         CREATE TABLE IF NOT EXISTS stage.granted (id int PRIMARY KEY, name text, geom geometry(Point, 4326));
