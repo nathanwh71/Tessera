@@ -29,7 +29,7 @@ Tessera's _code_ is _written_ in a ***functional style***: immutable _values_, *
 
 ## Where null remains
 
-A _library_ _sometimes_ _hands_ over a _null_, or _demands_ _one_: Dapper for 'no row', the configuration for a _missing_ _setting_, _System_.Text.Json for the _text_ `null`, ASP.NET Core's ***endpoint filters***. Tessera _turns_ _each_ into a `Maybe` at that _edge_, with `AsMaybe()`, and _opens_ a `Maybe` _back_ into a _null_ _only_ where a _library_ _demands_ _one_. In the ETL, a _row_'s _values_ _keep_ JSON's `null`, _since_ it is _data_ that must _come_ _back_ out in the GeoJSON _unchanged_. _System_.Text.Json _knows_ no `Maybe`, so `tools/Tessera.Etl/MaybeJson.cs` _teaches_ it: a JSON `null` or a _missing_ _key_ _reads_ as _none_.
+A _library_ _sometimes_ _hands_ over a _null_, or _demands_ _one_: Dapper for 'no row', the configuration for a _missing_ _setting_, _System_.Text.Json for the _text_ `null`, ASP.NET Core's ***endpoint filters***. Tessera _turns_ _each_ into a `Maybe` at that _edge_, with `AsMaybe()`, and _opens_ a `Maybe` _back_ into a _null_ _only_ where a _library_ _demands_ _one_. In the ETL, a _row_'s _values_ _keep_ JSON's `null`, _since_ it is _data_ that must _come_ _back_ out in the GeoJSON _unchanged_. _Two_ more _places_ _keep_ `null` _because_ a `Maybe` would _cost_ more than it _gives_. The _records_ the JSON _reader_ _fills_ from a ***pipeline file*** _keep_ `null` for a _setting_ the _file_ _leaves_ out, _since_ _System_.Text.Json _knows_ no `Maybe`; teaching it _took_ a converter and _lost_ _part_ of _each_ _error_'s _path_. `LiveCatalogue` _keeps_ its _list_ in a _plain_ _reference_, so _one_ _step_ _swaps_ a _whole_ _list_ in, which a `Maybe`, a struct, _cannot_ do; its `Current` _still_ _answers_ with a `Maybe`.
 
 ## Early returns where they read better
 
@@ -74,7 +74,6 @@ JavaScript's pipe operator is a _proposal_ at _stage_ 2 of 4, and TypeScript _ca
 ## Consequences
 
 - _Absence_ has _one_ _form_, `Maybe<T>`, with `Map` and `Bind`; an _early_ _return_ with `TryGetValue` _serves_ where it _reads_ _better_.
-- `Maybe<T>` is a struct, so it _cannot_ be _swapped_ in _one_ atomic _step_; `LiveCatalogue` _guards_ its _list_ with a _lock_.
 - CSharpFunctionalExtensions has an `IResult` of its _own_, so a _file_ that _uses_ ASP.NET Core's _names_ it with a `using` alias.
 - C# 14 has no _closed_ _unions_, so `Match` _takes_ the _place_ of F#'s _exhaustive_ `match`.
 - _Each_ wrapper _type_ _costs_ a _little_ _code_ at the _edge_, where a _plain_ _number_ _arrives_ and is wrapped _once_.
