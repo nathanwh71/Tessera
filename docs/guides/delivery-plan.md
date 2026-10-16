@@ -1,6 +1,6 @@
 # Delivery plan: building Phase Oct in four iterations
 
-You can _build_ the _service_ and the _map_ of _Phase_ Oct, _Parts_ A and B of the _stories_, and _release_ them to the _office_ on Monday 7 December 2026, the _last_ _working_ _day_ _before_ the holiday of 8 December. The _other_ _four_ _parts_, _worth_ 22 _points_, _cannot_ _fit_ as _well_: the calendar _holds_ 30 _days_ for _stories_, and the thirty _stories_ _need_ 52. So the _plan_ _builds_ 16 _stories_, _worth_ 29 _points_, in _four_ iterations, _keeps_ _one_ _day_ in _hand_ for S-07, and _leaves_ _Parts_ C to F for a _second_ _plan_ that _starts_ on 9 December and _ends_ _about_ 18 January 2027. This _guide_ is for you, _building_ _Phase_ Oct _alone_, with the repository as a _worked_ _answer_. Its _sections_ _follow_ that _argument_: the brief, the _capacity_ _sum_, the iterations, the _order_ of the _stories_, the _work_ of _each_ iteration, the _rhythm_, the burn-up, the _cut_ _order_, the _work_ _after_ 8 December, and the risks.
+You can _build_ the _service_ and the _map_ of _Phase_ Oct, _Parts_ A and B of the _stories_, and _release_ them to the _office_ on Monday 7 December 2026, the _last_ _working_ _day_ _before_ the holiday of 8 December. The _other_ _four_ _parts_, _worth_ 23 _points_, _cannot_ _fit_ as _well_: the calendar _holds_ 30 _days_ for _stories_, and the thirty _stories_ _need_ 52. So the _plan_ _builds_ 16 _stories_, _worth_ 29 _points_, in _four_ iterations, _keeps_ _one_ _day_ in _hand_ for S-07, and _leaves_ _Parts_ C to F for a _second_ _plan_ that _starts_ on 9 December and _ends_ _about_ 18 January 2027. This _guide_ is for you, _building_ _Phase_ Oct _alone_, with the repository as a _worked_ _answer_. Its _sections_ _follow_ that _argument_: the brief, the _capacity_ _sum_, the iterations, the _order_ of the _stories_, the _work_ of _each_ iteration, the _rhythm_, the burn-up, the _cut_ _order_, the _work_ _after_ 8 December, and the risks.
 
 ## The brief in one page
 
@@ -202,7 +202,7 @@ _Decide_ a _cut_ at a _review_, not on the _last_ _day_. At the _review_ of 27 N
 
 ## After 8 December: Parts C to F
 
-The _rest_ of _Phase_ Oct, 22 _points_ in _eleven_ _stories_, _needs_ a _second_ _plan_ of its _own_. _Written_ at the _review_ of 7 December, it would _run_ from Wednesday 9 December in _three_ iterations, with Macau's holidays of 22, 24 and 25 December and 1 January out, and _end_ _about_ Monday 18 January 2027, a _day_ _later_ if S-07 _joins_ them. The _parts_ _keep_ the _stories_' _build_ _order_:
+The _rest_ of _Phase_ Oct, 22 _points_ in _thirteen_ _stories_ _once_ S-07 is _built_, _needs_ a _second_ _plan_ of its _own_. _Written_ at the _review_ of 7 December, it would _run_ from Wednesday 9 December in _three_ iterations, with Macau's holidays of 22, 24 and 25 December and 1 January out, and _end_ _about_ Monday 18 January 2027, a _day_ _later_ if S-07 _joins_ them. The _parts_ _keep_ the _stories_' _build_ _order_:
 
 | Part | Stories | Points | What the office gains |
 |---|---|---|---|
