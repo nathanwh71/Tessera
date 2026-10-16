@@ -5,7 +5,7 @@ using Modules.Tessera.Domain;
 using Modules.Tessera.Infrastructure.Sql;
 
 // Reads the list of tables and views the service may publish (US-03) from the database, and turns
-// each row into a Layer. The quoting of names lives here, beside the queries, since only SQL needs it.
+// each row into a Layer, quoting every name with Domain/SqlName.cs.
 
 namespace Modules.Tessera.Infrastructure;
 
