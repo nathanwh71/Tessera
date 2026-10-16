@@ -6,7 +6,7 @@
 | Date | 13 _October_ 2026 |
 | Decider | The _maintainer_ |
 | Covers | Every _line_ of the _back_ _end_, in C# 14 on .NET 10, in `nathanwh71/Tessera`; the _map_ and the _scripts_ _follow_ the _same_ _style_ in TypeScript 6 |
-| Related | ADR 0001, _rule_ 6; ADR 0002, _rules_ 1 and 2 |
+| Related | ADR 0010, _rule_ 8; ADR 0002, _rules_ 1 and 2 |
 
 ## Decision
 
