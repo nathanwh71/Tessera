@@ -93,8 +93,9 @@ public sealed class PoolTests(DatabaseFixture database) : IClassFixture<Database
     }
 
     // N-26 c2: a query whose own token is cancelled while it waits leaves the queue at once, rather
-    // than waiting out the pool's whole timeout. Tile queries pass the service's stop token instead,
-    // so this covers the other queries, such as the list of layers.
+    // than waiting out the pool's whole timeout. A tile query carries the request's own token, which
+    // ASP.NET Core cancels when the browser leaves; the list of layers carries the service's stop
+    // token. Both reach the queue the same way, so this covers each.
     [Fact]
     public async Task Lets_a_cancelled_request_leave_the_queue()
     {
