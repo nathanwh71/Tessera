@@ -10,7 +10,10 @@
 
 import { type GroupKey, dropDelays, dropMs } from "../design";
 
-/** A pin in view, as the map reports it: where its tip sits on screen and its group's colour. */
+/**
+ * A pin in view, as the map reports it: where its tip sits on screen and its group, which gives it
+ * its colour and shape.
+ */
 export interface PinInView {
 	/** Made from the place's id, so it stays the same across draws and React keeps each pin in place. */
 	readonly key: string;
