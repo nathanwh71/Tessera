@@ -11,7 +11,7 @@ _Run_ it from the _folder_ that _holds_ `tessera.json`, so the ***filters*** tha
 
 ## The key points
 
-- **One script, or none.** The _script_ _lands_ at the ***pipeline file***'s `output` _only_ when every _table_ _passes_; the _log_ _lands_ in `db/seed-logs/` on every _run_. The exit _code_ is 0 when the _pipeline_ _wrote_ the _script_, 1 when a _table_ _stopped_ or _failed_, and 2 when the _command_, the _pipeline_ _file_, the _source_ or the _script_'s _name_ is _wrong_.
+- **One script, or none.** The _script_ _lands_ at the ***pipeline file***'s `output` _only_ when every _table_ _passes_; the _log_ _lands_ in `db/seed-logs/` on every _run_ that _passes_ its _checks_. The exit _code_ is 0 when the _pipeline_ _wrote_ the _script_, 1 when a _table_ _stopped_ or _failed_, and 2 when the _command_, the _pipeline_ _file_, the _source_ or the _script_'s _name_ is _wrong_.
 - **The same meaning, not the same bytes.** _Two_ _versions_ of the _pipeline_ must _give_ the _database_ the _same_ _tables_, _columns_, _types_, _rows_ and _values_. `tools/compare_meaning.py` _loads_ _two_ _scripts_ into PostGIS and _checks_ it.
 - **Each table is cleaned whole.** pyogrio _reads_ a _table_ into a GeoDataFrame, geopandas' _table_ of _rows_ with a _column_ of _shapes_. _Each_ filter _judges_ the _whole_ _table_ at _once_, with masks, _columns_ of _true_ and _false_, and _returns_ a _new_ _table_.
 - **It reads like F#.** _Steps_ _join_ with `>>`; a filter's verdict on a _row_ is the _union_ `Fixed | Failed`, _taken_ _apart_ with `match` and _closed_ with `assert_never`; _results_ are `Ok | Err`; every _record_ is _frozen_.

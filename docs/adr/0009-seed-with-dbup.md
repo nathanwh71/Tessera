@@ -32,7 +32,7 @@ A _pipeline_ in Python, in the _folder_ `etl/`, _turns_ _each_ _file_ of _places
 | Seed | `Tessera seed`, which `npm start` _runs_ at every _start_ | DbUp _runs_ _each_ _new_ _script_ in a _transaction_ of its _own_ and _records_ it in `tessera.schemaversions` |
 | Publish | `npm run publish` | _Grants_ the schemas and their _tables_ to `tessera_reader` (US-24 c5) |
 
-The _pipeline_ _writes_ the _script_ _only_ when every _table_ _passes_, and _writes_ the _log_ on every _run_. It _ends_ with 0 when it _wrote_ the _script_, 1 when a _table_ _stopped_ or _failed_, and 2 when the _command_, the _pipeline_ _file_, the _source_ or the _script_'s _name_ is _wrong_.
+The _pipeline_ _writes_ the _script_ _only_ when every _table_ _passes_, and _writes_ the _log_ on every _run_ that _passes_ its _checks_. It _ends_ with 0 when it _wrote_ the _script_, 1 when a _table_ _stopped_ or _failed_, and 2 when the _command_, the _pipeline_ _file_, the _source_ or the _script_'s _name_ is _wrong_.
 
 The _pipeline_ _promises_ the _same_ _meaning_, not the _same_ _bytes_. _Two_ _versions_ of it must _give_ the _database_ the _same_ _tables_, _column_ _names_ and _types_, _rows_ and _values_, with _each_ _shape_ _equal_ by PostGIS's ST_Equals; the _text_ of a _long_ _number_, the _words_ of a _message_ and the _corners_ of a _repaired_ _shape_ may _differ_. `etl/tools/compare_meaning.py` _loads_ _two_ _scripts_ into PostGIS and _checks_ that _promise_.
 
