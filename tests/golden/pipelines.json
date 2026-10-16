@@ -1,0 +1,770 @@
+[
+  {
+    "name": "unknown top key",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"layer\": \"L\" } ], \"extra\": 1 }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The JSON property 'extra' could not be mapped to any .NET member contained in type 'Tessera.Etl.Pipeline'.\n"
+  },
+  {
+    "name": "missing source",
+    "text": "{ \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\" } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: JSON deserialization for type 'Tessera.Etl.Pipeline' was missing required properties including: 'source'.\n"
+  },
+  {
+    "name": "missing tables",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\" }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: JSON deserialization for type 'Tessera.Etl.Pipeline' was missing required properties including: 'tables'.\n"
+  },
+  {
+    "name": "missing source and output",
+    "text": "{ \"tables\": [] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: JSON deserialization for type 'Tessera.Etl.Pipeline' was missing required properties including: 'source', 'output'.\n"
+  },
+  {
+    "name": "missing everything",
+    "text": "{ }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: JSON deserialization for type 'Tessera.Etl.Pipeline' was missing required properties including: 'source', 'output', 'tables'.\n"
+  },
+  {
+    "name": "source a number",
+    "text": "{ \"source\": 5, \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\" } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The JSON value could not be converted to Tessera.Etl.Pipeline. Path: $.source | LineNumber: 0 | BytePositionInLine: 13.\n"
+  },
+  {
+    "name": "lines a string",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"lines\": \"yes\" } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The JSON value could not be converted to Tessera.Etl.TablePlan. Path: $.tables[0].lines | LineNumber: 0 | BytePositionInLine: 97.\n"
+  },
+  {
+    "name": "lines null",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"lines\": null } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The JSON value could not be converted to Tessera.Etl.TablePlan. Path: $.tables[0].lines | LineNumber: 0 | BytePositionInLine: 96.\n"
+  },
+  {
+    "name": "layer a number",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"layer\": 5 } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The JSON value could not be converted to Tessera.Etl.TablePlan. Path: $.tables[0].layer | LineNumber: 0 | BytePositionInLine: 93.\n"
+  },
+  {
+    "name": "where null",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"where\": null } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "x.gdb: no such file or folder.\n"
+  },
+  {
+    "name": "on fail halt",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"insideArea\", \"onFail\": \"halt\" } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "a.b: insideArea: The JSON value could not be converted to Tessera.Etl.Filters.InsideArea+Settings. Path: $.onFail | LineNumber: 0 | BytePositionInLine: 16.\n"
+  },
+  {
+    "name": "on fail Stop",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"requireFields\", \"fields\": [\"a\"], \"onFail\": \"Stop\" } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "x.gdb: no such file or folder.\n"
+  },
+  {
+    "name": "on fail one",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"requireFields\", \"fields\": [\"a\"], \"onFail\": 1 } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "x.gdb: no such file or folder.\n"
+  },
+  {
+    "name": "on fail two",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"requireFields\", \"fields\": [\"a\"], \"onFail\": 2 } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "x.gdb: no such file or folder.\n"
+  },
+  {
+    "name": "on fail text one",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"requireFields\", \"fields\": [\"a\"], \"onFail\": \"1\" } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "x.gdb: no such file or folder.\n"
+  },
+  {
+    "name": "on fail true",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"requireFields\", \"fields\": [\"a\"], \"onFail\": true } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "a.b: requireFields: The JSON value could not be converted to Tessera.Etl.Filters.RequireFields+Settings. Path: $.onFail | LineNumber: 0 | BytePositionInLine: 29.\n"
+  },
+  {
+    "name": "on fail null",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"requireFields\", \"fields\": [\"a\"], \"onFail\": null } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "a.b: requireFields: The JSON value could not be converted to Tessera.Etl.Filters.RequireFields+Settings. Path: $.onFail | LineNumber: 0 | BytePositionInLine: 29.\n"
+  },
+  {
+    "name": "fields a string",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"requireFields\", \"fields\": \"name\" } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "a.b: requireFields: The JSON value could not be converted to System.Collections.Immutable.ImmutableArray`1[System.String]. Path: $.fields | LineNumber: 0 | BytePositionInLine: 16.\n"
+  },
+  {
+    "name": "fields null",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"requireFields\", \"fields\": null } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "a.b: requireFields: The JSON value could not be converted to System.Collections.Immutable.ImmutableArray`1[System.String]. Path: $.fields | LineNumber: 0 | BytePositionInLine: 14.\n"
+  },
+  {
+    "name": "fields empty",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"requireFields\", \"fields\": [] } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "a.b: requireFields: needs fields, such as [\"name\"].\n"
+  },
+  {
+    "name": "fields a number in list",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"requireFields\", \"fields\": [1] } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "a.b: requireFields: The JSON value could not be converted to System.String. Path: $.fields[0] | LineNumber: 0 | BytePositionInLine: 12.\n"
+  },
+  {
+    "name": "fields null in list",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"requireFields\", \"fields\": [null] } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "x.gdb: no such file or folder.\n"
+  },
+  {
+    "name": "metres a word",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"dropNearDuplicates\", \"field\": \"name\", \"metres\": \"far\" } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "a.b: dropNearDuplicates: The JSON value could not be converted to Tessera.Etl.Filters.DropNearDuplicates+Settings. Path: $.metres | LineNumber: 0 | BytePositionInLine: 30.\n"
+  },
+  {
+    "name": "metres as text",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"dropNearDuplicates\", \"field\": \"name\", \"metres\": \"25\" } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "x.gdb: no such file or folder.\n"
+  },
+  {
+    "name": "metres huge",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"dropNearDuplicates\", \"field\": \"n\", \"metres\": 1e400 } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "x.gdb: no such file or folder.\n"
+  },
+  {
+    "name": "metres below zero",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"dropNearDuplicates\", \"field\": \"n\", \"metres\": -5 } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "a.b: dropNearDuplicates: needs metres above 0, such as 25.\n"
+  },
+  {
+    "name": "metres null",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"dropNearDuplicates\", \"field\": \"n\", \"metres\": null } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "a.b: dropNearDuplicates: The JSON value could not be converted to Tessera.Etl.Filters.DropNearDuplicates+Settings. Path: $.metres | LineNumber: 0 | BytePositionInLine: 26.\n"
+  },
+  {
+    "name": "field blank and metres zero",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"dropNearDuplicates\", \"field\": \" \", \"metres\": 0 } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "a.b: dropNearDuplicates: needs a field, such as \"name\".\na.b: dropNearDuplicates: needs metres above 0, such as 25.\n"
+  },
+  {
+    "name": "field null",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"dropDuplicateIds\", \"field\": null } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "a.b: dropDuplicateIds: The constructor parameter 'Field' on type 'Tessera.Etl.Filters.DropDuplicateIds+Settings' doesn't allow null values. Consider updating its nullability annotation. Path: $.field | LineNumber: 0 | BytePositionInLine: 13.\n"
+  },
+  {
+    "name": "field a number",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"dropDuplicateIds\", \"field\": 7 } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "a.b: dropDuplicateIds: The JSON value could not be converted to Tessera.Etl.Filters.DropDuplicateIds+Settings. Path: $.field | LineNumber: 0 | BytePositionInLine: 10.\n"
+  },
+  {
+    "name": "field empty",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"dropDuplicateIds\", \"field\": \"\" } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "a.b: dropDuplicateIds: needs a field, such as \"id\".\n"
+  },
+  {
+    "name": "accent before a fault",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"dropNearDuplicates\", \"field\": \"café<&>\", \"metres\": \"far\" } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "a.b: dropNearDuplicates: The JSON value could not be converted to Tessera.Etl.Filters.DropNearDuplicates+Settings. Path: $.metres | LineNumber: 0 | BytePositionInLine: 53.\n"
+  },
+  {
+    "name": "swap takes none",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"swapCoordinates\", \"x\": 1 } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "a.b: swapCoordinates: 'x' is not a setting; this filter takes none.\n"
+  },
+  {
+    "name": "setting of another filter",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"insideArea\", \"metres\": 25 } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "a.b: insideArea: 'metres' is not a setting; its settings are onFail.\n"
+  },
+  {
+    "name": "misspelt setting",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"requireFields\", \"feilds\": [\"name\"] } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "a.b: requireFields: 'feilds' is not a setting; its settings are fields, onFail.\na.b: requireFields: needs fields.\n"
+  },
+  {
+    "name": "needs a setting",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"requireFields\" } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "a.b: requireFields: needs fields.\n"
+  },
+  {
+    "name": "filter a number",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": 3 } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "a.b: '' is no filter; the filters are dropEmptyShapes, repairShapes, swapCoordinates, insideArea, tidyText, requireFields, dropDuplicateIds, dropNearDuplicates.\n"
+  },
+  {
+    "name": "filter null",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": null } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "a.b: '' is no filter; the filters are dropEmptyShapes, repairShapes, swapCoordinates, insideArea, tidyText, requireFields, dropDuplicateIds, dropNearDuplicates.\n"
+  },
+  {
+    "name": "filter missing",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"onFail\": \"stop\" } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "a.b: '' is no filter; the filters are dropEmptyShapes, repairShapes, swapCoordinates, insideArea, tidyText, requireFields, dropDuplicateIds, dropNearDuplicates.\n"
+  },
+  {
+    "name": "filter wrong case",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"insidearea\" } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "a.b: 'insidearea' is no filter; the filters are dropEmptyShapes, repairShapes, swapCoordinates, insideArea, tidyText, requireFields, dropDuplicateIds, dropNearDuplicates.\n"
+  },
+  {
+    "name": "filter not an object",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ 5 ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The JSON value could not be converted to System.Text.Json.Nodes.JsonObject. Path: $.tables[0].filters[0] | LineNumber: 0 | BytePositionInLine: 97.\n"
+  },
+  {
+    "name": "filter a string",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ \"tidyText\" ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The JSON value could not be converted to System.Text.Json.Nodes.JsonObject. Path: $.tables[0].filters[0] | LineNumber: 0 | BytePositionInLine: 106.\n"
+  },
+  {
+    "name": "filters null",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": null } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The JSON value could not be converted to System.Collections.Immutable.ImmutableArray`1[System.Text.Json.Nodes.JsonObject]. Path: $.tables[0].filters | LineNumber: 0 | BytePositionInLine: 98.\n"
+  },
+  {
+    "name": "filters a number",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": 5 } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The JSON value could not be converted to System.Collections.Immutable.ImmutableArray`1[System.Text.Json.Nodes.JsonObject]. Path: $.tables[0].filters | LineNumber: 0 | BytePositionInLine: 95.\n"
+  },
+  {
+    "name": "tidy fields null",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"tidyText\", \"fields\": null } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "x.gdb: no such file or folder.\n"
+  },
+  {
+    "name": "tables null",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": null }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The JSON value could not be converted to System.Collections.Immutable.ImmutableArray`1[Tessera.Etl.TablePlan]. Path: $.tables | LineNumber: 0 | BytePositionInLine: 67.\n"
+  },
+  {
+    "name": "tables a number",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": 5 }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The JSON value could not be converted to System.Collections.Immutable.ImmutableArray`1[Tessera.Etl.TablePlan]. Path: $.tables | LineNumber: 0 | BytePositionInLine: 64.\n"
+  },
+  {
+    "name": "tables a number in list",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ 5 ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The JSON value could not be converted to Tessera.Etl.TablePlan. Path: $.tables[0] | LineNumber: 0 | BytePositionInLine: 66.\n"
+  },
+  {
+    "name": "table null in list",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ null ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "tables: each entry must be an object that names its table.\n"
+  },
+  {
+    "name": "table empty object",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: JSON deserialization for type 'Tessera.Etl.TablePlan' was missing required properties including: 'table'.\n"
+  },
+  {
+    "name": "table name null",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": null } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The constructor parameter 'Table' on type 'Tessera.Etl.TablePlan' doesn't allow null values. Consider updating its nullability annotation. Path: $.tables[0].table | LineNumber: 0 | BytePositionInLine: 80.\n"
+  },
+  {
+    "name": "tables empty",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "tables: name at least one table.\n"
+  },
+  {
+    "name": "table named twice",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\" }, { \"table\": \"a.b\" } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "a.b: named more than once.\n"
+  },
+  {
+    "name": "table name capitals",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"Food.Cafes\" } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "Food.Cafes: write the table as schema.table, in lower-case letters, digits and _.\n"
+  },
+  {
+    "name": "table name three parts",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b.c\" } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "a.b.c: write the table as schema.table, in lower-case letters, digits and _.\n"
+  },
+  {
+    "name": "Filters in capitals",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"Filters\": [] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The JSON property 'Filters' could not be mapped to any .NET member contained in type 'Tessera.Etl.TablePlan'.\n"
+  },
+  {
+    "name": "stop rows a fraction",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"stopWhen\": { \"rowsUnder\": 1.5 } } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The JSON value could not be converted to Tessera.Etl.StopWhen. Path: $.tables[0].stopWhen.rowsUnder | LineNumber: 0 | BytePositionInLine: 113.\n"
+  },
+  {
+    "name": "stop rows as text",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"stopWhen\": { \"rowsUnder\": \"2\" } } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "x.gdb: no such file or folder.\n"
+  },
+  {
+    "name": "stop rows huge",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"stopWhen\": { \"rowsUnder\": 3000000000 } } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The JSON value could not be converted to Tessera.Etl.StopWhen. Path: $.tables[0].stopWhen.rowsUnder | LineNumber: 0 | BytePositionInLine: 120.\n"
+  },
+  {
+    "name": "stop rows exponent",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"stopWhen\": { \"rowsUnder\": 1e2 } } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The JSON value could not be converted to Tessera.Etl.StopWhen. Path: $.tables[0].stopWhen.rowsUnder | LineNumber: 0 | BytePositionInLine: 113.\n"
+  },
+  {
+    "name": "stop percent as text",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"layer\": \"L\" } ], \"stopWhen\": { \"droppedOverPercent\": \"5\" } }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "x.gdb: no such file or folder.\n"
+  },
+  {
+    "name": "stop percent null",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"layer\": \"L\" } ], \"stopWhen\": { \"droppedOverPercent\": null } }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "x.gdb: no such file or folder.\n"
+  },
+  {
+    "name": "stop unknown key",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"layer\": \"L\" } ], \"stopWhen\": { \"dropped\": 5 } }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The JSON property 'dropped' could not be mapped to any .NET member contained in type 'Tessera.Etl.StopWhen'.\n"
+  },
+  {
+    "name": "stop a number",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"layer\": \"L\" } ], \"stopWhen\": 5 }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The JSON value could not be converted to Tessera.Etl.StopWhen. Path: $.stopWhen | LineNumber: 0 | BytePositionInLine: 114.\n"
+  },
+  {
+    "name": "area a number",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"layer\": \"L\" } ], \"area\": 5 }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The JSON value could not be converted to Tessera.Etl.Area. Path: $.area | LineNumber: 0 | BytePositionInLine: 110.\n"
+  },
+  {
+    "name": "area empty",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"layer\": \"L\" } ], \"area\": { } }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: JSON deserialization for type 'Tessera.Etl.Area' was missing required properties including: 'minLongitude', 'minLatitude', 'maxLongitude', 'maxLatitude'.\n"
+  },
+  {
+    "name": "area as text",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"layer\": \"L\" } ], \"area\": { \"minLongitude\": \"113.5\", \"minLatitude\": 22.1, \"maxLongitude\": 113.6, \"maxLatitude\": 22.2 } }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "x.gdb: no such file or folder.\n"
+  },
+  {
+    "name": "area null value",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"layer\": \"L\" } ], \"area\": { \"minLongitude\": null, \"minLatitude\": 22.1, \"maxLongitude\": 113.6, \"maxLatitude\": 22.2 } }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The JSON value could not be converted to Tessera.Etl.Area. Path: $.area.minLongitude | LineNumber: 0 | BytePositionInLine: 131.\n"
+  },
+  {
+    "name": "area backwards",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"layer\": \"L\" } ], \"area\": { \"minLongitude\": 3, \"minLatitude\": 1, \"maxLongitude\": 2, \"maxLatitude\": 2 } }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "area: the box must run west to east and south to north.\n"
+  },
+  {
+    "name": "area unknown key",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"layer\": \"L\" } ], \"area\": { \"minLongitude\": 1, \"minLatitude\": 1, \"maxLongitude\": 2, \"maxLatitude\": 2, \"name\": \"x\" } }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The JSON property 'name' could not be mapped to any .NET member contained in type 'Tessera.Etl.Area'.\n"
+  },
+  {
+    "name": "every file fault",
+    "text": "{ \"source\": \"\", \"output\": \"\", \"tables\": [] , \"area\": { \"minLongitude\": 3, \"minLatitude\": 1, \"maxLongitude\": 2, \"maxLatitude\": 2 } }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "source: name the file to read, such as data/macau.gdb.\noutput: '' must be named NNNN-words.sql, such as db/seed/0002-parks.sql, so DbUp runs it in order.\ntables: name at least one table.\narea: the box must run west to east and south to north.\n"
+  },
+  {
+    "name": "output badly named",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/2-x.sql\", \"tables\": [ { \"table\": \"a.b\" } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "output: 'db/seed/2-x.sql' must be named NNNN-words.sql, such as db/seed/0002-parks.sql, so DbUp runs it in order.\n"
+  },
+  {
+    "name": "five faults",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/parks.sql\", \"tables\": [ { \"table\": \"Food.Cafes\", \"filters\": [ { \"filter\": \"dropDuplicates\" }, { \"filter\": \"dropNearDuplicates\", \"field\": \"name\" } ] }, { \"table\": \"outdoors.parks\", \"filters\": [ { \"filter\": \"insideArea\" } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "output: 'db/seed/parks.sql' must be named NNNN-words.sql, such as db/seed/0002-parks.sql, so DbUp runs it in order.\nFood.Cafes: write the table as schema.table, in lower-case letters, digits and _.\nFood.Cafes: 'dropDuplicates' is no filter; the filters are dropEmptyShapes, repairShapes, swapCoordinates, insideArea, tidyText, requireFields, dropDuplicateIds, dropNearDuplicates.\nFood.Cafes: dropNearDuplicates: needs metres.\noutdoors.parks: insideArea: needs an area: give one in the pipeline file, or run beside tessera.json.\n"
+  },
+  {
+    "name": "needs an area",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"insideArea\" } ] } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "a.b: insideArea: needs an area: give one in the pipeline file, or run beside tessera.json.\n"
+  },
+  {
+    "name": "null file",
+    "text": "null",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file needs source, output and tables.\n"
+  },
+  {
+    "name": "a list",
+    "text": "[]",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The JSON value could not be converted to Tessera.Etl.Pipeline. Path: $ | LineNumber: 0 | BytePositionInLine: 1.\n"
+  },
+  {
+    "name": "a string",
+    "text": "\"x\"",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The JSON value could not be converted to Tessera.Etl.Pipeline. Path: $ | LineNumber: 0 | BytePositionInLine: 3.\n"
+  },
+  {
+    "name": "empty file",
+    "text": "",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The input does not contain any JSON tokens. Expected the input to start with a valid JSON token, when isFinalBlock is true. Path: $ | LineNumber: 0 | BytePositionInLine: 0.\n"
+  },
+  {
+    "name": "white space only",
+    "text": "  \n ",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The input does not contain any JSON tokens. Expected the input to start with a valid JSON token, when isFinalBlock is true. Path: $ | LineNumber: 1 | BytePositionInLine: 1.\n"
+  },
+  {
+    "name": "comment only",
+    "text": "// a comment",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The input does not contain any JSON tokens. Expected the input to start with a valid JSON token, when isFinalBlock is true. Path: $ | LineNumber: 0 | BytePositionInLine: 12.\n"
+  },
+  {
+    "name": "comments allowed",
+    "text": "// a comment\n{ \"source\": \"x.gdb\", /* c */ \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\" } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "x.gdb: no such file or folder.\n"
+  },
+  {
+    "name": "cut short",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"layer\": \"L\" } ],",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: Expected start of a property name or value, but instead reached end of data. Path: $ | LineNumber: 0 | BytePositionInLine: 99.\n"
+  },
+  {
+    "name": "open object",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"layer\": \"L\" } ]",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: Expected depth to be zero at the end of the JSON payload. There is an open JSON object or array that should be closed. Path: $ | LineNumber: 0 | BytePositionInLine: 99.\n"
+  },
+  {
+    "name": "text after",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"layer\": \"L\" } ] } x",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: 'x' is invalid after a single JSON value. Expected end of data. Path: $ | LineNumber: 0 | BytePositionInLine: 102.\n"
+  },
+  {
+    "name": "trailing comma in object",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The JSON object contains a trailing comma at the end which is not supported in this mode. Change the reader options. Path: $.tables[0] | LineNumber: 0 | BytePositionInLine: 83.\n"
+  },
+  {
+    "name": "trailing comma in list",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"layer\": \"L\" }, ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The JSON array contains a trailing comma at the end which is not supported in this mode. Change the reader options. Path: $.tables[1] | LineNumber: 0 | BytePositionInLine: 99.\n"
+  },
+  {
+    "name": "bad literal",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"layer\": \"L\" } ], \"stopWhen\": tru }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: 'tru }' is an invalid JSON literal. Expected the literal 'true'. Path: $.stopWhen | LineNumber: 0 | BytePositionInLine: 116.\n"
+  },
+  {
+    "name": "missing colon",
+    "text": "{ \"source\" \"x.gdb\" }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: '\"' is invalid after a property name. Expected a ':'. Path: $ | LineNumber: 0 | BytePositionInLine: 11.\n"
+  },
+  {
+    "name": "unquoted key",
+    "text": "{ source: 1 }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: 's' is an invalid start of a property name. Expected a '\"'. Path: $ | LineNumber: 0 | BytePositionInLine: 2.\n"
+  },
+  {
+    "name": "unterminated string",
+    "text": "{ \"source\": \"x.gdb",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: Expected end of string, but instead reached end of data. Path: $.source | LineNumber: 0 | BytePositionInLine: 18.\n"
+  },
+  {
+    "name": "line break in string",
+    "text": "{ \"source\": \"x\n.gdb\" }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: '0x0A' is invalid within a JSON string. The string should be correctly escaped. Path: $.source | LineNumber: 0 | BytePositionInLine: 14.\n"
+  },
+  {
+    "name": "second line fault",
+    "text": "{\n  \"source\": \"x.gdb\",\n  \"output\": 7,\n  \"tables\": []\n}",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: The JSON value could not be converted to Tessera.Etl.Pipeline. Path: $.output | LineNumber: 2 | BytePositionInLine: 13.\n"
+  },
+  {
+    "name": "third line syntax",
+    "text": "{\n  \"source\": \"x.gdb\",\n  \"output\": \"db/seed/0002-x.sql\",,\n}",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: ',' is an invalid start of a property name. Expected a '\"'. Path: $ | LineNumber: 2 | BytePositionInLine: 33.\n"
+  },
+  {
+    "name": "duplicate key",
+    "text": "{ \"source\": \"a.gdb\", \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\" } ] }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "x.gdb: no such file or folder.\n"
+  },
+  {
+    "name": "minus alone",
+    "text": "{ \"source\": - }",
+    "settings": false,
+    "code": 2,
+    "stdout": "",
+    "stderr": "The pipeline file is not valid: ' ' is invalid within a number, immediately after a sign character ('+' or '-'). Expected a digit ('0'-'9'). Path: $.source | LineNumber: 0 | BytePositionInLine: 13.\n"
+  },
+  {
+    "name": "settings area",
+    "text": "{ \"source\": \"x.gdb\", \"output\": \"db/seed/0002-x.sql\", \"tables\": [ { \"table\": \"a.b\", \"filters\": [ { \"filter\": \"insideArea\" }, { \"filter\": \"swapCoordinates\" } ] } ] }",
+    "settings": true,
+    "code": 2,
+    "stdout": "",
+    "stderr": "x.gdb: no such file or folder.\n"
+  }
+]

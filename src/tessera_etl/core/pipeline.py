@@ -72,8 +72,6 @@ def read(text: str, area_from_settings: Area | None) -> Result[Plan, tuple[str, 
             pass
         case _:
             assert_never(parsed)
-    if file.tables is None:
-        return Err(("The pipeline file needs source, output and tables.",))
     if any(table is None for table in file.tables):
         return Err(("tables: each entry must be an object that names its table.",))
     tables = tuple(table for table in file.tables if table is not None)
@@ -98,7 +96,7 @@ def _build(table: TablePlan, pipeline: Pipeline) -> Result[CleaningPlan, tuple[s
     problems: list[str] = []
     names: list[str] = []
     steps: list[Handler[Cleaning]] = []
-    for step in table.filters or ():
+    for step in table.filters:
         given: dict[str, Any] = dict(step or {})
         name = given.get("filter")
         kind = filters.find(name) if isinstance(name, str) else None

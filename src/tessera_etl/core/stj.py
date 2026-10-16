@@ -113,8 +113,7 @@ def _fault(root: type[Named], parsed: Parsed, error: ErrorDetails) -> _Fault:
     if not loc:
         return _Fault(place, f"The JSON value could not be converted to {root.dotnet_name}.{where}")
     if isinstance(loc[-1], int):
-        holder = _target(root, loc[:-1])
-        return _Fault(place, f"The JSON value could not be converted to {_dotnet_type(holder)}.{where}")
+        return _Fault(place, f"The JSON value could not be converted to {_dotnet_type(_target(root, loc))}.{where}")
     owner = _owner(root, loc[:-1])
     field = _fields(owner)[str(loc[-1])]
     if value is None and not field.nullable and field.kind == "value" and field.target is str:

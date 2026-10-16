@@ -19,11 +19,11 @@ NAME = "requireFields"
 
 class Settings(Model):
     """`fields` has no default, since only the publisher knows which columns a place cannot
-    lack; a failing row is dropped unless the file says stop. The file may write null for the
-    list, which counts as no list, and the check below then asks for one."""
+    lack; a failing row is dropped unless the file says stop. .NET's reader let a null stand in
+    the list, which this filter then reads as a field that is always missing."""
 
     dotnet_name: ClassVar[str] = settings_name(NAME)
-    fields: tuple[Text | None, ...] | None
+    fields: tuple[Text | None, ...]
     on_fail: OnFailSetting = OnFail.DROP
 
 
@@ -45,7 +45,7 @@ def _check(settings: Settings, area: Area | None) -> tuple[str, ...]:
 
 
 def _create(settings: Settings, area: Area | None) -> Handler[Cleaning]:
-    return create(settings.fields or (), settings.on_fail)
+    return create(settings.fields, settings.on_fail)
 
 
 KIND = FilterKind(NAME, "a row missing any of `fields`, or holding only spaces there, fails", Settings, _create, _check)

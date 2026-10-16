@@ -137,11 +137,12 @@ class _Reader:
         if byte in _LITERALS:
             word, meaning = _LITERALS[byte]
             if self.data[self.at : self.at + len(word)] != word:
-                end = self.at
-                while end < len(self.data) and chr(self.data[end]).isalpha():
-                    end += 1
-                found = self.data[self.at : end].decode("utf-8", "replace")
-                raise self.fail(f"'{found}' is an invalid JSON literal. Expected the literal '{word.decode()}'.")
+                # .NET names the rest of the text from the literal on, and points at the first
+                # letter that differs.
+                rest = self.data[self.at :]
+                wrong = next((index for index in range(1, len(word)) if index >= len(rest) or rest[index] != word[index]), len(word))
+                found = rest.decode("utf-8", "replace")
+                raise self.fail(f"'{found}' is an invalid JSON literal. Expected the literal '{word.decode()}'.", at=self.at + min(wrong, len(rest)))
             self.at += len(word)
             self.places[path] = self.place()
             self.ends[path] = self.place()
@@ -165,7 +166,7 @@ class _Reader:
             raise self.fail(
                 "'"
                 + (self.shown(self.data[self.at]) if self.at < len(self.data) else "")
-                + "' is invalid within a number, immediately after a sign character ('-' or '+'). Expected a digit ('0'-'9')."
+                + "' is invalid within a number, immediately after a sign character ('+' or '-'). Expected a digit ('0'-'9')."
             )
         return Number(text)
 
@@ -197,11 +198,12 @@ class _Reader:
             self.at += 1
             self.ends[path] = self.place()
             return result
+        comma: int | None = None
         while True:
             self.skip()
             byte = self.peek()
             if byte is None:
-                raise self.fail("Expected start of a property name or value, but instead reached end of data.")
+                raise self.fail("Expected start of a property name or value, but instead reached end of data.", at=comma)
             if byte == ord("}"):
                 raise self.fail("The JSON object contains a trailing comma at the end which is not supported in this mode. Change the reader options.")
             if byte != ord('"'):
@@ -221,6 +223,7 @@ class _Reader:
             self.skip()
             byte = self.peek()
             if byte == ord(","):
+                comma = self.at
                 self.at += 1
                 continue
             if byte == ord("}"):
@@ -239,16 +242,23 @@ class _Reader:
             self.at += 1
             self.ends[path] = self.place()
             return result
+        comma: int | None = None
         while True:
             self.skip()
             byte = self.peek()
             if byte == ord("]") and result:
-                raise self.fail("The JSON array contains a trailing comma at the end which is not supported in this mode. Change the reader options.")
+                raise self.fail(
+                    "The JSON array contains a trailing comma at the end which is not supported in this mode. Change the reader options.",
+                    path=(*path, len(result)),
+                )
+            if byte is None:
+                raise self.fail("Expected start of a property name or value, but instead reached end of data.", at=comma)
             result.append(self.value((*path, len(result))))
             self.stack[:] = list(path)
             self.skip()
             byte = self.peek()
             if byte == ord(","):
+                comma = self.at
                 self.at += 1
                 continue
             if byte == ord("]"):

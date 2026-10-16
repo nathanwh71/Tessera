@@ -71,7 +71,8 @@ def _on_fail(value: object) -> object:
         for choice in OnFail:
             if value.lower() == choice.value:
                 return choice
-        return value
+        # .NET's enum reader also takes a number written as text.
+        return _on_fail(Number(value)) if value.lstrip("-").isdigit() else value
     if isinstance(value, Number):
         whole = _whole(value)
         # 1 is stop; .NET keeps any other number as a value that is not stop, so it drops.
@@ -138,7 +139,7 @@ class TablePlan(Model):
     layer: Text | None = None
     where: Text | None = None
     lines: Flag = False
-    filters: tuple[dict[str, Any] | None, ...] | None = None
+    filters: tuple[dict[str, Any] | None, ...] = ()
     stop_when: StopWhen | None = None
 
 
@@ -146,13 +147,12 @@ class Pipeline(Model):
     """The whole pipeline file.
 
     Where the places come from, which ***seed script*** to write, the area they must sit in,
-    when to stop, and one entry for each table to make. `tables` may be null in the file; the
-    reader then refuses the file in words of its own.
+    when to stop, and one entry for each table to make.
     """
 
     dotnet_name: ClassVar[str] = "Tessera.Etl.Pipeline"
     source: Text
     output: Text
-    tables: tuple[TablePlan | None, ...] | None
+    tables: tuple[TablePlan | None, ...]
     area: Area | None = None
     stop_when: StopWhen | None = None
