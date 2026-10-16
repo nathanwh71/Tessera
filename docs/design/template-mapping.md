@@ -102,7 +102,7 @@ The _layers_ _fit_ ADR 0004 _without_ strain, _since_ they _divide_ the _code_ w
 - **Domain** _holds_ the read-only _records_ and the _pure_ _functions_: `TileAddress.Of`, `LayerCatalogue.FromRows` and `Find`, the _settings_ _records_ with their _own_ _checks_. It _knows_ no _database_ and no _web_, and a _rule_ _says_ so.
 - **Infrastructure** _holds_ every _effect_ on the _database_. It _speaks_ `Result<T, DatabaseError>`, as `Database` does _now_, and _never_ _throws_ for a _failure_ the _caller_ _expects_.
 - **Features** is the _edge_ where a `Result` _becomes_ an _answer_: `Match` _turns_ _success_ into a _tile_ and _each_ `DatabaseError` into 404, 503 or 500, as `TileServer.Answer` does _now_. `Map.Render` _stays_ a _pure_ _function_ that the _route_ _calls_.
-- **One `Result` type** for the _whole_ _program_: CSharpFunctionalExtensions. If the _template_'s `Common` _carries_ a `Result` of its _own_, _choose_ _one_ and delete the _other_, so no _code_ _converts_ _between_ _two_.
+- **One `Result` type** for the _whole_ _program_: CSharpFunctionalExtensions. The _template_'s `Common` _holds_ no `Result` of its _own_, so Tessera _brings_ this _one_, and no _code_ _converts_ _between_ _two_.
 
 The _comments_ _move_ with their _code_. _Each_ _moved_ _file_ _keeps_ its _reasons_, and _each_ _new_ _file_, such as `TesseraModule.cs`, _gets_ _comments_ _written_ the _same_ _way_.
 
@@ -234,4 +234,4 @@ The ETL in `tools/`, the _scripts_, the _map_ in `web/`, the _seed_ _scripts_ an
 
 ## What remains unknown
 
-This _design_ _rests_ on the _template_'s tree _alone_. Its `Common` _code_ may _carry_ a `Result` _type_, a _way_ to _answer_ _problems_, a _module_ registration or a _settings_ helper of its _own_. Where it does, Tessera _uses_ the _template_'s _piece_ and deletes its _own_ _copy_, _under_ the _same_ _three_ constraints. _Reading_ the _template_'s `Common` _projects_ _settles_ this in an _hour_.
+This _design_ _rests_ on the _template_'s tree and _one_ _fact_ _about_ its _code_: `Common` _holds_ no `Result` _type_, so CSharpFunctionalExtensions _serves_ the _whole_ _program_. `Common` may _still_ _carry_ a _way_ to _answer_ _problems_, a _module_ registration or a _settings_ helper of its _own_. Where it does, Tessera _uses_ the _template_'s _piece_ and deletes its _own_ _copy_, _under_ the _same_ _three_ constraints. _Reading_ the _template_'s `Common` _projects_ _settles_ this in an _hour_.
