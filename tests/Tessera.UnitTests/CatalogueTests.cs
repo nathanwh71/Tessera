@@ -60,7 +60,7 @@ public sealed class CatalogueTests
         Assert.Equal(4326, layer.Srid);
     }
 
-    // US-03 test 2: PostgreSQL holds 'food.cafes' and a quoted "Food"."Cafes" as two tables, so the
+    // US-03 test 2: PostgreSQL holds 'food.cafes' and a quoted '"Food"."Cafes"' as two tables, so the
     // lookup matches letter for letter, and a schema alone names no layer.
     [Fact]
     public void Finds_a_layer_exactly_and_case_sensitively()

@@ -131,8 +131,8 @@ public sealed class Database : IAsyncDisposable
     /// </summary>
     public async Task<bool> Ping(CancellationToken stop)
     {
-        // The second token takes the ping out of the pool's queue when the second runs out, so a
-        // ping that gave up never takes a connection a tile is waiting for.
+        // This token, tied to the caller's, takes the ping out of the pool's queue once PingLimit
+        // runs out, so a ping that gave up never takes a connection a tile is waiting for.
         var limit = CancellationTokenSource.CreateLinkedTokenSource(stop);
         limit.CancelAfter(PingLimit);
         try
@@ -151,7 +151,7 @@ public sealed class Database : IAsyncDisposable
         }
         finally
         {
-            // Cancelled before it is disposed, so the queue hears of it whichever clock ran out first.
+            // Cancel the token before releasing it, so the queue hears of it whichever clock ran out first.
             await limit.CancelAsync().ConfigureAwait(false);
             limit.Dispose();
         }

@@ -17,8 +17,8 @@ namespace Tessera.UnitTests;
 public sealed class SettingsTests
 {
     /// <summary>
-    /// A database URL with every part set apart from the defaults: a password holding an encoded '@'
-    /// and a port other than 5432, so a test sees each part read, not assumed (US-00 c4).
+    /// A database URL whose every part differs from its default: a password holding an encoded '@'
+    /// and the port 5433, not 5432, so a test sees each part read, not assumed (US-00 c4).
     /// </summary>
     private const string Url = "postgresql://tessera_reader:s%40cret@db.office:5433/tessera";
 
