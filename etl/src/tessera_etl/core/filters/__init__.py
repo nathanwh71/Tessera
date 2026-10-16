@@ -1,6 +1,7 @@
 """Every ***filter*** a ***pipeline file*** may name.
 
-A new filter is one new module beside these, declaring its KIND, and one more line in `KINDS`.
+A new filter is one new module beside these, declaring its KIND, and one more line in each of
+`AnyKind` and `KINDS`.
 """
 
 from ..filter_kind import FilterKind
