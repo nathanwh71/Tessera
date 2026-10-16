@@ -140,7 +140,8 @@ def props_geojson(folder: str) -> None:
 
 
 def places_gdb(folder: str) -> None:
-    """The test geodatabase: seven cafés with one fault each, and two parks."""
+    """The test geodatabase: seven cafés, six with one fault each and one clean, and two
+    parks."""
     path = os.path.join(folder, "places.gdb")
     shutil.rmtree(path, ignore_errors=True)
     gdal.VectorTranslate(path, os.path.join(folder, "cafes.geojson"), format="OpenFileGDB", layerName="Cafes")

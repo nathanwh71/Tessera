@@ -1,7 +1,7 @@
 """Whole runs of the ***pipeline***, from a file ***geodatabase***.
 
-The geodatabase holds seven cafés with one fault each, and two parks, one an area whose edge
-crosses itself; tests/fixtures/make_fixtures.py builds it with GDAL.
+The geodatabase holds seven cafés, six with one fault each and one clean, and two parks, one an
+area whose edge crosses itself; tests/fixtures/make_fixtures.py builds it with GDAL.
 """
 
 import json
