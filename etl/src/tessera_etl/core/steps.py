@@ -22,13 +22,14 @@ type Judge = Callable[[GeoDataFrame], Judged]
 """A function that judges a whole table at once: it mends some rows and fails others."""
 
 IDENTITY: Step[Cleaning] = Step(lambda cleaning: cleaning)
-"""The step that changes nothing: the start of a fold, so a list of no filters is a chain too."""
+"""The step that changes nothing: the start of a ***fold***, which joins a list into one value an
+item at a time, so a list of no filters is a chain too."""
 
 
 def chain(steps: Iterable[Step[Cleaning]]) -> Step[Cleaning]:
     """The steps joined with `>>`, in order, as `a >> b >> c` joins them.
 
-    A ***fold***, here `reduce`, starts from IDENTITY and joins each step on in turn.
+    The fold, here `reduce`, starts from IDENTITY and joins each step on in turn.
     """
     # typeshed declares operator.rshift for any operands, which strict pyright reads as unknown.
     return reduce(operator.rshift, steps, IDENTITY)  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
