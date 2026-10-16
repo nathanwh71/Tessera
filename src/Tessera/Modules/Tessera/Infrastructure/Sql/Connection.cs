@@ -2,8 +2,9 @@ using System.ComponentModel.DataAnnotations;
 using CSharpFunctionalExtensions;
 using Npgsql;
 
-// The database's address, as the environment gives it (US-00 c4). It lives in the Infrastructure,
-// the one layer that may use the database client, Npgsql (ADR 0010, rule 2).
+// The database's address, as the environment gives it (US-00 c4). It lives here, apart from the
+// other settings, since only the Infrastructure layer may use the database client, Npgsql, whose
+// connection string the URL becomes (ADR 0010, rule 2).
 
 namespace Modules.Tessera.Infrastructure.Sql;
 
@@ -68,10 +69,7 @@ public sealed class DatabaseConnection : IValidatableObject
         Parsed.IsFailure ? [new ValidationResult($"{Variable}: {Parsed.Error}")] : [];
 }
 
-/// <summary>
-/// Reads and checks the database's URL. It lives here, not with the other settings, since only the
-/// Infrastructure may use Npgsql, whose connection string the URL becomes (ADR 0010, rule 2).
-/// </summary>
+/// <summary>Reads and checks the database's URL.</summary>
 public static class DatabaseConnections
 {
     /// <summary>The database URL the service reads tiles with; pg_tileserv uses the same name.</summary>
