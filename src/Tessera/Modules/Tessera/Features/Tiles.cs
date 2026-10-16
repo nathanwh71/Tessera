@@ -70,10 +70,11 @@ public sealed class TileServer(Func<LayerCatalogue?> catalogue, TileReader read,
         // browser and Nginx keep the empty answer like any other.
         return built.Match(
             bytes => new TileResult(bytes ?? [], CacheControl(settings.CacheSeconds)),
-            // A withdrawn grant gives 42501: the layer has left, so 404 (US-03 c6). A column a seed script
-            // dropped gives 42703: the browser is asked to try again shortly, and the list of layers
-            // heals at its next refresh, within Catalogue.RefreshSeconds (N-23). A database that cannot
-            // answer now gives 503 (N-22); anything else is the service's fault.
+            // A withdrawn grant gives 42501, and a dropped table 42P01: the layer has left, so 404
+            // (US-03 c6). A column a seed script dropped gives 42703: the answer asks the browser to try
+            // again shortly, and the list of layers heals at its next refresh, within
+            // Catalogue.RefreshSeconds (N-23). A database that cannot answer now gives 503 (N-22);
+            // anything else is the service's fault.
             error => error switch
             {
                 DatabaseError.MissingTable _ => Problems.NotFound("No published layer has that name."),
