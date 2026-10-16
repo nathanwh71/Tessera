@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
+using CSharpFunctionalExtensions;
 using NetTopologySuite.Geometries;
 
 namespace Tessera.Etl;
@@ -19,35 +20,40 @@ public static class Judge
     public static Envelope Box(Area area) => new(area.MinLongitude, area.MaxLongitude, area.MinLatitude, area.MaxLatitude);
 
     /// <summary>True when any part of the shape touches the box: a road may run out of the area.</summary>
-    public static bool Inside(Geometry? shape, Envelope box) =>
-        shape is { IsEmpty: false } && box.Intersects(shape.EnvelopeInternal) && shape.Intersects(shape.Factory.ToGeometry(box));
+    public static bool Inside(Maybe<Geometry> shape, Envelope box) =>
+        shape.TryGetValue(out var found) && !found.IsEmpty
+        && box.Intersects(found.EnvelopeInternal) && found.Intersects(found.Factory.ToGeometry(box));
 
     /// <summary>
     /// True for no value, or text of spaces alone: such a value shows nothing on the map, so
     /// requireFields treats it as missing.
     /// </summary>
-    public static bool IsBlank(object? value) => value is null || value is string text && string.IsNullOrWhiteSpace(text);
+    public static bool IsBlank(Maybe<object> value) =>
+        !value.TryGetValue(out var found) || found is string text && string.IsNullOrWhiteSpace(text);
 
-    /// <summary>A value as text, for comparing ids and names; numbers keep their exact digits.</summary>
-    public static string? Text(object? value) => value switch
+    /// <summary>
+    /// A value as text, for comparing ids and names; numbers keep their exact digits. None for no
+    /// value, or text of spaces alone.
+    /// </summary>
+    public static Maybe<string> Text(Maybe<object> value) => value.Bind(found => found switch
     {
-        null => null,
-        string text => string.IsNullOrWhiteSpace(text) ? null : text,
+        string text => string.IsNullOrWhiteSpace(text) ? Maybe<string>.None : text,
         IFormattable number => number.ToString(null, CultureInfo.InvariantCulture),
-        _ => value.ToString(),
-    };
+        // object.ToString may give null; that becomes none here.
+        _ => found.ToString().AsMaybe(),
+    });
 
     // Any run of white space, tabs and line breaks included: each shows as a gap in a label.
     private static readonly Regex Spaces = new(@"\s+");
 
     /// <summary>
-    /// One Unicode form, one space between words, no spaces at the ends; null when nothing is left.
+    /// One Unicode form, one space between words, no spaces at the ends; none when nothing is left.
     /// NFC is the form most systems write, so 'é' typed two ways compares equal.
     /// </summary>
-    public static string? TidyText(string text)
+    public static Maybe<string> TidyText(string text)
     {
         var clean = Spaces.Replace(text.Normalize(NormalizationForm.FormC), " ").Trim();
-        return clean.Length == 0 ? null : clean;
+        return clean.Length == 0 ? Maybe<string>.None : clean;
     }
 
     /// <summary>

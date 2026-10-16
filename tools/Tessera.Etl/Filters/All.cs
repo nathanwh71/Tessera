@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using CSharpFunctionalExtensions;
 
 namespace Tessera.Etl.Filters;
 
@@ -25,8 +26,8 @@ public static class All
     ];
 
     /// <summary>
-    /// The filter a pipeline file names, or null. The match is exact, case included, as JSON keys
+    /// The filter a pipeline file names, or none. The match is exact, case included, as JSON keys
     /// are, so 'insidearea' is refused rather than quietly read as 'insideArea'.
     /// </summary>
-    public static FilterKind? Find(string name) => Kinds.FirstOrDefault(kind => kind.Name == name);
+    public static Maybe<FilterKind> Find(string name) => Kinds.TryFirst(kind => kind.Name == name);
 }

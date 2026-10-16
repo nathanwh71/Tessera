@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Text;
+using CSharpFunctionalExtensions;
 
 namespace Tessera.Etl;
 
@@ -27,7 +28,7 @@ public static class Report
         {
             var table = done.Table;
             text.AppendLine();
-            text.AppendLine($"== {table.Table}{(table.Layer is { } layer ? $", from {layer}" : "")}{(table.Where is { } where ? $", where {where}" : "")}");
+            text.AppendLine($"== {table.Table}{table.Layer.Match(layer => $", from {layer}", () => "")}{table.Where.Match(where => $", where {where}", () => "")}");
             text.AppendLine($"Read {done.Read} rows.");
             // Each filter's counts come from the joined log, whose lines name their filter. The rows
             // kept after a filter are those read less every row dropped up to and including it.

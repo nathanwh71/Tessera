@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using CSharpFunctionalExtensions;
 using NetTopologySuite.Geometries.Utilities;
 using NetTopologySuite.Operation.Valid;
 
@@ -35,9 +36,10 @@ public static class RepairShapes
     public static Handler<Cleaning> Create(OnFail onFail = OnFail.Drop) =>
         Steps.Filter(Name, onFail, Steps.EachRow(row =>
         {
-            if (row.Shape is null || row.Shape.IsEmpty || row.Shape.IsValid) return Verdict.Keep(row);
-            var why = new IsValidOp(row.Shape).ValidationError?.Message ?? "invalid";
-            var fixedShape = GeometryFixer.Fix(row.Shape);
+            if (!row.Shape.TryGetValue(out var shape) || shape.IsEmpty || shape.IsValid) return Verdict.Keep(row);
+            // NetTopologySuite gives null when it names no error; that becomes none here.
+            var why = new IsValidOp(shape).ValidationError.AsMaybe().Map(error => error.Message).GetValueOrDefault("invalid");
+            var fixedShape = GeometryFixer.Fix(shape);
             // A repair is a fix; a shape that comes out empty fails, so it obeys onFail, drop or stop.
             return fixedShape.IsEmpty
                 ? Verdict.Fail(row, "its shape is invalid and cannot be repaired")

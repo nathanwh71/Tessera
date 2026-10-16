@@ -21,11 +21,11 @@ public static class InsideArea
 
     /// <summary>
     /// The kind Filters/All.cs lists, so a pipeline file may name this filter. NeedsArea refuses
-    /// the filter when there is no area, so <c>area!</c> never meets a null.
+    /// the filter when there is no area, so <c>GetValueOrThrow</c> never meets none.
     /// </summary>
     public static readonly FilterKind Kind = FilterKind.Of<Settings>(Name,
         "a shape that does not touch the area's box fails",
-        FilterKind.NeedsArea, (settings, area) => Create(area!, settings.OnFail));
+        FilterKind.NeedsArea, (settings, area) => Create(area.GetValueOrThrow(), settings.OnFail));
 
     /// <summary>
     /// Builds the filter from plain values, so a test can make one without a pipeline file.

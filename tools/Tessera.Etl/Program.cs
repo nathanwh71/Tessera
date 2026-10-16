@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Text.Json;
+using CSharpFunctionalExtensions;
 using Tessera.Etl;
 
 // Turns a file of places into a seed script for DbUp, cleaning it on the way (ADR 0009, US-24,
@@ -53,7 +54,7 @@ try
     foreach (var plan in tables)
     {
         var table = plan.Table;
-        Console.WriteLine($"{table.Table}: extracting{(table.Layer is { } layer ? $" {layer}" : "")}...");
+        Console.WriteLine($"{table.Table}: extracting{table.Layer.Match(layer => $" {layer}", () => "")}...");
         var extracted = Path.Combine(work, $"{table.Table}.extracted.geojson");
         var extract = await Gdal.Run(SeedScript.ExtractArguments(source, extracted, table), folders);
         if (extract.IsFailure)
@@ -63,7 +64,7 @@ try
         // The whole transform step: the table's chain of filters and stop rules, run on its rows.
         var done = plan.Chain.Run(Cleaning.Start(table, rows));
         cleaned.Add((plan, done));
-        if (done.Stop is { } stop)
+        if (done.Stop.TryGetValue(out var stop))
             return Finish(1, $"stopped. {stop} No script written.");
 
         Console.WriteLine($"{table.Table}: read {done.Read}, kept {done.Rows.Length}, dropped {done.Dropped}.");
@@ -109,12 +110,12 @@ static int Fail(int code, params string[] problems)
 }
 
 // The area's box from tessera.json's Area section, when the file is here, so a pipeline need not
-// repeat it.
-static Area? AreaFromSettings(string settingsFile)
+// repeat it; none when the file or its Area section is missing.
+static Maybe<Area> AreaFromSettings(string settingsFile)
 {
-    if (!File.Exists(settingsFile)) return null;
+    if (!File.Exists(settingsFile)) return Maybe<Area>.None;
     using var settings = JsonDocument.Parse(File.ReadAllText(settingsFile));
-    if (!settings.RootElement.TryGetProperty("Area", out var area)) return null;
+    if (!settings.RootElement.TryGetProperty("Area", out var area)) return Maybe<Area>.None;
     double Degrees(string key) => area.GetProperty(key).GetDouble();
     return new Area(Degrees("MinLongitude"), Degrees("MinLatitude"), Degrees("MaxLongitude"), Degrees("MaxLatitude"));
 }

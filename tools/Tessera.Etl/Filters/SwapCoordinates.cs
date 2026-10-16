@@ -22,11 +22,11 @@ public static class SwapCoordinates
 
     /// <summary>
     /// The kind Filters/All.cs lists, so a pipeline file may name this filter. NeedsArea refuses
-    /// the filter when there is no area, so <c>area!</c> never meets a null.
+    /// the filter when there is no area, so <c>GetValueOrThrow</c> never meets none.
     /// </summary>
     public static readonly FilterKind Kind = FilterKind.Of<Settings>(Name,
         "a shape outside the area that falls inside it with longitude and latitude swapped is swapped back",
-        FilterKind.NeedsArea, (_, area) => Create(area!));
+        FilterKind.NeedsArea, (_, area) => Create(area.GetValueOrThrow()));
 
     /// <summary>
     /// Builds the filter from plain values, so a test can make one without a pipeline file.
@@ -37,10 +37,10 @@ public static class SwapCoordinates
         // It never fails a row, so OnFail.Drop never comes into play.
         return Steps.Filter(Name, OnFail.Drop, Steps.EachRow(row =>
         {
-            if (row.Shape is null || row.Shape.IsEmpty || Judge.Inside(row.Shape, box)) return Verdict.Keep(row);
+            if (!row.Shape.TryGetValue(out var shape) || shape.IsEmpty || Judge.Inside(shape, box)) return Verdict.Keep(row);
             // Apply changes a shape in place, so it works on a copy: the row read must stay as it
             // was, since rows are never changed, only replaced (ADR 0004).
-            var turned = row.Shape.Copy();
+            var turned = shape.Copy();
             turned.Apply(new SwapAxes());
             return Judge.Inside(turned, box) ? Verdict.Fix(row with { Shape = turned }, "swapped longitude and latitude") : Verdict.Keep(row);
         }));

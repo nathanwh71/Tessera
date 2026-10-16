@@ -80,7 +80,7 @@ public sealed class ChainTests
             return next(cleaning);
         };
         var outcome = Clean(InsideArea.Create(Macau, OnFail.Stop) >> later, [Place(1, 0.5, 51.5)]);
-        Assert.NotNull(outcome.Stop);
+        Assert.True(outcome.Stop.HasValue);
         Assert.False(ran);
     }
 

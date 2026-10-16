@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Text;
 using System.Text.Json;
+using CSharpFunctionalExtensions;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO.Converters;
 
@@ -31,9 +32,10 @@ public static class GeoJson
         foreach (var feature in document.RootElement.GetProperty("features").EnumerateArray())
         {
             number++;
+            // The converter gives null when it reads no shape; that becomes none here.
             var shape = feature.TryGetProperty("geometry", out var geometry) && geometry.ValueKind == JsonValueKind.Object
-                ? geometry.Deserialize<Geometry>(Shapes)
-                : null;
+                ? geometry.Deserialize<Geometry>(Shapes).AsMaybe()
+                : Maybe<Geometry>.None;
             var values = ImmutableDictionary.CreateBuilder<string, object?>(StringComparer.Ordinal);
             // GDAL writes a text field named id as the feature's own id, outside its properties;
             // it comes back here as the id column, first, as it stood in the source.
@@ -56,7 +58,8 @@ public static class GeoJson
     }
 
     // A JSON value as the plain .NET value a filter compares: text, a whole number, a number with a
-    // fraction, true or false, or null. A list or an object stays as its JSON text.
+    // fraction, true or false, or null. A list or an object stays as its JSON text. Null stays null,
+    // not none, since it is a value the written GeoJSON must carry back (see Row).
     private static object? Value(JsonElement value) => value.ValueKind switch
     {
         JsonValueKind.String => value.GetString(),
@@ -107,22 +110,27 @@ public static class GeoJson
                 foreach (var column in columns)
                 {
                     writer.WritePropertyName(column);
-                    switch (row.Value(column))
+                    if (!row.Value(column).TryGetValue(out var value))
                     {
-                        case null: writer.WriteNullValue(); break;
+                        writer.WriteNullValue();
+                        continue;
+                    }
+                    switch (value)
+                    {
                         case string text: writer.WriteStringValue(text); break;
                         case long whole: writer.WriteNumberValue(whole); break;
                         case double fraction: writer.WriteNumberValue(fraction); break;
                         case bool flag: writer.WriteBooleanValue(flag); break;
                         // Any other value a filter set is written as raw JSON. Read keeps lists and
                         // objects as text, so they meet the string case above, not this one.
-                        case var other: writer.WriteRawValue(other.ToString() ?? "null"); break;
+                        // object.ToString may give null; that becomes none here, written as JSON's null.
+                        case var other: writer.WriteRawValue(other.ToString().AsMaybe().GetValueOrDefault("null")); break;
                     }
                 }
                 writer.WriteEndObject();
                 writer.WritePropertyName("geometry");
-                if (row.Shape is null) writer.WriteNullValue();
-                else JsonSerializer.Serialize(writer, row.Shape, Shapes);
+                if (row.Shape.TryGetValue(out var shape)) JsonSerializer.Serialize(writer, shape, Shapes);
+                else writer.WriteNullValue();
                 writer.WriteEndObject();
             }
             writer.WriteEndArray();

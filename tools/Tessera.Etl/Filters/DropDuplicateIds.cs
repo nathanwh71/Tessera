@@ -35,7 +35,7 @@ public static class DropDuplicateIds
             var first = new Dictionary<string, int>(StringComparer.Ordinal);
             return [.. rows.Select(row =>
             {
-                if (Judge.Text(row.Value(field)) is not { } id) return Verdict.Keep(row);
+                if (!Judge.Text(row.Value(field)).TryGetValue(out var id)) return Verdict.Keep(row);
                 if (first.TryGetValue(id, out var earlier)) return Verdict.Fail(row, $"it repeats {field} '{id}' of row {earlier}");
                 first[id] = row.Number;
                 return Verdict.Keep(row);

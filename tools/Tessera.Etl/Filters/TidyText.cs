@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using CSharpFunctionalExtensions;
 
 namespace Tessera.Etl.Filters;
 
@@ -17,10 +18,10 @@ public static class TidyText
     public const string Name = "tidyText";
 
     /// <summary>
-    /// The settings a pipeline file may give it. Fields is null by default, meaning every text
+    /// The settings a pipeline file may give it. Fields is none by default, meaning every text
     /// column, since most data needs tidying throughout; no onFail, since it fails no row.
     /// </summary>
-    public sealed record Settings(ImmutableArray<string>? Fields = null);
+    public sealed record Settings(Maybe<ImmutableArray<string>> Fields = default);
 
     /// <summary>The kind Filters/All.cs lists, so a pipeline file may name this filter.</summary>
     public static readonly FilterKind Kind = FilterKind.Of<Settings>(Name,
@@ -30,7 +31,7 @@ public static class TidyText
     /// <summary>
     /// Builds the filter from plain values, so a test can make one without a pipeline file.
     /// </summary>
-    public static Handler<Cleaning> Create(ImmutableArray<string>? fields = null) =>
+    public static Handler<Cleaning> Create(Maybe<ImmutableArray<string>> fields = default) =>
         // It never fails a row, so OnFail.Drop never comes into play.
         Steps.Filter(Name, OnFail.Drop, Steps.EachRow(row =>
         {
@@ -38,11 +39,12 @@ public static class TidyText
             var values = row.Values;
             foreach (var (column, value) in row.Values)
             {
-                if (value is not string text || (fields is { IsDefaultOrEmpty: false } only && !only.Contains(column))) continue;
+                if (value is not string text || (fields.TryGetValue(out var only) && !only.IsDefaultOrEmpty && !only.Contains(column))) continue;
                 var clean = Judge.TidyText(text);
-                if (clean == text) continue;
+                if (clean.TryGetValue(out var tidy) && tidy == text) continue;
                 changed.Add(column);
-                values = values.SetItem(column, clean);
+                // Text that tidies to nothing becomes null, the value of an empty cell (see Row).
+                values = values.SetItem(column, clean.HasValue ? clean.Value : null);
             }
             // A row keeps its values in no order, so the names are sorted: the same row then
             // gives the same log line on every run.

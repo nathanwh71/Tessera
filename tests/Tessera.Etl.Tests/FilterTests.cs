@@ -30,7 +30,7 @@ public sealed class FilterTests
     [Fact]
     public void Drops_a_row_with_no_shape_or_an_empty_one()
     {
-        var outcome = Clean(DropEmptyShapes.Create(), [Place(1, 113.55, 22.19), new Row(2, null, []), new Row(3, Shapes.CreatePoint(), [])]);
+        var outcome = Clean(DropEmptyShapes.Create(), [Place(1, 113.55, 22.19), new Row(2, Maybe<Geometry>.None, []), new Row(3, Shapes.CreatePoint(), [])]);
 
         Assert.Equal([1], outcome.Rows.Select(row => row.Number));
         Assert.Equal(["Row 2: dropped by dropEmptyShapes: it has no shape", "Row 3: dropped by dropEmptyShapes: it has no shape"], outcome.Log.Select(line => line.ToString()));
@@ -51,10 +51,10 @@ public sealed class FilterTests
     {
         var outcome = Clean(SwapCoordinates.Create(Macau), [Place(1, 22.19, 113.55), Place(2, 113.55, 22.19), Place(3, 0.5, 51.5)]);
 
-        Assert.Equal(new Coordinate(113.55, 22.19), outcome.Rows[0].Shape!.Coordinate);
+        Assert.Equal(new Coordinate(113.55, 22.19), outcome.Rows[0].Shape.GetValueOrThrow().Coordinate);
         // A place already inside, and one outside whichever way round, stay as they were.
-        Assert.Equal(new Coordinate(113.55, 22.19), outcome.Rows[1].Shape!.Coordinate);
-        Assert.Equal(new Coordinate(0.5, 51.5), outcome.Rows[2].Shape!.Coordinate);
+        Assert.Equal(new Coordinate(113.55, 22.19), outcome.Rows[1].Shape.GetValueOrThrow().Coordinate);
+        Assert.Equal(new Coordinate(0.5, 51.5), outcome.Rows[2].Shape.GetValueOrThrow().Coordinate);
         Assert.Equal("Row 1: fixed by swapCoordinates: swapped longitude and latitude", Assert.Single(outcome.Log).ToString());
     }
 
@@ -74,7 +74,7 @@ public sealed class FilterTests
 
         var outcome = Clean(RepairShapes.Create(), [new Row(1, bowTie, [])]);
 
-        Assert.True(outcome.Rows[0].Shape!.IsValid);
+        Assert.True(outcome.Rows[0].Shape.GetValueOrThrow().IsValid);
         Assert.StartsWith("Row 1: fixed by repairShapes: repaired a shape that was invalid (Self-intersection", Assert.Single(outcome.Log).ToString(), StringComparison.Ordinal);
     }
 
@@ -85,7 +85,8 @@ public sealed class FilterTests
         var outcome = Clean(TidyText.Create(), [Place(1, 113.55, 22.19, ("name", "  Café \t Uno  "), ("note", "   "), ("floors", 3L))]);
 
         Assert.Equal("Café Uno", outcome.Rows[0].Value("name"));
-        Assert.Null(outcome.Rows[0].Value("note"));
+        // Text that tidies to nothing stays in the row as null, the value of an empty cell.
+        Assert.Null(outcome.Rows[0].Values["note"]);
         Assert.Equal(3L, outcome.Rows[0].Value("floors"));
         Assert.Equal("Row 1: fixed by tidyText: tidied name, note", Assert.Single(outcome.Log).ToString());
     }
@@ -93,9 +94,9 @@ public sealed class FilterTests
     [Fact]
     public void Tidies_only_the_fields_named()
     {
-        var outcome = Clean(TidyText.Create(["name"]), [Place(1, 113.55, 22.19, ("name", " a "), ("code", " b "))]);
+        var outcome = Clean(TidyText.Create(ImmutableArray.Create("name")), [Place(1, 113.55, 22.19, ("name", " a "), ("code", " b "))]);
 
-        Assert.Equal(("a", " b "), ((string?)outcome.Rows[0].Value("name"), (string?)outcome.Rows[0].Value("code")));
+        Assert.Equal(("a", " b "), ((string?)outcome.Rows[0].Values["name"], (string?)outcome.Rows[0].Values["code"]));
     }
 
     [Fact]

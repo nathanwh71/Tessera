@@ -29,5 +29,5 @@ public static class DropEmptyShapes
     /// </summary>
     public static Handler<Cleaning> Create(OnFail onFail = OnFail.Drop) =>
         Steps.Filter(Name, onFail, Steps.EachRow(row =>
-            row.Shape is null or { IsEmpty: true } ? Verdict.Fail(row, "it has no shape") : Verdict.Keep(row)));
+            !row.Shape.TryGetValue(out var shape) || shape.IsEmpty ? Verdict.Fail(row, "it has no shape") : Verdict.Keep(row)));
 }

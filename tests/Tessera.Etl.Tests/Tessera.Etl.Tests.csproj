@@ -22,6 +22,7 @@
     <Using Include="Xunit" />
     <Using Include="System.Collections.Immutable" />
     <Using Include="NetTopologySuite.Geometries" />
+    <Using Include="CSharpFunctionalExtensions" />
   </ItemGroup>
   <ItemGroup>
     <!-- Places with one fault of each kind, from which a test builds a geodatabase. -->

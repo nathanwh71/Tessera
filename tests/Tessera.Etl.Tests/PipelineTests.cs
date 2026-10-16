@@ -35,7 +35,7 @@ public sealed class PipelineTests
         Assert.Equal(("food.cafes", "Cafes"), (table.Table.Table, table.Table.Layer));
         Assert.Equal(["insideArea", "requireFields"], table.Filters);
         // The chain stops at a place outside the area, since the file says "onFail": "stop".
-        Assert.NotNull(FilterTests.Clean(table.Chain, [FilterTests.Place(1, 0.5, 51.5, ("name", "Far"))]).Stop);
+        Assert.True(FilterTests.Clean(table.Chain, [FilterTests.Place(1, 0.5, 51.5, ("name", "Far"))]).Stop.HasValue);
     }
 
     // Each filter reads its own settings, so one that belongs to another filter is refused.
@@ -74,7 +74,7 @@ public sealed class PipelineTests
               { "table": "outdoors.parks", "filters": [ { "filter": "insideArea" } ] } ] }
             """;
 
-        var problems = PipelineFile.Read(bad, areaFromSettings: null).Error;
+        var problems = PipelineFile.Read(bad, areaFromSettings: Maybe<Area>.None).Error;
 
         Assert.Equal(5, problems.Length);
         Assert.Contains(problems, problem => problem.StartsWith("output:", StringComparison.Ordinal));
@@ -85,13 +85,13 @@ public sealed class PipelineTests
     }
 
     // One table for the tests below, with the stop rules a test gives it.
-    private static TablePlan Cafes(StopWhen? rules = null) => new("food.cafes", "Cafes", StopWhen: rules);
+    private static TablePlan Cafes(Maybe<StopWhen> rules = default) => new("food.cafes", "Cafes", StopWhen: rules);
 
     // A cleaning plan built by hand, as PipelineFile.Read would build it, so the stop rules are
     // checked without a pipeline file.
-    private static CleaningPlan Plan(StopWhen? rules, params (string Name, Handler<Cleaning> Step)[] filters) =>
+    private static CleaningPlan Plan(Maybe<StopWhen> rules, params (string Name, Handler<Cleaning> Step)[] filters) =>
         new(Cafes(rules), [.. filters.Select(filter => filter.Name)],
-            Pipes.All(filters.Select(filter => filter.Step)) >> Steps.StopWhen(rules ?? PipelineFile.Defaults));
+            Pipes.All(filters.Select(filter => filter.Step)) >> Steps.StopWhen(rules.GetValueOrDefault(PipelineFile.Defaults)));
 
     // Runs a plan's chain on the rows, as the program does for each table.
     private static Cleaning Clean(CleaningPlan plan, ImmutableArray<Row> rows) => plan.Chain.Run(Cleaning.Start(plan.Table, rows));
@@ -109,7 +109,7 @@ public sealed class PipelineTests
     [Fact]
     public void Stops_a_table_that_drops_more_than_ten_per_cent_by_default()
     {
-        var report = Clean(Plan(null, RequireName), Ten(named: 8));
+        var report = Clean(Plan(Maybe<StopWhen>.None, RequireName), Ten(named: 8));
 
         Assert.Equal("food.cafes: 2 of 10 rows were dropped (20 %), more than the 10 % allowed.", report.Stop);
     }
@@ -117,7 +117,7 @@ public sealed class PipelineTests
     [Fact]
     public void Lets_a_table_set_its_own_rules()
     {
-        Assert.Null(Clean(Plan(new StopWhen(DroppedOverPercent: 25), RequireName), Ten(named: 8)).Stop);
+        Assert.True(Clean(Plan(new StopWhen(DroppedOverPercent: 25), RequireName), Ten(named: 8)).Stop.HasNoValue);
         Assert.Equal("food.cafes: only 8 rows remain, fewer than the 9 required.",
             Clean(Plan(new StopWhen(DroppedOverPercent: 50, RowsUnder: 9), RequireName), Ten(named: 8)).Stop);
     }
@@ -134,7 +134,7 @@ public sealed class PipelineTests
         Assert.Equal("food.cafes: 1 of 10 rows were dropped (10 %), more than the 5 % allowed.", Clean(fileRules, Ten(named: 9)).Stop);
 
         var own = file.Replace("\"layer\": \"Cafes\",", "\"layer\": \"Cafes\", \"stopWhen\": { \"droppedOverPercent\": 20 },", StringComparison.Ordinal);
-        Assert.Null(Clean(Assert.Single(PipelineFile.Read(own, Macau).Value.Tables), Ten(named: 9)).Stop);
+        Assert.True(Clean(Assert.Single(PipelineFile.Read(own, Macau).Value.Tables), Ten(named: 9)).Stop.HasNoValue);
     }
 
     [Fact]
@@ -220,7 +220,7 @@ public sealed class PipelineTests
 
         Assert.Equal(["name", "floors", "height", "open", "note"], columns);
         Assert.Equal(rows[0].Values, again[0].Values);
-        Assert.Equal(3L, Assert.IsType<long>(again[0].Value("floors")));
-        Assert.Equal(new Coordinate(113.55, 22.19), again[0].Shape!.Coordinate);
+        Assert.Equal(3L, Assert.IsType<long>(again[0].Values["floors"]));
+        Assert.Equal(new Coordinate(113.55, 22.19), again[0].Shape.GetValueOrThrow().Coordinate);
     }
 }

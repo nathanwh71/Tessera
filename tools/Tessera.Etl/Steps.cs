@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Globalization;
+using CSharpFunctionalExtensions;
 
 namespace Tessera.Etl;
 
@@ -66,12 +67,14 @@ public static class Steps
     public static Handler<Cleaning> StopWhen(StopWhen rules) => next => cleaning =>
     {
         var percent = cleaning.Read == 0 ? 0 : 100.0 * cleaning.Dropped / cleaning.Read;
-        string? broken =
-            rules.RowsUnder is { } least && cleaning.Rows.Length < least
-                ? $"only {cleaning.Rows.Length} rows remain, fewer than the {least} required"
-            : rules.DroppedOverPercent is { } most && percent > most
-                ? $"{cleaning.Dropped} of {cleaning.Read} rows were dropped ({percent.ToString("0.#", CultureInfo.InvariantCulture)} %), more than the {most.ToString(CultureInfo.InvariantCulture)} % allowed"
-            : null;
-        return broken is null ? next(cleaning) : cleaning with { Stop = $"{cleaning.Table.Table}: {broken}." };
+        var broken =
+            rules.RowsUnder.TryGetValue(out var least) && cleaning.Rows.Length < least
+                ? Maybe.From($"only {cleaning.Rows.Length} rows remain, fewer than the {least} required")
+            : rules.DroppedOverPercent.TryGetValue(out var most) && percent > most
+                ? Maybe.From($"{cleaning.Dropped} of {cleaning.Read} rows were dropped ({percent.ToString("0.#", CultureInfo.InvariantCulture)} %), more than the {most.ToString(CultureInfo.InvariantCulture)} % allowed")
+            : Maybe<string>.None;
+        return broken.Match(
+            reason => cleaning with { Stop = $"{cleaning.Table.Table}: {reason}." },
+            () => next(cleaning));
     };
 }

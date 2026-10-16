@@ -1,3 +1,4 @@
+using CSharpFunctionalExtensions;
 using NetTopologySuite.Geometries;
 
 namespace Tessera.Etl.Filters;
@@ -44,9 +45,11 @@ public static class DropNearDuplicates
             return [.. rows.Select(row =>
             {
                 // A row with no name or no shape passes: requireFields and dropEmptyShapes judge those.
-                if (Judge.Text(row.Value(field)) is not { } value || row.Shape is null || row.Shape.IsEmpty) return Verdict.Keep(row);
-                var key = (Judge.TidyText(value) ?? "").ToLowerInvariant();
-                var centre = row.Shape.Centroid;
+                // A name that tidies to nothing counts as no name.
+                if (!Judge.Text(row.Value(field)).Bind(Judge.TidyText).TryGetValue(out var name) || !row.Shape.TryGetValue(out var shape) || shape.IsEmpty)
+                    return Verdict.Keep(row);
+                var key = name.ToLowerInvariant();
+                var centre = shape.Centroid;
                 if (!seen.TryGetValue(key, out var earlier)) seen[key] = earlier = [];
                 foreach (var (number, other) in earlier)
                 {

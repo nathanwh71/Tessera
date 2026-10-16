@@ -1,20 +1,25 @@
 using System.Collections.Immutable;
+using CSharpFunctionalExtensions;
 using NetTopologySuite.Geometries;
 
 namespace Tessera.Etl;
 
 /// <summary>
 /// One place read from the source: its number in the source, counting from 1, so the log can name
-/// it; its shape, in longitude and latitude; and its other values, by column name. A value is a
-/// string, a whole number (long), a number with a fraction (double), true or false, or null.
+/// it; its shape, in longitude and latitude, or none; and its other values, by column name. A value
+/// is a string, a whole number (long), a number with a fraction (double), true or false, or null.
+/// Values keep null, not a <b><i>Maybe</i></b>: in GeoJSON a null is a value in its own right, the
+/// mark of an empty cell, and it must reach the GeoJSON the pipeline writes as it came. tidyText,
+/// too, writes null for text that tidies to nothing.
 /// </summary>
-public sealed record Row(int Number, Geometry? Shape, ImmutableDictionary<string, object?> Values)
+public sealed record Row(int Number, Maybe<Geometry> Shape, ImmutableDictionary<string, object?> Values)
 {
     /// <summary>
-    /// The value in <paramref name="column"/>, or null when the row has none: a missing column
+    /// The value in <paramref name="column"/>, or none when the row has none: a missing column
     /// and an empty one mean the same to a <b><i>filter</i></b>, a step that checks or mends rows.
     /// </summary>
-    public object? Value(string column) => Values.TryGetValue(column, out var value) ? value : null;
+    public Maybe<object> Value(string column) =>
+        Values.TryGetValue(column, out var value) ? value.AsMaybe() : Maybe<object>.None;
 }
 
 /// <summary>What a filter did to one row. Kept rows leave no line in the log; the rest do.</summary>
@@ -59,10 +64,10 @@ public sealed record LogLine(int Row, string Filter, Act Act, string Detail)
 /// fixed, dropped or stopped at, and, once a step stops the run, the reason. Read stays fixed, so
 /// the stop rules can count what the filters dropped.
 /// </summary>
-public sealed record Cleaning(TablePlan Table, int Read, ImmutableArray<Row> Rows, ImmutableArray<LogLine> Log, string? Stop)
+public sealed record Cleaning(TablePlan Table, int Read, ImmutableArray<Row> Rows, ImmutableArray<LogLine> Log, Maybe<string> Stop)
 {
     /// <summary>A table's rows as GDAL read them, before any step has run.</summary>
-    public static Cleaning Start(TablePlan table, ImmutableArray<Row> rows) => new(table, rows.Length, rows, [], null);
+    public static Cleaning Start(TablePlan table, ImmutableArray<Row> rows) => new(table, rows.Length, rows, [], Maybe<string>.None);
 
     /// <summary>The rows lost, counted from the rows read, whichever filter dropped them.</summary>
     public int Dropped => Read - Rows.Length;

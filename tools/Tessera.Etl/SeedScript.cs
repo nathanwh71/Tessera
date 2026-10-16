@@ -22,12 +22,12 @@ public static class SeedScript
     public static ImmutableArray<string> ExtractArguments(string source, string geoJson, TablePlan table) =>
     [
         "-f", "GeoJSON", geoJson, source,
-        .. table.Layer is { } layer ? [layer] : Array.Empty<string>(),
+        .. table.Layer.Match(layer => new[] { layer }, () => []),
         "-t_srs", "EPSG:4326",
         "-dim", "XY",
         "-nlt", "CONVERT_TO_LINEAR",
         "-resolveDomains",
-        .. table.Where is { } where ? ["-where", where] : Array.Empty<string>(),
+        .. table.Where.Match(where => new[] { "-where", where }, () => []),
     ];
 
     /// <summary>
@@ -78,9 +78,9 @@ public static class SeedScript
     /// </summary>
     public static Result<string, string> Join(string pipelineFile, ImmutableArray<(TablePlan Table, string Sql)> parts)
     {
-        // A table with no rows is refused (US-24, criterion 3). When every part has rows,
-        // FirstOrDefault gives an empty pair whose Table is null, so the pattern does not match.
-        if (parts.FirstOrDefault(part => !part.Sql.Contains("INSERT INTO", StringComparison.Ordinal)) is { Table: not null } empty)
+        // A table with no rows is refused (US-24, criterion 3). When every part has rows, TryFirst
+        // gives none.
+        if (parts.TryFirst(part => !part.Sql.Contains("INSERT INTO", StringComparison.Ordinal)).TryGetValue(out var empty))
             return Result.Failure<string, string>($"{empty.Table.Table}: GDAL wrote no rows.");
 
         var schemas = parts.Select(part => SchemaAndName(part.Table).Schema).Distinct();
