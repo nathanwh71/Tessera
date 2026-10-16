@@ -65,7 +65,7 @@ def test_writes_a_date_time_as_GDAL_did(text: str, written: str) -> None:
 
 @given(st.floats(min_value=-180, max_value=180))
 def test_moves_a_coordinate_by_far_less_than_a_millimetre(value: float) -> None:
-    # 15 decimals of a degree is about a ten-billionth of a millimetre on the ground.
+    # The test allows 1e-12 of a degree, about a ten-thousandth of a millimetre on the ground.
     assert abs(gdal_text.coordinate(value) - value) < 1e-12
 
 
