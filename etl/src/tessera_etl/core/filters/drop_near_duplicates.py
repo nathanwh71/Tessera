@@ -73,11 +73,11 @@ def _near_pairs(centres: NDArray[np.float64], names: NDArray[np.object_], metres
     lon, lat = centres[:, 0], centres[:, 1]
     # A millionth more than the distance, so rounding in the last digit never shuts a place out.
     reach = np.degrees(metres / measure.RADIUS) * 1.000001
-    # Two places within the distance differ in longitude by at most this angle, by the
-    # haversine formula, at the latitudes they can share.
     widest = np.cos(np.radians(lat)) * np.cos(np.radians(np.minimum(np.abs(lat) + reach, 90.0)))
     with np.errstate(divide="ignore", invalid="ignore"):
         spread = np.sin(np.radians(reach) / 2) / np.sqrt(widest)
+    # Two places within the distance differ in longitude by at most this angle, by the
+    # haversine formula, at the latitudes they can share.
     across = np.degrees(2 * np.arcsin(np.minimum(spread, 1.0)))
     every = ~(spread < 1.0) | (lon - across < -180) | (lon + across > 180)
     west, east = np.where(every, -np.inf, lon - across), np.where(every, np.inf, lon + across)
