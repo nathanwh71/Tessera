@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | _Accepted_ |
+| Status | _Accepted_; _amended_ 16 _October_ 2026: Tessera _keeps_ a `Result` of its _own_ (ADR 0010) |
 | Date | 13 _October_ 2026 |
 | Decider | The _maintainer_ |
 | Covers | Every _line_ of the _back_ _end_, in C# 14 on .NET 10, in `nathanwh71/Tessera`; the _map_ and the _scripts_ _follow_ the _same_ _style_ in TypeScript 6 |
@@ -10,12 +10,12 @@
 
 ## Decision
 
-Tessera's _code_ is _written_ in a ***functional style***: immutable _values_, ***pure functions*** and _referential_ transparency. An _expected_ _failure_ is a `Result<T, E>`, from the CSharpFunctionalExtensions _library_, and _never_ an exception. A _value_ that may be _missing_ is a ***nullable type***, `T?`, which the _compiler_ _checks_.
+Tessera's _code_ is _written_ in a ***functional style***: immutable _values_, ***pure functions*** and _referential_ transparency. An _expected_ _failure_ is a `Result<T, E>`, from `src/Tessera/Common/Result.cs`, and _never_ an exception. A _value_ that may be _missing_ is a ***nullable type***, `T?`, which the _compiler_ _checks_.
 
 ## Why
 
 - **Code the maintainer reads at a glance.** The _maintainer_ _comes_ from F#, and will _read_ and _change_ this _code_ for _years_. Immutable _values_ and `Result` ***pipelines*** _read_ the _way_ an F# _programmer_ _thinks_.
-- **A library, not code of our own.** CSharpFunctionalExtensions _gives_ `Result` with `Map`, `Bind`, `MapError`, `Match`, `Ensure` and `Combine`, and `from … in … select` _chains_ its _steps_. It is widely _used_, with 38.9 million _downloads_, so Tessera _need_ not _write_ or _test_ a `Result` of its _own_.
+- **A small type of our own.** Tessera _used_ CSharpFunctionalExtensions until 16 _October_ 2026, and _called_ _nine_ of its _members_: `Success`, `Failure`, `IsSuccess`, `IsFailure`, `Value`, `Error`, `Map`, `Match` and `GetValueOrDefault`. _About_ sixty _lines_ in `Common/Result.cs` _give_ the _same_ _nine_, with _tests_, and a _reader_ _finds_ the _whole_ _type_ in _one_ _file_. The ETL _compiles_ the _same_ _file_, so the repository has _one_ `Result`.
 - **The compiler watches for missing values.** With `Nullable` on and every _warning_ an _error_, the _compiler_ _makes_ _each_ _caller_ _decide_ what _happens_ when a `T?` is _missing_.
 - **Tests without a database.** A _pure_ _function_ _reads_ _only_ its ***parameters***, so FsCheck and xUnit _test_ it with no _database_, no _network_ and no _clock_.
 
@@ -63,7 +63,8 @@ JavaScript's pipe operator is a _proposal_ at _stage_ 2 of 4, and TypeScript _ca
 
 | Option | Why not |
 |---|---|
-| An `Option<T>` and a `Result<T, E>` of Tessera's own | _Two_ _types_ to _write_ and _test_, for what a _library_ and the _compiler_'s _nullable_ _checks_ _already_ _give_ |
+| CSharpFunctionalExtensions | _Used_ until 16 _October_ 2026; Tessera _called_ _nine_ of its _many_ _members_, and a _package_ to track _cost_ more than sixty _lines_ of its _own_ |
+| An `Option<T>` of Tessera's own | The _compiler_'s _nullable_ _checks_ _already_ _give_ it |
 | LanguageExt | A _large_ _library_ with a _style_ of its _own_, for the _two_ or _three_ _functions_ Tessera _needs_ |
 | Exceptions for expected failures | A _caller_ _cannot_ _see_ from a _function_'s _type_ that it may _fail_ |
 

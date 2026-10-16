@@ -28,7 +28,7 @@ _Caching_, packing and _watching_ a _server_ are Nginx's daily _work_, _tested_ 
 | Refuse a malformed address, with a problem document that hides it | Its _own_ parser, and `error_page 400` |
 | Send a request to the other copy when one crashes or hangs, and rest the failed copy | `proxy_next_upstream error timeout`, `max_fails=3 fail_timeout=10s` |
 
-The _service_ _sends_ `Cache-Control` and a _weak_ `ETag` with _each_ _tile_, _answers_ `/health`, and _writes_ its _own_ ***problem documents***.
+The _service_ _sends_ `Cache-Control` and a _weak_ `ETag` with _each_ _tile_, _answers_ `/health`, and _writes_ its _own_ ***problem documents***. _Since_ 16 _October_ 2026 ASP.NET Core _also_ _answers_ 304 to a _matching_ `If-None-Match` that _reaches_ the _service_, as Nginx does from its _kept_ _copy_ (ADR 0010).
 
 ## A passive health check over two copies
 

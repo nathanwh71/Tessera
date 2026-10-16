@@ -35,7 +35,8 @@ ADR 0001's _choice_ of _one_ _service_, _built_ and _shipped_ as _one_ _unit_, _
 | `Modules/Tessera/Infrastructure` | Every SQL _text_, the _database_, the catalogue's timer, the _seed_ | Domain, Common, Npgsql, Dapper, DbUp |
 | `Modules/Tessera/Features` | The _tile_ _route_, the _map_, `/health` | Domain, Infrastructure, Common, ASP.NET Core |
 | `Modules/Tessera/TesseraModule.cs` | `AddTessera` and `MapTessera`: the _module_'s _one_ _door_ | All of the _module_ |
-| `Program.cs` | _Serve_ or _seed_ | The _module_'s _door_ |
+| `TesseraHost.cs` | The _template_'s _Host_: _builds_ the _service_, and _runs_ the _steps_ every _request_ _passes_, such as the exception _handler_ | Common, and _each_ _module_'s _door_ |
+| `Program.cs` | _Serve_, _through_ the _Host_, or _seed_ | The _Host_, and the Infrastructure's _seed_ |
 
 A `PublicApi` _folder_ _joins_ the _module_ when a _second_ _module_ _needs_ _something_ of Tessera's, and _holds_ _only_ what that _module_ _needs_.
 

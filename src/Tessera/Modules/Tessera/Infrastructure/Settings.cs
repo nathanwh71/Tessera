@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 
 // The settings that govern Tessera's use of the database: the pool's limits and how often the list of
-// layers is read (US-00, ADR 0003). Only the Infrastructure reads them.
+// layers is read (US-00, ADR 0003). The module's door, TesseraModule, hands them to the code here.
 
 namespace Modules.Tessera.Infrastructure;
 

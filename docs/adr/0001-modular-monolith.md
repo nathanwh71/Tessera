@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | _Accepted_ |
+| Status | _Accepted_ in _part_. _One_ _service_, _built_ and _shipped_ as _one_ _unit_, _stands_; the _project_ for _each_ ***module***, and the _compiler_ at the _borders_, _gave_ _way_ to ADR 0010 on 16 _October_ 2026 |
 | Date | 15 _October_ 2026 |
 | Decider | The _maintainer_ |
 | Covers | The _Phase_ Oct _back_ _end_, in C# 14 on .NET 10, in `nathanwh71/Tessera` |
@@ -10,7 +10,9 @@
 
 ## Decision
 
-Tessera's _back_ _end_ is _one_ _service_, _built_ and _shipped_ as _one_ _unit_, and _divided_ _inside_ into ***modules*** with _fixed_ _borders_. _Each_ _module_ is a _project_ of its _own_, in a _folder_ of `src/Tessera`, and _names_ _only_ the _modules_ it may _use_. The _compiler_ _guards_ the _borders_: a _module_ that _reaches_ into _one_ it does not _name_, or a _circle_ of _modules_, _fails_ the _build_.
+> _Since_ 16 _October_ 2026 the _service_ is _one_ _project_ laid out as the modular-monolith _template_, and _six_ ***architecture tests*** _guard_ its _borders_ (ADR 0010). The _modules_ _below_ are _now_ _folders_ in its ***layers***; this _record_ _keeps_ the _reasons_ for _one_ _service_ and for the ***roles***.
+
+Tessera's _back_ _end_ is _one_ _service_, _built_ and _shipped_ as _one_ _unit_, and _divided_ _inside_ into _modules_ with _fixed_ _borders_. _Each_ _module_ is a _project_ of its _own_, in a _folder_ of `src/Tessera`, and _names_ _only_ the _modules_ it may _use_. The _compiler_ _guards_ the _borders_: a _module_ that _reaches_ into _one_ it does not _name_, or a _circle_ of _modules_, _fails_ the _build_.
 
 This _record_ _covers_ the _back_ _end_ _alone_. The _map_'s _front_ _end_, in TypeScript, _keeps_ its _own_ _design_ (ADR 0006).
 
@@ -51,7 +53,7 @@ A _module_ _joins_ the _list_ when a _story_ _needs_ _one_, and _leaves_ when _n
 
 **The seed is a command of the service.** The _same_ _program_ that _serves_ _tiles_ _runs_ the _seed_ when _called_ with `seed`, then _stops_. Its _checks_ and its _tests_ _live_ in C#, _beside_ the _rest_ of the _back_ _end_.
 
-**Each program signs in as its own role.** The _service_ _signs_ in as `tessera_reader`, which _reads_ _granted_ _tables_ _alone_ (US-03). The _seed_ _signs_ in as `tessera_publisher`, the _data_ _publisher_'s ***role***, which _owns_ the ***schemas*** and their _tables_. It _creates_ and _fills_ them; the _publisher_ ***grants*** them when _ready_ (US-24, _criterion_ 5).
+**Each program signs in as its own role.** The _service_ _signs_ in as `tessera_reader`, which _reads_ _granted_ _tables_ _alone_ (US-03). The _seed_ _signs_ in as `tessera_publisher`, the _data_ _publisher_'s _role_, which _owns_ the ***schemas*** and their _tables_. It _creates_ and _fills_ them; the _publisher_ ***grants*** them when _ready_ (US-24, _criterion_ 5).
 
 | Variable | Read by | Holds |
 |---|---|---|
