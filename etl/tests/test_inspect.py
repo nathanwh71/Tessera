@@ -25,8 +25,11 @@ REPO = Path(__file__).resolve().parents[2]
 
 
 @pytest.mark.skipif(
-    shutil.which("node") is None or not (REPO / "scripts" / "inspect.ts").is_file() or shutil.which("ogrinfo") is None,
-    reason="needs Node.js, GDAL's ogrinfo and the repository's scripts/inspect.ts",
+    shutil.which("node") is None
+    or shutil.which("ogrinfo") is None
+    or not (REPO / "scripts" / "inspect.ts").is_file()
+    or not (REPO / "node_modules" / "zx").is_dir(),
+    reason="needs Node.js, GDAL's ogrinfo, the repository's scripts/inspect.ts and its packages (npm ci)",
 )
 def test_prints_a_starting_file_the_pipeline_accepts(tmp_path: Path) -> None:
     gdb = tmp_path / "places.gdb"
