@@ -57,7 +57,7 @@
 ### Step 9 · How the places enter the database
 
 - **Open:** `data/macau.pipeline.json`, then `tools/Tessera.Etl/Program.cs`, `Pipes.cs`, `Steps.cs` and _one_ ***filter*** in `Filters/`, such as `InsideArea.cs`, `db/seed/0001-macau-places.sql` (the _first_ _lines_ _alone_), `src/Tessera/Modules/Tessera/Infrastructure/Seeding/SeedScripts.cs`, and ADR 0009.
-- **Look for:** GDAL extracts _each_ _table_ to GeoJSON, the ***pipeline file***'s filters, _joined_ into _one_ _chain_ of _handlers_ with `>>` and _ended_ by the ***stop rules***, _clean_ its _rows_ in _turn_, and GDAL _writes_ the _cleaned_ _rows_ as SQL; DbUp _runs_ _each_ _new_ _script_ _once_ and _records_ it in `tessera.schemaversions`; `npm run publish` _grants_ the _tables_.
+- **Look for:** GDAL extracts _each_ _table_ to GeoJSON, the ***pipeline file***'s filters, _joined_ into _one_ _chain_ of _handlers_ with `>>` and _ended_ by the ***stop rules***, _clean_ its _rows_ in _turn_, and `TableSql.cs` _writes_ the _cleaned_ _rows_ as SQL; DbUp _runs_ _each_ _new_ _script_ _once_ and _records_ it in `tessera.schemaversions`; `npm run publish` _grants_ the _tables_.
 - **Check yourself:** you _find_ a _wrong_ _address_ in a _script_ that has _run_. What do you _change_?
 
 ## Part B · The frontend: the page opens and draws a tile

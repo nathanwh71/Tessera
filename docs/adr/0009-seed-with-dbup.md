@@ -10,7 +10,7 @@
 
 ## Decision
 
-A _pipeline_ in C#, `tools/Tessera.Etl`, _turns_ _each_ _file_ of _places_ into a SQL _script_ in _three_ _steps_. GDAL's `ogr2ogr` **extracts** _each_ _table_ to GeoJSON; ***filters*** the ***pipeline file*** _names_ **transform** its _rows_, _cleaning_ them; and `ogr2ogr` **loads** the _cleaned_ _rows_ as SQL. The _maintainer_ _reads_ the _script_ and its _log_, and _commits_ both. `Tessera seed`, _signed_ in as `tessera_publisher`, _runs_ _each_ _script_ DbUp has not _run_ _before_, _once_, in the _order_ of the _scripts_' _names_. A ***grant*** _publishes_ _each_ _table_.
+A _pipeline_ in C#, `tools/Tessera.Etl`, _turns_ _each_ _file_ of _places_ into a SQL _script_ in _three_ _steps_. GDAL's `ogr2ogr` **extracts** _each_ _table_ to GeoJSON; ***filters*** the ***pipeline file*** _names_ **transform** its _rows_, _cleaning_ them; and the _pipeline_ **loads** the _cleaned_ _rows_ as SQL, in the _form_ GDAL's PGDump _driver_ _wrote_ until 16 _October_ 2026 (`TableSql.cs`). The _maintainer_ _reads_ the _script_ and its _log_, and _commits_ both. `Tessera seed`, _signed_ in as `tessera_publisher`, _runs_ _each_ _script_ DbUp has not _run_ _before_, _once_, in the _order_ of the _scripts_' _names_. A ***grant*** _publishes_ _each_ _table_.
 
 ## Why
 
@@ -48,17 +48,18 @@ A _row_ that _fails_ is _dropped_ and logged, or, when its filter _says_ `"onFai
 
 _Each_ _table_ is _cleaned_ by _one_ _chain_ of _steps_, _built_ in Giraffe's _shape_: a _step_ is a _handler_, a _function_ that _receives_ the _rest_ of the _chain_ and the _table_'s context, its _rows_, its _log_ and _any_ _reason_ to _stop_ (`Pipes.cs`). A _step_ _changes_ the context and _passes_ it on, or _ends_ the _chain_ by not _passing_ it on, as a _stop_ does. _Each_ filter is a _judge_, a _function_ that _gives_ _one_ verdict for _each_ _row_: _keep_ it, _keep_ a mended _copy_, or _fail_ it; `Steps.Filter` _turns_ a _judge_ into a _step_ that _drops_ and logs a _failed_ _row_, or _stops_ at it. _Steps_ _join_ with `>>`, an operator that C# 14's extension _members_ _add_ to the _handler_ _type_: `a >> b` _runs_ `a`, then `b` on the _rows_ `a` _kept_. The _pipeline_ _file_'s _list_ of filters _folds_ into _one_ _chain_, and the ***stop rules*** are its _last_ _step_. _Code_ may _build_ the _same_ _chain_ by _hand_ from _each_ filter's _named_ `Create` _function_. _Each_ filter _lives_ in a _file_ of its _own_ in `tools/Tessera.Etl/Filters/`, with a _record_ of its _own_ _settings_, so the _pipeline_ _file_ _refuses_ a _setting_ that _belongs_ to another filter. The _script_ _takes_ its _columns_ from the _cleaned_ _rows_, so a filter may _add_ a _column_ or _remove_ _one_.
 
-_Each_ _choice_ GDAL is _asked_ to _make_:
+_Each_ _choice_ of the extract and the _load_:
 
 - **Longitude and latitude, flat.** Extraction _stores_ every _shape_ in EPSG:4326, _whatever_ _system_ the _source_ _uses_, and _drops_ heights and _measures_ (`-dim XY`), which a _flat_ ***tile*** _cannot_ _carry_.
 - **Straight lines.** _True_ curves, such as a geodatabase's arcs, _become_ _short_ _straight_ _lines_ (`CONVERT_TO_LINEAR`), which PostGIS's _tile_ _functions_ _read_.
 - **Words, not codes.** A geodatabase's _coded_ _value_ _becomes_ its _description_ (`-resolveDomains`), so a _tile_ _carries_ 'Museum', not 3.
-- **INSERT, not COPY.** DbUp _sends_ a _script_ as _plain_ SQL, so GDAL _writes_ `INSERT` _statements_ (`PG_USE_COPY NO`).
-- **One transaction for each script.** GDAL _wraps_ _each_ _table_ in `BEGIN` and `COMMIT`; the _pipeline_ _takes_ them out, so DbUp's _own_ _transaction_ _holds_ the _whole_ _script_ and its ***journal*** _record_. A _script_ that _fails_ _changes_ _nothing_, and _runs_ _again_ _once_ _fixed_.
-- **A numbered key.** GDAL _numbers_ the _rows_ 1, 2, 3 in the _order_ the filters _kept_ them, in a `fid` _column_. It is the _primary_ _key_, which _fixes_ the _order_ of _features_ in a _tile_ (US-24 _test_ 2). An `id` in the _source_ _stays_ a _column_ of its _own_.
-- **One kind of shape for lines and areas.** A _table_ _marked_ `lines` _stores_ _one_ _part_ and _many_ _parts_ alike as many-part _shapes_ (`PROMOTE_TO_MULTI`).
+- **INSERT, not COPY.** DbUp _sends_ a _script_ as _plain_ SQL, so the _script_ _holds_ _one_ `INSERT` for _each_ _row_.
+- **One transaction for each script.** The _script_ _holds_ no `BEGIN` or `COMMIT` of its _own_, so DbUp's _transaction_ _holds_ the _whole_ _script_ and its ***journal*** _record_. A _script_ that _fails_ _changes_ _nothing_, and _runs_ _again_ _once_ _fixed_.
+- **A numbered key.** The _rows_ are _numbered_ 1, 2, 3 in the _order_ the filters _kept_ them, in a `fid` _column_. It is the _primary_ _key_, which _fixes_ the _order_ of _features_ in a _tile_ (US-24 _test_ 2). An `id` in the _source_ _stays_ a _column_ of its _own_.
+- **One kind of shape for lines and areas.** A _table_ _marked_ `lines` _stores_ _one_ _part_ and _many_ _parts_ alike as many-part _shapes_, as GDAL's `PROMOTE_TO_MULTI` did, so its _column_ _takes_ _one_ _type_, such as `MULTIPOLYGON`.
+- **Names and types as GDAL chose them.** _Column_ _names_ _lose_ capitals A to Z and _turn_ ' - # into _; _whole_ _numbers_ _become_ `INTEGER` or `INT8`, fractions `FLOAT8`, _true_ and _false_ `BOOLEAN`. _Two_ _choices_ _differ_ from GDAL's on _purpose_: a fraction _keeps_ every digit, where GDAL _kept_ _fifteen_, and _text_ mixed with _other_ _kinds_ _stays_ _text_, where GDAL _made_ it `JSON`, which the ***tile query*** _leaves_ out.
 - **A new script replaces a table whole.** _Each_ _script_ _drops_ a _table_ _before_ it _makes_ it _again_. The _grant_ _goes_ with the _old_ _table_, so the _new_ _one_ _waits_ for the _publisher_.
-- **Fresh statistics.** _Each_ _table_ _ends_ with `ANALYZE`, so PostgreSQL _plans_ the ***tile query*** _well_ from the _first_ _tile_.
+- **Fresh statistics.** _Each_ _table_ _ends_ with `ANALYZE`, so PostgreSQL _plans_ the _tile_ _query_ _well_ from the _first_ _tile_.
 - **A name used once.** The _pipeline_ _refuses_ a _script_ _name_ that _exists_, _since_ DbUp _knows_ a _script_ by its _name_ and would _never_ _run_ a _changed_ _one_.
 
 ## Options considered

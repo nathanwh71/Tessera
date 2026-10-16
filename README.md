@@ -69,7 +69,7 @@ _Machines_, _ports_ and _passwords_ _come_ from ***environment variables***: _va
 
 ## Adding places
 
-The _places_ _reach_ the _database_ as SQL _scripts_ in `db/seed`, which DbUp _runs_ _once_ _each_, in the _order_ of their _names_ (ADR 0009). A **pipeline file** _turns_ a _file_ of _places_ into the _next_ _script_, _cleaning_ it on the _way_: GDAL extracts _each_ _table_, filters _clean_ its _rows_, and GDAL _writes_ the SQL. To _add_ _places_:
+The _places_ _reach_ the _database_ as SQL _scripts_ in `db/seed`, which DbUp _runs_ _once_ _each_, in the _order_ of their _names_ (ADR 0009). A **pipeline file** _turns_ a _file_ of _places_ into the _next_ _script_, _cleaning_ it on the _way_: GDAL extracts _each_ _table_, filters _clean_ its _rows_, and the _pipeline_ _writes_ the SQL. To _add_ _places_:
 
 1. Inspect the _data_, such as `npm run inspect -- data/parks.gdb`, and _save_ the _starting_ _pipeline_ _file_ it _prints_ _beside_ the _data_, such as `data/parks.pipeline.json`. Then _set_ _each_ _table_'s ***schema*** and _name_, and its filters. It _names_ the _source_, the _script_ to _write_, and _each_ _table_ with its filters. GDAL _reads_ _file_ geodatabases, GeoJSON, shapefiles, GeoPackages, CSV and more, and _stores_ every _shape_ in longitude and latitude.
 2. _Run_ it: `npm run etl -- data/parks.pipeline.json`. It _writes_ the _script_, such as `db/seed/0002-parks.sql`, and a _log_ of what _each_ filter did to _each_ _row_, in `db/seed-logs/`.
