@@ -1,4 +1,5 @@
-// Tests of npm run etl's pure parts; node --test runs them, with no .NET and no GDAL.
+// Tests of npm run etl's pure parts. node --test runs them with no Python and no GDAL, the library
+// that reads map files.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readEtlArguments, uvArguments } from './etl.ts';
