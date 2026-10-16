@@ -15,3 +15,13 @@ public sealed class DatabaseAnswers(Database database) : IHealthCheck
             ? HealthCheckResult.Healthy()
             : HealthCheckResult.Unhealthy();
 }
+
+/// <summary>
+/// The <b><i>health check</i></b> on the list of layers: degraded until the first list loads, since
+/// until then every tile answers 503 though the service itself is well (N-23 c3, N-25).
+/// </summary>
+public sealed class CatalogueReady(LiveCatalogue catalogue) : IHealthCheck
+{
+    public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default) =>
+        Task.FromResult(catalogue.Current is null ? HealthCheckResult.Degraded() : HealthCheckResult.Healthy());
+}

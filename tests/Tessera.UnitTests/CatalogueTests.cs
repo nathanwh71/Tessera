@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Modules.Tessera.Domain;
 using Modules.Tessera.Infrastructure;
@@ -136,5 +137,19 @@ public sealed class CatalogueTests
         await (live.ExecuteTask ?? Task.CompletedTask);
 
         Assert.Equal(1, calls);
+    }
+
+    // N-25: /health says OUT_OF_SERVICE while no list has loaded, and the check turns healthy once
+    // one has, so a list that loads late heals the service without a restart.
+    [Fact]
+    public async Task Reports_degraded_until_the_first_list_loads()
+    {
+        var live = Live(_ => Ok(With("cafes")));
+        var check = new CatalogueReady(live);
+        var before = await check.CheckHealthAsync(new(), TestContext.Current.CancellationToken);
+        await live.Refresh(TestContext.Current.CancellationToken);
+        var after = await check.CheckHealthAsync(new(), TestContext.Current.CancellationToken);
+
+        Assert.Equal((HealthStatus.Degraded, HealthStatus.Healthy), (before.Status, after.Status));
     }
 }

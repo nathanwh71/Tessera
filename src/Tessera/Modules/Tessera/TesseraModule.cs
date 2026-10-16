@@ -54,8 +54,11 @@ public static class TesseraModule
             services.GetRequiredService<ILoggerFactory>().CreateLogger("Tessera.Catalogue")));
         // The background loop is the same object the tiles read, so a refresh reaches every request.
         builder.Services.AddHostedService(services => services.GetRequiredService<LiveCatalogue>());
-        // N-25: the database must answer a ping within a second, through the same pool as the tiles.
-        builder.Services.AddHealthChecks().AddCheck<DatabaseAnswers>("database");
+        // N-25: the database must answer a ping within a second, through the same pool as the tiles,
+        // and the first list of layers must have loaded.
+        builder.Services.AddHealthChecks()
+            .AddCheck<DatabaseAnswers>("database")
+            .AddCheck<CatalogueReady>("catalogue");
         return builder;
     }
 
@@ -69,7 +72,7 @@ public static class TesseraModule
         var catalogue = app.Services.GetRequiredService<LiveCatalogue>();
         // Before the routes run, so its hook joins every answer, whichever route or step writes it.
         app.UseMapHeaders();
-        app.MapHealth(catalogue);
+        app.MapHealth();
         app.MapTiles(
             catalogue,
             app.Services.GetRequiredService<Database>(),
