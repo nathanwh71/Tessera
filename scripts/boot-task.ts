@@ -16,7 +16,8 @@ if (!distro) {
   process.exit(1);
 }
 
-// npm start needs Docker running before it; systemd starts Docker with Ubuntu once it is enabled.
+// npm start needs Docker running before it. systemd, the first program Ubuntu runs, which starts
+// the others, starts Docker with Ubuntu once Docker is enabled.
 const docker = dockerSteps((await $({ nothrow: true, quiet: true })`systemctl is-enabled docker`).stdout);
 if (docker.length > 0) {
   console.log(docker.join('\n'));

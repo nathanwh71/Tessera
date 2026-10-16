@@ -1,6 +1,8 @@
 // Checks what Nginx adds in front of the service (ADR 0008): the office-only rule and the limits
-// for each visitor, kept tiles, 304, gzip, a second copy that takes over when the first stops, and
-// tiles served while both copies are down.
+// for each visitor; kept tiles, which Nginx stores and serves again without asking the service;
+// 304, the status that tells a browser its own stored copy still holds; gzip, a way of packing
+// bytes smaller for the journey; a second copy that takes over when the first stops; and tiles
+// served while both copies are down.
 // scripts/e2e.ts runs these after the browser tests, with the office set to 127.0.0.4/30.
 import assert from 'node:assert/strict';
 import { Agent, request } from 'node:http';
@@ -94,9 +96,10 @@ export async function checkEdge(base: string, stopFirst: () => Promise<void>, st
   assert.equal((await ask(tile, {}, 'GET', '127.0.0.5')).status, 200);
 
   // S-30: one visitor asking for 600 tiles as fast as eight connections allow passes the burst of
-  // 300 and meets 429, which asks it to wait a second. The flood comes from an address of its own,
-  // so the limit it meets touches no other check. Eight connections stay well under the cap of 32
-  // at once, so only the rate limit can answer 429 here.
+  // 300, the requests Nginx lets a visitor send above the steady 100 a second, and meets 429, which
+  // asks it to wait a second. The flood comes from an address of its own, so the limit it meets
+  // touches no other check. Eight connections stay well under the cap of 32 at once, so only the
+  // rate limit can answer 429 here.
   const flood = new Agent({ keepAlive: true, maxSockets: 8 });
   const answers = await Promise.all(Array.from({ length: 600 }, () => ask(tile, {}, 'GET', '127.0.0.6', flood)));
   flood.destroy();
@@ -119,8 +122,9 @@ export async function checkEdge(base: string, stopFirst: () => Promise<void>, st
   assert.ok(took >= 1800 && took < 4000, `twenty requests took ${took} ms`);
 
   // S-30: one machine may have 32 requests in hand at once. Forty at once for a slow tile leave
-  // eight or more refused with 429, and the rest receive the tile. Without keep-alive, and with room
-  // for 64 sockets, each request holds a connection of its own, so Nginx counts all forty at once.
+  // eight or more refused with 429, and the rest receive the tile. Without keep-alive, which lets one
+  // connection carry request after request, and with room for 64 sockets, each request holds a
+  // connection of its own, so Nginx counts all forty at once.
   // The tile, 1/1/0, is one no check has asked for, so every request waits on the slow query
   // rather than meeting a kept copy; the address, 127.0.0.7, has met no limit yet.
   const many = new Agent({ keepAlive: false, maxSockets: 64 });

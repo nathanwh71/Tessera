@@ -98,9 +98,10 @@ process.on('SIGINT', () => {
 
 /**
  * Stops one copy, whatever state it is in. A copy waiting out its restart delay has already ended,
- * and zx then throws at once rather than return a promise, so the try catches that; a copy that ends
- * just as the signal goes makes the kill fail later, and .catch drops that. Either way the copy is
- * stopped, and an error here would end the script before it stopped the other copy.
+ * and zx then throws at once rather than return a promise, an object that stands for a result still
+ * to come, so the try catches that; a copy that ends just as the signal goes makes the kill fail
+ * later, and .catch drops that. Either way the copy is stopped, and an error here would end the
+ * script before it stopped the other copy.
  */
 function stopCopy(copy: ProcessPromise): void {
   try {
