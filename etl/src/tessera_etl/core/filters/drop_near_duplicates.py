@@ -1,7 +1,8 @@
 """dropNearDuplicates: two rows with one name, close together, are one place entered twice.
 
-The name is compared ignoring case and spaces, and the shapes' centres must lie within the
-given metres; the first row is kept. Neither test alone is enough: a name repeats across a
+The names are compared after tidying, as tidyText tidies them (one Unicode form, one space
+between words, none at the ends), and lowering their case; the shapes' centres must lie within
+the given metres; the first row is kept. Neither test alone is enough: a name repeats across a
 city, and a position repeats in a busy building.
 """
 
