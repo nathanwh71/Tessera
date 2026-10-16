@@ -44,11 +44,11 @@ def create(fields: Sequence[str | None] | None = None) -> Step[Cleaning]:
         for name in sorted(name for name in columns(frame) if only is None or name in only):
             texts = measure.as_text(frame[name][measure.is_text(frame[name])])
             clean = measure.tidied(texts)
-            # Empty text is untidy too: it becomes null, even though tidying leaves it as it was.
+            # Empty text is untidy too: it becomes null, the value of an empty cell, though
+            # tidying leaves it as it was.
             moved = clean[(clean != texts) | (clean == "")]
             if moved.empty:
                 continue
-            # Text that tidies to nothing becomes null, the value of an empty cell.
             tidy[name] = frame[name].copy()
             tidy[name].loc[moved.index] = moved.astype(object).replace("", None)
             for row in moved.index:
