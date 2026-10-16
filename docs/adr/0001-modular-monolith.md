@@ -12,7 +12,7 @@
 
 Tessera's _back_ _end_ is _one_ _service_, _built_ and _shipped_ as _one_ _unit_, and _divided_ _inside_ into ***modules*** with _fixed_ _borders_. The _service_ is _one_ _project_, `src/Tessera`, laid out as the modular-monolith _template_; Tessera is its _one_ _module_, `Modules.Tessera`, and ***architecture tests*** _guard_ the _borders_ _between_ its ***layers***. ADR 0010 _sets_ out the layout, the _rules_ and the _tests_.
 
-This _record_ _covers_ the _back_ _end_ _alone_. The _map_'s _front_ _end_, in TypeScript, _keeps_ its _own_ _design_ (ADR 0006).
+This _record_ _covers_ the _back_ _end_. The _map_'s _front_ _end_, in TypeScript, _keeps_ its _own_ _design_ (ADR 0006), but _borrows_ this _record_'s _idea_: its _folders_ are _modules_, _each_ with a _public_ _face_, that _depend_ on _one_ another in _one_ _direction_, and its _own_ _architecture_ _test_ _guards_ them.
 
 ## Context
 
