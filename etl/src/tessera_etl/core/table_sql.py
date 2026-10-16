@@ -3,36 +3,36 @@
 ***SQL*** is the language a database such as PostgreSQL takes its orders in; ***PostGIS*** is
 the PostgreSQL extension that stores and measures shapes.
 
-The SQL takes the form GDAL's PGDump driver wrote before: drop the table, make it with a `fid`
-***key*** and a `geom` column in ***SRID*** 4326 (the code of longitude and latitude), one
-INSERT for each row in order, a ***spatial index***, and fresh statistics.
+The SQL takes the form of GDAL's PGDump driver: drop the table, make it with a `fid` ***key***
+and a `geom` column in ***SRID*** 4326 (the code of longitude and latitude), one INSERT for each
+row in order, a ***spatial index***, and fresh statistics.
 
 It keeps GDAL's choices where the map service depends on them, its typing of dates, times and
-date-times included, and departs from them in two places on purpose, as the C# tool did. A
-number with a fraction keeps all its digits, where GDAL kept fifteen. A column that mixes text
-with numbers or true and false becomes text, where GDAL made it JSON, which the tile query
-leaves out of every tile.
+date-times included, and departs from them in two places on purpose. A number with a fraction
+keeps all its digits, where GDAL keeps fifteen. A column that mixes text with numbers or true
+and false becomes text, where GDAL makes it JSON, which the tile query leaves out of every tile.
 """
 
 import math
 import re
 from collections import Counter
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 
 from geopandas import GeoDataFrame
 from shapely.geometry import LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon
 from shapely.geometry.base import BaseGeometry
 
 from ..kernel.result import Err, Ok, Result
-from . import rows
 from .judge import number_text
 from .plan import TablePlan
-from .rows import Value, columns, numbers, values
+from .rows import Value, columns, numbers, shapes, values
 from .seed_script import schema_and_name
 from .shapes import ewkb_hex
 
-# PostgreSQL keeps a name to 63 bytes, and cuts a longer one; GDAL cuts it first, and so does this.
-_NAME_BYTES = 63
+NAME_BYTES = 63
+"""PostgreSQL keeps a name to 63 bytes, and cuts a longer one; GDAL cuts it first, and so does this."""
+
+_INT32 = range(-(2**31), 2**31)
 
 
 def written(frame: GeoDataFrame, absent: Mapping[str, frozenset[int]]) -> list[str]:
@@ -51,52 +51,67 @@ def statements(table: TablePlan, frame: GeoDataFrame, absent: Mapping[str, froze
 
     There are none for no rows, or for two columns whose names become one.
     """
-    # A table with no rows is refused.
     if frame.empty:
         return Err(f"{table.table}: no rows to write.")
-
     schema, name = schema_and_name(table)
-    columns = written(frame, absent)
-    cells = {column: values(frame, column) for column in columns}
-    names = [launder(column) for column in columns]
+    kept = written(frame, absent)
+    names = [launder(column) for column in kept]
     # Two columns that become one name, such as 'Name' and 'name', or a column named as the key
     # or the shape, would make a script the database refuses; the run stops here instead.
     counts = Counter([*names, "fid", "geom"])
-    clash = next((column for column in dict.fromkeys([*names, "fid", "geom"]) if counts[column] > 1), None)
+    clash = next((column for column in counts if counts[column] > 1), None)
     if clash is not None:
         return Err(f'{table.table}: two columns become "{clash}"; rename one in the source.')
 
-    types = [type_of(cells[column]) for column in columns]
-    shapes = [_kept_shape(shape, table.lines) for shape in rows.shapes(frame)]
-    kinds = list(dict.fromkeys(shape.geom_type.upper() for shape in shapes if shape is not None))
+    cells = [values(frame, column) for column in kept]
+    kinds = [type_of(column) for column in cells]
+    found = [_kept_shape(shape, table.lines) for shape in shapes(frame)]
+    # One kind of shape gives a column of that kind; a mix, or none, gives GEOMETRY.
+    shared = {shape.geom_type.upper() for shape in found if shape is not None}
+    geometry = next(iter(shared)) if len(shared) == 1 else "GEOMETRY"
     quoted = f"{_quote(schema)}.{_quote(name)}"
+    return Ok(
+        (
+            "SET standard_conforming_strings = ON;",
+            f"DROP TABLE IF EXISTS {quoted} CASCADE;",
+            f"CREATE TABLE {quoted}();",
+            # The key numbers the rows 1, 2, 3 in the order they are inserted, which is the
+            # source's, and fixes the order of features in a tile.
+            f'ALTER TABLE {quoted} ADD COLUMN "fid" SERIAL CONSTRAINT {_quote(f"{name}_pk")} PRIMARY KEY;',
+            f"SELECT AddGeometryColumn({_text(schema)},{_text(name)},'geom',4326,'{geometry}',2);",
+            *(f"ALTER TABLE {quoted} ADD COLUMN {_quote(column)} {kind};" for column, kind in zip(names, kinds, strict=True)),
+            *_inserts(
+                quoted,
+                names,
+                found,
+                [[literal(value, kind) for value in column] for column, kind in zip(cells, kinds, strict=True)],
+            ),
+            # The spatial index lets the tile query read only the rows inside one tile.
+            f'CREATE INDEX {_quote(f"{name}_geom_geom_idx")} ON {quoted} USING GIST ("geom");',
+            # Fresh statistics let PostgreSQL plan the tile query well from the first request.
+            f"ANALYZE {quoted};",
+        )
+    )
 
-    out: list[str] = [
-        "SET standard_conforming_strings = ON;",
-        f"DROP TABLE IF EXISTS {quoted} CASCADE;",
-        f"CREATE TABLE {quoted}();",
-        # The key numbers the rows 1, 2, 3 in the order they are inserted, which is the
-        # source's, and fixes the order of features in a tile.
-        f'ALTER TABLE {quoted} ADD COLUMN "fid" SERIAL CONSTRAINT {_quote(f"{name}_pk")} PRIMARY KEY;',
-        # One kind of shape gives a column of that kind; a mix, or none, gives GEOMETRY.
-        f"SELECT AddGeometryColumn({_text(schema)},{_text(name)},'geom',4326,'{kinds[0] if len(kinds) == 1 else 'GEOMETRY'}',2);",
-    ]
-    out.extend(f"ALTER TABLE {quoted} ADD COLUMN {_quote(column)} {kind};" for column, kind in zip(names, types, strict=True))
 
+def _inserts(
+    quoted: str, names: Sequence[str], found: Sequence[BaseGeometry | None], literals: Sequence[Sequence[str]]
+) -> list[str]:
+    """One INSERT for each row, in order, from each column's values already written as SQL.
+
+    Each shape goes in as PostGIS's ***extended well-known binary***, in hexadecimal, the form
+    GDAL writes, which PostGIS reads into a geometry column directly. A row with no shape leaves
+    the column out, so it holds NULL.
+    """
     listed = ", ".join(_quote(column) for column in names)
-    for position, shape in enumerate(shapes):
-        listing = ", ".join(literal(cells[column][position], kind) for column, kind in zip(columns, types, strict=True))
-        # A row with no shape leaves the column out, so it holds NULL, as GDAL wrote it.
-        if shape is not None:
-            out.append(f"INSERT INTO {quoted} (\"geom\", {listed}) VALUES ('{_ewkb(shape)}', {listing});")
-        else:
-            out.append(f"INSERT INTO {quoted} ({listed}) VALUES ({listing});")
-
-    # The spatial index lets the tile query read only the rows inside one tile.
-    out.append(f'CREATE INDEX {_quote(f"{name}_geom_geom_idx")} ON {quoted} USING GIST ("geom");')
-    # Fresh statistics let PostgreSQL plan the tile query well from the first request.
-    out.append(f"ANALYZE {quoted};")
-    return Ok(tuple(out))
+    rows = zip(*literals, strict=True) if literals else iter([()] * len(found))
+    hexes = iter(ewkb_hex([shape for shape in found if shape is not None], 4326))
+    return [
+        f"INSERT INTO {quoted} (\"geom\", {listed}) VALUES ('{next(hexes)}', {', '.join(row)});"
+        if shape is not None
+        else f"INSERT INTO {quoted} ({listed}) VALUES ({', '.join(row)});"
+        for shape, row in zip(found, rows, strict=True)
+    ]
 
 
 def launder(column: str) -> str:
@@ -107,34 +122,32 @@ def launder(column: str) -> str:
     """
     name = "".join("_" if letter in "'-#" else letter.lower() if ord(letter) <= 127 else letter for letter in column)
     # Cut at a whole character, so no letter is split in two.
-    while len(name.encode("utf-8", "surrogatepass")) > _NAME_BYTES:
+    while len(name.encode("utf-8", "surrogatepass")) > NAME_BYTES:
         name = name[:-1]
     return name
 
 
-def type_of(values: Iterable[Value]) -> str:
-    """The column's type, from the values its rows hold, as GDAL chose it.
+def type_of(column: Sequence[Value]) -> str:
+    """The column's type, from the values its rows hold, as GDAL chooses it.
 
-    Whole numbers become INTEGER, or INT8 past 32 bits; any fraction makes FLOAT8; true and
-    false become BOOLEAN, or a number beside other numbers; text that is all dates, times or
-    date-times takes that type (see `time_type_of`); anything mixed with text, and a column of
-    nulls, becomes text.
+    Text that is all dates, times or date-times takes that type (see `time_type_of`); any other
+    text, text mixed with other values, and a column of nulls become VARCHAR; any fraction makes
+    FLOAT8; whole numbers become INTEGER, or INT8 past 32 bits, with true and false beside them
+    as numbers; and true and false alone become BOOLEAN.
     """
-    held = [value for value in values if value is not None]
-    texts = [value for value in held if isinstance(value, str)]
-    if held and len(texts) == len(held):
-        time = time_type_of(texts)
-        if time is not None:
-            return time
-    if texts or not held:
+    held = [value for value in column if value is not None]
+    if not held:
         return "VARCHAR"
-    flags = [value for value in held if isinstance(value, bool)]
-    wholes = [value for value in held if isinstance(value, int) and not isinstance(value, bool)]
+    if all(isinstance(value, str) for value in held):
+        return time_type_of(value for value in held if isinstance(value, str)) or "VARCHAR"
+    if any(isinstance(value, str) for value in held):
+        return "VARCHAR"
     if any(isinstance(value, float) for value in held):
         return "FLOAT8"
+    wholes = [value for value in held if isinstance(value, int) and not isinstance(value, bool)]
     if wholes:
-        return "INTEGER" if all(-(2**31) <= number <= 2**31 - 1 for number in wholes) else "INT8"
-    return "BOOLEAN" if flags else "VARCHAR"
+        return "INTEGER" if all(number in _INT32 for number in wholes) else "INT8"
+    return "BOOLEAN"
 
 
 # A date as GDAL reads one: four digits, two and two, joined by - or /, such as 2024-05-01.
@@ -150,29 +163,26 @@ _TIME_ONLY = re.compile(f"^{_CLOCK}$")
 _DATE_AND_TIME = re.compile(f"^{_DAY}[T ]{_CLOCK}(Z|[+-][0-9]{{2}}(:?[0-9]{{2}})?)?$")
 
 
-def time_type_of(values: Iterable[str]) -> str | None:
+def time_type_of(texts: Iterable[str]) -> str | None:
     """The type for a column of text when every value is a date, a time or a date-time.
 
     It is `date`, `time`, or `timestamp with time zone`, which also takes dates mixed with
-    date-times, as GDAL typed the column when it read the GeoJSON; None when any value is
-    other text, or a date that cannot be, such as 2024-13-45. The values go into the script as
+    date-times, as GDAL types the column when it reads GeoJSON; None when any value is other
+    text, or a date that cannot be, such as 2024-13-45. The values go into the script as
     written, and PostgreSQL reads them as the type says.
     """
-    kinds: list[str] = []
-    for value in values:
-        kind = _kind_of(value)
+    kinds: set[str] = set()
+    for text in texts:
+        kind = _kind_of(text)
         # One value of plain text makes the column text, so the rest need no look.
         if kind == "text":
             return None
-        if kind not in kinds:
-            kinds.append(kind)
-    if kinds == ["date"]:
+        kinds.add(kind)
+    if kinds == {"date"}:
         return "date"
-    if kinds == ["time"]:
+    if kinds == {"time"}:
         return "time"
-    if kinds and all(kind in ("date", "timestamp") for kind in kinds):
-        return "timestamp with time zone"
-    return None
+    return "timestamp with time zone" if kinds and kinds <= {"date", "timestamp"} else None
 
 
 def _kind_of(value: str) -> str:
@@ -258,13 +268,3 @@ def _kept_shape(shape: BaseGeometry | None, lines: bool) -> BaseGeometry | None:
             return MultiPoint([shape])
         case _:
             return shape
-
-
-def _ewkb(shape: BaseGeometry) -> str:
-    """The shape as PostGIS's ***extended well-known binary***, in hexadecimal.
-
-    That is the form GDAL wrote, which PostGIS reads into a geometry column directly: least
-    significant byte first, x and y alone, with SRID 4326 inside, since the extract put every
-    shape in longitude and latitude.
-    """
-    return ewkb_hex([shape], 4326)[0]
