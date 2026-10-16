@@ -8,8 +8,9 @@
 // (etl/src/tessera_etl/shell/extract.py). The pipeline then runs the filters and writes the script
 // to db/seed and its log to db/seed-logs. This script runs the pipeline in etl/, or in the folder
 // TESSERA_ETL_PYTHON names. It checks what it can first, so a mistake gets a plain
-// answer, then runs the pipeline and ends with its exit code: 0 when it wrote the script, 1 when it
-// stopped or failed, 2 when the command or the pipeline file is wrong.
+// answer, then runs the pipeline and ends with its exit code, the number a program hands back to
+// whoever ran it: 0 when the pipeline wrote the script, 1 when it stopped or failed, and 2 when a
+// check fails before any row is read, here or in the pipeline.
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { $ } from 'zx';
