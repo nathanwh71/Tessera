@@ -46,7 +46,7 @@ def run(command: list[str], case: str, pipeline: str = "p.json") -> Ran:
         done = subprocess.run([*command, pipeline], cwd=folder, capture_output=True, env=dict(os.environ), check=False)
         output = str(json.loads((folder / pipeline).read_text(encoding="utf-8"))["output"])
         script = folder / output
-        log = folder / f"{os.path.dirname(output)}-logs" / (Path(output).stem + ".log")
+        log = folder / f"{output.rpartition('/')[0]}-logs" / (Path(output).stem + ".log")
         existed = (CASES / case / output).is_file()
         return Ran(
             done.returncode,

@@ -22,12 +22,12 @@ core/ is pure.
 """
 
 import json
-import os
 import shutil
 import sys
 import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 
 from ..core import failure, pipeline, report, seed_script, tables
 from ..core.pipeline import CleaningPlan, Plan
@@ -59,15 +59,14 @@ def _fail(code: int, *problems: str) -> int:
     return code
 
 
-def _area_from_settings(settings_file: str) -> Area | None:
+def _area_from_settings(settings_file: Path) -> Area | None:
     """The area's box from tessera.json's Area section, when the file is here.
 
     A pipeline then need not repeat it; None when the file or its Area section is missing.
     """
-    if not os.path.isfile(settings_file):
+    if not settings_file.is_file():
         return None
-    with open(settings_file, encoding="utf-8-sig") as file:
-        settings = json.load(file)
+    settings = json.loads(settings_file.read_text(encoding="utf-8-sig"))
     area = settings.get("Area")
     if area is None:
         return None
@@ -86,11 +85,10 @@ def run(arguments: list[str]) -> int:
     if len(arguments) != 1:
         return _fail(2, "Usage: npm run etl -- PIPELINE.json")
     pipeline_file = arguments[0]
-    if not os.path.isfile(pipeline_file):
+    if not Path(pipeline_file).is_file():
         return _fail(2, f"{pipeline_file}: no such file.")
-    with open(pipeline_file, "rb") as file:
-        text = file.read().decode("utf-8-sig", "replace")
-    match pipeline.read(text, _area_from_settings("tessera.json")):
+    text = Path(pipeline_file).read_bytes().decode("utf-8-sig", "replace")
+    match pipeline.read(text, _area_from_settings(Path("tessera.json"))):
         case Err(problems):
             return _fail(2, *problems)
         case Ok(plan):
@@ -106,23 +104,21 @@ class _Run:
     cleaned: list[tuple[CleaningPlan, Outcome]] = field(default_factory=list[tuple[CleaningPlan, Outcome]])
 
     @property
-    def log_file(self) -> str:
+    def log_file(self) -> Path:
         """The log beside the scripts' folder: db/seed/0002-x.sql logs to db/seed-logs/0002-x.log."""
         output = self.plan.pipeline.output
-        folder, name = os.path.split(output)
-        stem = name[: name.rfind(".")] if "." in name else name
-        return os.path.join(f"{folder}-logs", f"{stem}.log")
+        return Path(f"{output.rpartition('/')[0]}-logs", f"{Path(output).stem}.log")
 
     def go(self) -> int:
         """Checks the source and the script's name, then extracts, cleans and loads each table."""
         file = self.plan.pipeline
         # A full path, since GDAL's Docker image sees each folder at the same path.
-        source = os.path.abspath(file.source)
-        if not os.path.exists(source):
+        source = str(Path(file.source).absolute())
+        if not Path(source).exists():
             return _fail(2, f"{file.source}: no such file or folder.")
         # DbUp runs a script once, known by its name, and never again; a changed script would
         # change nothing.
-        if os.path.isfile(file.output):
+        if Path(file.output).is_file():
             return _fail(2, f"{file.output} already exists. Give new data a new script, with the next number.")
         # A fresh folder for the copy and the script as it grows, deleted at the end however
         # the run ends.
@@ -145,8 +141,8 @@ class _Run:
         print(f"extracting {len(plans)} tables...", flush=True)
         # The script is written in the work folder as each table passes, and moved to its place
         # only once every table has passed, so a run that stops still leaves no script.
-        draft = os.path.join(work, "script.sql")
-        with open(draft, "w", encoding="utf-8", newline="\n") as script:
+        draft = Path(work, "script.sql")
+        with draft.open("w", encoding="utf-8", newline="\n") as script:
             for line in seed_script.head(self.pipeline_file, (plan.table for plan in plans)):
                 script.write(line + "\n")
             for plan in plans:
@@ -172,7 +168,7 @@ class _Run:
                         )
                         for statement in done.sql:
                             script.write(statement + "\n")
-        os.makedirs(os.path.dirname(os.path.abspath(file.output)), exist_ok=True)
+        Path(file.output).absolute().parent.mkdir(parents=True, exist_ok=True)
         shutil.move(draft, file.output)
         kept = sum(outcome.kept for _, outcome in self.cleaned)
         return self._finish(
@@ -186,9 +182,9 @@ class _Run:
         leaves a log as surely as a finished one.
         """
         log_file = self.log_file
-        os.makedirs(os.path.dirname(os.path.abspath(log_file)), exist_ok=True)
+        log_file.absolute().parent.mkdir(parents=True, exist_ok=True)
         text = report.log(self.pipeline_file, self.plan.pipeline, self.cleaned, result, datetime.now().astimezone())
-        with open(log_file, "w", encoding="utf-8", newline="\n") as file:
+        with log_file.open("w", encoding="utf-8", newline="\n") as file:
             file.write(text)
         print(f"{'Done' if code == 0 else 'Stopped'}: {result}", file=sys.stdout if code == 0 else sys.stderr, flush=True)
         print(f"The log is in {log_file}.", flush=True)

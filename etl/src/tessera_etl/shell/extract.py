@@ -20,10 +20,10 @@ Four cases still run ogr2ogr, as the C# tool did:
 """
 
 import json
-import os
 import warnings
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, cast
 
 import geopandas
@@ -96,7 +96,7 @@ def open_source(source: str, tables: int, work: str) -> Result[Reader, str]:
     (core/seed_script.py, copy_first): GeoJSON has no index, so each table's read would scan
     the whole file again.
     """
-    folders = (os.path.dirname(source), work)
+    folders = (str(Path(source).parent), work)
     if not seed_script.copy_first(source, tables):
         native = False
         try:
@@ -104,7 +104,7 @@ def open_source(source: str, tables: int, work: str) -> Result[Reader, str]:
         except Exception:  # noqa: BLE001 - an unreadable source fails later, with ogr2ogr's words
             native = False
         return Ok(Reader(source, work, tables, None, native, frozenset(), folders))
-    copy = os.path.join(work, "source.gpkg")
+    copy = str(Path(work, "source.gpkg"))
     try:
         json_columns = _copy(source, copy)
     except Exception:  # noqa: BLE001 - ogr2ogr then names the fault, as in the C# tool
@@ -467,8 +467,7 @@ def _native_json(raw: Any, value: Value) -> Value:
 def _source_features(reader: Reader) -> list[tuple[Any, frozenset[str], dict[str, Any]]]:
     """Each source feature's own id, the keys of its properties, and its raw JSON values."""
     if reader.native_features is None:
-        with open(reader.source, "rb") as file:
-            document = json.loads(file.read(), parse_int=geojson.NumberText, parse_float=geojson.NumberText)
+        document = json.loads(Path(reader.source).read_bytes(), parse_int=geojson.NumberText, parse_float=geojson.NumberText)
         found: list[tuple[Any, frozenset[str], dict[str, Any]]] = []
         shared: dict[frozenset[str], frozenset[str]] = {}
         for item in cast(list[dict[str, Any]], document.get("features", [])):
@@ -484,16 +483,15 @@ def _with_ogr2ogr(reader: Reader, table: TablePlan) -> Result[Result[Extract, st
     """Reads one table as the C# tool did: ogr2ogr writes it as GeoJSON, and that is read back."""
     source = reader.gdal_source or reader.source
     if seed_script.copy_first(reader.source, reader.tables) and reader.gdal_source is None:
-        copy = os.path.join(reader.work, "source-gdal.gpkg")
+        copy = str(Path(reader.work, "source-gdal.gpkg"))
         made = gdal.run(seed_script.copy_arguments(reader.source, copy), reader.folders)
         if isinstance(made, Err):
             return Err(made.error)
         reader.gdal_source = source = copy
-    extracted = os.path.join(reader.work, f"{table.table}.extracted.geojson")
-    match gdal.run(seed_script.extract_arguments(source, extracted, table), reader.folders):
+    extracted = Path(reader.work, f"{table.table}.extracted.geojson")
+    match gdal.run(seed_script.extract_arguments(source, str(extracted), table), reader.folders):
         case Err(why):
             return Err(why)
         case Ok():
             pass
-    with open(extracted, encoding="utf-8", errors="replace") as file:
-        return Ok(geojson.read(file.read()))
+    return Ok(geojson.read(extracted.read_text(encoding="utf-8", errors="replace")))

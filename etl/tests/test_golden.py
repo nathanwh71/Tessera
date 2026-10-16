@@ -90,7 +90,7 @@ def test_writes_the_90000_place_script_the_CSharp_tool_wrote(tmp_path: Path) -> 
     assert SCALE is not None
     folder = tmp_path / "scale"
     shutil.copytree(Path(__file__).parent / "fixtures" / "scale", folder)
-    os.symlink(SCALE, folder / "big.geojson")
+    (folder / "big.geojson").symlink_to(SCALE)
 
     done = subprocess.run([*PYTHON, "p.json"], cwd=folder, capture_output=True, text=True, check=False)
 

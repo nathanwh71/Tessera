@@ -68,14 +68,13 @@ class FilterKind[S: Model]:
         """Names each key the settings lack, then each needed setting the file leaves out."""
         fields = self.settings.model_fields
         known = [info.alias or name for name, info in fields.items()]
-        problems: list[str] = []
-        for key in given:
-            if key not in known:
-                problems.append(
-                    f"'{key}' is not a setting; this filter takes none."
-                    if not known
-                    else f"'{key}' is not a setting; its settings are {', '.join(known)}."
-                )
+        problems = [
+            f"'{key}' is not a setting; this filter takes none."
+            if not known
+            else f"'{key}' is not a setting; its settings are {', '.join(known)}."
+            for key in given
+            if key not in known
+        ]
         for name, info in fields.items():
             key = info.alias or name
             if info.is_required() and key not in given:

@@ -46,7 +46,7 @@ def _run(command: list[str], folder: Path, pipeline: str) -> Outcome:
     except (ValueError, KeyError, TypeError):
         output = ""
     script = copy / output
-    log = copy / f"{os.path.dirname(output)}-logs" / (Path(output).stem + ".log")
+    log = copy / f"{output.rpartition('/')[0]}-logs" / (Path(output).stem + ".log")
     outcome = Outcome(
         done.returncode,
         done.stdout,
@@ -62,13 +62,11 @@ def compare(folder: Path, pipeline: str = "p.json") -> list[str]:
     """The differences between the two tools' runs in one folder; none when they agree."""
     csharp = _run([DOTNET, CSHARP], folder, pipeline)
     python = _run(PYTHON_TOOL, folder, pipeline)
-    differences: list[str] = []
-    for name in ("code", "out", "err", "script", "log"):
-        if getattr(csharp, name) != getattr(python, name):
-            differences.append(
-                f"{name} differs:\n  C#:     {str(getattr(csharp, name))[:600]!r}\n  Python: {str(getattr(python, name))[:600]!r}"
-            )
-    return differences
+    return [
+        f"{name} differs:\n  C#:     {str(getattr(csharp, name))[:600]!r}\n  Python: {str(getattr(python, name))[:600]!r}"
+        for name in ("code", "out", "err", "script", "log")
+        if getattr(csharp, name) != getattr(python, name)
+    ]
 
 
 def main() -> int:

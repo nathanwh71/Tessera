@@ -43,7 +43,7 @@ target-version = "py313"
 extend-exclude = ["tests/fixtures/make_fixtures.py"]
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "N", "BLE", "C4", "PIE", "PT", "RET", "PL", "ARG"]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "PTH", "PERF", "N", "BLE", "C4", "PIE", "PT", "RET", "PL", "ARG"]
 ignore = [
     "PLR0911",  # a match with one return per case reads better than a table of exits
     "PLR0912",
