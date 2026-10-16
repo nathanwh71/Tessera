@@ -48,7 +48,7 @@ public sealed class MapTests
     [InlineData(true, null, "This release carries no map.")]
     public void Answers_404_when_there_is_no_page_to_show(bool preview, string? page, string detail)
     {
-        var answer = Assert.IsType<ProblemHttpResult>(MapRoutes.Answer(page.AsMaybe(), new MapSettings { ShowPreview = preview }));
+        var answer = Assert.IsType<ProblemHttpResult>(MapRoutes.Answer(page, new MapSettings { ShowPreview = preview }));
 
         Assert.Equal(404, answer.StatusCode);
         Assert.Equal(detail, answer.ProblemDetails.Detail);
@@ -60,7 +60,7 @@ public sealed class MapTests
     [InlineData("food.cafes.html", "food.cafes")]
     [InlineData("transport.buses.html", "transport.buses")]
     public void Opens_a_page_named_for_one_of_the_nine_layers(string file, string layer) =>
-        Assert.Equal(Maybe.From(layer), MapRoutes.LayerOf(file));
+        Assert.Equal(layer, MapRoutes.LayerOf(file));
 
     [Theory]
     [InlineData("index.html")]
@@ -68,5 +68,5 @@ public sealed class MapTests
     [InlineData("food.cafes")]
     [InlineData("food.cafes.htm")]
     public void Refuses_any_other_name(string file) =>
-        Assert.True(MapRoutes.LayerOf(file).HasNoValue);
+        Assert.Null(MapRoutes.LayerOf(file));
 }

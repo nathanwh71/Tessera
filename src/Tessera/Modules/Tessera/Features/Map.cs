@@ -1,7 +1,6 @@
 using System.Collections.Immutable;
 using System.Text.Json;
 using Common.Api;
-using CSharpFunctionalExtensions;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.FileProviders;
 using Modules.Tessera.Domain;
@@ -48,7 +47,7 @@ public static class MapRoutes
     public static WebApplication UseMap(this WebApplication app, AreaSettings area, MapSettings settings, string folder)
     {
         var file = Path.Combine(folder, "index.html");
-        var page = File.Exists(file) ? Maybe.From(Render(File.ReadAllText(file), area)) : Maybe<string>.None;
+        var page = File.Exists(file) ? Render(File.ReadAllText(file), area) : null;
         var assets = Path.Combine(folder, "assets");
         if (settings.ShowPreview && Directory.Exists(assets))
         {
@@ -72,16 +71,15 @@ public static class MapRoutes
         // Any other single name, such as /index.html, is not found, so each view of the map has one
         // address.
         pages.MapMethods("/{file}", read, (string file) =>
-            LayerOf(file).HasNoValue ? Problems.NotFound() : Answer(page, settings));
+            LayerOf(file) is null ? Problems.NotFound() : Answer(page, settings));
         return app;
     }
 
     /// <summary>The page, or a 404 that says why there is none (US-23 c5).</summary>
-    internal static IResult Answer(Maybe<string> page, MapSettings settings) =>
+    internal static IResult Answer(string? page, MapSettings settings) =>
         !settings.ShowPreview ? Problems.NotFound("The map preview is switched off.")
-        : page.Match(
-            html => TypedResults.Text(html, "text/html; charset=utf-8"),
-            () => Problems.NotFound("This release carries no map."));
+        : page is null ? Problems.NotFound("This release carries no map.")
+        : TypedResults.Text(page, "text/html; charset=utf-8");
 
     /// <summary>
     /// Writes the area into the page as the <c>tessera-area</c> block, before <c>&lt;/head&gt;</c>, so the
@@ -104,14 +102,14 @@ public static class MapRoutes
     }
 
     /// <summary>
-    /// The layer a page's name opens, such as <c>food.cafes</c> for <c>food.cafes.html</c>, or none
+    /// The layer a page's name opens, such as <c>food.cafes</c> for <c>food.cafes.html</c>, or null
     /// when the name opens none of the nine. The match is ordinal, letter for letter, as layer ids are
     /// (US-03).
     /// </summary>
-    public static Maybe<string> LayerOf(string file) =>
+    public static string? LayerOf(string file) =>
         file.EndsWith(".html", StringComparison.Ordinal) && LayerIds.Contains(file[..^".html".Length])
             ? file[..^".html".Length]
-            : Maybe<string>.None;
+            : null;
 
     /// <summary>
     /// An <b><i>endpoint filter</i></b>, a step ASP.NET Core runs around each of the page's routes. It

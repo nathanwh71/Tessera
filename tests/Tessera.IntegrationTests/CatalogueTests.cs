@@ -75,8 +75,8 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
         await using var reader = Database.Open(database.Reader, new DatabaseSettings());
         var catalogue = await Load(reader);
 
-        Assert.Equal((4326, "Point"), catalogue.Find("stage.granted").Map(layer => (layer.Srid, layer.GeometryType)).Value);
-        Assert.Equal((3857, "Point"), catalogue.Find("stage.mercator").Map(layer => (layer.Srid, layer.GeometryType)).Value);
+        Assert.Equal((4326, "Point"), catalogue.Find("stage.granted") is { } granted ? (granted.Srid, granted.GeometryType) : default);
+        Assert.Equal((3857, "Point"), catalogue.Find("stage.mercator") is { } mercator ? (mercator.Srid, mercator.GeometryType) : default);
     }
 
     // US-24 test 2: a table's primary key fixes the order of its features; a view has no key,
@@ -87,8 +87,8 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
         await using var reader = Database.Open(database.Reader, new DatabaseSettings());
         var catalogue = await Load(reader);
 
-        Assert.Equal(["\"id\""], catalogue.Find("stage.granted").Value.Order);
-        Assert.Empty(catalogue.Find("stage.granted_view").Value.Order);
+        Assert.Equal(["\"id\""], catalogue.Find("stage.granted")!.Order);
+        Assert.Empty(catalogue.Find("stage.granted_view")!.Order);
     }
 
     // c4: the awkward name is published and served.
@@ -162,14 +162,14 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
         var live = new LiveCatalogue(cancel => CatalogueReader.Load(reader, cancel), TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(100), Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance);
         await live.StartAsync(TestContext.Current.CancellationToken);
 
-        await Until(() => live.Current.Map(list => list.Layers.ContainsKey("stage.granted")).GetValueOrDefault(false));
-        Assert.False(live.Current.Value.Layers.ContainsKey("stage.late"));
+        await Until(() => live.Current?.Layers.ContainsKey("stage.granted") == true);
+        Assert.False(live.Current!.Layers.ContainsKey("stage.late"));
 
         await database.Owner("GRANT SELECT ON stage.late TO tessera_reader;");
-        await Until(() => live.Current.Map(list => list.Layers.ContainsKey("stage.late")).GetValueOrDefault(false));
+        await Until(() => live.Current?.Layers.ContainsKey("stage.late") == true);
 
         await database.Owner("REVOKE SELECT ON stage.late FROM tessera_reader;");
-        await Until(() => live.Current.Map(list => !list.Layers.ContainsKey("stage.late")).GetValueOrDefault(false));
+        await Until(() => live.Current?.Layers.ContainsKey("stage.late") == false);
 
         await live.StopAsync(TestContext.Current.CancellationToken);
     }

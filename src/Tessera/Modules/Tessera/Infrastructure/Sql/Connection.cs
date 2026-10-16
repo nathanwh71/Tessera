@@ -28,9 +28,9 @@ public sealed record ConnectionString
     /// with no port, PostgreSQL's usual 5432. A password may hold any character, so a character such
     /// as '@' arrives percent-encoded, here %40. A missing or malformed URL gives the reason.
     /// </summary>
-    public static Result<ConnectionString, string> FromUrl(Maybe<string> given)
+    public static Result<ConnectionString, string> FromUrl(string? url)
     {
-        if (!given.TryGetValue(out var url) || url.Length == 0)
+        if (string.IsNullOrEmpty(url))
             return Result.Failure<ConnectionString, string>("missing or empty");
         // PostgreSQL's own tools accept both 'postgresql' and 'postgres', so a URL copied from them
         // reads.
@@ -58,7 +58,7 @@ public sealed class DatabaseConnection : IValidatableObject
     /// The URL, parsed once when the settings are read: the connection string, or why the URL was
     /// refused. ASP.NET's settings need a setter, so it starts refused, as for a missing variable.
     /// </summary>
-    public Result<ConnectionString, string> Parsed { get; set; } = ConnectionString.FromUrl(Maybe<string>.None);
+    public Result<ConnectionString, string> Parsed { get; set; } = ConnectionString.FromUrl(null);
 
     /// <summary>
     /// Refuses a missing or malformed URL and names its variable, so the service will not start
@@ -90,7 +90,7 @@ public static class DatabaseConnections
     /// </summary>
     public static void Register(IServiceCollection services, IConfiguration configuration, string variable) =>
         services.AddOptions<DatabaseConnection>()
-            .Configure(connection => (connection.Variable, connection.Parsed) = (variable, ConnectionString.FromUrl(configuration[variable].AsMaybe())))
+            .Configure(connection => (connection.Variable, connection.Parsed) = (variable, ConnectionString.FromUrl(configuration[variable])))
             .ValidateDataAnnotations()
             .ValidateOnStart();
 }

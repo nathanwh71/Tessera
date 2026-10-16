@@ -36,7 +36,7 @@ public sealed class TileTests
     [InlineData(15, 27154, 14280)]
     [InlineData(22, 4194303, 0)]
     public void Accepts_a_tile_that_exists(int z, int x, int y) =>
-        Assert.True(TileAddress.Of(z, x, y).HasValue);
+        Assert.NotNull(TileAddress.Of(z, x, y));
 
     [Theory]
     [InlineData(-1, 0, 0)]
@@ -44,7 +44,7 @@ public sealed class TileTests
     [InlineData(1, 2, 0)]
     [InlineData(1, 0, -1)]
     public void Refuses_a_tile_outside_the_grid(int z, int x, int y) =>
-        Assert.True(TileAddress.Of(z, x, y).HasNoValue);
+        Assert.Null(TileAddress.Of(z, x, y));
 
     // S-01 test 2: the tile query's text matches an approved snapshot, approved/tile-query.sql. A change
     // to the query fails this test until someone reads the new text and copies it over the old file.
@@ -74,7 +74,7 @@ public sealed class TileTests
         var query = Queries.Tile(Cafes, new TileAddress(15, 27154, 14280), Limits);
 
         Assert.DoesNotContain("food.cafes", query.Text, StringComparison.Ordinal);
-        Assert.Equal(new { layer = "food.cafes", resolution = 4096, z = 15, x = 27154, y = 14280, buffer = 64, margin = 0.015625, srid = 4326, limit = 10000 }.ToString(), query.Parameters.Value.ToString());
+        Assert.Equal(new { layer = "food.cafes", resolution = 4096, z = 15, x = 27154, y = 14280, buffer = 64, margin = 0.015625, srid = 4326, limit = 10000 }.ToString(), query.Parameters?.ToString());
     }
 
     // A column a seed script dropped since the list was read gives 42703. The tile answers 503, so the
@@ -84,7 +84,7 @@ public sealed class TileTests
     {
         var server = new TileServer(
             () => CatalogueReader.FromRows([new CatalogueRow("food", "cafes", "geom", 4326, "POINT", "[]")]),
-            (_, _) => Task.FromResult(Result.Failure<Maybe<byte[]>, DatabaseError>(DatabaseError.Of("42703", "column does not exist"))),
+            (_, _) => Task.FromResult(Result.Failure<byte[]?, DatabaseError>(DatabaseError.Of("42703", "column does not exist"))),
             Limits);
 
         var answer = await server.Answer("food.cafes", 15, 27154, 14280, TestContext.Current.CancellationToken);

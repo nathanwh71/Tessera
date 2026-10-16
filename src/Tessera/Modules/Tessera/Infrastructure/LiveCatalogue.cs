@@ -26,16 +26,15 @@ public sealed class LiveCatalogue(
     TimeSpan retry,
     ILogger log) : BackgroundService
 {
-    // Null before the first load. The field stays a plain reference, not a Maybe, so the loop can
-    // swap a whole list in with one step that no request can see half done (Interlocked.Exchange),
-    // which a Maybe, a struct, cannot do; Current hands it out as a Maybe.
+    // Null before the first load. The loop swaps a whole list in with one step that no request can
+    // see half done (Interlocked.Exchange).
     private LayerCatalogue? _current;
 
     /// <summary>
-    /// The list as it stands, or none before the first load. Volatile.Read makes each request see the
+    /// The list as it stands, or null before the first load. Volatile.Read makes each request see the
     /// list another thread swapped in last, never a stale copy held in a processor's memory.
     /// </summary>
-    public Maybe<LayerCatalogue> Current => Volatile.Read(ref _current).AsMaybe();
+    public LayerCatalogue? Current => Volatile.Read(ref _current);
 
     /// <summary>
     /// Reads the list once; on success it becomes the current list. The loop below calls it; it is
@@ -70,9 +69,9 @@ public sealed class LiveCatalogue(
             while (!stoppingToken.IsCancellationRequested)
             {
                 await Refresh(stoppingToken).ConfigureAwait(false);
-                if (Current.HasValue && every <= TimeSpan.Zero)
+                if (Current is not null && every <= TimeSpan.Zero)
                     return;
-                await Task.Delay(Current.HasNoValue ? retry : every, stoppingToken).ConfigureAwait(false);
+                await Task.Delay(Current is null ? retry : every, stoppingToken).ConfigureAwait(false);
             }
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)

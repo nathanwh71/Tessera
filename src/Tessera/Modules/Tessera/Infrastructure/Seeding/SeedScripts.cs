@@ -64,6 +64,6 @@ public static class SeedScripts
         return result.Successful
             ? Result.Success<IReadOnlyList<string>, string>([.. result.Scripts.Select(script => script.Name)])
             : Result.Failure<IReadOnlyList<string>, string>(
-                $"{result.ErrorScript.AsMaybe().Map(script => script.Name).GetValueOrDefault("The seed")} failed: {result.Error.Message}");
+                $"{result.ErrorScript?.Name ?? "The seed"} failed: {result.Error.Message}");
     }
 }

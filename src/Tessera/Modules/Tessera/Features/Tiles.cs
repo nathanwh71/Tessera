@@ -16,9 +16,9 @@ using IResult = Microsoft.AspNetCore.Http.IResult;
 namespace Modules.Tessera.Features;
 
 /// <summary>
-/// Runs the tile query and gives the tile's bytes, or none for an empty tile. A test passes a stand-in.
+/// Runs the tile query and gives the tile's bytes, or null for an empty tile. A test passes a stand-in.
 /// </summary>
-public delegate Task<Result<Maybe<byte[]>, DatabaseError>> TileReader(Query query, CancellationToken cancel);
+public delegate Task<Result<byte[]?, DatabaseError>> TileReader(Query query, CancellationToken cancel);
 
 /// <summary>Answers a tile request from the database (US-07).</summary>
 /// <param name="catalogue">
@@ -27,7 +27,7 @@ public delegate Task<Result<Maybe<byte[]>, DatabaseError>> TileReader(Query quer
 /// </param>
 /// <param name="read">Runs the tile query.</param>
 /// <param name="settings">The tile's limits and how long a browser and Nginx may keep it.</param>
-public sealed class TileServer(Func<Maybe<LayerCatalogue>> catalogue, TileReader read, TileSettings settings)
+public sealed class TileServer(Func<LayerCatalogue?> catalogue, TileReader read, TileSettings settings)
 {
     /// <summary>
     /// The registered media type of a <b><i>vector tile</i></b>, which US-07 c1 asks of every tile,
@@ -57,18 +57,18 @@ public sealed class TileServer(Func<Maybe<LayerCatalogue>> catalogue, TileReader
     /// </summary>
     public async Task<IResult> Answer(string layer, int z, int x, int y, CancellationToken cancel)
     {
-        if (!catalogue().TryGetValue(out var layers))
+        if (catalogue() is not { } layers)
             return Problems.Unavailable("The list of layers is not ready yet.");
-        if (!layers.Find(layer).TryGetValue(out var found))
+        if (layers.Find(layer) is not { } found)
             return Problems.NotFound("No published layer has that name.");
-        if (!TileAddress.Of(z, x, y, settings.MinZoom, settings.MaxZoom).TryGetValue(out var tile))
+        if (TileAddress.Of(z, x, y, settings.MinZoom, settings.MaxZoom) is not { } tile)
             return Problems.NotFound("No tile has those coordinates.");
 
         var built = await read(Queries.Tile(found, tile, settings), cancel).ConfigureAwait(false);
         // An empty tile is still a tile: 200 with no bytes, so the map draws nothing there, and the
         // browser and Nginx keep the empty answer like any other.
         return built.Match(
-            bytes => new TileResult(bytes.GetValueOrDefault([]), CacheControl(settings.CacheSeconds)),
+            bytes => new TileResult(bytes ?? [], CacheControl(settings.CacheSeconds)),
             // A withdrawn grant gives 42501: the layer has left, so 404 (US-03 c6). A column a seed script
             // dropped gives 42703: the browser is asked to try again shortly, and the list of layers
             // heals at its next refresh, within Catalogue.RefreshSeconds (N-23). A database that cannot

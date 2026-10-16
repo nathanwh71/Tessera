@@ -16,7 +16,7 @@ namespace Modules.Tessera.Infrastructure.Sql;
 /// request can change what a query does: <b><i>SQL injection</i></b>, SQL hidden in a request, has no
 /// way in. Every text lives in Queries.cs. A query with no values, such as the ping, has none.
 /// </summary>
-public sealed record Query(string Text, Maybe<object> Parameters = default);
+public sealed record Query(string Text, object? Parameters = null);
 
 /// <summary>
 /// Why the database refused a query: its SQLSTATE code, five characters, and its message, sorted into
@@ -117,12 +117,11 @@ public sealed class Database : IAsyncDisposable
             (await connection.QueryAsync<T>(Command(query, cancel)).ConfigureAwait(false)).ToImmutableArray(), cancel);
 
     /// <summary>
-    /// Runs a query that returns one value, or none when no row comes back; the <b><i>tile</i></b>
-    /// route reads none as an empty tile. Dapper gives null for 'no row', so the value becomes a
-    /// <b><i>Maybe</i></b> here, at the edge, and no null travels further.
+    /// Runs a query that returns one value, or null when no row comes back; the <b><i>tile</i></b>
+    /// route reads null as an empty tile.
     /// </summary>
-    public Task<Result<Maybe<T>, DatabaseError>> Single<T>(Query query, CancellationToken cancel = default) where T : class =>
-        Run(async connection => (await connection.QuerySingleOrDefaultAsync<T>(Command(query, cancel)).ConfigureAwait(false)).AsMaybe(), cancel);
+    public Task<Result<T?, DatabaseError>> Single<T>(Query query, CancellationToken cancel = default) where T : class =>
+        Run(async connection => await connection.QuerySingleOrDefaultAsync<T>(Command(query, cancel)).ConfigureAwait(false), cancel);
 
     /// <summary>
     /// True when the database answers <c>SELECT 1</c> within a second, the wait for a free connection
@@ -198,7 +197,7 @@ public sealed class Database : IAsyncDisposable
     };
 
     // Bundles the text, the parameters and the cancel token for Dapper, so no query leaves without
-    // all three. Dapper takes null for 'no parameters', so the Maybe opens here, at the edge.
+    // all three.
     private static CommandDefinition Command(Query query, CancellationToken cancel) =>
-        new(query.Text, query.Parameters.GetValueOrDefault(), cancellationToken: cancel);
+        new(query.Text, query.Parameters, cancellationToken: cancel);
 }

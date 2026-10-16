@@ -46,7 +46,7 @@ public sealed class CatalogueTests
     /// The ids of the current list, sorted so the comparison never depends on order. 'none' stands
     /// for no list yet, so an assertion can tell 'no list' from 'an empty list'.
     /// </summary>
-    private static string[] Ids(LiveCatalogue live) => live.Current.Map(list => list.Layers.Keys.Order(StringComparer.Ordinal).ToArray()).GetValueOrDefault(["none"]);
+    private static string[] Ids(LiveCatalogue live) => live.Current?.Layers.Keys.Order(StringComparer.Ordinal).ToArray() ?? ["none"];
 
     [Fact]
     public void Turns_a_row_into_a_layer_whose_id_is_schema_dot_name()
@@ -66,9 +66,9 @@ public sealed class CatalogueTests
     {
         var catalogue = CatalogueReader.FromRows([Cafes]);
 
-        Assert.True(catalogue.Find("food.cafes").HasValue);
-        Assert.True(catalogue.Find("Food.Cafes").HasNoValue);
-        Assert.True(catalogue.Find("food").HasNoValue);
+        Assert.NotNull(catalogue.Find("food.cafes"));
+        Assert.Null(catalogue.Find("Food.Cafes"));
+        Assert.Null(catalogue.Find("food"));
     }
 
     // US-03 test 3: each column the query returns maps to one field of the row, by name.
@@ -118,7 +118,7 @@ public sealed class CatalogueTests
         var live = Live(_ => ++calls < 3 ? Down() : Ok(With("cafes")), TimeSpan.FromSeconds(30));
 
         await live.StartAsync(TestContext.Current.CancellationToken);
-        for (var wait = 0; wait < 100 && live.Current.HasNoValue; wait++)
+        for (var wait = 0; wait < 100 && live.Current is null; wait++)
             await Task.Delay(10, TestContext.Current.CancellationToken);
         await live.StopAsync(TestContext.Current.CancellationToken);
 

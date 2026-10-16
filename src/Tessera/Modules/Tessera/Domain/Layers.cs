@@ -1,5 +1,4 @@
 using System.Collections.Immutable;
-using CSharpFunctionalExtensions;
 
 // The tables and views the service may publish as map tiles (US-03). The database keeps the guest
 // list; the Infrastructure reads it (Catalogue.cs) and builds these values from it.
@@ -36,9 +35,9 @@ public sealed record Layer(
 public sealed record LayerCatalogue(ImmutableDictionary<string, Layer> Layers)
 {
     /// <summary>
-    /// The layer with this id, or none: a <b><i>Maybe</i></b>, so the caller must say what happens when
-    /// there is no such layer. The match is exact and case-sensitive, as the database treats quoted
+    /// The layer with this id, or null when there is none; the compiler makes the caller check
+    /// which. The match is exact and case-sensitive, as the database treats quoted
     /// names: <c>food.cafes</c> is a layer, <c>Food.Cafes</c> is not.
     /// </summary>
-    public Maybe<Layer> Find(string id) => Layers.TryFind(id);
+    public Layer? Find(string id) => Layers.GetValueOrDefault(id);
 }

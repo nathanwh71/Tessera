@@ -1,6 +1,5 @@
 using Common.Api;
 using Common.Infrastructure;
-using CSharpFunctionalExtensions;
 using Modules.Tessera;
 
 /// <summary>
@@ -20,11 +19,12 @@ public static class TesseraHost
     /// Settings a test lays over the file and the environment; none when the program runs. Each value
     /// may be null, since ASP.NET Core's configuration reads null as 'no value'.
     /// </param>
-    public static WebApplication Build(Maybe<Dictionary<string, string?>> overrides = default)
+    public static WebApplication Build(Dictionary<string, string?>? overrides = null)
     {
         var builder = WebApplication.CreateBuilder();
         Settings.AddFile(builder.Configuration);
-        overrides.Tap(settings => builder.Configuration.AddInMemoryCollection(settings));
+        if (overrides is not null)
+            builder.Configuration.AddInMemoryCollection(overrides);
         // Every error answers as a problem document of one shape, so no route writes its own (US-07 c5).
         builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = Problems.Shape);
         builder.AddTessera();

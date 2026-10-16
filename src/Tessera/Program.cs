@@ -1,5 +1,4 @@
 using Common.Infrastructure;
-using CSharpFunctionalExtensions;
 using Microsoft.Extensions.Options;
 using Modules.Tessera.Infrastructure.Seeding;
 using Modules.Tessera.Infrastructure.Sql;
@@ -45,7 +44,7 @@ static int Seed()
     var configuration = new ConfigurationBuilder();
     Settings.AddFile(configuration);
     var variable = DatabaseConnections.PublisherDatabase;
-    var connection = ConnectionString.FromUrl(configuration.Build()[variable].AsMaybe());
+    var connection = ConnectionString.FromUrl(configuration.Build()[variable]);
     if (connection.IsFailure)
         return Fail([$"{variable}: {connection.Error}"]);
 
