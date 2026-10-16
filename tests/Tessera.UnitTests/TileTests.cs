@@ -90,6 +90,6 @@ public sealed class TileTests
     {
         Assert.Equal(TileServer.Tag([1, 2, 3]), TileServer.Tag([1, 2, 3]));
         Assert.NotEqual(TileServer.Tag([1, 2, 3]), TileServer.Tag([1, 2, 4]));
-        Assert.StartsWith("W/\"", TileServer.Tag([]), StringComparison.Ordinal);
+        Assert.StartsWith("W/\"", TileServer.Tag([]).ToString(), StringComparison.Ordinal);
     }
 }

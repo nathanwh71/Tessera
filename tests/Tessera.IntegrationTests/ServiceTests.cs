@@ -142,6 +142,21 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         Assert.Equal(first.Headers.ETag, second.Headers.ETag);
     }
 
+    // N-19 c2: a browser that sends the tag back, with its copy still good, gets 304 and no body. The
+    // answer keeps its Cache-Control, so the browser keeps the copy for another max-age.
+    [Fact]
+    public async Task Answers_a_matching_tag_with_304()
+    {
+        using var first = await Get($"/food.cafes/{Zoom}/{Tile.X}/{Tile.Y}.pbf");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/food.cafes/{Zoom}/{Tile.X}/{Tile.Y}.pbf");
+        request.Headers.IfNoneMatch.Add(first.Headers.ETag!);
+        using var again = await service.Client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.NotModified, again.StatusCode);
+        Assert.Equal("public, max-age=60", again.Headers.CacheControl?.ToString());
+        Assert.Empty(await again.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken));
+    }
+
     // A watcher, such as a script that checks a tile's tag, may ask with HEAD for the headers alone
     // (ADR 0008); the answer carries the same tag as a GET's, with no body sent.
     [Fact]

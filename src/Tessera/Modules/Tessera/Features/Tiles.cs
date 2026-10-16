@@ -1,14 +1,15 @@
 using System.Security.Cryptography;
 using Common;
 using Common.Api;
+using Microsoft.Net.Http.Headers;
 using Modules.Tessera.Domain;
 using Modules.Tessera.Infrastructure;
 using Modules.Tessera.Infrastructure.Sql;
 
 // The request at the heart of Tessera: 'send me this tile of this layer' (US-07). A vector tile is
 // one square of the map sent as data, the shapes of the places within it, for the browser to draw.
-// Nginx, in front, keeps tiles, packs them and answers 304 (ADR 0008), so this file builds each tile
-// it is asked for.
+// Nginx, in front, keeps tiles and packs them (ADR 0008), so this file builds each tile it is asked
+// for. ASP.NET Core answers 304 to a browser whose kept copy is still good, as Nginx does.
 
 namespace Modules.Tessera.Features;
 
@@ -46,7 +47,8 @@ public sealed class TileServer(
     /// <c>W/"…"</c>, because one tag covers the plain and the gzip form (N-20 c4). Sixteen of the
     /// hash's 32 bytes keep the tag short, yet two different tiles still never share one in practice.
     /// </summary>
-    public static string Tag(byte[] bytes) => $"W/\"{Convert.ToHexStringLower(SHA256.HashData(bytes).AsSpan(0, 16))}\"";
+    public static EntityTagHeaderValue Tag(byte[] bytes) =>
+        new($"\"{Convert.ToHexStringLower(SHA256.HashData(bytes).AsSpan(0, 16))}\"", isWeak: true);
 
     /// <summary>
     /// Finds the layer, checks the address, then runs the query. An unknown layer is refused before any
@@ -82,14 +84,17 @@ public sealed class TileServer(
         return Problems.Unavailable("The layer has changed. Try again shortly.");
     }
 
-    /// <summary>A tile's bytes with its two headers: how long it may be kept, and its tag.</summary>
+    /// <summary>
+    /// A tile's bytes with its two headers: how long it may be kept, and its tag. ASP.NET Core writes
+    /// the tag, and answers 304 with no body when the browser's <c>If-None-Match</c> holds the same
+    /// one (N-19 c2), so only Cache-Control is written here.
+    /// </summary>
     public sealed record TileResult(byte[] Bytes, string CacheControl) : IResult
     {
         public Task ExecuteAsync(HttpContext context)
         {
             context.Response.Headers.CacheControl = CacheControl;
-            context.Response.Headers.ETag = Tag(Bytes);
-            return Results.Bytes(Bytes, ContentType).ExecuteAsync(context);
+            return TypedResults.Bytes(Bytes, ContentType, entityTag: Tag(Bytes)).ExecuteAsync(context);
         }
     }
 }
