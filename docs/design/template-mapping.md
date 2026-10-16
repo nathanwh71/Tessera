@@ -49,7 +49,7 @@ tests/
 
 `Modules.Tessera` is _one_ _project_, `Common` _one_ more, and the _Host_ a _third_. The _folders_ _match_ the _template_'s _names_, so a _reader_ who _knows_ the _template_ _finds_ _each_ _file_ where they _expect_ it. _Each_ namespace _matches_ its _folder_, and the _build_ _enforces_ it (_see_ the _rules_ _below_).
 
-The _template_'s _other_ _pieces_, the _four_ _sample_ _modules_, `Common/Application` and `Common/Domain`, _carry_ _nothing_ Tessera _needs_. They _go_, or _stay_ _empty_. Aspire's AppHost _stays_ _optional_: `npm start` _still_ _runs_ the _service_.
+The _template_'s `Common` is _empty_, so Tessera _fills_ _two_ of its _folders_, `Api` and `Infrastructure`, and _leaves_ `Application` and `Domain` _empty_. The _four_ _sample_ _modules_ _carry_ _nothing_ Tessera _needs_, and _go_. Aspire's AppHost _stays_ _optional_: `npm start` _still_ _runs_ the _service_.
 
 ## Where each file goes
 
@@ -81,7 +81,7 @@ Tessera _already_ leans on the _framework_ for _most_ of its plumbing. The _move
 
 **Already the framework's, and kept:** `AddProblemDetails` with `TypedResults.Problem`; `ValidateDataAnnotations` and `ValidateOnStart` for every _settings_ _section_; `AddHealthChecks`; `BackgroundService` for the catalogue's timer; `UseStaticFiles` for the _map_'s _files_; `UseExceptionHandler` and `UseStatusCodePages`.
 
-**The module's door is two extension methods,** `AddTessera(this IHostApplicationBuilder)` and `MapTessera(this IEndpointRouteBuilder)`. This is ASP.NET Core's _own_ idiom, as in `AddHealthChecks` and `MapHealthChecks`. If the _template_ _finds_ its _modules_ _through_ an `IModule` interface and reflection, Tessera does not _join_ that _scheme_: a reflection scan _hides_ who _calls_ whom, which is the very _thing_ the ***boundary rules*** must _see_.
+**The module's door is two extension methods,** `AddTessera(this IHostApplicationBuilder)` and `MapTessera(this IEndpointRouteBuilder)`. This is ASP.NET Core's _own_ idiom, as in `AddHealthChecks` and `MapHealthChecks`. The _template_'s `Common` _offers_ no _module_ _scheme_, and Tessera _adds_ _none_: no `IModule` interface, and no reflection scan to _find_ _modules_, _since_ such a scan _hides_ who _calls_ whom, the very _thing_ the ***boundary rules*** must _see_. A _second_ _module_ _brings_ its _own_ _two_ _methods_, and the _Host_ _calls_ them.
 
 **Kept by hand, since the framework has no equal:** _reading_ `DATABASE_URL` as a URL (Npgsql _reads_ _only_ `key=value` _text_); _placing_ the _area_'s _box_ in the _map_ _page_; `LayerOf`, which _knows_ the _nine_ _layer_ _pages_; and the latch that _lets_ _one_ _reread_ of the catalogue _run_ at a _time_.
 
@@ -102,7 +102,7 @@ The _layers_ _fit_ ADR 0004 _without_ strain, _since_ they _divide_ the _code_ w
 - **Domain** _holds_ the read-only _records_ and the _pure_ _functions_: `TileAddress.Of`, `LayerCatalogue.FromRows` and `Find`, the _settings_ _records_ with their _own_ _checks_. It _knows_ no _database_ and no _web_, and a _rule_ _says_ so.
 - **Infrastructure** _holds_ every _effect_ on the _database_. It _speaks_ `Result<T, DatabaseError>`, as `Database` does _now_, and _never_ _throws_ for a _failure_ the _caller_ _expects_.
 - **Features** is the _edge_ where a `Result` _becomes_ an _answer_: `Match` _turns_ _success_ into a _tile_ and _each_ `DatabaseError` into 404, 503 or 500, as `TileServer.Answer` does _now_. `Map.Render` _stays_ a _pure_ _function_ that the _route_ _calls_.
-- **One `Result` type** for the _whole_ _program_: CSharpFunctionalExtensions. The _template_'s `Common` _holds_ no `Result` of its _own_, so Tessera _brings_ this _one_, and no _code_ _converts_ _between_ _two_.
+- **One `Result` type** for the _whole_ _program_: CSharpFunctionalExtensions. The _template_'s `Common` is _empty_, so Tessera _brings_ this _one_, and every _module_ _uses_ it.
 
 The _comments_ _move_ with their _code_. _Each_ _moved_ _file_ _keeps_ its _reasons_, and _each_ _new_ _file_, such as `TesseraModule.cs`, _gets_ _comments_ _written_ the _same_ _way_.
 
@@ -232,6 +232,6 @@ _Each_ _step_ is _one_ _commit_ and _leaves_ `npm test` _green_, the URLs the _s
 
 The ETL in `tools/`, the _scripts_, the _map_ in `web/`, the _seed_ _scripts_ and the Nginx _settings_ _stay_ _outside_ the _template_. The ETL is a _tool_ the _publisher_ _runs_, not a _module_ the _Host_ _serves_.
 
-## What remains unknown
+## What Common holds
 
-This _design_ _rests_ on the _template_'s tree and _one_ _fact_ _about_ its _code_: `Common` _holds_ no `Result` _type_, so CSharpFunctionalExtensions _serves_ the _whole_ _program_. `Common` may _still_ _carry_ a _way_ to _answer_ _problems_, a _module_ registration or a _settings_ helper of its _own_. Where it does, Tessera _uses_ the _template_'s _piece_ and deletes its _own_ _copy_, _under_ the _same_ _three_ constraints. _Reading_ the _template_'s `Common` _projects_ _settles_ this in an _hour_.
+The _template_'s `Common` is _empty_, so _nothing_ in it competes with Tessera's _code_, and the _design_ _keeps_ no _open_ _question_ _about_ it. Tessera _supplies_ every _shared_ _piece_: `Problems` in `Common/Api`, `Section<T>` in `Common/Infrastructure`, and CSharpFunctionalExtensions' `Result` for the _whole_ _program_. _Each_ _piece_ _moves_ as it _stands_, so the _move_ _adds_ no _shared_ _code_. _Only_ the _sample_ _modules_ may _still_ _use_ EF _Core_ or a mediator, and they _go_.
