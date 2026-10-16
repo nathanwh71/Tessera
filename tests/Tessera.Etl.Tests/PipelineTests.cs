@@ -166,7 +166,7 @@ public sealed class PipelineTests
         var plan = Plan(new StopWhen(DroppedOverPercent: 50), (TidyText.Name, TidyText.Create()), RequireName);
         var done = Clean(plan, Ten(named: 9));
 
-        var log = Report.Log("data/macau.pipeline.json", pipeline, [(plan, done)], "wrote it.", new DateTimeOffset(2026, 10, 15, 13, 0, 0, TimeSpan.FromHours(8)));
+        var log = Report.Log("data/macau.pipeline.json", pipeline, [(plan, done.Outcome)], "wrote it.", new DateTimeOffset(2026, 10, 15, 13, 0, 0, TimeSpan.FromHours(8)));
 
         Assert.Contains("Tessera ETL log, 2026-10-15 13:00:00 +08:00", log, StringComparison.Ordinal);
         Assert.Contains("  tidyText: kept 10, fixed 0, dropped 0", log, StringComparison.Ordinal);

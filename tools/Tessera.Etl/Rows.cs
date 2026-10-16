@@ -71,4 +71,18 @@ public sealed record Cleaning(TablePlan Table, int Read, ImmutableArray<Row> Row
 
     /// <summary>The rows lost, counted from the rows read, whichever filter dropped them.</summary>
     public int Dropped => Read - Rows.Length;
+
+    /// <summary>What the log needs of a cleaned table, without its rows (see <see cref="Outcome"/>).</summary>
+    public Outcome Outcome => new(Table, Read, Rows.Length, Log);
+}
+
+/// <summary>
+/// What the log needs of one cleaned table: the rows read and kept, and the log's lines. The rows
+/// themselves are left out, so the program can let each table's rows go once its SQL is written,
+/// rather than hold every table's rows until the run ends.
+/// </summary>
+public sealed record Outcome(TablePlan Table, int Read, int Kept, ImmutableArray<LogLine> Log)
+{
+    /// <summary>The rows lost, counted from the rows read, whichever filter dropped them.</summary>
+    public int Dropped => Read - Kept;
 }

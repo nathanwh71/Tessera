@@ -47,7 +47,9 @@ var work = Directory.CreateTempSubdirectory("tessera-etl-").FullName;
 // The folders GDAL's Docker image must see: the source's, to read it, and the work folder, for the
 // GeoJSON. The SQL comes back on standard output, so the scripts' folder needs no mount.
 var folders = new[] { Path.GetDirectoryName(source)!, work };
-var cleaned = ImmutableArray.CreateBuilder<(CleaningPlan, Cleaning)>();
+// Each table's counts and log lines, for the log; its rows go once its SQL is written, so the run
+// holds one table's rows at a time, not every table's.
+var cleaned = ImmutableArray.CreateBuilder<(CleaningPlan, Outcome)>();
 var parts = ImmutableArray.CreateBuilder<(TablePlan, string)>();
 try
 {
@@ -78,7 +80,7 @@ try
         var (rows, columns) = geoJson.Value;
         // The whole transform step: the table's chain of filters and stop rules, run on its rows.
         var done = plan.Chain.Run(Cleaning.Start(table, rows));
-        cleaned.Add((plan, done));
+        cleaned.Add((plan, done.Outcome));
         if (done.Stop.TryGetValue(out var stop))
             return Finish(1, $"stopped. {stop} No script written.");
 
@@ -96,7 +98,7 @@ try
         return Finish(1, script.Error);
     Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(pipeline.Output))!);
     File.WriteAllText(pipeline.Output, script.Value);
-    var kept = cleaned.Sum(table => table.Item2.Rows.Length);
+    var kept = cleaned.Sum(table => table.Item2.Kept);
     return Finish(0, $"wrote {pipeline.Output}: {parts.Count} tables, {kept} rows. Read it, then commit it; 'Tessera seed' runs it once.");
 }
 finally

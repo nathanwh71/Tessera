@@ -15,9 +15,10 @@ public static class Report
     /// <summary>
     /// The source, then for each table the rows read, a count for each <b><i>filter</i></b>, and
     /// one line for each row a filter fixed, dropped or stopped at; then the result. Each table
-    /// comes as its plan, for the filters' names in order, and the context its chain ended with.
+    /// comes as its plan, for the filters' names in order, and its outcome: the counts and lines
+    /// its chain ended with.
     /// </summary>
-    public static string Log(string pipelineFile, Pipeline pipeline, ImmutableArray<(CleaningPlan Plan, Cleaning Done)> tables, string result, DateTimeOffset when)
+    public static string Log(string pipelineFile, Pipeline pipeline, ImmutableArray<(CleaningPlan Plan, Outcome Done)> tables, string result, DateTimeOffset when)
     {
         var text = new StringBuilder();
         text.AppendLine($"Tessera ETL log, {when.ToString("yyyy-MM-dd HH:mm:ss zzz", CultureInfo.InvariantCulture)}");
@@ -49,7 +50,7 @@ public static class Report
             // stopped by its stop rules did judge every row, so its counts still stand.
             text.AppendLine(done.Log.Any(line => line.Act == Act.Stopped)
                 ? "Stopped; nothing kept."
-                : $"Kept {done.Rows.Length} of {done.Read}; dropped {done.Dropped}.");
+                : $"Kept {done.Kept} of {done.Read}; dropped {done.Dropped}.");
             foreach (var line in done.Log)
                 text.AppendLine($"  {line}");
         }
