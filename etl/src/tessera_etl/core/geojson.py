@@ -1,8 +1,10 @@
-"""Features, the form every reader hands its places in, and the table the ***filters*** clean.
+"""A table as read from its source, and the JSON forms its values take.
 
-***GeoJSON*** is the text form of places that GDAL's ogr2ogr writes. The pipeline reads most
-sources with pyogrio (shell/extract.py), and builds the same features ogr2ogr's GeoJSON would
-hold, so this module turns either into a table the same way.
+***GeoJSON*** is the text form of places, a list of features, each with a shape and its
+properties. A GeoJSON source of one table is read feature by feature (shell/extract.py), since
+a feature may carry an id of its own and lack a property another feature has; `rows_of` turns
+those features into the table the ***filters*** clean. Lists and objects in a source become
+text, as GDAL's JSON library writes them.
 """
 
 import json
@@ -25,10 +27,10 @@ class Some:
 
 @dataclass(frozen=True, slots=True)
 class Feature:
-    """One place as GDAL's GeoJSON held it.
+    """One place as GDAL's GeoJSON writer gives it.
 
     Its own `id`, which GDAL writes outside the properties, when it has one; its properties,
-    in the order GDAL wrote them; and its shape, if any.
+    in the order GDAL writes them; and its shape, if any.
     """
 
     id: Some | None
