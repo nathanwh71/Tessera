@@ -60,7 +60,7 @@ public static class MapRoutes
             });
         }
 
-        // The page's routes share one group, so the page's headers join them alone (PageHeaders).
+        // A group lets PageHeaders run on the page's routes and on no others, such as the tiles'.
         var pages = app.MapGroup("");
         pages.AddEndpointFilter(PageHeaders);
         // GET fetches the page; HEAD asks for its headers alone, as a watcher or a checking cache may.
