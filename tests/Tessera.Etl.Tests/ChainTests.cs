@@ -51,14 +51,6 @@ public sealed class ChainTests
     }
 
     [Fact]
-    public void Skips_a_step_whose_test_fails_and_runs_the_rest()
-    {
-        var chain = Pipes.When(seen => seen.Count > 0, Note("only when something ran")) >> Note("last");
-        Assert.Equal(["last"], chain.Run([]));
-        Assert.Equal(["first", "only when something ran", "last"], (Note("first") >> chain).Run([]));
-    }
-
-    [Fact]
     public void Runs_the_second_filter_on_what_the_first_kept_and_joins_their_logs()
     {
         var clean = SwapCoordinates.Create(Macau) >> InsideArea.Create(Macau) >> RequireFields.Create(["name"]);

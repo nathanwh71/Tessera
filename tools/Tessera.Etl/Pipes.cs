@@ -48,13 +48,6 @@ public static class Pipes
         steps.Aggregate(Identity<TContext>(), (chain, step) => chain >> step);
 
     /// <summary>
-    /// A step that applies only when <paramref name="test"/> holds; otherwise the context passes
-    /// straight on. A step stays simple when the choice of where it applies lives outside it.
-    /// </summary>
-    public static Handler<TContext> When<TContext>(Func<TContext, bool> test, Handler<TContext> step) =>
-        next => context => test(context) ? step(next)(context) : next(context);
-
-    /// <summary>
     /// Runs a chain on a context. The end of every chain hands the context back as it arrives, so
     /// the result is the context as the last step to run left it.
     /// </summary>

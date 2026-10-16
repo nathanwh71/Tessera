@@ -64,7 +64,6 @@ public static class Pipes
 
     public static Handler<TContext> Identity<TContext>() => next => next;
     public static Handler<TContext> All<TContext>(IEnumerable<Handler<TContext>> steps) => /* a >> b >> … */;
-    public static Handler<TContext> When<TContext>(Func<TContext, bool> test, Handler<TContext> step) => /* … */;
     public static TContext Run<TContext>(this Handler<TContext> chain, TContext context) => chain(done => done)(context);
 }
 ```
@@ -72,7 +71,7 @@ public static class Pipes
 _Two_ _choices_ _differ_ from Giraffe, on _purpose_:
 
 - **No `Task`.** The filters compute and _never_ _wait_, so the _chain_ is _plain_ _functions_. _Only_ the _edges_ _wait_ on GDAL.
-- **No `option`.** In Giraffe, `None` _means_ 'this handler does not apply'. Here `When` _covers_ that _need_ _without_ a _null_. A _stop_ is not `None` either: a _step_ that _stops_ _returns_ the context **without calling `next`**, with the _reason_ _inside_. That is Giraffe's _early_ _return_, and it _keeps_ the _reason_ and the _log_ for the _report_.
+- **No `option`.** In Giraffe, `None` _means_ 'this handler does not apply'. No _step_ here _needs_ that: _each_ filter _judges_ every _row_ it is _given_, and a filter that _suits_ _some_ _shapes_ _alone_, such as `repairShapes`, _checks_ the _shape_ _itself_. A _stop_ is not `None` either: a _step_ that _stops_ _returns_ the context **without calling `next`**, with the _reason_ _inside_. That is Giraffe's _early_ _return_, and it _keeps_ the _reason_ and the _log_ for the _report_.
 
 ## Steps: filters and stop rules
 
@@ -127,7 +126,7 @@ A _new_ filter is _one_ _new_ _file_ and _one_ _line_ in `Filters/All.cs`.
 
 | File | Holds |
 |---|---|
-| `Pipes.cs` | The _generic_ kernel: the _two_ delegates, `>>`, `Identity`, `All`, `When` and `Run` |
+| `Pipes.cs` | The _generic_ kernel: the _two_ delegates, `>>`, `Identity`, `All` and `Run` |
 | `Rows.cs` | `Row`, `Act`, `Verdict`, `LogLine` and the context, `Cleaning` |
 | `Steps.cs` | `Filter`, `EachRow` and `StopWhen` |
 | `Judge.cs` | The _measures_ the _judges_ _share_: _inside_ the _area_, blank, _text_, _tidy_ _text_, _metres_ |
@@ -141,7 +140,7 @@ A _new_ filter is _one_ _new_ _file_ and _one_ _line_ in `Filters/All.cs`.
 
 The 38 _tests_ in `tests/Tessera.Etl.Tests` _check_ _five_ _things_:
 
-1. **The kernel** (`ChainTests.cs`). `>>` and `All` _run_ _steps_ in _order_; a _step_ can _run_ _code_ _after_ the _rest_ of the _chain_; `When` skips a _step_ whose _test_ _fails_; a _step_ that does not _call_ `next` _ends_ the _chain_.
+1. **The kernel** (`ChainTests.cs`). `>>` and `All` _run_ _steps_ in _order_; a _step_ can _run_ _code_ _after_ the _rest_ of the _chain_; a _step_ that does not _call_ `next` _ends_ the _chain_.
 2. **Each filter alone** (`FilterTests.cs`). _Rows_ in, _rows_ and _log_ out: what _each_ _keeps_, _fixes_ and _drops_ (US-36, _test_ 1).
 3. **The stop rules** (`PipelineTests.cs`). A _table_ that _drops_ 2 of 10 _rows_ _stops_ _under_ the _default_ 10 _per_ _cent_, and _passes_ when its _own_ _rule_ _allows_ 25; a _table_'s _own_ _rules_ _win_ over the _file_'s (_test_ 2).
 4. **The plan** (`PipelineTests.cs`). A _file_ with _five_ _faults_ _names_ all _five_, and _runs_ _nothing_.
@@ -156,7 +155,6 @@ The _first_ _four_ _need_ no GDAL and _run_ in _about_ a _second_.
 | A step | `Filter`: _rows_ in, an outcome out | `Handler<Cleaning>`: _wraps_ the _rest_ of the _chain_ |
 | A filter's own code | _Called_ `Judge.Rows` or `Judge.Changes`, which _dropped_ and logged | _Gives_ verdicts; `Steps.Filter` _drops_, logs and _stops_ for all |
 | The stop rules | _Checked_ by the _cleaning_ _code_ _after_ the _chain_ | The _last_ _step_ of the _chain_ |
-| A filter for some rows only | _Each_ filter _checks_ for _itself_ | `Pipes.When` can _decide_, _outside_ the filter |
 | Code around later steps | Not possible | A _step_ can _run_ _code_ _after_ `next`, such as _timing_ _each_ filter |
 
 The _pipeline_ _file_, the _script_ and the _log_ did not _change_. On the Macau _places_, the rebuilt _pipeline_ _writes_ a _script_ _identical_ to the _old_ _one_, _byte_ for _byte_, and the _same_ _log_, both for a _run_ that _finishes_ and for _one_ _set_ to _stop_.
