@@ -65,8 +65,9 @@ public static class Queries
     /// argument true, clips it at the buffer, so a tile carries no more than it can draw. ST_AsMVT
     /// packs the rows into one <b><i>vector tile</i></b>, told that the column <c>tessera_shape</c>
     /// holds the shape: a name no table of places is likely to share. Features come out in key
-    /// order, so the same name wins a clash every time. LIMIT caps the features at
-    /// <c>Tiles.MaxFeatures</c>, so a crowded square stays small and quick to build.
+    /// order: where two labels overlap, the map draws the first, so the same one shows every time.
+    /// LIMIT caps the features at <c>Tiles.MaxFeatures</c>, so a crowded square stays small and quick
+    /// to build.
     /// </remarks>
     public static Query Tile(Layer layer, TileAddress tile, TileSettings limits)
     {
