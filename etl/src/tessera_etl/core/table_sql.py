@@ -33,6 +33,8 @@ NAME_BYTES = 63
 """PostgreSQL keeps a name to 63 bytes, and cuts a longer one; GDAL cuts it first, and so does this."""
 
 _INT32 = range(-(2**31), 2**31)
+"""The whole numbers PostgreSQL's INTEGER holds, in 32 bits; a column holding a larger one needs
+INT8, also called BIGINT, which holds 64."""
 
 
 def written(frame: GeoDataFrame, absent: Mapping[str, frozenset[int]]) -> list[str]:

@@ -30,7 +30,10 @@ def _fraction(value: object) -> object:
 
 
 # Each plain value is strict, so true never passes as 1, and 1.5 never as a whole number; the
-# validators above let a number written as text pass, as a publisher may quote one.
+# validators above let a number written as text pass, as a publisher may quote one. A whole
+# number counts rows (`rowsUnder`), so it stops at 2**31 - 1: each table's key, `fid`, is a
+# SERIAL, a PostgreSQL INTEGER the database counts up by itself, and an INTEGER holds 32 bits, so
+# no table holds more rows; a larger `rowsUnder` would stop every run.
 Whole = Annotated[int, BeforeValidator(_whole), Strict(), Field(ge=-(2**31), le=2**31 - 1)]
 Fraction = Annotated[float, BeforeValidator(_fraction), Strict()]
 Text = Annotated[str, Strict()]
