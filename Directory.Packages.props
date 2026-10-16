@@ -3,6 +3,7 @@
   <ItemGroup Label="Service">
     <PackageVersion Include="Npgsql" Version="10.0.3" />
     <PackageVersion Include="Dapper" Version="2.1.89" />
+    <PackageVersion Include="CSharpFunctionalExtensions" Version="3.7.0" />
     <PackageVersion Include="dbup-postgresql" Version="7.0.1" />
   </ItemGroup>
   <ItemGroup Label="ETL">

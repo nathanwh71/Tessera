@@ -24,6 +24,7 @@
     <PackageReference Include="Dapper" />
     <!-- Runs each seed script once (ADR 0009). -->
     <PackageReference Include="dbup-postgresql" />
+    <PackageReference Include="CSharpFunctionalExtensions" />
   </ItemGroup>
   <ItemGroup>
     <!-- The tests may read internal members, such as MapRoutes.Answer, without making them public. -->
