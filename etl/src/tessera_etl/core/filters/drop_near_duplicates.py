@@ -5,7 +5,7 @@ given metres; the first row is kept. Neither test alone is enough: a name repeat
 city, and a position repeats in a busy building.
 """
 
-from ...kernel.pipes import Handler
+from ...kernel.pipes import Step
 from .. import judge as measure
 from ..filter_kind import FilterKind
 from ..plan import Area, Fraction, Model, OnFail, OnFailSetting, Text
@@ -25,7 +25,7 @@ class Settings(Model):
     on_fail: OnFailSetting = OnFail.DROP
 
 
-def create(field: str, metres: float, on_fail: OnFail = OnFail.DROP) -> Handler[Cleaning]:
+def create(field: str, metres: float, on_fail: OnFail = OnFail.DROP) -> Step[Cleaning]:
     """Builds the filter from plain values, so a test can make one without a pipeline file."""
 
     def judge(rows: tuple[Row, ...]) -> tuple[Verdict, ...]:
@@ -68,7 +68,7 @@ def _check(settings: Settings, area: Area | None) -> tuple[str, ...]:
     return tuple(problems)
 
 
-def _create(settings: Settings, area: Area | None) -> Handler[Cleaning]:
+def _create(settings: Settings, area: Area | None) -> Step[Cleaning]:
     return create(settings.field, settings.metres, settings.on_fail)
 
 

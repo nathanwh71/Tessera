@@ -14,13 +14,13 @@ from typing import Any, assert_never
 
 from pydantic import ValidationError
 
-from ..kernel.pipes import Handler, chain
+from ..kernel.pipes import Step
 from ..kernel.result import Err, Ok, Result
 from . import filters
 from .judge import is_blank
 from .plan import Area, Pipeline, StopWhen, TablePlan
 from .rows import Cleaning
-from .steps import stop_when
+from .steps import chain, stop_when
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,7 +33,7 @@ class CleaningPlan:
 
     table: TablePlan
     filters: tuple[str, ...]
-    chain: Handler[Cleaning]
+    chain: Step[Cleaning]
 
 
 @dataclass(frozen=True, slots=True)
@@ -141,7 +141,7 @@ def _build(table: TablePlan, pipeline: Pipeline) -> Result[CleaningPlan, tuple[s
     """
     problems: list[str] = []
     names: list[str] = []
-    steps: list[Handler[Cleaning]] = []
+    steps: list[Step[Cleaning]] = []
     for step in table.filters:
         given: dict[str, Any] = dict(step or {})
         name = given.get("filter")
@@ -160,7 +160,7 @@ def _build(table: TablePlan, pipeline: Pipeline) -> Result[CleaningPlan, tuple[s
             case _ as never:
                 assert_never(never)
     rules = table.stop_when or pipeline.stop_when or DEFAULTS
-    joined = chain(steps) >> stop_when(rules)
+    joined = chain([*steps, stop_when(rules)])
     return Err(tuple(problems)) if problems else Ok(CleaningPlan(table, tuple(names), joined))
 
 

@@ -4,7 +4,7 @@ An id must name one place alone, or two places would claim one key. A row with n
 passes, since requireFields is the ***filter*** that asks for one.
 """
 
-from ...kernel.pipes import Handler
+from ...kernel.pipes import Step
 from .. import judge as measure
 from ..filter_kind import FilterKind
 from ..plan import Area, Model, OnFail, OnFailSetting, Text
@@ -22,7 +22,7 @@ class Settings(Model):
     on_fail: OnFailSetting = OnFail.DROP
 
 
-def create(field: str, on_fail: OnFail = OnFail.DROP) -> Handler[Cleaning]:
+def create(field: str, on_fail: OnFail = OnFail.DROP) -> Step[Cleaning]:
     """Builds the filter from plain values, so a test can make one without a pipeline file.
 
     Each run starts a fresh table of ids, since one table's ids say nothing about another's.
@@ -49,7 +49,7 @@ def _check(settings: Settings, area: Area | None) -> tuple[str, ...]:
     return ('needs a field, such as "id".',) if measure.is_blank(settings.field) else ()
 
 
-def _create(settings: Settings, area: Area | None) -> Handler[Cleaning]:
+def _create(settings: Settings, area: Area | None) -> Step[Cleaning]:
     return create(settings.field, settings.on_fail)
 
 

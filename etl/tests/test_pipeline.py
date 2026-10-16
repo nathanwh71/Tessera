@@ -13,8 +13,8 @@ from tessera_etl.core.filters import require_fields, tidy_text
 from tessera_etl.core.pipeline import DEFAULTS, CleaningPlan, Plan
 from tessera_etl.core.plan import OnFail, StopWhen, TablePlan
 from tessera_etl.core.rows import Cleaning, Row
-from tessera_etl.core.steps import stop_when
-from tessera_etl.kernel.pipes import Handler, chain, run
+from tessera_etl.core.steps import chain, stop_when
+from tessera_etl.kernel.pipes import Step
 from tessera_etl.kernel.result import Err, Ok, Result
 
 # A pipeline file with no fault. The refusal tests below each change one thing in it, so every
@@ -101,19 +101,18 @@ def cafes(rules: StopWhen | None = None) -> TablePlan:
     return table("food.cafes", layer="Cafes", stopWhen=None if rules is None else rules.model_dump(by_alias=True))
 
 
-def plan_of(rules: StopWhen | None, *steps: tuple[str, Handler[Cleaning]]) -> CleaningPlan:
+def plan_of(rules: StopWhen | None, *steps: tuple[str, Step[Cleaning]]) -> CleaningPlan:
     """A cleaning plan built by hand, as pipeline.read would build it."""
-    return CleaningPlan(
-        cafes(rules), tuple(name for name, _ in steps), chain([step for _, step in steps]) >> stop_when(rules or DEFAULTS)
-    )
+    joined = chain([*(step for _, step in steps), stop_when(rules or DEFAULTS)])
+    return CleaningPlan(cafes(rules), tuple(name for name, _ in steps), joined)
 
 
 def clean_plan(plan: CleaningPlan, rows: list[Row]) -> Cleaning:
     """Runs a plan's chain on the rows, as the program does for each table."""
-    return run(plan.chain, Cleaning.start(plan.table, tuple(rows)))
+    return plan.chain(Cleaning.start(plan.table, tuple(rows)))
 
 
-def require_name() -> tuple[str, Handler[Cleaning]]:
+def require_name() -> tuple[str, Step[Cleaning]]:
     """The filter the stop-rule tests drop rows with, since dropping by a missing name is easy to count."""
     return (require_fields.NAME, require_fields.create(["name"]))
 

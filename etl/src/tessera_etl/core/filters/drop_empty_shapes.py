@@ -4,7 +4,7 @@ A place with no shape has no position, so no ***tile*** can draw it, and the oth
 ***filters*** have nothing to test.
 """
 
-from ...kernel.pipes import Handler
+from ...kernel.pipes import Step
 from ..filter_kind import FilterKind
 from ..plan import Area, Model, OnFail, OnFailSetting
 from ..rows import Cleaning, Fail, Keep, Row, Verdict
@@ -20,7 +20,7 @@ class Settings(Model):
     on_fail: OnFailSetting = OnFail.DROP
 
 
-def create(on_fail: OnFail = OnFail.DROP) -> Handler[Cleaning]:
+def create(on_fail: OnFail = OnFail.DROP) -> Step[Cleaning]:
     """Builds the filter from plain values, so a test can make one without a pipeline file."""
 
     def judge(row: Row) -> Verdict:
@@ -29,7 +29,7 @@ def create(on_fail: OnFail = OnFail.DROP) -> Handler[Cleaning]:
     return filter_step(NAME, on_fail, each_row(judge))
 
 
-def _create(settings: Settings, area: Area | None) -> Handler[Cleaning]:
+def _create(settings: Settings, area: Area | None) -> Step[Cleaning]:
     return create(settings.on_fail)
 
 

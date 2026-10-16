@@ -5,6 +5,8 @@ shrinks it to the smallest value that still fails.
 """
 
 import json
+from dataclasses import dataclass, replace
+from functools import reduce
 from typing import Any
 
 from helpers import clean, place
@@ -14,34 +16,52 @@ from hypothesis import strategies as st
 from tessera_etl.core import judge, pipeline, table_sql
 from tessera_etl.core.filters import drop_duplicate_ids, require_fields, tidy_text
 from tessera_etl.core.rows import Act, Cleaning, Value
-from tessera_etl.kernel.pipes import Handler, chain, identity, run
-
-type Seen = tuple[str, ...]
-
-names = st.sampled_from(["a", "b", "c", "d"])
+from tessera_etl.kernel.pipes import Step
 
 
-def note(name: str) -> Handler[Seen]:
-    return Handler(lambda rest: lambda seen: rest((*seen, name)))
+@dataclass(frozen=True, slots=True)
+class Seen:
+    """A context for the kernel's laws: the names of the steps that ran, and any stop."""
+
+    names: tuple[str, ...] = ()
+    stop: str | None = None
+
+
+# A step notes its name, or, for a name in capitals, stops the chain with it.
+names = st.sampled_from(["a", "b", "c", "STOP"])
+
+
+def step(name: str) -> Step[Seen]:
+    if name.isupper():
+        return Step(lambda seen: replace(seen, stop=name))
+    return Step(lambda seen: replace(seen, names=(*seen.names, name)))
+
+
+NOTHING: Step[Seen] = Step(lambda seen: seen)
+
+
+def joined(steps: list[str]) -> Step[Seen]:
+    return reduce(lambda done, name: done >> step(name), steps, NOTHING)
 
 
 @given(st.lists(names), st.lists(names))
-def test_identity_changes_nothing_at_either_end(steps: list[str], start: list[str]) -> None:
-    joined = chain([note(name) for name in steps])
-    begin = tuple(start)
-    nothing: Handler[Seen] = identity()
-    assert run(nothing >> joined, begin) == run(joined, begin) == run(joined >> nothing, begin)
+def test_a_step_that_changes_nothing_may_stand_at_either_end(steps: list[str], start: list[str]) -> None:
+    begin = Seen(tuple(start))
+    assert (NOTHING >> joined(steps))(begin) == joined(steps)(begin) == (joined(steps) >> NOTHING)(begin)
 
 
-@given(names, names, names)
-def test_joining_groups_either_way(a: str, b: str, c: str) -> None:
-    # (a >> b) >> c and a >> (b >> c) run the same steps in the same order.
-    assert run((note(a) >> note(b)) >> note(c), ()) == run(note(a) >> (note(b) >> note(c)), ())
+@given(st.lists(names), st.lists(names), st.lists(names))
+def test_joining_groups_either_way(a: list[str], b: list[str], c: list[str]) -> None:
+    # (a >> b) >> c and a >> (b >> c) run the same steps in the same order, and stop alike.
+    first, second, third = joined(a), joined(b), joined(c)
+    assert ((first >> second) >> third)(Seen()) == (first >> (second >> third))(Seen())
 
 
 @given(st.lists(names))
-def test_a_chain_runs_its_steps_in_order(steps: list[str]) -> None:
-    assert run(chain([note(name) for name in steps]), ()) == tuple(steps)
+def test_a_chain_runs_its_steps_in_order_up_to_the_first_stop(steps: list[str]) -> None:
+    ran = joined(steps)(Seen())
+    until = steps.index("STOP") if "STOP" in steps else len(steps)
+    assert ran == Seen(tuple(steps[:until]), "STOP" if "STOP" in steps else None)
 
 
 maybe_names = st.one_of(st.none(), st.text(alphabet=" \tab", max_size=4))

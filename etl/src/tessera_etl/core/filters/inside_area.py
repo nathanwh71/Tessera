@@ -4,7 +4,7 @@ The map shows one area alone, so a place outside it is a mistake in the data, su
 sign on a coordinate, and no ***tile*** of the map would ever show it.
 """
 
-from ...kernel.pipes import Handler
+from ...kernel.pipes import Step
 from .. import judge as measure
 from ..filter_kind import FilterKind, needs_area
 from ..plan import Area, Model, OnFail, OnFailSetting
@@ -21,7 +21,7 @@ class Settings(Model):
     on_fail: OnFailSetting = OnFail.DROP
 
 
-def create(area: Area, on_fail: OnFail = OnFail.DROP) -> Handler[Cleaning]:
+def create(area: Area, on_fail: OnFail = OnFail.DROP) -> Step[Cleaning]:
     """Builds the filter from plain values, so a test can make one without a pipeline file."""
     area_box = measure.box(area)
 
@@ -31,7 +31,7 @@ def create(area: Area, on_fail: OnFail = OnFail.DROP) -> Handler[Cleaning]:
     return filter_step(NAME, on_fail, each_row(judge))
 
 
-def _create(settings: Settings, area: Area | None) -> Handler[Cleaning]:
+def _create(settings: Settings, area: Area | None) -> Step[Cleaning]:
     # needs_area refuses the filter when there is no area, so this never meets None.
     assert area is not None
     return create(area, settings.on_fail)

@@ -9,7 +9,7 @@ from dataclasses import replace
 import numpy as np
 from numpy.typing import NDArray
 
-from ...kernel.pipes import Handler
+from ...kernel.pipes import Step
 from .. import judge as measure
 from ..filter_kind import FilterKind, needs_area
 from ..plan import Area, Model, OnFail
@@ -33,7 +33,7 @@ def _swap(points: NDArray[np.float64]) -> NDArray[np.float64]:
     return points[:, ::-1].copy()
 
 
-def create(area: Area) -> Handler[Cleaning]:
+def create(area: Area) -> Step[Cleaning]:
     """Builds the filter from plain values, so a test can make one without a pipeline file."""
     area_box = measure.box(area)
 
@@ -51,7 +51,7 @@ def create(area: Area) -> Handler[Cleaning]:
     return filter_step(NAME, OnFail.DROP, each_row(judge))
 
 
-def _create(settings: Settings, area: Area | None) -> Handler[Cleaning]:
+def _create(settings: Settings, area: Area | None) -> Step[Cleaning]:
     # needs_area refuses the filter when there is no area, so this never meets None.
     assert area is not None
     return create(area)

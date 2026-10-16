@@ -8,7 +8,7 @@ it tidies those columns alone.
 from collections.abc import Sequence
 from dataclasses import replace
 
-from ...kernel.pipes import Handler
+from ...kernel.pipes import Step
 from .. import judge as measure
 from ..filter_kind import FilterKind
 from ..plan import Area, Model, OnFail, Text
@@ -26,7 +26,7 @@ class Settings(Model):
     fields: tuple[Text | None, ...] | None = None
 
 
-def create(fields: Sequence[str | None] | None = None) -> Handler[Cleaning]:
+def create(fields: Sequence[str | None] | None = None) -> Step[Cleaning]:
     """Builds the filter from plain values, so a test can make one without a pipeline file.
 
     An empty list of fields counts as none given, as in the C# tool.
@@ -55,7 +55,7 @@ def create(fields: Sequence[str | None] | None = None) -> Handler[Cleaning]:
     return filter_step(NAME, OnFail.DROP, each_row(judge))
 
 
-def _create(settings: Settings, area: Area | None) -> Handler[Cleaning]:
+def _create(settings: Settings, area: Area | None) -> Step[Cleaning]:
     return create(settings.fields)
 
 

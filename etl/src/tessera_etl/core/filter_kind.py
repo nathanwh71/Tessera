@@ -11,7 +11,7 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
-from ..kernel.pipes import Handler
+from ..kernel.pipes import Step
 from ..kernel.result import Err, Ok, Result
 from .plan import Area, Model
 from .rows import Cleaning
@@ -38,10 +38,10 @@ class FilterKind[S: Model]:
     name: str
     description: str
     settings: type[S]
-    create: Callable[[S, Area | None], Handler[Cleaning]]
+    create: Callable[[S, Area | None], Step[Cleaning]]
     check: Callable[[S, Area | None], tuple[str, ...]] = field(default=nothing_to_check)
 
-    def build(self, given: Mapping[str, Any], area: Area | None) -> Result[Handler[Cleaning], tuple[str, ...]]:
+    def build(self, given: Mapping[str, Any], area: Area | None) -> Result[Step[Cleaning], tuple[str, ...]]:
         """The filter's step, built from the settings the file gives, or every fault in them.
 
         A key the model lacks, or a setting it needs and the file leaves out, is refused first,

@@ -7,7 +7,7 @@ from shapely.geometry.base import BaseGeometry
 
 from tessera_etl.core.plan import Area, TablePlan
 from tessera_etl.core.rows import Cleaning, Row, Value, frozen_values
-from tessera_etl.kernel.pipes import Handler, run
+from tessera_etl.kernel.pipes import Step
 
 MACAU = Area.model_validate({"minLongitude": 113.52, "minLatitude": 22.10, "maxLongitude": 113.61, "maxLatitude": 22.22})
 """The area: Macau's box, as tessera.json holds it."""
@@ -31,9 +31,9 @@ def shaped(number: int, shape: BaseGeometry | None, **values: Value) -> Row:
     return Row(number, shape, frozen_values(values))
 
 
-def clean(steps: Handler[Cleaning], rows: Sequence[Row], plan: TablePlan = TABLE) -> Cleaning:
+def clean(steps: Step[Cleaning], rows: Sequence[Row], plan: TablePlan = TABLE) -> Cleaning:
     """Runs one step, or a chain of them, on the rows, as the pipeline runs a table's chain."""
-    return run(steps, Cleaning.start(plan, tuple(rows)))
+    return steps(Cleaning.start(plan, tuple(rows)))
 
 
 def log_lines(cleaning: Cleaning) -> list[str]:

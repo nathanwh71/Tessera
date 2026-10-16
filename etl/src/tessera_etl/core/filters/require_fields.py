@@ -5,7 +5,7 @@ A place with no name has no label on the map and cannot be told from its neighbo
 
 from collections.abc import Sequence
 
-from ...kernel.pipes import Handler
+from ...kernel.pipes import Step
 from .. import judge as measure
 from ..filter_kind import FilterKind
 from ..plan import Area, Model, OnFail, OnFailSetting, Text
@@ -25,7 +25,7 @@ class Settings(Model):
     on_fail: OnFailSetting = OnFail.DROP
 
 
-def create(fields: Sequence[str | None], on_fail: OnFail = OnFail.DROP) -> Handler[Cleaning]:
+def create(fields: Sequence[str | None], on_fail: OnFail = OnFail.DROP) -> Step[Cleaning]:
     """Builds the filter from plain values, so a test can make one without a pipeline file."""
     names = tuple(fields)
 
@@ -42,7 +42,7 @@ def _check(settings: Settings, area: Area | None) -> tuple[str, ...]:
     return ('needs fields, such as ["name"].',) if not settings.fields else ()
 
 
-def _create(settings: Settings, area: Area | None) -> Handler[Cleaning]:
+def _create(settings: Settings, area: Area | None) -> Step[Cleaning]:
     return create(settings.fields, settings.on_fail)
 
 

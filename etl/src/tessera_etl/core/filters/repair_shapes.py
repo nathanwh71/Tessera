@@ -8,7 +8,7 @@ shape that comes out empty fails, since nothing is left to draw.
 import re
 from dataclasses import replace
 
-from ...kernel.pipes import Handler
+from ...kernel.pipes import Step
 from ..filter_kind import FilterKind
 from ..plan import Area, Model, OnFail, OnFailSetting
 from ..rows import Cleaning, Fail, Fix, Keep, Row, Verdict
@@ -30,7 +30,7 @@ class Settings(Model):
 _PLACE = re.compile(r"\[[^\]]*\]$")
 
 
-def create(on_fail: OnFail = OnFail.DROP) -> Handler[Cleaning]:
+def create(on_fail: OnFail = OnFail.DROP) -> Step[Cleaning]:
     """Builds the filter from plain values, so a test can make one without a pipeline file.
 
     The repair is GEOS's 'structure' method: it rebuilds each area from its rings, so an area
@@ -52,7 +52,7 @@ def create(on_fail: OnFail = OnFail.DROP) -> Handler[Cleaning]:
     return filter_step(NAME, on_fail, each_row(judge))
 
 
-def _create(settings: Settings, area: Area | None) -> Handler[Cleaning]:
+def _create(settings: Settings, area: Area | None) -> Step[Cleaning]:
     return create(settings.on_fail)
 
 

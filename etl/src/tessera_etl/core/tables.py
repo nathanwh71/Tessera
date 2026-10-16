@@ -7,7 +7,6 @@ with GeoJSON they write themselves.
 
 from dataclasses import dataclass
 
-from ..kernel.pipes import run
 from ..kernel.result import Err, Ok, Result
 from . import geojson, table_sql
 from .failure import Failure, Refused, Stopped, Unreadable
@@ -33,7 +32,7 @@ def load(plan: CleaningPlan, extract: Result[geojson.Extract, str]) -> Result[Lo
             return Err(Unreadable(plan.table, why))
         case Ok(read):
             pass
-    done = run(plan.chain, Cleaning.start(plan.table, read.rows))
+    done = plan.chain(Cleaning.start(plan.table, read.rows))
     if done.stop is not None:
         return Err(Stopped(done.outcome, done.stop))
     match table_sql.statements(plan.table, done.rows, read.columns):

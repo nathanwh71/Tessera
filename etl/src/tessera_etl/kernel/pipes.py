@@ -1,64 +1,45 @@
-"""The kernel of the pipeline: Giraffe's two types, without the web.
+"""The kernel of the pipeline: steps joined with `>>`, each run on what the one before left.
 
-Giraffe, a web library for F#, builds a web server from ***handlers***, each a step that may
-pass a request on to the rest. Here the same idea passes a table of places from one cleaning
-step to the next. The kernel knows nothing of places: the pipeline fills in the type of the
-***context***, the value every step reads and hands on, with its own `Cleaning` record.
+A ***step*** is a function from a ***context***, the value every step reads and hands on, to a
+changed copy of it. The kernel knows nothing of places: the pipeline fills in the context with
+its own `Cleaning` record, which holds a table's rows, its log and any reason to stop.
 """
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from dataclasses import dataclass
-from functools import reduce
+from typing import Protocol
 
-type Next[C] = Callable[[C], C]
-"""The rest of a chain, from here to its end: it takes the context and returns it as the chain
-left it. Giraffe calls this an HttpFunc."""
+
+class Stoppable(Protocol):
+    """A context that can carry a reason to stop; once it does, no later step runs."""
+
+    @property
+    def stop(self) -> str | None: ...
 
 
 @dataclass(frozen=True, slots=True)
-class Handler[C]:
-    """One step of a chain, Giraffe's HttpHandler.
+class Step[C: Stoppable]:
+    """One step of a chain: `apply` takes the context and returns it changed.
 
-    Given the rest of the chain, `wrap` returns a chain with this step in front. A step may
-    change the context and pass it on, or end the chain by returning the context without
-    calling `next`, as a stop does.
+    A step that stops the run returns the context with its reason in `stop`.
     """
 
-    wrap: Callable[[Next[C]], Next[C]]
+    apply: Callable[[C], C]
 
-    def __call__(self, next_step: Next[C]) -> Next[C]:
-        return self.wrap(next_step)
+    def __call__(self, context: C) -> C:
+        return self.apply(context)
 
-    def __rshift__(self, second: "Handler[C]") -> "Handler[C]":
-        """Runs this step, then `second`.
+    def __rshift__(self, then: "Step[C]") -> "Step[C]":
+        """Runs this step, then `then` on what this one left, unless this one stopped.
 
-        `>>` is Python's shift operator, borrowed to mean 'then', as F#'s `>>` and Giraffe's
-        `>=>` do. The first step is handed a chain that starts with the second, so whatever the
-        first passes on reaches the second.
+        `>>` is Python's shift operator, borrowed to mean 'then', as F#'s `>>` composes two
+        functions. Joining steps this way obeys two laws, which the tests check: a step that
+        changes nothing may stand at either end of a chain, and `(a >> b) >> c` runs as
+        `a >> (b >> c)` does.
         """
-        first = self
-        return Handler(lambda rest: first(second(rest)))
 
+        def both(context: C) -> C:
+            done = self(context)
+            return done if done.stop is not None else then(done)
 
-def identity[C]() -> Handler[C]:  # pyright: ignore[reportInvalidTypeVarUse] - C# writes Identity<TContext>() too
-    """The step that passes the context straight on.
-
-    It starts a fold, so a list of steps joins into one chain, and an empty list gives a chain
-    that changes nothing.
-    """
-    return Handler(lambda rest: rest)
-
-
-def chain[C](steps: Iterable[Handler[C]]) -> Handler[C]:
-    """Joins steps in the order given, as `a >> b >> c` would."""
-    start: Handler[C] = identity()
-    return reduce(lambda joined, step: joined >> step, steps, start)
-
-
-def run[C](handler: Handler[C], context: C) -> C:
-    """Runs a chain on a context.
-
-    The end of every chain hands the context back as it arrives, so the result is the context
-    as the last step to run left it.
-    """
-    return handler(lambda done: done)(context)
+        return Step(both)
