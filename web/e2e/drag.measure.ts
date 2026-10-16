@@ -38,11 +38,8 @@ declare global {
 
 /** The middle frame length, which one stray slow frame cannot pull up as an average would. */
 const median = (values: readonly number[]): number => values.toSorted((a, b) => a - b)[Math.floor(values.length / 2)] ?? 0;
-/**
- * The frame length that the given share of frames stay within, a percentile: 0.95 gives the 95th,
- * which shows how bad the worst stutters are while ignoring the rare one-off.
- */
-const share = (values: readonly number[], q: number): number => values.toSorted((a, b) => a - b)[Math.floor(values.length * q)] ?? 0;
+/** The `q` percentile: 0.95 gives the length 95 in 100 frames stay within, ignoring rare one-offs. */
+const percentile = (values: readonly number[], q: number): number => values.toSorted((a, b) => a - b)[Math.floor(values.length * q)] ?? 0;
 
 test("a drag over the busiest street, with every layer on", async ({ page }) => {
 	await openMap(page);
@@ -102,7 +99,7 @@ test("a drag over the busiest street, with every layer on", async ({ page }) => 
 		frames: seen.frames.length,
 		slowerThan16_7ms: slow,
 		medianMs: Number(median(seen.frames).toFixed(1)),
-		p95Ms: Number(share(seen.frames, 0.95).toFixed(1)),
+		p95Ms: Number(percentile(seen.frames, 0.95).toFixed(1)),
 		longFramesOver50ms: seen.longFrames,
 		// The rest of a long frame, beyond its scripts, is the browser drawing: style, layout and the
 		// map's WebGL.
