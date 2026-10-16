@@ -21,8 +21,8 @@ NAME = "requireFields"
 
 class Settings(Model):
     """`fields` has no default, since only the publisher knows which columns a place cannot
-    lack; a failing row is dropped unless the file says stop. .NET's reader let a null stand in
-    the list, which this filter then reads as a field that is always missing."""
+    lack; a failing row is dropped unless the file says stop. A null may stand in the list,
+    and this filter reads it as a field that is always missing."""
 
     fields: tuple[Text | None, ...]
     on_fail: OnFailSetting = OnFail.DROP

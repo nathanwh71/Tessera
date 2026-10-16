@@ -4,11 +4,13 @@ Each is a pure function, so these tests need no files.
 """
 
 import numpy as np
+import pytest
 from helpers import MACAU, clean, kept, log_lines, place, shape, shaped, value
 from shapely.geometry import LineString, Point, Polygon
 
-from tessera_etl.core import judge
+from tessera_etl.core import filters, judge
 from tessera_etl.core.filters import (
+    AnyKind,
     drop_duplicate_ids,
     drop_empty_shapes,
     drop_near_duplicates,
@@ -20,6 +22,7 @@ from tessera_etl.core.filters import (
 )
 from tessera_etl.core.plan import OnFail
 from tessera_etl.core.rows import Act
+from tessera_etl.kernel.result import Ok
 
 
 def coordinate(found: object) -> tuple[float, float]:
@@ -129,3 +132,21 @@ def test_drops_a_place_entered_twice_nearby_and_keeps_one_of_the_same_name_far_o
 
 def test_measures_a_degree_of_latitude_as_about_111_kilometres() -> None:
     assert 111_150 <= judge.metres(np.array([[113.55, 22.0]]), np.array([[113.55, 23.0]]))[0] <= 111_250
+
+
+# Settings that suit every filter: each takes the ones its model names.
+SETTINGS: dict[str, object] = {"field": "id", "fields": ["name"], "metres": 25}
+
+
+@pytest.mark.parametrize("kind", filters.KINDS, ids=[kind.name for kind in filters.KINDS])
+def test_passes_clean_places_as_they_are(kind: AnyKind) -> None:
+    names = {info.alias or name for name, info in kind.settings.model_fields.items()}
+    built = kind.build({key: value for key, value in SETTINGS.items() if key in names}, MACAU)
+    assert isinstance(built, Ok), built
+    places = [place(1, 113.55, 22.19, id="cafes-001", name="Café Uno"), place(2, 113.56, 22.20, id="cafes-002", name="Café Dos")]
+
+    outcome = clean(built.value, places)
+
+    assert kept(outcome) == [1, 2]
+    assert outcome.log == ()
+    assert [value(outcome, row, "name") for row in (1, 2)] == ["Café Uno", "Café Dos"]

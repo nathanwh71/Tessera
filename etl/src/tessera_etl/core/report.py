@@ -14,11 +14,9 @@ from .rows import Act, Outcome
 
 
 def stamp(when: datetime) -> str:
-    """A moment as .NET's pattern 'yyyy-MM-dd HH:mm:ss zzz' writes it, such as 2026-10-15 13:00:00 +08:00."""
-    offset = when.utcoffset()
-    minutes = 0 if offset is None else int(offset.total_seconds() // 60)
-    sign = "+" if minutes >= 0 else "-"
-    return f"{when:%Y-%m-%d %H:%M:%S} {sign}{abs(minutes) // 60:02d}:{abs(minutes) % 60:02d}"
+    """A moment as the log writes it: date, time and offset from universal time, such as
+    2026-10-15 13:00:00 +08:00."""
+    return f"{when:%Y-%m-%d %H:%M:%S %:z}"
 
 
 def log(

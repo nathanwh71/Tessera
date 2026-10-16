@@ -26,9 +26,9 @@ PYTHON = [sys.executable, "-m", "tessera_etl"]
 
 
 @pytest.mark.parametrize("case", cases())
-def test_matches_its_recorded_outcome(case: str) -> None:
+def test_matches_its_recorded_outcome(case: str, tmp_path: Path) -> None:
     expected = load(case)
-    found = run(PYTHON, case)
+    found = run(PYTHON, case, tmp_path)
 
     assert found.code == expected.code
     assert found.stdout == expected.stdout

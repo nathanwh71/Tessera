@@ -4,9 +4,9 @@
 
 pyogrio reads files but cannot write a geodatabase's coded domains or curves, so this script
 uses the osgeo package that comes with GDAL itself (Ubuntu's python3-gdal, GDAL 3.8.4). The
-files it makes are committed, so the tests need neither it nor GDAL's bindings. Four sources
-come as they are from elsewhere: dates.geojson and t.gdb from the C# tool's checks,
-macau-pois.geojson from its data folder, and cafes.geojson and parks.geojson from its tests.
+files it makes are committed, so the tests need neither it nor GDAL's bindings. Five sources
+were made before this script and are kept as they are: dates.geojson and t.gdb,
+macau-pois.geojson, a copy of data/macau-pois.geojson, and cafes.geojson and parks.geojson.
 """
 
 import json
@@ -140,7 +140,7 @@ def props_geojson(folder: str) -> None:
 
 
 def places_gdb(folder: str) -> None:
-    """The C# tool's own test geodatabase: seven cafés with one fault each, and two parks."""
+    """The test geodatabase: seven cafés with one fault each, and two parks."""
     path = os.path.join(folder, "places.gdb")
     shutil.rmtree(path, ignore_errors=True)
     gdal.VectorTranslate(path, os.path.join(folder, "cafes.geojson"), format="OpenFileGDB", layerName="Cafes")

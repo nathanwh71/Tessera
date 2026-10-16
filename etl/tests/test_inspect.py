@@ -2,7 +2,7 @@
 
 The script prints a starting pipeline file for a source. This test checks the one thing the
 script's own tests cannot: the file it prints for a real ***geodatabase*** passes this
-pipeline's reader, so the maintainer's first run does not fail. (C#: InspectTests.cs)
+pipeline's reader, so the maintainer's first run does not fail.
 
 It needs Node.js, GDAL's ogrinfo and the scripts' packages, installed with npm ci in the
 repository's root; without them the test is skipped.

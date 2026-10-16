@@ -5,10 +5,8 @@ The golden files under tests/golden were made by running the pipeline this way
 """
 
 import json
-import os
 import shutil
 import subprocess
-import tempfile
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -28,35 +26,32 @@ class Ran:
     log: str | None
 
 
-def stage(case: str) -> Path:
-    """A fresh folder holding the case's own files and every source, under sources/."""
-    folder = Path(tempfile.mkdtemp(prefix="tessera-golden-")) / case
+def stage(case: str, work: Path) -> Path:
+    """A folder in `work` holding the case's own files and every source, under sources/."""
+    folder = work / case
     shutil.copytree(CASES / case, folder)
     shutil.copytree(FIXTURES / "sources", folder / "sources")
     return folder
 
 
-def run(command: list[str], case: str, pipeline: str = "p.json") -> Ran:
-    """Runs `command PIPELINE` in a staged copy of the case and gathers the outcome.
+def run(command: list[str], case: str, work: Path, pipeline: str = "p.json") -> Ran:
+    """Runs `command PIPELINE` in a copy of the case staged in `work`, and gathers the outcome.
 
     The log's first line holds the time of the run, so it is left out.
     """
-    folder = stage(case)
-    try:
-        done = subprocess.run([*command, pipeline], cwd=folder, capture_output=True, env=dict(os.environ), check=False)
-        output = str(json.loads((folder / pipeline).read_text(encoding="utf-8"))["output"])
-        script = folder / output
-        log = folder / f"{output.rpartition('/')[0]}-logs" / (Path(output).stem + ".log")
-        existed = (CASES / case / output).is_file()
-        return Ran(
-            done.returncode,
-            done.stdout.decode("utf-8"),
-            done.stderr.decode("utf-8"),
-            script.read_text(encoding="utf-8") if script.is_file() and not existed else None,
-            "\n".join(log.read_text(encoding="utf-8").split("\n")[1:]) if log.is_file() else None,
-        )
-    finally:
-        shutil.rmtree(folder.parent)
+    folder = stage(case, work)
+    done = subprocess.run([*command, pipeline], cwd=folder, capture_output=True, check=False)
+    output = str(json.loads((folder / pipeline).read_text(encoding="utf-8"))["output"])
+    script = folder / output
+    log = folder / f"{output.rpartition('/')[0]}-logs" / (Path(output).stem + ".log")
+    existed = (CASES / case / output).is_file()
+    return Ran(
+        done.returncode,
+        done.stdout.decode("utf-8"),
+        done.stderr.decode("utf-8"),
+        script.read_text(encoding="utf-8") if script.is_file() and not existed else None,
+        "\n".join(log.read_text(encoding="utf-8").split("\n")[1:]) if log.is_file() else None,
+    )
 
 
 def save(case: str, ran: Ran) -> None:

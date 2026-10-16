@@ -1,7 +1,7 @@
 [project]
 name = "tessera-etl"
 version = "0.1.0"
-description = "Tessera's ETL tool in Python: a pipeline file in, one SQL seed script out, byte for byte as the C# tool wrote it."
+description = "Tessera's ETL pipeline: a pipeline file in, one SQL seed script and its log out."
 authors = [
     { name = "Claude", email = "noreply@anthropic.com" }
 ]

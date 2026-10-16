@@ -2,7 +2,7 @@
 
 The type checker checks each filter's own module, but not the one line that lists it. These
 tests do: a filter left out would pass the checker, yet a ***pipeline file*** naming it would be
-refused. (C#: AllFiltersTests.cs)
+refused.
 """
 
 import importlib
