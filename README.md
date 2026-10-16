@@ -108,9 +108,9 @@ A _table_ of a geodatabase _names_ its ***feature class*** as `layer`; a _table_
 | `dropDuplicateIds` | A _row_ that _repeats_ an earlier _row_'s `field` _fails_ |
 | `dropNearDuplicates` | A _row_ whose `field` _matches_ an earlier _row_'s, _within_ `metres` of it, _fails_ |
 
-Filters _run_ in the _order_ _listed_, _each_ on the _rows_ the _one_ _before_ _kept_. A _row_ that _fails_ is _dropped_, or, with `"onFail": "stop"`, _ends_ the _whole_ _run_. A _table_ _also_ _stops_ the _run_ when more than `droppedOverPercent` of its _rows_ were _dropped_, 10 by _default_, or _fewer_ than `rowsUnder` _remain_, 1 by _default_; `stopWhen` _sets_ them for the _whole_ _file_ or for _one_ _table_. A _stopped_ _run_ _writes_ no _script_, but _always_ _writes_ its _log_. The _area_ _comes_ from `tessera.json`, or from the _pipeline_'s _own_ `area`. `lines: true` _stores_ _lines_ and _areas_ as many-part _shapes_, so _one_ _table_ _holds_ both _kinds_.
+Filters _run_ in the _order_ _listed_, _each_ on the _rows_ the _one_ _before_ _kept_. A _row_ that _fails_ is _dropped_, or, with `"onFail": "stop"`, _ends_ the _whole_ _run_. A _table_ _also_ _stops_ the _run_ when more than `droppedOverPercent` of its _rows_ were _dropped_, 10 by _default_, or _fewer_ than `rowsUnder` _remain_, 1 by _default_; `stopWhen` _sets_ them for the _whole_ _file_ or for _one_ _table_. A _stopped_ _run_ _writes_ no _script_, but _always_ _writes_ its _log_. The _area_ _comes_ from the _pipeline_'s _own_ `area`, or _else_ from `tessera.json`. `lines: true` _stores_ _lines_ and _areas_ as many-part _shapes_, so _one_ _table_ _holds_ both _kinds_.
 
-**Adding a filter.** The _pipeline_ _lives_ in its _own_ repository, nathanwh71/tessera-etl-python, in Python. _Each_ filter is _one_ ***module*** in `src/tessera_etl/core/filters/`. It _holds_ the filter's _name_, what it does, a _model_ of its _own_ _settings_, its _checks_, and a _function_ that _returns_ the filter as a _step_ of the _chain_. The filter _itself_ is a _judge_: a _function_ that _gives_ _each_ _row_ a verdict, _keep_, _fix_ or _fail_, and the kernel does the _dropping_, _logging_ and _stopping_ for every filter alike. A _new_ filter is _one_ _new_ _module_, _modelled_ on `inside_area.py`, and _one_ _line_ in `KINDS`. _Each_ filter _reads_ _only_ its _own_ _settings_, so the _pipeline_ _file_ _refuses_ a _setting_ that _belongs_ to another filter, or _one_ that is _missing_.
+**Adding a filter.** The _pipeline_ _lives_ in its _own_ repository, nathanwh71/tessera-etl-python, in Python. _Each_ filter is _one_ ***module*** in `src/tessera_etl/core/filters/`. It _holds_ the filter's _name_, what it does, a _model_ of its _own_ _settings_, its _checks_, and a _function_ that _returns_ the filter as a _step_ of the _chain_. The filter _itself_ is a _judge_: a _function_ that _gives_ _each_ _row_ a verdict, _keep_, _fix_ or _fail_, and `filter_step`, in `core/steps.py`, does the _dropping_, _logging_ and _stopping_ for every filter alike. A _new_ filter is _one_ _new_ _module_, _modelled_ on `inside_area.py`, and _one_ _line_ in `KINDS`. _Each_ filter _reads_ _only_ its _own_ _settings_, so the _pipeline_ _file_ _refuses_ a _setting_ that _belongs_ to another filter, or _one_ that is _missing_.
 
 **Filters in code.** Filters _join_ with `>>`, which _runs_ the _left_ _one_, then the _right_ _one_ on the _rows_ it _kept_, and _stops_ at the _first_ _stop_. _Each_ _step_ is a _handler_ in Giraffe's _shape_, which _receives_ the _rest_ of the _chain_ (`kernel/pipes.py`):
 
@@ -129,7 +129,7 @@ The _pipeline_ _file_ _builds_ the _same_ _chain_ from its _list_, and _adds_ th
 
 Tessera _follows_ pg_tileserv's _rule_: the _database_ _decides_ what the _map_ _shows_. The _service_ _signs_ in as `tessera_reader`, a _role_ that may _only_ _read_, and a _table_ _becomes_ a _layer_ _only_ when that _role_ is _granted_ it. The _seed_ _signs_ in as `tessera_publisher`, which _owns_ the _tables_ but _never_ _grants_ them on its _own_; _publishing_ is the _publisher_'s _own_ _act_.
 
-_Two_ _attacks_ are _closed_ by _design_. Every _value_ from a _request_ _travels_ _beside_ the _query_ as a ***parameter***, _never_ _inside_ its _text_, and every _name_ _enters_ the _text_ _quoted_, _through_ _one_ _function_, `Queries.Quote`; so no _request_ can smuggle in a _command_ (***SQL injection***, S-01). Nginx _refuses_ an _address_ it _cannot_ _read_, and the _service_ _matches_ _routes_ on the _address_ as _sent_, so a disguised _address_ _reaches_ no _route_ (a _malformed_ URL, S-06).
+_Two_ _attacks_ are _closed_ by _design_. Every _value_ from a _request_ _travels_ _beside_ the _query_ as a ***parameter***, _never_ _inside_ its _text_, and every _name_ _enters_ the _text_ as a `SqlName`, which _only_ `SqlName.Quote` and `SqlName.Qualified` can _make_, so it _always_ _arrives_ _quoted_; no _request_ can smuggle in a _command_ (***SQL injection***, S-01). Nginx _refuses_ an _address_ it _cannot_ _read_, and the _service_ _matches_ _routes_ on the _address_ as _sent_, so a disguised _address_ _reaches_ no _route_ (a _malformed_ URL, S-06).
 
 ## What is where
 
@@ -138,7 +138,7 @@ The _service_ is _one_ _program_, _one_ _project_ laid out as the modular-monoli
 | Folder | What it holds |
 |---|---|
 | `src/Tessera/Common` | `Api/Problems.cs`, the _shape_ of every _problem_ _document_; `Infrastructure/Settings.cs`, how a _section_ of `tessera.json` is _read_ and _checked_ |
-| `src/Tessera/Modules/Tessera/Domain` | _Records_ and ***pure functions***: a _tile_'s _address_, the _layers_ and their ***catalogue***, the _area_ and _tile_ _settings_ |
+| `src/Tessera/Modules/Tessera/Domain` | _Records_ and ***pure functions***: a _tile_'s _address_, a _quoted_ SQL _name_, the _layers_ and their ***catalogue***, the _area_ and _tile_ _settings_ |
 | `src/Tessera/Modules/Tessera/Infrastructure` | Every SQL _text_, in `Sql/Queries.cs`, and the _code_ that _talks_ to the _database_; the _list_ of _layers_, _reread_ every `Catalogue.RefreshSeconds`; the ***health checks***; the `seed` _command_'s DbUp _run_, in `Seeding/` |
 | `src/Tessera/Modules/Tessera/Features` | The _routes_: the _tiles_, the _map_'s _page_ with the _area_ _written_ in, and `/health` |
 | `src/Tessera/Modules/Tessera/TesseraModule.cs` | The _module_'s _door_: `AddTessera` and `MapTessera` |
@@ -148,7 +148,7 @@ The _service_ is _one_ _program_, _one_ _project_ laid out as the modular-monoli
 | `tests/` | The _architecture_ _tests_, and the _unit_, _property_ and ***integration tests*** of the _service_ |
 | `db/` | The _packaged_ _database_: PostgreSQL 18 with PostGIS 3.6, the _role_ _script_, the _seed_ _scripts_ in `db/seed`, and, _beside_ _each_ _script_ `npm run etl` _writes_, its _log_ in `db/seed-logs` |
 | `data/` | The _seed_'s _source_: 900 _places_ in longitude and latitude, and `macau.pipeline.json`, which _cleans_ them into a _seed_ _script_ |
-| `scripts/` | The _scripts_, in TypeScript with zx (ADR 0002): `start.ts`, `boot.ts` and `boot-task.ts`, `publish.ts`, `inspect.ts`, `etl.ts`, which _hands_ a _pipeline_ _file_ to the C# _pipeline_, `office-port.ts`, the _test_ and _build_ _runners_, and the Nginx _checks_ in `scripts/lib/edge.ts` |
+| `scripts/` | The _scripts_, in TypeScript with zx (ADR 0002): `start.ts`, `boot.ts` and `boot-task.ts`, `publish.ts`, `inspect.ts`, `etl.ts`, which _hands_ a _pipeline_ _file_ to the Python _pipeline_, `office-port.ts`, the _test_ and _build_ _runners_, and the Nginx _checks_ in `scripts/lib/edge.ts` |
 | `docs/` | The _stories_ and the ***architecture decision records*** |
 
 ## The documents
@@ -165,12 +165,12 @@ The _service_ is _one_ _program_, _one_ _project_ laid out as the modular-monoli
 - `docs/adr/0009-seed-with-dbup.md`: why the _places_ _arrive_ as SQL _scripts_ that DbUp _runs_ _once_
 - `docs/adr/0010-template-layout-guarded-by-tests.md`: why the _service_ _follows_ the modular-monolith _template_, with _architecture_ _tests_ at its _borders_
 - `docs/design/etl-pipeline.md`: how the ETL _pipeline_ _cleans_ _places_ into _seed_ _scripts_, as a _chain_ of Giraffe-style _handlers_
-- `docs/design/template-mapping.md`: how Tessera _maps_ onto the modular-monolith _template_, and what ASP.NET Core _took_ over
-- `docs/guides/delivery-plan.md`: _Parts_ A and B rebuilt in _four_ iterations, from 19 _October_ to the _release_ of 7 December 2026, and what _follows_
+- `docs/design/template-mapping.md`: how Tessera _maps_ onto the modular-monolith _template_, and which _jobs_ ASP.NET Core does
+- `docs/guides/delivery-plan.md`: how to _build_ _Parts_ A and B in _four_ iterations, from 19 _October_ to the _release_ of 7 December 2026, and what _follows_
 - `docs/guides/reading-the-code.md`: _fifteen_ _steps_ _through_ the backend and the _map_, in the _order_ a _tile_ _travels_
 - `docs/guides/reading-the-frontend.md`: _fifteen_ _steps_ _through_ the _map_ _alone_, from the _page_ that _starts_ to the _tests_ that _state_ its _rules_
 - `docs/guides/reading-the-scripts.md`: _eleven_ _steps_ _through_ the TypeScript _scripts_, from the _rules_ they _keep_ to the _tests_ that _check_ Nginx
-- `docs/guides/reading-the-harder-files.md`: the _one_ _idea_ _behind_ _each_ of `Settings.cs`, `Database.cs` and `Catalogue.cs`, for _readers_ _new_ to ASP.NET Core
+- `docs/guides/reading-the-harder-files.md`: the _one_ _idea_ _behind_ _each_ of `Settings.cs`, `Database.cs` and `LiveCatalogue.cs`, for _readers_ _new_ to ASP.NET Core
 
 
 ## Comments in the code

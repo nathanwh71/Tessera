@@ -33,7 +33,7 @@
 ### Step 5 · The tile route
 
 - **Open:** `src/Tessera/Modules/Tessera/Features/Tiles.cs`, then `src/Tessera/Modules/Tessera/Domain/Tiles.cs`.
-- **Look for:** the _path_ a _request_ _takes_. `MapTiles` _matches_ `/{layer}/{z}/{x}/{y}.pbf`; `TileAddress.Of` _refuses_ a _tile_ _outside_ the _grid_; `TileServer.Answer` _finds_ the _layer_, _builds_ the _query_ with `Queries.Tile`, _runs_ it, and _returns_ the _bytes_ with `Cache-Control`. The _list_ of _layers_, `Find` and `TileAddress.Of` _each_ _return_ a `Maybe`, a _value_ that may be _missing_, and `TryGetValue` _opens_ _each_ _one_ with an _early_ _return_. `TypedResults.Bytes` _writes_ the `ETag`, and _answers_ 304 _itself_ when the _browser_'s _copy_ _matches_. _Each_ _failure_ _becomes_ a ***problem document*** from `src/Tessera/Common/Api/Problems.cs`: 404 for no such _layer_ or _tile_, 503 _while_ the _list_ of _layers_ _loads_, _while_ the _database_ _cannot_ _answer_, or when a ***seed script*** has _dropped_ a _column_ the _list_ _still_ _names_. That _last_ 503 _lasts_ until the _list_'s _next_ refresh.
+- **Look for:** the _path_ a _request_ _takes_. `MapTiles` _matches_ `/{layer}/{z}/{x}/{y}.pbf`; `TileAddress.Of` _refuses_ a _tile_ _outside_ the _grid_; `TileServer.Answer` _finds_ the _layer_, _builds_ the _query_ with `Queries.Tile`, _runs_ it, and _returns_ the _bytes_ with `Cache-Control`. The _list_ of _layers_, `Find` and `TileAddress.Of` _each_ _return_ a ***nullable type***, such as `TileAddress?`: a _value_ that may be _missing_, which the _compiler_ _makes_ the _code_ _check_. An `is not { }` _pattern_ _opens_ _each_ _one_ with an _early_ _return_. `TileAddress.Of` is a smart constructor, the _one_ _way_ to _make_ an _address_: the _record_'s _own_ constructor is _private_, so every _address_ that _exists_ _lies_ on the _grid_. `TypedResults.Bytes` _writes_ the `ETag`, and _answers_ 304 _itself_ when the _browser_'s _copy_ _matches_. _Each_ _failure_ _becomes_ a ***problem document*** from `src/Tessera/Common/Api/Problems.cs`: 404 for no such _layer_ or _tile_, 503 _while_ the _list_ of _layers_ _loads_, _while_ the _database_ _cannot_ _answer_, or when a ***seed script*** has _dropped_ a _column_ the _list_ _still_ _names_. That _last_ 503 _lasts_ until the _list_'s _next_ refresh.
 - **Check yourself:** why does a _revoked_ ***grant*** _answer_ 404 _rather_ than 500?
 
 ### Step 6 · Where the list of layers comes from
@@ -45,7 +45,7 @@
 ### Step 7 · Every SQL text, and the one door to PostgreSQL
 
 - **Open:** `src/Tessera/Modules/Tessera/Infrastructure/Sql/Queries.cs`, then `Database.cs` _beside_ it.
-- **Look for:** in `Queries.cs`, the ***tile query***: `ST_TileEnvelope` _makes_ the _tile_'s _square_, `ST_AsMVTGeom` _fits_ _each_ _place_ into it, `ST_AsMVT` _packs_ the _tile_. Every _value_ _travels_ as a ***parameter*** such as `@z`; every _name_ _goes_ _through_ `Quote` (S-01). In `Database.cs`, `Run`, which _borrows_ a _connection_ from the _pool_ and _turns_ _each_ _failure_ into a `Result`.
+- **Look for:** in `Queries.cs`, the ***tile query***: `ST_TileEnvelope` _makes_ the _tile_'s _square_, `ST_AsMVTGeom` _fits_ _each_ _place_ into it, `ST_AsMVT` _packs_ the _tile_. Every _value_ _travels_ as a ***parameter*** such as `@z`; every _name_ _arrives_ as a `SqlName`, from `src/Tessera/Modules/Tessera/Domain/SqlName.cs`, which _only_ `SqlName.Quote` and `SqlName.Qualified` can _make_, so no _name_ _reaches_ the _text_ unquoted (S-01). In `Database.cs`, `Run`, which _borrows_ a _connection_ from the _pool_ and _turns_ _each_ _failure_ into a `Result`.
 - **Check yourself:** `tests/Tessera.UnitTests/approved/tile-query.sql` _holds_ the _approved_ _text_. Why does a _test_ _compare_ the _query_ with it?
 
 ### Step 8 · How the page reaches the browser
@@ -56,8 +56,8 @@
 
 ### Step 9 · How the places enter the database
 
-- **Open:** `data/macau.pipeline.json`, then, in the _pipeline_'s _own_ repository, `nathanwh71/tessera-etl-python`, `src/tessera_etl/shell/program.py`, `kernel/pipes.py`, `core/steps.py` and _one_ ***filter*** in `core/filters/`, such as `inside_area.py`; then, here, `db/seed/0001-macau-places.sql` (the _first_ _lines_ _alone_), `src/Tessera/Modules/Tessera/Infrastructure/Seeding/SeedScripts.cs`, and ADR 0009.
-- **Look for:** GDAL extracts _each_ _table_ to GeoJSON, the ***pipeline file***'s filters, _joined_ into _one_ _chain_ of _handlers_ with `>>` and _ended_ by the ***stop rules***, _clean_ its _rows_ in _turn_, and `TableSql.cs` _writes_ the _cleaned_ _rows_ as SQL; DbUp _runs_ _each_ _new_ _script_ _once_ and _records_ it in `tessera.schemaversions`; `npm run publish` _grants_ the _tables_.
+- **Open:** `data/macau.pipeline.json`, then, in the _pipeline_'s _own_ repository, `nathanwh71/tessera-etl-python`, `src/tessera_etl/shell/program.py`, `kernel/pipes.py`, `core/steps.py`, `core/table_sql.py` and _one_ ***filter*** in `core/filters/`, such as `inside_area.py`; then, here, `db/seed/0001-macau-places.sql` (the _first_ _lines_ _alone_), `src/Tessera/Modules/Tessera/Infrastructure/Seeding/SeedScripts.cs`, and ADR 0009.
+- **Look for:** pyogrio, a Python _library_, _reads_ _each_ _table_ _through_ GDAL; the ***pipeline file***'s filters, _joined_ into _one_ _chain_ of _handlers_ with `>>` and _ended_ by the ***stop rules***, _clean_ its _rows_ in _turn_; `table_sql.py` _writes_ the _cleaned_ _rows_ as SQL; DbUp _runs_ _each_ _new_ _script_ _once_ and _records_ it in `tessera.schemaversions`; `npm run publish` _grants_ the _tables_.
 - **Check yourself:** you _find_ a _wrong_ _address_ in a _script_ that has _run_. What do you _change_?
 
 ## Part B · The frontend: the page opens and draws a tile
@@ -71,7 +71,7 @@
 ### Step 11 · The heart of the map: one model, one update
 
 - **Open:** `web/src/map/map.ts`, then `web/src/app/App.tsx`.
-- **Look for:** the Elmish _pattern_. `Model` _holds_ _everything_ the _page_ _shows_; `Msg` _lists_ _everything_ that can _happen_; `update` _makes_ the _next_ _model_ from the _old_ _one_ and a _message_, and _changes_ _nothing_ _else_ (ADR 0004). _Work_ _outside_, such as _moving_ the _map_, _goes_ out _through_ `Ports`. `App.tsx` _runs_ the loop with `useElmish` and _lays_ out the _parts_.
+- **Look for:** the Elmish _pattern_. `Model` _holds_ _everything_ the _page_ _shows_; `Message` _lists_ _everything_ that can _happen_; `update` _makes_ the _next_ _model_ from the _old_ _one_ and a _message_, and _changes_ _nothing_ _else_ (ADR 0004). _Work_ _outside_, such as _moving_ the _map_, _goes_ out _through_ `Ports`. `App.tsx` _runs_ the loop with `useElmish` and _lays_ out the _parts_.
 - **Check yourself:** _find_ the _message_ a _click_ on 'zoom in' _sends_, and _follow_ it _through_ `update`. What _leaves_ _through_ the _ports_?
 
 ### Step 12 · The nine layers and the map's style

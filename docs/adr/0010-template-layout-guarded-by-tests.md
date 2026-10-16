@@ -6,23 +6,22 @@
 | Date | 16 _October_ 2026 |
 | Decider | The _maintainer_ |
 | Covers | The _service_, `src/Tessera`, and its ***architecture tests***, `tests/Tessera.ArchitectureTests` |
-| Supersedes | ADR 0001's _guards_: _one_ _project_ _per_ ***module***, and the _compiler_ at the _borders_ |
 | Related | ADR 0001, ADR 0004, ADR 0008; `docs/design/template-mapping.md` |
 
 ## Decision
 
-The _back_ _end_ _follows_ the modular-monolith _template_'s layout: a `Common` _part_ that every _module_ may _use_, and a _folder_ for _each_ _module_ _under_ `Modules`, _divided_ into Domain, Infrastructure and _Features_. Tessera is the _one_ _module_, `Modules.Tessera`. The _whole_ _service_ is _one_ _project_, `src/Tessera`, and _each_ namespace _matches_ its _folder_.
+The _back_ _end_ _follows_ the modular-monolith _template_'s layout: a `Common` _part_ that every ***module*** may _use_, and a _folder_ for _each_ _module_ _under_ `Modules`, _divided_ into Domain, Infrastructure and _Features_. Tessera is the _one_ _module_, `Modules.Tessera`. The _whole_ _service_ is _one_ _project_, `src/Tessera`, and _each_ namespace _matches_ its _folder_.
 
-_Six_ ArchUnitNET _rules_, in `tests/Tessera.ArchitectureTests`, _guard_ the _borders_ that _eight_ _projects_ and the _compiler_ _guarded_ _before_. `npm test` and the _build_ on GitHub _run_ them _before_ the _service_'s _other_ _suites_.
+_Six_ ArchUnitNET _rules_, in `tests/Tessera.ArchitectureTests`, _guard_ the _borders_. `npm test` and the _build_ on GitHub _run_ them _before_ the _service_'s _other_ _suites_.
 
-ADR 0001's _choice_ of _one_ _service_, _built_ and _shipped_ as _one_ _unit_, _stands_. _Only_ its _guards_ _change_.
+ADR 0001 _records_ the _choice_ of _one_ _service_, _built_ and _shipped_ as _one_ _unit_; this _record_ _sets_ its layout and its _guards_.
 
 ## Context
 
 - **The template.** The _maintainer_ _chose_ the modular-monolith _template_ as the _shape_ for Tessera's _back_ _end_, so a _reader_ who _knows_ it _finds_ _each_ _file_ where they _expect_ it.
-- **Eight projects cost more than they guard.** ADR 0001 _kept_ a _project_ for _each_ of _seven_ _modules_, and `DisableTransitiveProjectReferences` and `PrivateAssets` on Npgsql and Dapper. The _maintainer_ _found_ the _project_ _files_ _hard_ to _follow_, and the _borders_ they _guard_ are _few_.
+- **Project files cost more than they guard.** A _project_ for _each_ _part_, with `DisableTransitiveProjectReferences` and `PrivateAssets` on Npgsql and Dapper, _lets_ the _compiler_ _guard_ _each_ _border_, but the _maintainer_ _finds_ such _files_ _hard_ to _follow_, and the _borders_ they _guard_ are _few_.
 - **Layers, not modules, divide the code.** _Within_ Tessera, the _real_ _line_ _runs_ _between_ ***pure functions***, _effects_ on the _database_, and the HTTP _edge_ (ADR 0004). The _template_'s Domain, Infrastructure and _Features_ _draw_ that _line_.
-- **A test can check what the compiler checked.** A sketch on .NET 10 _showed_ _six_ ArchUnitNET _rules_ _passing_ on _clean_ _code_ and _each_ _failing_ on a planted breach (`docs/design/template-mapping.md`).
+- **A test can check what a compiler would.** _Six_ ArchUnitNET _rules_ _pass_ on _clean_ _code_, and _each_ _fails_ on a planted breach (`docs/design/template-mapping.md`).
 
 ## The layout
 
@@ -50,14 +49,14 @@ A `PublicApi` _folder_ _joins_ the _module_ when a _second_ _module_ _needs_ _so
 | 5. **One door between modules.** Another module reaches Tessera through its PublicApi alone. | ArchUnitNET: `Other_modules_reach_Tessera_through_PublicApi_alone`, _waiting_ for a _second_ _module_ |
 | 6. **A public face shows no workings.** PublicApi uses no Infrastructure or Features. | ArchUnitNET: `PublicApi_shows_no_workings`, _waiting_ for PublicApi's _first_ _type_ |
 | 7. **A namespace matches its folder,** so the rules above can trust it. | The _compiler_: IDE0130 at _error_ _level_ |
-| 8. **One shape for errors, and values rather than shared state.** | _Review_, as _before_ (ADR 0001 _rules_ 5 and 6) |
+| 8. **One shape for errors, and values rather than shared state.** | _Review_ (ADR 0001) |
 
 ## Options considered
 
 | Option | For | Against |
 |---|---|---|
 | One project, ArchUnitNET rules (chosen) | _One_ _project_ _file_; the _rules_ _name_ _each_ breach and the _type_ that _made_ it. | The _rules_ _run_ at _test_ _time_, not at _compile_ _time_; ArchUnitNET is a _dependency_ of the _tests_. |
-| The template's projects: one per layer, with the compiler | The _compiler_ _guards_ the _layers_. | _Three_ or _four_ _project_ _files_ for _one_ _module_, the _cost_ ADR 0001 _already_ _found_ high. |
+| The template's projects: one per layer, with the compiler | The _compiler_ _guards_ the _layers_. | _Three_ or _four_ _project_ _files_ for _one_ _module_, _each_ to _keep_ and to _follow_. |
 | One project, review alone | _Nothing_ to _keep_. | _Nothing_ _stops_ a slip. |
 
 ## Consequences
@@ -76,4 +75,4 @@ A `PublicApi` _folder_ _joins_ the _module_ when a _second_ _module_ _needs_ _so
 ## When to revisit
 
 - **A part needs its own machine or its own release.** The _module_'s _folder_ _marks_ where it would _divide_, as ADR 0001 _says_.
-- **ArchUnitNET misses a breach.** Then the _layers_ _become_ _projects_, and the _compiler_ _takes_ _back_ the _borders_.
+- **ArchUnitNET misses a breach.** Then the _layers_ _become_ _projects_, and the _compiler_ _guards_ the _borders_.

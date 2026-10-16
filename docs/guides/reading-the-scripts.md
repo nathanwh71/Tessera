@@ -1,6 +1,6 @@
 # Reading the scripts, step by step
 
-**The short answer.** The _scripts_ _follow_ _one_ _pattern_: a _thin_ _file_ in `scripts/` _runs_ the _commands_, and a _file_ in `scripts/lib/` _makes_ every _decision_ as a ***pure function***, which a _test_ _checks_ with _values_ _alone_ (ADR 0002). _Learn_ the _pattern_ _once_, on the _smallest_ _script_, then _read_ the _scripts_ in the _order_ a _maintainer_ _uses_ them: _start_ Tessera, _bring_ in _places_, _set_ _up_ the _office_ _machine_, then _build_ and _test_. _Eleven_ _steps_ _take_ _two_ _hours_. The _scripts_ are _about_ 1,400 _lines_ of TypeScript: _ten_ _entry_ _scripts_, _eight_ helper _files_ in `scripts/lib/`, _six_ of them _pure_, and _six_ _test_ _files_ _beside_ those _six_.
+**The short answer.** The _scripts_ _follow_ _one_ _pattern_: a _thin_ _file_ in `scripts/` _runs_ the _commands_, and a _file_ in `scripts/lib/` _makes_ every _decision_ as a ***pure function***, which a _test_ _checks_ with _values_ _alone_ (ADR 0002). _Learn_ the _pattern_ _once_, on the _smallest_ _script_, then _read_ the _scripts_ in the _order_ a _maintainer_ _uses_ them: _start_ Tessera, _bring_ in _places_, _set_ _up_ the _office_ _machine_, then _build_ and _test_. _Eleven_ _steps_ _take_ _two_ _hours_. The _scripts_ are _about_ 1,500 _lines_ of TypeScript: _ten_ _entry_ _scripts_, _eight_ helper _files_ in `scripts/lib/`, _six_ of them _pure_, and _six_ _test_ _files_ _beside_ those _six_.
 
 **Before you start.** At the repository's _root_, _run_ `npm ci`, then `npm run typecheck` and `npm run test:scripts`. The _tests_ _take_ a _second_ and _need_ no Docker, no _database_ and no .NET, which is the _pattern_ at _work_. Node.js 26 _runs_ _each_ `.ts` _file_ as it _stands_, by stripping its _types_; `tsc` _only_ _checks_ them.
 
@@ -57,7 +57,7 @@ _Two_ helpers are not _pure_, _since_ their _work_ is to _talk_ to the _world_: 
 ### Step 6 · Publishing the places
 
 - **Open:** `scripts/publish.ts`.
-- **Look for:** _one_ ***grant***, _run_ as `tessera_publisher` _inside_ the _database_'s _container_. The _service_ _rereads_ its _list_ of ***layers*** every 30 _seconds_, so the _places_ _appear_ with no _restart_ (N-23). _Note_ how the _password_ _travels_: `--env PGPASSWORD`, with no _value_, _copies_ it from the _script_'s _own_ _environment_.
+- **Look for:** _two_ ***grants*** in _one_ _command_, _run_ as `tessera_publisher` _inside_ the _database_'s _container_. The _service_ _rereads_ its _list_ of ***layers*** every 30 _seconds_, so the _places_ _appear_ with no _restart_ (N-23). _Note_ how the _password_ _travels_: `--env PGPASSWORD`, with no _value_, _copies_ it from the _script_'s _own_ _environment_.
 - **Check yourself:** why does the _password_ _never_ _appear_ on the _command_ _line_?
 
 ## Part C · Bringing in places
@@ -68,11 +68,11 @@ _Two_ helpers are not _pure_, _since_ their _work_ is to _talk_ to the _world_: 
 - **Look for:** the _edge_ _uses_ the _machine_'s _own_ `ogrinfo` if it has _one_, and GDAL's Docker _image_ if not. It _reads_ GDAL's JSON and _prints_ what the _pure_ _parts_ _make_ of it. `readLayers` _turns_ GDAL's _description_ into _plain_ _values_; `summary` _writes_ it in _words_; `starter` _writes_ a _first_ ***pipeline file***, with the ***filters*** _each_ _kind_ of _shape_ _needs_; `nextScript` _numbers_ the _next_ _seed_ _script_.
 - **Check yourself:** the _seed_ _folder_ _holds_ `0001-macau-places.sql` and `0002-parks.sql`, and the _source_ is `data/Macau.gdb/`. What does `nextScript` _name_ the _next_ _script_?
 
-### Step 8 · Handing a pipeline file to C#
+### Step 8 · Handing a pipeline file to Python
 
 - **Open:** `scripts/etl.ts`, then `scripts/lib/etl.ts`.
-- **Look for:** a _script_ that does _little_ on _purpose_. The ***pipeline*** _itself_ is Python, in its _own_ repository, `nathanwh71/tessera-etl-python` (ADR 0009); this _script_ _checks_ the _command_, the _file_, the _pipeline_'s _folder_ and uv _first_, so _each_ _mistake_ _gets_ a _plain_ _answer_, then _runs_ the _pipeline_ and _ends_ with its exit _code_.
-- **Check yourself:** why _check_ for `dotnet` here, when `dotnet run` would _fail_ _anyway_?
+- **Look for:** a _script_ that does _little_ on _purpose_. The ***pipeline*** _itself_ is Python, in its _own_ repository, `nathanwh71/tessera-etl-python` (ADR 0009), _cloned_ _beside_ this _one_ or in the _folder_ `TESSERA_ETL_PYTHON` _names_. This _script_ _checks_ the _command_, the _file_, the _pipeline_'s _folder_ and uv, Python's _project_ _tool_, _first_, so _each_ _mistake_ _gets_ a _plain_ _answer_, then _runs_ the _pipeline_ with `uv run`, from the _arguments_ `uvArguments` _builds_, and _ends_ with its exit _code_.
+- **Check yourself:** why _check_ for uv here, when `uv run` would _fail_ _anyway_?
 
 ## Part D · The office machine
 

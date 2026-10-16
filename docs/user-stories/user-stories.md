@@ -178,7 +178,7 @@ The _service_ _builds_ from the _database_ _up_: the _database_, then the _layer
 | Culture | `culture` | `museums`, `libraries` |
 | Transport | `transport` | `trains`, `buses` |
 
-The _places_ _arrive_ as _files_ the _data_ _publisher_ _owns_, _each_ with _columns_ of its _own_; for Macau, `data/macau-pois.geojson`, a **GeoJSON** _file_ of _points_ with their _properties_. A ***pipeline*** _turns_ _each_ _file_ into a SQL _script_ with GDAL's `ogr2ogr`, and DbUp _runs_ _each_ _script_ _once_ (ADR 0009). The _tables_ _store_ _each_ _shape_ in longitude and latitude in **WGS 84** (SRID 4326), _whatever_ _system_ the _file_ _uses_. The _tiles_ _use_ **Web Mercator** (EPSG:3857), which _measures_ in _metres_ _east_ and _north_: a ***vector tile*** _stores_ _each_ _point_ as a _position_ _inside_ a _Web_ Mercator _square_, so the _tile_ _query_ _converts_ the _places_ it _returns_ (US-07). No _client_ _sees_ that _conversion_; it _turns_ the _tile_ _back_ into longitude and latitude on its _own_. _Each_ _group_ _becomes_ a **schema**, a _named_ _folder_ of _tables_, and _each_ _layer_ a _table_ in it, so the _layer_ `food.cafes` _carries_ its _group_ in its _name_. You _publish_ the _tables_ by a **grant**, the _database_'s _word_ for a _permission_. A _library_ _buys_ a _book_ (the _seed_), but the _book_ _reaches_ the _open_ _shelf_ _only_ when the librarian _says_ so (the _grant_).
+The _places_ _arrive_ as _files_ the _data_ _publisher_ _owns_, _each_ with _columns_ of its _own_; for Macau, `data/macau-pois.geojson`, a **GeoJSON** _file_ of _points_ with their _properties_. A ***pipeline***, in its _own_ repository, _reads_ _each_ _file_ _through_ GDAL and _turns_ it into a SQL _script_, and DbUp _runs_ _each_ _script_ _once_ (ADR 0009). The _tables_ _store_ _each_ _shape_ in longitude and latitude in **WGS 84** (SRID 4326), _whatever_ _system_ the _file_ _uses_. The _tiles_ _use_ **Web Mercator** (EPSG:3857), which _measures_ in _metres_ _east_ and _north_: a ***vector tile*** _stores_ _each_ _point_ as a _position_ _inside_ a _Web_ Mercator _square_, so the _tile_ _query_ _converts_ the _places_ it _returns_ (US-07). No _client_ _sees_ that _conversion_; it _turns_ the _tile_ _back_ into longitude and latitude on its _own_. _Each_ _group_ _becomes_ a **schema**, a _named_ _folder_ of _tables_, and _each_ _layer_ a _table_ in it, so the _layer_ `food.cafes` _carries_ its _group_ in its _name_. You _publish_ the _tables_ by a **grant**, the _database_'s _word_ for a _permission_. A _library_ _buys_ a _book_ (the _seed_), but the _book_ _reaches_ the _open_ _shelf_ _only_ when the librarian _says_ so (the _grant_).
 
 > **Story.** **As** a _data_ _publisher_, **I want** _each_ _file_ of _places_ I _own_ _turned_ into a SQL _script_, _each_ _new_ _script_ _loaded_ _once_, and the _tables_ _published_ by _grant_, **so that** _office_ _machines_ can _load_ the _places_ as _tiles_, _layer_ by _layer_.
 
@@ -1004,9 +1004,11 @@ _One_ _story_ _cleans_ the _places_ _before_ they _become_ a _script_, so _fault
 
 **Tests to write first**
 
+The _pipeline_'s _own_ repository, `nathanwh71/tessera-etl-python`, _holds_ these _tests_.
+
 1. **Each filter alone.** _Pure_ _tests_: what _each_ _keeps_, _fixes_ and _drops_, and the _stop_ at the _first_ _bad_ _row_.
 2. **The stop rules.** A _table_ that _drops_ 2 of 10 _rows_ _stops_ _under_ the _default_ 10 %, and _passes_ when its _own_ _rule_ _allows_ 25 %.
-3. **A geodatabase, end to end.** GDAL _builds_ a geodatabase from fixtures with _one_ _fault_ of _each_ _kind_; the _run_ _keeps_ 3 of 7 cafés, _swaps_ _one_ _back_, _repairs_ a _crossing_ park, and logs _each_ _row_; a _run_ _set_ to _stop_ _writes_ no _script_ and logs why.
+3. **A geodatabase, end to end.** Over a fixture geodatabase of faulty _places_, the _run_ _keeps_ 3 of 7 cafés, _swaps_ _one_ _back_, _repairs_ a _crossing_ park, and logs _each_ _row_; a _run_ _set_ to _stop_ _writes_ no _script_ and logs why.
 
 **Open to talk**
 

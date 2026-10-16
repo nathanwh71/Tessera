@@ -1,6 +1,6 @@
-# Delivery plan: rebuilding Phase Oct in four iterations
+# Delivery plan: building Phase Oct in four iterations
 
-You can rebuild the _service_ and the _map_ of _Phase_ Oct, _Parts_ A and B of the _stories_, and _release_ them to the _office_ on Monday 7 December 2026, the _last_ _working_ _day_ _before_ the holiday of 8 December. The _other_ _four_ _parts_, _worth_ 22 _points_, _cannot_ _fit_ as _well_: the calendar _holds_ 30 _days_ for _stories_, and the thirty _stories_ _need_ 52. So the _plan_ _builds_ 16 _stories_, _worth_ 29 _points_, in _four_ iterations, _keeps_ _one_ _day_ in _hand_ for S-07, and _leaves_ _Parts_ C to F for a _second_ _plan_ that _starts_ on 9 December and _ends_ _about_ 18 January 2027. This _guide_ is for you, rebuilding _Phase_ Oct _alone_ with the repository as a _worked_ _answer_. Its _sections_ _follow_ that _argument_: the brief, the _capacity_ _sum_, the iterations, the _order_ of the _stories_, the _work_ of _each_ iteration, the _rhythm_, the burn-up, the _cut_ _order_, the _work_ _after_ 8 December, and the risks.
+You can _build_ the _service_ and the _map_ of _Phase_ Oct, _Parts_ A and B of the _stories_, and _release_ them to the _office_ on Monday 7 December 2026, the _last_ _working_ _day_ _before_ the holiday of 8 December. The _other_ _four_ _parts_, _worth_ 22 _points_, _cannot_ _fit_ as _well_: the calendar _holds_ 30 _days_ for _stories_, and the thirty _stories_ _need_ 52. So the _plan_ _builds_ 16 _stories_, _worth_ 29 _points_, in _four_ iterations, _keeps_ _one_ _day_ in _hand_ for S-07, and _leaves_ _Parts_ C to F for a _second_ _plan_ that _starts_ on 9 December and _ends_ _about_ 18 January 2027. This _guide_ is for you, _building_ _Phase_ Oct _alone_, with the repository as a _worked_ _answer_. Its _sections_ _follow_ that _argument_: the brief, the _capacity_ _sum_, the iterations, the _order_ of the _stories_, the _work_ of _each_ iteration, the _rhythm_, the burn-up, the _cut_ _order_, the _work_ _after_ 8 December, and the risks.
 
 ## The brief in one page
 
@@ -18,7 +18,7 @@ The _work_ _comes_ as 30 **user stories** in _six_ _parts_, in `docs/user-storie
 | E · Nginx guards the door | S-30, N-29 | 4 | _After_ 8 December |
 | F · Clean places | US-36 | 3 | _After_ 8 December |
 
-You _build_ both _ends_ of _one_ _program_. The _service_ is C# 14 on .NET 10, with ASP.NET Core, Npgsql, Dapper and DbUp; the _map_ is TypeScript 6 with React, MapLibre GL JS and react-elmish; the _scripts_ are TypeScript with zx on Node.js 26; the _database_ is PostgreSQL 18 with PostGIS 3.6 in Docker, and Nginx _stands_ in _front_ of the _service_. You _work_ on Ubuntu 24.04 _inside_ WSL2 on _Windows_ 11, and the _office_ _machine_ _runs_ the _same_ set-up.
+You _build_ both _ends_ of _one_ _program_. The _service_ is C# 14 on .NET 10, with ASP.NET Core, Npgsql, Dapper and DbUp; the _map_ is TypeScript 6 with React, MapLibre GL JS and react-elmish; the _scripts_ are TypeScript with zx on Node.js 26; the _database_ is PostgreSQL 18 with PostGIS 3.6 in Docker, and Nginx _stands_ in _front_ of the _service_. The ***pipeline*** that _cleans_ the _places_ (US-36) is Python, in its _own_ repository, `nathanwh71/tessera-etl-python`, and `npm run etl` _runs_ it. You _work_ on Ubuntu 24.04 _inside_ WSL2 on _Windows_ 11, and the _office_ _machine_ _runs_ the _same_ set-up.
 
 _Four_ _rules_ _shape_ every _day_ of the _plan_:
 
@@ -27,7 +27,7 @@ _Four_ _rules_ _shape_ every _day_ of the _plan_:
 - **Committed every evening.** _Each_ _day_ _ends_ with its _work_ _committed_.
 - **Cut from the bottom.** When _time_ _runs_ _short_, _cut_ the _last_ _stories_ of the _map_, _never_ a _test_ and _never_ a _defence_.
 
-The repository is a _worked_ _answer_. It _holds_ the _whole_ of _Phase_ Oct, with _about_ 300 _tests_ that _passed_ on 15 _October_ 2026. You rebuild _each_ _story_ in a _folder_ of your _own_ and _compare_ your _work_ with the _answer_ at the _end_ of _each_ _day_. The rebuild _teaches_ you; the _answer_ _saves_ you when a _story_ overruns. The _three_ _reading_ _guides_, `reading-the-code.md`, `reading-the-frontend.md` and `reading-the-scripts.md`, _take_ you _through_ the _answer_ in _order_.
+The repository is a _worked_ _answer_. It _holds_ the _whole_ of _Phase_ Oct, with _about_ 300 _tests_. You _build_ _each_ _story_ in a _folder_ of your _own_ and _compare_ your _work_ with the _answer_ at the _end_ of _each_ _day_. Your _own_ _build_ _teaches_ you; the _answer_ _saves_ you when a _story_ overruns. The _three_ _reading_ _guides_, `reading-the-code.md`, `reading-the-frontend.md` and `reading-the-scripts.md`, _take_ you _through_ the _answer_ in _order_.
 
 ## The capacity sum
 

@@ -28,7 +28,7 @@ _Caching_, packing and _watching_ a _server_ are Nginx's daily _work_, _tested_ 
 | Refuse a malformed address, with a problem document that hides it | Its _own_ parser, and `error_page 400` |
 | Send a request to the other copy when one crashes or hangs, and rest the failed copy | `proxy_next_upstream error timeout`, `max_fails=3 fail_timeout=10s` |
 
-The _service_ _sends_ `Cache-Control` and a _weak_ `ETag` with _each_ _tile_, _answers_ `/health`, and _writes_ its _own_ ***problem documents***. _Since_ 16 _October_ 2026 ASP.NET Core _also_ _answers_ 304 to a _matching_ `If-None-Match` that _reaches_ the _service_, as Nginx does from its _kept_ _copy_ (ADR 0010).
+The _service_ _sends_ `Cache-Control` and a _weak_ `ETag` with _each_ _tile_, _answers_ `/health`, and _writes_ its _own_ ***problem documents***. ASP.NET Core _answers_ 304 to a _matching_ `If-None-Match` that _reaches_ the _service_, as Nginx does from its _kept_ _copy_.
 
 ## A passive health check over two copies
 
@@ -43,7 +43,7 @@ Nginx's _free_ _edition_ _watches_ a _server_ _only_ _through_ the _requests_ it
 | Option | Why not |
 |---|---|
 | A cache in the service, of its own or on `MemoryCache` | It _puts_ _code_ in the _service_ that Nginx _already_ has, and `MemoryCache` _turns_ a _new_ _tile_ _away_ when it is _full_ |
-| YARP, a proxy written in .NET | _One_ more _program_ of our _own_, _set_ _up_ in _code_; Nginx _needs_ _one_ _file_ of 121 _lines_ |
+| YARP, a proxy written in .NET | _One_ more _program_ of our _own_, _set_ _up_ in _code_; Nginx _needs_ _one_ _file_ of 154 _lines_ |
 | Varnish | A ***cache*** _alone_: no gzip of its _own_, no _answer_ to a _malformed_ _address_, and a _language_ of its _own_ for its _rules_ |
 
 ## Consequences

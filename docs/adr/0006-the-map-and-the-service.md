@@ -6,7 +6,7 @@
 | Date | 13 _October_ 2026 |
 | Decider | The _maintainer_ |
 | Covers | The _map_, in TypeScript 6, in `web/`, and the _service_ that _serves_ it |
-| Related | US-23, which _opens_ the _map_; ADR 0001, whose _Map_ ***module*** _serves_ it; ADR 0004, whose _map_ _section_ _fixes_ the _map_'s _style_; ADR 0008, whose Nginx _stands_ in _front_ of both |
+| Related | US-23, which _opens_ the _map_; ADR 0001, whose _service_ _serves_ it, from `src/Tessera/Modules/Tessera/Features/Map.cs`; ADR 0004, whose _map_ _section_ _fixes_ the _map_'s _style_; ADR 0008, whose Nginx _stands_ in _front_ of both |
 
 ## Decision
 
@@ -15,7 +15,7 @@ The _map_ _lives_ in this repository's `web/`. `npm run build` _writes_ it to `w
 ## Why
 
 - **One repository, one history.** A _change_ that _touches_ the _map_ and the _service_ _lands_ in _one_ _commit_, and _one_ CI _run_ _tests_ both.
-- **The map tests itself.** Its _unit_ and _architecture_ _tests_ _run_ with `npm test` in `web/`, and its _browser_ and _screenshot_ _tests_ with `npm run e2e`, _apart_ from the _service_'s.
+- **The map tests itself.** Its _unit_ and ***architecture tests*** _run_ with `npm test` in `web/`, and its _browser_ and _screenshot_ _tests_ with `npm run e2e`, _apart_ from the _service_'s.
 - **The contract is small.** The _map_ _needs_ _three_ _things_ of the _service_, _listed_ _below_. A _service_ that _keeps_ them could _serve_ the _map_ _unchanged_.
 
 ## The contract between the map and the service

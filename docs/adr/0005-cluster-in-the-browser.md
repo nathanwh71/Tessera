@@ -22,7 +22,7 @@ MapLibre GL JS clusters the _features_ of a GeoJSON _source_ _alone_; it _cannot
 | 4. Cluster | _One_ GeoJSON _source_ with `cluster: true`, a radius of 48 pixels, clusters _up_ to _level_ 15 | _Counts_ _each_ _group_'s _places_ in _each_ cluster, for the _coloured_ _ring_ of UI-10 |
 | 5. Skip work | A fingerprint of the _places_' ids | _Sets_ the _source_'s _data_ _only_ when its _places_ _change_, _since_ _each_ _new_ _set_ _makes_ MapLibre cluster _again_ |
 
-_Two_ _rules_ _follow_ for the _service_, its _Tiles_ and _Seeding_ ***modules*** (ADR 0001). **Every tile carries each place's `id`**, so the _map_ can _keep_ _each_ _place_ _once_. **Every tile carries each place's `name`**, so the _map_ can _name_ the _pins_ _without_ a _request_ of its _own_. The _group_ _needs_ no _property_: the _layer_'s id _names_ it, as `food.cafes` _names_ the _food_ _group_ (US-24).
+_Two_ _rules_ _follow_ for the _service_'s ***tile query*** and its ***seed scripts***. **Every tile carries each place's `id`**, so the _map_ can _keep_ _each_ _place_ _once_. **Every tile carries each place's `name`**, so the _map_ can _name_ the _pins_ _without_ a _request_ of its _own_. The _group_ _needs_ no _property_: the _layer_'s id _names_ it, as `food.cafes` _names_ the _food_ _group_ (US-24).
 
 ## Context
 
@@ -38,7 +38,7 @@ _Two_ _rules_ _follow_ for the _service_, its _Tiles_ and _Seeding_ ***modules**
 | Cluster in the browser, from the vector tiles (chosen) | No _change_ to the API, the _tables_ or the _stories_. _Pins_ can _move_ out of a cluster as the _visitor_ _zooms_ (UI-10, _criterion_ 2) | The _map_ clusters _only_ the _places_ in the _tiles_ it has _loaded_, so a cluster at the _edge_ of the _screen_ _counts_ _fewer_ _places_ than _lie_ beyond it, and _grows_ as the _visitor_ _pans_ |
 | Store the places as JSON in PostgreSQL | _None_ for clustering: how the _database_ _stores_ a _place_ _never_ _reaches_ the _browser_, which _receives_ _tiles_ | _Breaks_ US-03, _since_ a JSON _column_ is no _typed_ geometry and its _table_ _becomes_ no _layer_; US-24, _criterion_ 1, _since_ a JSON _column_ _takes_ no spatial index; and US-07, _since_ `ST_AsMVT` _builds_ _tiles_ from geometry |
 | A GeoJSON file for each layer, built by `ST_AsGeoJSON` | _One_ _request_ _loads_ a _whole_ _layer_, so the clusters _see_ every _place_, with no _edge_ _effect_ | A _second_ API, and a _new_ _story_: in _Phase_ Oct, _clients_ _load_ _tiles_ _alone_. The geometry _stays_ in the _tables_ either _way_ |
-| Clusters built in the tiles, with `ST_ClusterDBSCAN` for each level | Every _client_ _gets_ the _same_ clusters, with no _work_ in the _browser_ | A heavier ***tile query*** for every _tile_. The clusters _change_ at _tile_ _edges_, and UI-10's _pins_ that _move_ out of a cluster _need_ _new_ _work_ |
+| Clusters built in the tiles, with `ST_ClusterDBSCAN` for each level | Every _client_ _gets_ the _same_ clusters, with no _work_ in the _browser_ | A heavier _tile_ _query_ for every _tile_. The clusters _change_ at _tile_ _edges_, and UI-10's _pins_ that _move_ out of a cluster _need_ _new_ _work_ |
 
 ## Consequences
 

@@ -5,7 +5,7 @@
 | Status | _Accepted_ |
 | Date | 13 _October_ 2026 |
 | Decider | The _maintainer_ |
-| Covers | The _Settings_ ***module*** of the _back_ _end_, in `nathanwh71/Tessera` |
+| Covers | The _service_'s _settings_, in `nathanwh71/Tessera`: the helpers in `src/Tessera/Common/Infrastructure/Settings.cs`, and _each_ _section_'s _record_ _beside_ the _code_ that _reads_ it |
 | Related | ADR 0001, which _names_ the _database_'s ***environment variables***; ADR 0008; US-00, US-07, US-23; N-18 to N-25 |
 
 ## Decision
@@ -32,7 +32,7 @@ The _room_ for _kept_ ***tiles*** _belongs_ to Nginx: `max_size` in `nginx/defau
 ## How it works
 
 - **One unit, one form.** A _key_ that _holds_ a _time_ _names_ its _unit_, such as `QueryTimeoutSeconds`, and _takes_ a _whole_ _number_. No _key_ _takes_ _two_ _forms_, such as _seconds_ or `"1h"`.
-- **The file.** The _service_ _starts_ on ASP.NET Core's _standard_ start-up, `WebApplication.CreateBuilder`, and _adds_ `tessera.json` from _beside_ _itself_; the `seed` _command_ does the _same_ on a _plain_ _host_. A _missing_ _file_ is no _fault_: every _key_ _takes_ its _default_.
+- **The file.** The _service_ _starts_ on ASP.NET Core's _standard_ start-up, `WebApplication.CreateBuilder`, and _adds_ `tessera.json` from _beside_ _itself_. The `seed` _command_ _reads_ the _same_ _file_ and the _environment_, and _takes_ from them the _publisher_'s _database_ URL _alone_, so a _fault_ in another _section_ _never_ _stops_ it. A _missing_ _file_ is no _fault_: every _key_ _takes_ its _default_.
 - **Overrides.** _Any_ _environment_ variable _overrides_ the _key_ it _names_, with `__` for _each_ _step_ _down_ a _level_, so `Tiles__CacheSeconds=0` _sets_ `Tiles.CacheSeconds`. Variables that _name_ no _setting_, such as `TESSERA_DB_PASSWORD`, _change_ _nothing_.
 - **Checked at start-up.** _Each_ _section_ _binds_ to its _record_ _through_ .NET's _options_ _pattern_. Attributes such as `[Range]` _give_ _each_ _value_ its _limits_, a _record_'s _own_ `Validate` _checks_ _values_ that must agree, such as a _box_ that _runs_ _west_ to _east_, and the _check_ _runs_ _before_ the _service_ _starts_. Every _value_ out of its _limits_ is _named_ at _once_, with its _record_; a _key_ the _record_ _lacks_ _stops_ the _start_ on its _own_ (US-00 c4). A _misspelt_ _section_ _name_ _passes_ unseen, and the _section_ _keeps_ its _defaults_.
 - **No password in the file.** The _shipped_ _file_ _holds_ no _password_, and _listens_ on 127.0.0.1 _alone_; a _test_ _reads_ it and _fails_ the _build_ if it _breaks_ either _rule_.

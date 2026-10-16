@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | _Accepted_; _amended_ 16 _October_ 2026: `Maybe` from CSharpFunctionalExtensions _came_ in, then _left_ _again_ the _same_ _day_ for `T?`, which the _compiler_ _already_ _checks_ |
+| Status | _Accepted_ |
 | Date | 13 _October_ 2026 |
 | Decider | The _maintainer_ |
 | Covers | Every _line_ of the _back_ _end_, in C# 14 on .NET 10, in `nathanwh71/Tessera`; the _map_ and the _scripts_ _follow_ the _same_ _style_ in TypeScript 6 |
@@ -15,8 +15,8 @@ Tessera's _code_ is _written_ in a ***functional style***: immutable _values_, *
 ## Why
 
 - **Code the maintainer reads at a glance.** The _maintainer_ _comes_ from F#, and will _read_ and _change_ this _code_ for _years_. Immutable _values_ and `Result` ***pipelines*** _read_ the _way_ an F# _programmer_ _thinks_.
-- **A library, not code of our own.** CSharpFunctionalExtensions _gives_ `Result`, with `Map`, `Bind` and `Match`, so Tessera _need_ not _write_ or _test_ it. For _part_ of 16 _October_ 2026, Tessera _kept_ a `Result` of its _own_; the _library_ _came_ _back_, with its `Maybe`, and `Maybe` _left_ _again_ that _evening_.
-- **A missing value says so in its type.** `Nullable` is on and every _warning_ is an _error_ (`Directory.Build.props`), so a `T?` does the _work_ of F#'s `option`: the _compiler_ _refuses_ to _use_ a `Layer?` until the _code_ has _checked_ it, _through_ `is { } layer`, `?.` or `??`. No stand-in _object_, such as an _empty_ _list_ or a _default_ _record_, _hides_ a _value_ that is _missing_. `Maybe<T>` _gave_ the _same_ _check_ with more ceremony, and _needed_ a _conversion_ _wherever_ a _library_ _handed_ over a _null_.
+- **A library, not code of our own.** CSharpFunctionalExtensions _gives_ `Result`, with `Map`, `Bind` and `Match`, so Tessera _need_ not _write_ or _test_ it.
+- **A missing value says so in its type.** `Nullable` is on and every _warning_ is an _error_ (`Directory.Build.props`), so a `T?` does the _work_ of F#'s `option`: the _compiler_ _refuses_ to _use_ a `Layer?` until the _code_ has _checked_ it, _through_ `is { } layer`, `?.` or `??`. No stand-in _object_, such as an _empty_ _list_ or a _default_ _record_, _hides_ a _value_ that is _missing_.
 - **Tests without a database.** A _pure_ _function_ _reads_ _only_ its ***parameters***, so FsCheck and xUnit _test_ it with no _database_, no _network_ and no _clock_.
 
 ## The three habits
@@ -68,8 +68,8 @@ JavaScript's pipe operator is a _proposal_ at _stage_ 2 of 4, and TypeScript _ca
 
 | Option | Why not |
 |---|---|
-| A `Result` of Tessera's own | _Tried_ on 16 _October_ 2026; the _library_ _gives_ the _same_, _tested_ by _others_ |
-| `Maybe<T>` from the same library, in place of `T?` | _Tried_ on 16 _October_ 2026; it _repeated_ the _compiler_'s _own_ _check_, and _needed_ `AsMaybe()` and `GetValueOrDefault` _wherever_ a _library_ _handed_ over or _demanded_ a _null_ |
+| A `Result` of Tessera's own | _Code_ to _write_ and _test_, where the _library_ _gives_ the _same_, _tested_ by _others_ |
+| `Maybe<T>` from the same library, in place of `T?` | It _repeats_ the _compiler_'s _own_ _check_, and _needs_ `AsMaybe()` and `GetValueOrDefault` _wherever_ a _library_ _hands_ over or _demands_ a _null_ |
 | LanguageExt | A _large_ _library_ with a _style_ of its _own_, for the _two_ or _three_ _functions_ Tessera _needs_ |
 | Exceptions for expected failures | A _caller_ _cannot_ _see_ from a _function_'s _type_ that it may _fail_ |
 

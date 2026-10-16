@@ -83,7 +83,7 @@
 ### Step 11 · The pins' drop, as a state machine
 
 - **Open:** `web/src/map/landing.ts`, then its _test_, `web/src/map/landing.test.ts`.
-- **Look for:** _three_ _stages_, `waiting`, `dropping` and `landed`, and _five_ _events_. `step` _returns_ the _next_ _stage_, and the very _same_ _object_ when an _event_ _means_ _nothing_, so React skips a redraw. Every _path_ is _tested_ with _values_ _alone_, _including_ a _visitor_ who drags the _map_ _before_ the _places_ _arrive_ (UI-15 c6).
+- **Look for:** _three_ _stages_, `waiting`, `dropping` and `landed`, and _five_ _events_. `step` _returns_ the _next_ _stage_, and the _same_ _object_ when an _event_ _means_ _nothing_, so React skips a redraw. Every _path_ is _tested_ with _values_ _alone_, _including_ a _visitor_ who drags the _map_ _before_ the _places_ _arrive_ (UI-15 c6).
 - **Check yourself:** the _places_ _never_ _arrive_. What _ends_ the _wait_?
 
 ### Step 12 · The controls and readouts
