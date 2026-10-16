@@ -1,10 +1,13 @@
-// Pure parts of npm run etl, which hands a pipeline file to the C# pipeline in tools/Tessera.Etl
-// (ADR 0009). Each function reads only its parameters, so node --test checks it with no .NET and
-// no GDAL (ADR 0002, rule 1).
+// Pure parts of npm run etl, which hands a pipeline file to the Python pipeline, a repository of its
+// own beside this one (ADR 0009). Each function reads only its parameters, so node --test checks it
+// with no Python and no GDAL (ADR 0002, rule 1).
 import { err, ok, type Result } from '../../web/src/shared/result.ts';
 
-/** The pipeline's project, beside the service's, so one solution builds both. */
-export const etlProject = 'tools/Tessera.Etl';
+/**
+ * Where the pipeline lives when TESSERA_ETL_PYTHON names no other folder: beside this repository,
+ * as nathanwh71/tessera-etl-python clones by default.
+ */
+export const etlProject = '../tessera-etl-python';
 
 /** Reads the command line: one pipeline file, ending in .json. */
 export function readEtlArguments(args: readonly string[]): Result<string, string> {
@@ -15,11 +18,11 @@ export function readEtlArguments(args: readonly string[]): Result<string, string
 }
 
 /**
- * What dotnet needs to build the pipeline, if it has changed, and run it on the file. Release, as
- * CI builds it, so a run after a Release build starts at once rather than building again.
+ * What uv, Python's project tool, needs to run the pipeline on the file. uv installs the pipeline's
+ * own packages first if they have changed, so a fresh clone needs no step of its own.
  */
-export const dotnetArguments = (file: string): readonly string[] =>
-  ['run', '--project', etlProject, '--configuration', 'Release', '--', file];
+export const uvArguments = (project: string, file: string): readonly string[] =>
+  ['run', '--project', project, 'tessera-etl', file];
 
 /** What the maintainer does once the pipeline has written a script (README, 'Adding places'). */
 export const nextSteps: readonly string[] = [

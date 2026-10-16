@@ -1,7 +1,7 @@
 // Tests of npm run etl's pure parts; node --test runs them, with no .NET and no GDAL.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { dotnetArguments, readEtlArguments } from './etl.ts';
+import { readEtlArguments, uvArguments } from './etl.ts';
 
 test('reads one pipeline file, and refuses anything else', () => {
   assert.deepEqual(readEtlArguments(['data/parks.pipeline.json']), { ok: true, value: 'data/parks.pipeline.json' });
@@ -12,7 +12,7 @@ test('reads one pipeline file, and refuses anything else', () => {
   assert.ok(!source.ok && source.error.includes('a pipeline file is JSON'));
 });
 
-test('runs the C# pipeline in Release, with the file after --', () => {
-  assert.deepEqual(dotnetArguments('data/parks.pipeline.json'),
-    ['run', '--project', 'tools/Tessera.Etl', '--configuration', 'Release', '--', 'data/parks.pipeline.json']);
+test('runs the Python pipeline in its own project, with the file last', () => {
+  assert.deepEqual(uvArguments('../tessera-etl-python', 'data/parks.pipeline.json'),
+    ['run', '--project', '../tessera-etl-python', 'tessera-etl', 'data/parks.pipeline.json']);
 });

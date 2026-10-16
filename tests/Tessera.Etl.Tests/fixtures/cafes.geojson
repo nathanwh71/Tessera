@@ -1,8 +1,0 @@
-{"type":"FeatureCollection","features":[
-{"type":"Feature","properties":{"id":"c1","name":"  Café   Uno ","kind":"cafe"},"geometry":{"type":"Point","coordinates":[113.55,22.19,4]}},
-{"type":"Feature","properties":{"id":"c2","name":"Swapped Café","kind":"cafe"},"geometry":{"type":"Point","coordinates":[22.20,113.56]}},
-{"type":"Feature","properties":{"id":"c3","name":"   ","kind":"cafe"},"geometry":{"type":"Point","coordinates":[113.551,22.191]}},
-{"type":"Feature","properties":{"id":"c1","name":"Repeat Id","kind":"cafe"},"geometry":{"type":"Point","coordinates":[113.552,22.192]}},
-{"type":"Feature","properties":{"id":"c5","name":"café uno","kind":"cafe"},"geometry":{"type":"Point","coordinates":[113.5501,22.1901]}},
-{"type":"Feature","properties":{"id":"c6","name":"Far Away","kind":"cafe"},"geometry":{"type":"Point","coordinates":[0.5,51.5]}},
-{"type":"Feature","properties":{"id":"c7","name":"Good Café","kind":"cafe"},"geometry":{"type":"Point","coordinates":[113.56,22.20]}}]}

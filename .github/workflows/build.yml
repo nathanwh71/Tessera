@@ -50,11 +50,6 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run test:scripts
-      # The ETL's tests build a geodatabase with GDAL and run the pipeline on it (ADR 0009); one runs
-      # scripts/inspect.ts, so it follows npm ci. Ubuntu's own GDAL serves; without it the pipeline
-      # would pull GDAL's Docker image.
-      - run: sudo apt-get update && sudo apt-get install --yes --no-install-recommends gdal-bin
-      - run: dotnet run --project tests/Tessera.Etl.Tests --configuration Release --no-build
       # The browser tests drive Chrome against the built service and a database of their own
       # (scripts/e2e.ts). They use the Google Chrome the runner image ships with, through
       # CHROMIUM_PATH: downloading Playwright's own browser can hang for ten minutes. The screenshot

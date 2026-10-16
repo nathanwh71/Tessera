@@ -1,3 +1,0 @@
-{"type":"FeatureCollection","features":[
-{"type":"Feature","properties":{"id":"p1","name":"Bow Tie Park"},"geometry":{"type":"Polygon","coordinates":[[[113.54,22.18],[113.55,22.19],[113.55,22.18],[113.54,22.19],[113.54,22.18]]]}},
-{"type":"Feature","properties":{"id":"p2","name":"Square Park"},"geometry":{"type":"MultiPolygon","coordinates":[[[[113.56,22.20],[113.57,22.20],[113.57,22.21],[113.56,22.21],[113.56,22.20]]]]}}]}

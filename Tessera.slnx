@@ -2,13 +2,9 @@
   <Folder Name="/src/">
     <Project Path="src/Tessera/Tessera.csproj" />
   </Folder>
-  <Folder Name="/tools/">
-    <Project Path="tools/Tessera.Etl/Tessera.Etl.csproj" />
-  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Tessera.ArchitectureTests/Tessera.ArchitectureTests.csproj" />
     <Project Path="tests/Tessera.UnitTests/Tessera.UnitTests.csproj" />
     <Project Path="tests/Tessera.IntegrationTests/Tessera.IntegrationTests.csproj" />
-    <Project Path="tests/Tessera.Etl.Tests/Tessera.Etl.Tests.csproj" />
   </Folder>
 </Solution>
