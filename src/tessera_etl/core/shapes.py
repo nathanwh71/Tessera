@@ -97,6 +97,11 @@ def difference(first: BaseGeometry, second: BaseGeometry) -> BaseGeometry:
     return cast(BaseGeometry, _shapely.difference(first, second))
 
 
+def prepare(shape: BaseGeometry) -> None:
+    """Builds GEOS's index of the shape's edges, so later tests against it run faster."""
+    _shapely.prepare(shape)
+
+
 def intersects(first: BaseGeometry, second: BaseGeometry) -> bool:
     """True when the two shapes share any point."""
     return bool(_shapely.intersects(first, second))

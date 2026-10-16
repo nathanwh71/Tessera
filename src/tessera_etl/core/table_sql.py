@@ -140,7 +140,14 @@ def time_type_of(values: Iterable[str]) -> str | None:
     other text, or a date that cannot be, such as 2024-13-45. The values go into the script as
     written, and PostgreSQL reads them as the type says.
     """
-    kinds = list(dict.fromkeys(_kind_of(value) for value in values))
+    kinds: list[str] = []
+    for value in values:
+        kind = _kind_of(value)
+        # One value of plain text makes the column text, so the rest need no look.
+        if kind == "text":
+            return None
+        if kind not in kinds:
+            kinds.append(kind)
     if kinds == ["date"]:
         return "date"
     if kinds == ["time"]:
@@ -152,6 +159,9 @@ def time_type_of(values: Iterable[str]) -> str | None:
 
 def _kind_of(value: str) -> str:
     """One value's kind: date, time, timestamp, or text for anything else."""
+    # Every date and time starts with a digit, so other text needs no pattern.
+    if not value[:1].isdigit():
+        return "text"
     for pattern, kind in ((_DATE_ONLY, "date"), (_TIME_ONLY, "time"), (_DATE_AND_TIME, "timestamp")):
         found = pattern.match(value)
         if found is not None and _fits(found):

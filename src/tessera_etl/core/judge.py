@@ -10,31 +10,37 @@ import re
 import unicodedata
 from dataclasses import dataclass
 
+from shapely.geometry import Point
 from shapely.geometry import box as shapely_box
 from shapely.geometry.base import BaseGeometry
 
-from . import dotnet
+from . import dotnet, shapes
 from .plan import Area
 from .rows import Value
 
 
 @dataclass(frozen=True, slots=True)
 class Box:
-    """The area's box, in degrees; a shape's own box is tested against it before the shape."""
+    """The area's box, in degrees, and the same box as a shape.
+
+    A shape's own box is tested against the numbers first; the shape itself is tested against
+    `polygon` only when the boxes meet.
+    """
 
     west: float
     south: float
     east: float
     north: float
-
-    def polygon(self) -> BaseGeometry:
-        """The box as a shape, for the slower test of the shape itself."""
-        return shapely_box(self.west, self.south, self.east, self.north)
+    polygon: BaseGeometry
 
 
 def box(area: Area) -> Box:
-    """The box of an area."""
-    return Box(area.min_longitude, area.min_latitude, area.max_longitude, area.max_latitude)
+    """The box of an area, made once for every row a filter judges."""
+    west, south, east, north = area.min_longitude, area.min_latitude, area.max_longitude, area.max_latitude
+    polygon = shapely_box(west, south, east, north)
+    # 'Preparing' a shape builds an index of its edges once, so each later test runs faster.
+    shapes.prepare(polygon)
+    return Box(west, south, east, north, polygon)
 
 
 def inside(shape: BaseGeometry | None, area_box: Box) -> bool:
@@ -46,9 +52,13 @@ def inside(shape: BaseGeometry | None, area_box: Box) -> bool:
     if shape is None or shape.is_empty:
         return False
     west, south, east, north = shape.bounds
-    if west > area_box.east or east < area_box.west or south > area_box.north or north < area_box.south:
+    # Written as 'not meets', so a shape with a number that is not a number fails the test.
+    if not (west <= area_box.east and east >= area_box.west and south <= area_box.north and north >= area_box.south):
         return False
-    return bool(shape.intersects(area_box.polygon()))
+    # A point whose box meets the area's box lies in it; only longer shapes need the slow test.
+    if isinstance(shape, Point):
+        return True
+    return shapes.intersects(area_box.polygon, shape)
 
 
 def is_blank(value: Value) -> bool:
@@ -80,11 +90,19 @@ def text(value: Value) -> str | None:
 _SPACES = re.compile("[" + re.escape("".join(sorted(dotnet.WHITE_SPACE))) + "]+")
 
 
+# Text that needs tidying: white space other than a plain space, two marks of white space in a
+# row, or white space at either end.
+_UNTIDY = re.compile("[" + re.escape("".join(sorted(dotnet.WHITE_SPACE - {" "}))) + "]| {2}|^ | $")
+
+
 def tidy_text(value: str) -> str | None:
     """One Unicode form, one space between words, no spaces at the ends; None when nothing is left.
 
     NFC, the ***normal form*** most systems write, makes 'é' typed two ways compare equal.
     """
+    # Most text is tidy already; two quick tests find it, and the work below runs only on the rest.
+    if value and unicodedata.is_normalized("NFC", value) and _UNTIDY.search(value) is None:
+        return value
     clean = dotnet.trim(_SPACES.sub(" ", unicodedata.normalize("NFC", value)))
     return clean or None
 
