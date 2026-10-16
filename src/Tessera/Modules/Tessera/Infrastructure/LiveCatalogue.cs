@@ -26,13 +26,15 @@ public sealed class LiveCatalogue(
     TimeSpan retry,
     ILogger log) : BackgroundService
 {
-    // Null before the first load. The loop swaps a whole list in with one step that no request can
-    // see half done (Interlocked.Exchange).
+    // Null before the first load. Requests read this field on many threads, strands of work the
+    // computer runs side by side, while the loop writes it on another. Interlocked.Exchange swaps a
+    // whole list in as one step, so no request can see it half done.
     private LayerCatalogue? _current;
 
     /// <summary>
-    /// The list as it stands, or null before the first load. Volatile.Read makes each request see the
-    /// list another thread swapped in last, never a stale copy held in a processor's memory.
+    /// The list as it stands, or null before the first load. Volatile.Read fetches the field afresh
+    /// each time, so a request sees the list another thread swapped in last, never a stale copy a
+    /// processor kept in its own small, fast memory.
     /// </summary>
     public LayerCatalogue? Current => Volatile.Read(ref _current);
 

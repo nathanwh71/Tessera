@@ -13,9 +13,10 @@ namespace Modules.Tessera.Infrastructure.Sql;
 /// well formed.
 /// </summary>
 /// <remarks>
-/// F# would write a <b><i>single-case union</i></b>, <c>ConnectionString of string</c>, with the same
-/// aim: <b><i>parse, don't validate</i></b>. A check that a string is good leaves a plain string,
-/// which the next reader must trust; parsing it into its own type leaves a value that cannot be bad.
+/// F# would write a <b><i>single-case union</i></b>, a type that wraps one value, such as
+/// <c>ConnectionString of string</c>, with the same aim: <b><i>parse, don't validate</i></b>. A check
+/// that a string is good leaves a plain string, which the next reader must trust; parsing it into its
+/// own type leaves a value that cannot be bad.
 /// </remarks>
 public sealed record ConnectionString
 {

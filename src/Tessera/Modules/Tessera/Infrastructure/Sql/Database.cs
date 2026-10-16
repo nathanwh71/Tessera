@@ -102,7 +102,8 @@ public sealed class Database : IAsyncDisposable
             CommandTimeout = pool.QueryTimeoutSeconds,
             // Covers both opening a connection and waiting for a free one in the pool.
             Timeout = pool.ConnectionWaitSeconds,
-            // A query text sent three times on a connection becomes a prepared statement, planned once.
+            // A query text sent three times on a connection becomes a prepared statement: the database
+            // parses and plans it once, keeps the plan, and reruns it with new values each time.
             // Measured on 14 October 2026, this raised the rate from 1,580 to 2,408 tiles a second.
             MaxAutoPrepare = 32,
             AutoPrepareMinUsages = 3,

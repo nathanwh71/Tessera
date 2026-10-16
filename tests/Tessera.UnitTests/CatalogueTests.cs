@@ -27,7 +27,8 @@ public sealed class CatalogueTests
 
     /// <summary>
     /// Stand-ins for a load that succeeds and one that fails, so a test decides each answer the
-    /// database gives. SQLSTATE 08006, a lost connection, is a failure that may pass (N-22).
+    /// database gives. The database labels each error with a five-character code, its SQLSTATE;
+    /// 08006, a lost connection, is a failure that may pass (N-22).
     /// </summary>
     private static Task<Result<LayerCatalogue, DatabaseError>> Ok(LayerCatalogue catalogue) =>
         Task.FromResult(Result.Success<LayerCatalogue, DatabaseError>(catalogue));
