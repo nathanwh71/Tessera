@@ -32,16 +32,25 @@ _Only_ Extract, _Load_ and _Report_ _touch_ _files_ or _run_ _programs_. _Readin
 `Rows.cs` _holds_ them:
 
 ```csharp
-public sealed record Row(int Number, Geometry? Shape, ImmutableDictionary<string, object?> Values);
+public sealed record Row(int Number, Maybe<Geometry> Shape, ImmutableDictionary<string, object?> Values);
 
 public enum Act { Kept, Fixed, Dropped, Stopped }
-public sealed record Verdict(Act Act, Row Row, string Detail);       // a filter's word on one row
+// A filter's word on one row: one of three cases, as an F# union would be.
+[Closed(typeof(Keep), typeof(Fix), typeof(Fail))]
+public abstract record Verdict(Row Row)
+{
+    public sealed record Keep(Row Row) : Verdict(Row);
+    public sealed record Fix(Row Row, string Did) : Verdict(Row);
+    public sealed record Fail(Row Row, string Reason) : Verdict(Row);
+}
 public sealed record LogLine(int Row, string Filter, Act Act, string Detail);   // one line of the log
 
 // The context every step reads and hands on: one table's rows, its log, and any reason to stop.
 public sealed record Cleaning(TablePlan Table, int Read, ImmutableArray<Row> Rows,
-                              ImmutableArray<LogLine> Log, string? Stop);
+                              ImmutableArray<LogLine> Log, Maybe<string> Stop);
 ```
+
+A verdict is a _union_: _always_ _exactly_ _one_ of its _three_ _cases_, _each_ _carrying_ _only_ what it _needs_. C# 14 has no _unions_, so `[Closed]` _names_ the _cases_, and the ExhaustiveMatching analyser _stops_ the _build_ when a _switch_ over a verdict misses _one_. The analyser does not _notice_ a _record_ that derives from `Verdict` _without_ being _named_, so `VerdictTests` _checks_ that the _names_ and the _records_ agree. C# 15's `union` and `closed` will do both _jobs_, and the _package_ can then _go_.
 
 `Read` _keeps_ the _number_ of _rows_ extracted, which the _stop_ _rules_ _need_ _after_ the filters have _dropped_ _some_. _Each_ _value_ is a read-only _record_, and _each_ _step_ _returns_ a _changed_ _copy_ with `with`.
 
