@@ -19,7 +19,7 @@ What surprises a newcomer:
 
 - **`services` is a table, not a set of running programs.** It is the dependency-injection _container_: a _table_ of 'when code asks for X, give it this'. `AddTessera` in `TesseraModule.cs` _fills_ the _table_, and `builder.Build()` in `TesseraHost.cs` _freezes_ it.
 - **The records hold no code to read JSON.** The binder _fills_ _each_ `init` _property_ by its _name_; `[Range]` and `Validate` _carry_ the _rules_.
-- **The database's URL is not here.** `DatabaseConnection`, in `Infrastructure/Sql/Connection.cs`, is a _class_ with setters: `DatabaseConnections.Register` _sets_ its _two_ _values_ _after_ .NET _creates_ it, which a _record_ with `init` _properties_ would _refuse_. It _lives_ in the Infrastructure, the _one_ ***layer*** that may _use_ Npgsql (ADR 0010, _rule_ 2), _beside_ the _names_ of the _two_ variables that _hold_ the URLs, `ReaderDatabase` and `PublisherDatabase`.
+- **The database's URL is not here.** `DatabaseConnection`, in `Infrastructure/Sql/Connection.cs`, is a _class_ with setters: `DatabaseConnections.Register` _sets_ its _two_ _values_ _after_ .NET _creates_ it, which a _record_ with `init` _properties_ would _refuse_. The _second_ _value_, `Parsed`, _holds_ the URL _already_ parsed: a `ConnectionString`, which _only_ `ConnectionString.FromUrl` can _make_, or the _reason_ the URL was _refused_. So _nothing_ _after_ the start-up _check_ _handles_ a URL that might be _bad_. It _lives_ in the Infrastructure, the _one_ ***layer*** that may _use_ Npgsql (ADR 0010, _rule_ 2), _beside_ the _names_ of the _two_ variables that _hold_ the URLs, `ReaderDatabase` and `PublisherDatabase`.
 
 ## Database.cs: one pool, and every failure as a value
 
