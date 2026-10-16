@@ -142,8 +142,8 @@ def _build(table: TablePlan, pipeline: Pipeline) -> Result[CleaningPlan, tuple[s
     problems: list[str] = []
     names: list[str] = []
     steps: list[Step[Cleaning]] = []
-    for step in table.filters:
-        given: dict[str, Any] = dict(step or {})
+    for entry in table.filters:
+        given: dict[str, Any] = dict(entry or {})
         name = given.get("filter")
         kind = filters.find(name) if isinstance(name, str) else None
         if kind is None:
@@ -152,9 +152,9 @@ def _build(table: TablePlan, pipeline: Pipeline) -> Result[CleaningPlan, tuple[s
             continue
         settings = {key: value for key, value in given.items() if key != "filter"}
         match kind.build(settings, pipeline.area):
-            case Ok(handler):
+            case Ok(step):
                 names.append(kind.name)
-                steps.append(handler)
+                steps.append(step)
             case Err(why):
                 problems.extend(f"{table.table}: {problem}" for problem in why)
             case _ as never:
