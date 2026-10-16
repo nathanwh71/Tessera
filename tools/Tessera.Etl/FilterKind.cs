@@ -1,7 +1,7 @@
 using System.Collections.Immutable;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using CSharpFunctionalExtensions;
+using Common;
 
 namespace Tessera.Etl;
 

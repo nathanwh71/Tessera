@@ -1,6 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
-using CSharpFunctionalExtensions;
+using Common;
 
 namespace Tessera.Etl;
 

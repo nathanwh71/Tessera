@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using CSharpFunctionalExtensions;
+using Common;
 using Npgsql;
 
 // The database's address, as the environment gives it (US-00 c4). It lives in the Infrastructure,

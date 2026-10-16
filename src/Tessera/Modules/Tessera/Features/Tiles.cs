@@ -1,10 +1,9 @@
 using System.Security.Cryptography;
+using Common;
 using Common.Api;
-using CSharpFunctionalExtensions;
 using Modules.Tessera.Domain;
 using Modules.Tessera.Infrastructure;
 using Modules.Tessera.Infrastructure.Sql;
-using IResult = Microsoft.AspNetCore.Http.IResult;
 
 // The request at the heart of Tessera: 'send me this tile of this layer' (US-07). A vector tile is
 // one square of the map sent as data, the shapes of the places within it, for the browser to draw.

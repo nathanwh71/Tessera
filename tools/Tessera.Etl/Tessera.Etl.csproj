@@ -15,9 +15,12 @@
     <PackageReference Include="NetTopologySuite" />
     <!-- Turns GeoJSON geometry into shapes with .NET's own JSON reader. -->
     <PackageReference Include="NetTopologySuite.IO.GeoJSON4STJ" />
+  </ItemGroup>
+  <ItemGroup>
     <!-- Result, a value that holds either an answer or the faults, so a function returns its
-         faults rather than throwing them (ADR 0004). -->
-    <PackageReference Include="CSharpFunctionalExtensions" />
+         faults rather than throwing them (ADR 0004). The service's own file, compiled here too, so
+         the repository has one Result and the tool needs nothing of the service beside it. -->
+    <Compile Include="../../src/Tessera/Common/Result.cs" Link="Common/Result.cs" />
   </ItemGroup>
   <ItemGroup>
     <!-- Lets the tests read internal members, such as PipelineFile.Options, without making them

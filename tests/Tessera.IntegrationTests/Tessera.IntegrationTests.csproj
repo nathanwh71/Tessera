@@ -32,6 +32,6 @@
     <!-- Names every test file uses, written once here rather than at the head of each file. -->
     <Using Include="Xunit" />
     <Using Include="System.Collections.Immutable" />
-    <Using Include="CSharpFunctionalExtensions" />
+    <Using Include="Common" />
   </ItemGroup>
 </Project>
