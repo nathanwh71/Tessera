@@ -13,12 +13,27 @@ public sealed class DatabaseErrorTests
     [InlineData("57P01")]
     [InlineData("53300")]
     public void Asks_the_browser_to_wait_for_a_failure_that_may_pass(string sqlState) =>
-        Assert.True(new DatabaseError(sqlState, "").IsUnavailable);
+        Assert.IsType<DatabaseError.Unavailable>(DatabaseError.Of(sqlState, ""));
 
-    // 42501 a missing grant, XX000 an internal fault: waiting cures neither.
+    // 42501 a missing grant and 42P01 a missing table mean the layer has gone; 42703 a dropped
+    // column; XX000 an internal fault, which waiting cannot cure.
     [Theory]
-    [InlineData("42501")]
-    [InlineData("XX000")]
-    public void Leaves_any_other_failure_alone(string sqlState) =>
-        Assert.False(new DatabaseError(sqlState, "").IsUnavailable);
+    [InlineData("42501", typeof(DatabaseError.MissingTable))]
+    [InlineData("42P01", typeof(DatabaseError.MissingTable))]
+    [InlineData("42703", typeof(DatabaseError.MissingColumn))]
+    [InlineData("XX000", typeof(DatabaseError.Other))]
+    public void Sorts_any_other_failure_into_its_kind(string sqlState, Type kind) =>
+        Assert.IsType(kind, DatabaseError.Of(sqlState, ""));
+
+    // The ExhaustiveMatching analyser checks each switch against the cases [Closed] names, but misses
+    // a record that derives from DatabaseError without being named, so this test makes them agree.
+    [Fact]
+    public void Lists_every_kind_as_a_case()
+    {
+        var named = typeof(DatabaseError).GetCustomAttributes(typeof(ExhaustiveMatching.ClosedAttribute), false)
+            .Cast<ExhaustiveMatching.ClosedAttribute>().Single().Cases;
+        var derived = typeof(DatabaseError).Assembly.GetTypes().Where(type => type.BaseType == typeof(DatabaseError));
+
+        Assert.Equal(named.OrderBy(type => type.Name), derived.OrderBy(type => type.Name));
+    }
 }

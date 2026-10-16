@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using Common.Api;
 using CSharpFunctionalExtensions;
+using ExhaustiveMatching;
 using Microsoft.Net.Http.Headers;
 using Modules.Tessera.Domain;
 using Modules.Tessera.Infrastructure;
@@ -72,10 +73,14 @@ public sealed class TileServer(Func<Maybe<LayerCatalogue>> catalogue, TileReader
             // dropped gives 42703: the browser is asked to try again shortly, and the list of layers
             // heals at its next refresh, within Catalogue.RefreshSeconds (N-23). A database that cannot
             // answer now gives 503 (N-22); anything else is the service's fault.
-            error => error.IsMissingTable ? Problems.NotFound("No published layer has that name.")
-                : error.IsMissingColumn ? Problems.Unavailable("The layer has changed. Try again shortly.")
-                : error.IsUnavailable ? Problems.Unavailable("The database cannot be reached. Try again shortly.")
-                : Problems.Fault());
+            error => error switch
+            {
+                DatabaseError.MissingTable _ => Problems.NotFound("No published layer has that name."),
+                DatabaseError.MissingColumn _ => Problems.Unavailable("The layer has changed. Try again shortly."),
+                DatabaseError.Unavailable _ => Problems.Unavailable("The database cannot be reached. Try again shortly."),
+                DatabaseError.Other _ => Problems.Fault(),
+                _ => throw ExhaustiveMatch.Failed(error),
+            });
     }
 
     /// <summary>

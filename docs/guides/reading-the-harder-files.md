@@ -31,7 +31,7 @@ What surprises a newcomer:
 | `Run` | _Borrows_ a _connection_, _runs_ the _work_, _returns_ the _connection_, and _turns_ an `NpgsqlException` into a `DatabaseError` |
 | `Rows` and `Single` | The _two_ _ways_ the _service_ _queries_; Dapper _fills_ a _record_ from _each_ _row_ by _column_ _name_ |
 | `Ping` | _Sends_ `SELECT 1` and _waits_ _one_ _second_ at _most_, for `/health` (N-25) |
-| `DatabaseError` | PostgreSQL's five-character SQLSTATE _code_, and _three_ _questions_ _about_ it: has the _table_ _gone_, has a _column_ _gone_, may _waiting_ _cure_ it |
+| `DatabaseError` | PostgreSQL's five-character SQLSTATE _code_, sorted _once_ by `DatabaseError.Of` into _one_ of _four_ _kinds_: the _table_ has _gone_, a _column_ has _gone_, _waiting_ may _cure_ it, or _any_ _other_ _fault_. It is a _union_, so a `switch` must _handle_ all _four_ |
 
 What surprises a newcomer:
 

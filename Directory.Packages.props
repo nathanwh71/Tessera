@@ -5,12 +5,12 @@
     <PackageVersion Include="Dapper" Version="2.1.89" />
     <PackageVersion Include="CSharpFunctionalExtensions" Version="3.7.0" />
     <PackageVersion Include="dbup-postgresql" Version="7.0.1" />
+    <!-- Stops the build when a switch over a closed set of records misses a case. -->
+    <PackageVersion Include="ExhaustiveMatching.Analyzer" Version="0.5.0" />
   </ItemGroup>
   <ItemGroup Label="ETL">
     <PackageVersion Include="NetTopologySuite" Version="2.6.0" />
     <PackageVersion Include="NetTopologySuite.IO.GeoJSON4STJ" Version="4.0.0" />
-    <!-- Stops the build when a switch over a closed set of records misses a case. -->
-    <PackageVersion Include="ExhaustiveMatching.Analyzer" Version="0.5.0" />
   </ItemGroup>
   <ItemGroup Label="Tests">
     <PackageVersion Include="xunit.v3" Version="4.0.2" />

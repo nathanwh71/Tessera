@@ -84,7 +84,7 @@ public sealed class TileTests
     {
         var server = new TileServer(
             () => CatalogueReader.FromRows([new CatalogueRow("food", "cafes", "geom", 4326, "POINT", "[]")]),
-            (_, _) => Task.FromResult(Result.Failure<Maybe<byte[]>, DatabaseError>(new DatabaseError("42703", "column does not exist"))),
+            (_, _) => Task.FromResult(Result.Failure<Maybe<byte[]>, DatabaseError>(DatabaseError.Of("42703", "column does not exist"))),
             Limits);
 
         var answer = await server.Answer("food.cafes", 15, 27154, 14280, TestContext.Current.CancellationToken);

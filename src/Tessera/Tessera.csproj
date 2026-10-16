@@ -25,6 +25,9 @@
     <!-- Runs each seed script once (ADR 0009). -->
     <PackageReference Include="dbup-postgresql" />
     <PackageReference Include="CSharpFunctionalExtensions" />
+    <!-- Checks that each switch over a union, such as DatabaseError, handles every case, as F#'s
+         match does; C# 14 cannot. C# 15's closed records will do the same, and then it can go. -->
+    <PackageReference Include="ExhaustiveMatching.Analyzer" />
   </ItemGroup>
   <ItemGroup>
     <!-- The tests may read internal members, such as MapRoutes.Answer, without making them public. -->

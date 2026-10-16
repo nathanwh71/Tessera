@@ -33,7 +33,7 @@ public sealed class CatalogueTests
         Task.FromResult(Result.Success<LayerCatalogue, DatabaseError>(catalogue));
 
     private static Task<Result<LayerCatalogue, DatabaseError>> Down() =>
-        Task.FromResult(Result.Failure<LayerCatalogue, DatabaseError>(new DatabaseError("08006", "down")));
+        Task.FromResult(Result.Failure<LayerCatalogue, DatabaseError>(DatabaseError.Of("08006", "down")));
 
     /// <summary>
     /// A live list over a stand-in load. It retries every 10 ms, not the service's 5 seconds

@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using CSharpFunctionalExtensions;
 using Dapper;
+using ExhaustiveMatching;
 using Npgsql;
 
 // The door to PostgreSQL: the query the code hands over, the reasons the database may refuse it, and
@@ -17,28 +18,48 @@ namespace Modules.Tessera.Infrastructure.Sql;
 /// </summary>
 public sealed record Query(string Text, Maybe<object> Parameters = default);
 
-/// <summary>Why the database refused a query: its SQLSTATE code, five characters, and its message.</summary>
-public sealed record DatabaseError(string SqlState, string Message)
+/// <summary>
+/// Why the database refused a query: its SQLSTATE code, five characters, and its message, sorted into
+/// the four kinds a caller must tell apart.
+/// </summary>
+/// <remarks>
+/// A <b><i>union</i></b>, as F# would write <c>MissingTable | MissingColumn | Unavailable | Other</c>:
+/// <see cref="Of"/> sorts each code once, where the failure arises, so no caller reads a code again
+/// and no code can count as two kinds. C# 14 has no unions, so [Closed] names the cases and the
+/// ExhaustiveMatching analyser stops the build when a switch misses one. The code and message stay
+/// on every case for the log.
+/// </remarks>
+[Closed(typeof(MissingTable), typeof(MissingColumn), typeof(Unavailable), typeof(Other))]
+public abstract record DatabaseError(string SqlState, string Message)
 {
     /// <summary>The table, or its <b><i>grant</i></b>, has gone: 42501 or 42P01 (US-03 c6).</summary>
-    public bool IsMissingTable =>
-        SqlState is PostgresErrorCodes.InsufficientPrivilege or PostgresErrorCodes.UndefinedTable;
+    public sealed record MissingTable(string SqlState, string Message) : DatabaseError(SqlState, Message);
 
     /// <summary>
     /// The query names a column a <b><i>seed script</i></b> has dropped since the list of
     /// <b><i>layers</i></b> was read: 42703.
     /// </summary>
-    public bool IsMissingColumn => SqlState is PostgresErrorCodes.UndefinedColumn;
+    public sealed record MissingColumn(string SqlState, string Message) : DatabaseError(SqlState, Message);
 
     /// <summary>
     /// Waiting may cure it (N-22): a failed connection (class 08), a query past its time (57014), a
     /// server stopping or starting (57P01 to 57P03), or no room for another connection (53300).
     /// </summary>
-    public bool IsUnavailable =>
-        SqlState.StartsWith("08", StringComparison.Ordinal)
-        || SqlState is PostgresErrorCodes.QueryCanceled
-            or PostgresErrorCodes.AdminShutdown or PostgresErrorCodes.CrashShutdown
-            or PostgresErrorCodes.CannotConnectNow or PostgresErrorCodes.TooManyConnections;
+    public sealed record Unavailable(string SqlState, string Message) : DatabaseError(SqlState, Message);
+
+    /// <summary>Any other refusal, which waiting will not cure: the service's own fault.</summary>
+    public sealed record Other(string SqlState, string Message) : DatabaseError(SqlState, Message);
+
+    /// <summary>Sorts a refusal by its SQLSTATE code into the one kind it belongs to.</summary>
+    public static DatabaseError Of(string sqlState, string message) => sqlState switch
+    {
+        PostgresErrorCodes.InsufficientPrivilege or PostgresErrorCodes.UndefinedTable => new MissingTable(sqlState, message),
+        PostgresErrorCodes.UndefinedColumn => new MissingColumn(sqlState, message),
+        PostgresErrorCodes.QueryCanceled or PostgresErrorCodes.AdminShutdown or PostgresErrorCodes.CrashShutdown
+            or PostgresErrorCodes.CannotConnectNow or PostgresErrorCodes.TooManyConnections => new Unavailable(sqlState, message),
+        _ when sqlState.StartsWith("08", StringComparison.Ordinal) => new Unavailable(sqlState, message),
+        _ => new Other(sqlState, message),
+    };
 }
 
 /// <summary>
@@ -171,9 +192,9 @@ public sealed class Database : IAsyncDisposable
     // database never answered: 08006, 'connection failure'.
     private static DatabaseError Error(NpgsqlException error) => error switch
     {
-        PostgresException refusal => new DatabaseError(refusal.SqlState, refusal.MessageText),
-        { InnerException: TimeoutException } => new DatabaseError(PostgresErrorCodes.QueryCanceled, error.Message),
-        _ => new DatabaseError(PostgresErrorCodes.ConnectionFailure, error.Message),
+        PostgresException refusal => DatabaseError.Of(refusal.SqlState, refusal.MessageText),
+        { InnerException: TimeoutException } => DatabaseError.Of(PostgresErrorCodes.QueryCanceled, error.Message),
+        _ => DatabaseError.Of(PostgresErrorCodes.ConnectionFailure, error.Message),
     };
 
     // Bundles the text, the parameters and the cancel token for Dapper, so no query leaves without
