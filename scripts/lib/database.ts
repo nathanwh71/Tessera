@@ -4,7 +4,7 @@ import { $, sleep } from 'zx';
 /**
  * Waits until the database answers on 127.0.0.1 inside its container, for up to a minute. On a
  * first start the image runs its set-up scripts on a private server, which answers on no network
- * port, so "running" is not yet "ready". The result is the reason it is not ready, or nothing.
+ * port, so 'running' is not yet 'ready'. The result is the reason it is not ready, or nothing.
  */
 export async function waitForDatabase(container: string, name: string): Promise<string | undefined> {
   for (let attempt = 1; attempt <= 60; attempt++) {

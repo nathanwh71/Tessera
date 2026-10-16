@@ -21,8 +21,9 @@ for (const check of [['pyright'], ['ruff', 'check', '.'], ['lint-imports'], ['py
 await $({ cwd: 'web' })`npm ci --no-audit --no-fund`;
 await $({ cwd: 'web' })`npm test`;
 await $`node scripts/build.ts`;
-// build.ts has just built everything in Release, so --no-build runs that build. Each test project
-// is a program of its own (global.json picks Microsoft.Testing.Platform), so dotnet run runs it.
+// build.ts, the step before, built everything in Release, so --no-build runs that build. Each test
+// project is a program of its own (global.json picks Microsoft.Testing.Platform), so dotnet run
+// runs it.
 // The architecture tests go first: a broken border between layers is a fault of design, and they
 // find it in seconds (ADR 0010).
 for (const suite of ['ArchitectureTests', 'UnitTests', 'IntegrationTests']) {

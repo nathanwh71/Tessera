@@ -23,7 +23,7 @@ export type DatabasePlace = {
 /**
  * Reads the start-up settings, naming every missing variable at once, so one failed start tells
  * the maintainer everything to fix. The result is the map's own ***Result*** type (ADR 0006), shared
- * so the scripts and the map say "failed" one way.
+ * so the scripts and the map say 'failed' one way.
  *
  * The first copy listens on 7800 unless told otherwise, the port US-35 and N-29 name for the
  * service, and the second on the next port. A port below 1024 needs root on Linux, and the second
@@ -88,7 +88,7 @@ export function readDatabasePlace(environment: Readonly<Record<string, string | 
 }
 
 /**
- * The arguments for "docker run" that start the packaged database (US-01). The port binds to
+ * The arguments for `docker run` that start the packaged database (US-01). The port binds to
  * 127.0.0.1, so only this machine reaches the database; the office reaches the service alone.
  * The volume keeps the data when the container goes. Each argument stays one word, however many
  * spaces a password holds, since the script passes the list as it is, not as one line of text.
@@ -120,7 +120,7 @@ export function databaseUrl(user: string, password: string, database: DatabasePl
 }
 
 /**
- * The arguments for "docker run" that start Nginx in front of the two copies of the service
+ * The arguments for `docker run` that start Nginx in front of the two copies of the service
  * (ADR 0008, N-29). Nginx shares the machine's own network, so it reaches the service at
  * 127.0.0.1 and opens the office port itself; it runs as root inside its container, so port 80
  * needs no change to Ubuntu. The image fills the ports and the office's network into the template

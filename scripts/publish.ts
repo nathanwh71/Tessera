@@ -33,7 +33,7 @@ const grant = [
   'GRANT SELECT ON ALL TABLES IN SCHEMA food, outdoors, culture, transport TO tessera_reader;',
 ].join(' ');
 
-// "--env PGPASSWORD" with no value copies the variable from this script's own environment, so the
+// `--env PGPASSWORD` with no value copies the variable from this script's own environment, so the
 // password never appears on a command line, where any user's process list could show it.
 await $({ env: { ...process.env, PGPASSWORD: password } })`docker exec --env PGPASSWORD ${container} psql --host 127.0.0.1 --username tessera_publisher --dbname ${database.name} --command ${grant}`;
 console.log('Published the nine layers. The service serves them within Catalogue.RefreshSeconds (30 seconds by default).');

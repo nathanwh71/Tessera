@@ -72,7 +72,7 @@ let stopping = false;
 // Ctrl+C aborts this, which cuts short any wait before a restart, so the script ends at once
 // rather than up to 30 seconds later, when the wait would have run out.
 const stopped = new AbortController();
-// Waits before a restart, or less if Ctrl+C comes first; an aborted wait simply ends early.
+// Waits before a restart, or less if Ctrl+C comes first; an aborted wait ends early.
 const wait = (milliseconds: number): Promise<void> => delay(milliseconds, undefined, { signal: stopped.signal }).catch(() => undefined);
 const copiesNow = new Map<string, ProcessPromise>();
 const reader = databaseUrl('tessera_reader', settings.readerPassword, settings.database);
@@ -99,9 +99,9 @@ process.on('SIGINT', () => {
 /**
  * Stops one copy, whatever state it is in. A copy waiting out its restart delay has already ended,
  * and zx then throws at once rather than return a promise, an object that stands for a result still
- * to come, so the try catches that; a copy that ends just as the signal goes makes the kill fail
- * later, and .catch drops that. Either way the copy is stopped, and an error here would end the
- * script before it stopped the other copy.
+ * to come, so the try catches that; a copy that ends while the signal is on its way makes the
+ * kill fail later, and .catch drops that. Either way the copy is stopped, and an error here would
+ * end the script before it stopped the other copy.
  */
 function stopCopy(copy: ProcessPromise): void {
   try {

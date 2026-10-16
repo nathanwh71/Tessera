@@ -122,8 +122,8 @@ export async function checkEdge(base: string, stopFirst: () => Promise<void>, st
   assert.ok(took >= 1800 && took < 4000, `twenty requests took ${took} ms`);
 
   // S-30: one machine may have 32 requests in hand at once. Forty at once for a slow tile leave
-  // eight or more refused with 429, and the rest receive the tile. Without keep-alive, which lets one
-  // connection carry request after request, and with room for 64 sockets, each request holds a
+  // eight or more refused with 429, and the rest receive the tile. Without keep-alive, which lets
+  // one connection carry request after request, and with room for 64 sockets, each request holds a
   // connection of its own, so Nginx counts all forty at once.
   // The tile, 1/1/0, is one no check has asked for, so every request waits on the slow query
   // rather than meeting a kept copy; the address, 127.0.0.7, has met no limit yet.
