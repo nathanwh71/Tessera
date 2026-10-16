@@ -38,6 +38,13 @@ public sealed class TileTests
     public void Accepts_a_tile_that_exists(int z, int x, int y) =>
         Assert.NotNull(TileAddress.Of(z, x, y));
 
+    // Whatever three numbers arrive, an address that exists lies on its level's grid: the private
+    // constructor leaves Of the one way to make one.
+    [FsCheck.Xunit.Property]
+    public bool Gives_only_addresses_on_the_grid(int z, int x, int y) =>
+        TileAddress.Of(z, x, y) is not { } tile
+        || (tile.Z is >= 0 and <= 22 && tile.X >= 0 && tile.Y >= 0 && tile.X < 1 << tile.Z && tile.Y < 1 << tile.Z);
+
     [Theory]
     [InlineData(-1, 0, 0)]
     [InlineData(23, 0, 0)]
@@ -50,7 +57,7 @@ public sealed class TileTests
     // to the query fails this test until someone reads the new text and copies it over the old file.
     [Fact]
     public void Matches_the_approved_tile_query() =>
-        Assert.Equal(Approved, Queries.Tile(Cafes, new TileAddress(15, 27154, 14280), Limits).Text.ReplaceLineEndings().TrimEnd());
+        Assert.Equal(Approved, Queries.Tile(Cafes, TileAddress.Of(15, 27154, 14280)!, Limits).Text.ReplaceLineEndings().TrimEnd());
 
     // S-01 c1: whatever tile a request names, the text stays the approved text; the numbers travel as
     // parameters alone.
@@ -61,7 +68,7 @@ public sealed class TileTests
         // within that level's 2^z.
         var z = level % 23;
         var size = 1L << z;
-        var tile = new TileAddress(z, (int)(column % size), (int)(row % size));
+        var tile = TileAddress.Of(z, (int)(column % size), (int)(row % size))!;
         return Queries.Tile(Cafes, tile, Limits).Text.ReplaceLineEndings().TrimEnd() == Approved;
     }
 
@@ -71,7 +78,7 @@ public sealed class TileTests
     [Fact]
     public void Sends_the_layer_and_the_tile_as_parameters()
     {
-        var query = Queries.Tile(Cafes, new TileAddress(15, 27154, 14280), Limits);
+        var query = Queries.Tile(Cafes, TileAddress.Of(15, 27154, 14280)!, Limits);
 
         Assert.DoesNotContain("food.cafes", query.Text, StringComparison.Ordinal);
         Assert.Equal(new { layer = "food.cafes", resolution = 4096, z = 15, x = 27154, y = 14280, buffer = 64, margin = 0.015625, srid = 4326, limit = 10000 }.ToString(), query.Parameters?.ToString());
