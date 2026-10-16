@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <!--
     The whole service in one project, laid out as the modular-monolith template (ADR 0010):
-      Common/            what every module may use: the problem answers, the settings, Result
+      Common/            what every module may use: the problem answers and the settings
       Modules/Tessera/   the one module, in three layers: Domain, Infrastructure and Features
       Program.cs         serve, or seed
     The architecture tests in tests/Tessera.ArchitectureTests guard the borders between the layers.

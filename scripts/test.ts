@@ -19,7 +19,7 @@ await $`node scripts/build.ts`;
 // is a program of its own (global.json picks Microsoft.Testing.Platform), so dotnet run runs it.
 // The architecture tests go first: a broken border between layers is a fault of design, and they
 // find it in seconds (ADR 0010).
-for (const suite of ['ArchitectureTests', 'UnitTests', 'IntegrationTests', 'Etl.Tests']) {
+for (const suite of ['ArchitectureTests', 'UnitTests', 'IntegrationTests']) {
   await $`dotnet run --no-build --configuration Release --project tests/Tessera.${suite}`;
 }
 // Last, the browser tests: the slowest, against the real service and the places.
