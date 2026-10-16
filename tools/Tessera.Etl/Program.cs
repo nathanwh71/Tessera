@@ -99,7 +99,7 @@ try
             var plan = tables[i];
             var loaded = (await extracts[i])
                 .MapError(why => (Failure)new Failure.NotExtracted(plan.Table, why))
-                .Bind(_ => Load(plan, File.ReadAllText(Extracted(plan.Table))));
+                .Bind(_ => Tables.Load(plan, File.ReadAllText(Extracted(plan.Table))));
             if (loaded.IsFailure)
             {
                 // A stop or a refusal comes after the cleaning, so its counts still reach the log.
@@ -125,23 +125,6 @@ finally
     // A run that stops early may leave extracts still running; they finish before their folder goes.
     await Task.WhenAll(extracts);
     Directory.Delete(work, recursive: true);
-}
-
-// One table, from GDAL's GeoJSON to its SQL: read the rows, run the table's chain of filters and
-// stop rules on them (the whole transform step), and write them as SQL.
-static Result<(Outcome Outcome, ImmutableArray<string> Sql), Failure> Load(CleaningPlan plan, string geoJson)
-{
-    var read = GeoJson.Read(geoJson);
-    if (read.IsFailure)
-        return new Failure.Unreadable(plan.Table, read.Error);
-    var (rows, columns) = read.Value;
-    var done = plan.Chain.Run(Cleaning.Start(plan.Table, rows));
-    if (done.Stop.TryGetValue(out var stop))
-        return new Failure.Stopped(done.Outcome, stop);
-    var sql = TableSql.Statements(plan.Table, done.Rows, columns);
-    if (sql.IsFailure)
-        return new Failure.Refused(done.Outcome, sql.Error);
-    return (done.Outcome, sql.Value);
 }
 
 // Where a table's extract is written in the work folder.

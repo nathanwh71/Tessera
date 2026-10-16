@@ -127,10 +127,12 @@ A _new_ filter is _one_ _new_ _file_ and _one_ _line_ in `Filters/All.cs`.
 |---|---|---|
 | Copy | `SeedScript.CopyFirst`, `SeedScript.CopyArguments` | For a GeoJSON _source_ of _several_ _tables_, `ogr2ogr -f GPKG` _once_, so _each_ extract _reads_ an indexed _copy_, not the _whole_ _file_ _again_ |
 | Extract | `SeedScript.ExtractArguments`, `Gdal.Run` | `ogr2ogr -f GeoJSON` for _each_ _table_, the _tables_ _side_ by _side_, as _many_ at _once_ as the _machine_ has _processors_, with `-t_srs EPSG:4326`, `-nlt CONVERT_TO_LINEAR`, `-dim XY` and `-resolveDomains` (c6) |
-| Load | `SeedScript.Head`, `TableSql.Statements` | No GDAL: the _program_ _writes_ _each_ _table_'s SQL from its _cleaned_ _rows_, in the _form_ GDAL's PGDump _wrote_, _one_ _table_ at a _time_, into the _script_ in the _work_ _folder_, and _moves_ the _script_ to its _place_ when _whole_ |
+| Load | `SeedScript.Head`, `Tables.Load`, `TableSql.Statements` | No GDAL: the _program_ _writes_ _each_ _table_'s SQL from its _cleaned_ _rows_, in the _form_ GDAL's PGDump _wrote_, _one_ _table_ at a _time_, into the _script_ in the _work_ _folder_, and _moves_ the _script_ to its _place_ when _whole_ |
 | Report | `Report.Log` | The _log_ _beside_ the _scripts_, in `db/seed-logs/`, on every _run_ (c4), from _each_ _table_'s `Outcome`: its _counts_ and _log_ _lines_, _without_ its _rows_ |
 
-`Program.cs` _runs_ the _stages_ in _order_ and _ends_ with an exit _code_: 0 when it _wrote_ the _script_, 1 when a _table_ _stopped_ or GDAL _failed_, 2 when the _command_ or the _pipeline_ _file_ is _wrong_. Extract and _Load_ _use_ the _machine_'s _own_ GDAL, or GDAL's Docker _image_ when it has _none_.
+`Tables.Load` does a _table_'s _work_ _between_ its extract and the _script_: it _reads_ the GeoJSON, _cleans_ the _rows_ and _writes_ the SQL, and _returns_ the SQL or a `Failure`. It _reads_ no _file_, so the _tests_ _call_ it with GeoJSON of their _own_. `Failure` is a _union_ _like_ `Verdict`: GDAL _failed_, its GeoJSON could not be _read_, a filter _stopped_ the _run_, or the SQL could not _hold_ the _rows_. The _last_ _two_ _carry_ the _table_'s _counts_, so the _log_ _keeps_ them.
+
+`Program.cs` does the _reading_ and _writing_ _around_ it: it _runs_ the _stages_ in _order_ and _ends_ with an exit _code_: 0 when it _wrote_ the _script_, 1 when a _table_ _stopped_ or GDAL _failed_, 2 when the _command_ or the _pipeline_ _file_ is _wrong_. Extract and _Load_ _use_ the _machine_'s _own_ GDAL, or GDAL's Docker _image_ when it has _none_.
 
 **Size.** The _run_ _holds_ _one_ _table_'s _rows_ at a _time_. On 90,000 _places_, _nine_ _tables_ of 10,000 _copied_ from the Macau _data_, it _takes_ 15 _seconds_ and peaks at 0.3 GB, and _writes_ a _script_ byte-identical to GDAL's. _Before_ the _copy_, the outcomes, the SQL _written_ in C# and the extracts _side_ by _side_, it _took_ 50 _seconds_ and peaked at 1.2 GB. _Each_ _table_ is _still_ _cleaned_ _whole_ in _memory_, _since_ the duplicate filters _compare_ _rows_ _across_ the _table_ and the _stop_ _rules_ _count_ its losses.
 
@@ -140,23 +142,27 @@ A _new_ filter is _one_ _new_ _file_ and _one_ _line_ in `Filters/All.cs`.
 |---|---|
 | `Pipes.cs` | The _generic_ kernel: the _two_ delegates, `>>`, `Identity`, `All` and `Run` |
 | `Rows.cs` | `Row`, `Act`, `Verdict`, `LogLine` and the context, `Cleaning` |
+| `Tables.cs`, `Failure.cs` | `Tables.Load`, a _table_'s _work_ from GeoJSON to SQL, and the _ways_ it can _fail_ |
 | `Steps.cs` | `Filter`, `EachRow` and `StopWhen` |
 | `Judge.cs` | The _measures_ the _judges_ _share_: _inside_ the _area_, blank, _text_, _tidy_ _text_, _metres_ |
 | `Filters/*.cs` | The _eight_ filters, _one_ _file_ _each_, and `All.cs`, which _lists_ them |
 | `FilterKind.cs`, `Pipeline.cs` | The _pipeline_ _file_'s _format_, _each_ filter's _settings_, and `PipelineFile.Read` |
 | `GeoJson.cs`, `Gdal.cs`, `SeedScript.cs` | The _edges_: GDAL's _arguments_, its _runs_, and the _script_ |
 | `Report.cs` | The _log_'s _text_ |
-| `Program.cs` | The _stages_ in _order_, and the exit _codes_ |
+| `Program.cs` | The _files_, the GDAL _runs_ and the _script_ _around_ `Tables.Load`, and the exit _codes_ |
 
 ## The tests
 
-The 38 _tests_ in `tests/Tessera.Etl.Tests` _check_ _five_ _things_:
+The 84 _tests_ in `tests/Tessera.Etl.Tests` _check_ _eight_ _things_:
 
 1. **The kernel** (`ChainTests.cs`). `>>` and `All` _run_ _steps_ in _order_; a _step_ can _run_ _code_ _after_ the _rest_ of the _chain_; a _step_ that does not _call_ `next` _ends_ the _chain_.
 2. **Each filter alone** (`FilterTests.cs`). _Rows_ in, _rows_ and _log_ out: what _each_ _keeps_, _fixes_ and _drops_ (US-36, _test_ 1).
 3. **The stop rules** (`PipelineTests.cs`). A _table_ that _drops_ 2 of 10 _rows_ _stops_ _under_ the _default_ 10 _per_ _cent_, and _passes_ when its _own_ _rule_ _allows_ 25; a _table_'s _own_ _rules_ _win_ over the _file_'s (_test_ 2).
 4. **The plan** (`PipelineTests.cs`). A _file_ with _five_ _faults_ _names_ all _five_, and _runs_ _nothing_.
-5. **End to end** (`RunTests.cs`). GDAL _builds_ a ***geodatabase*** with _one_ _fault_ of _each_ _kind_; the _run_ _keeps_ 3 of 7 cafés, _swaps_ _one_ _back_, _repairs_ a _crossing_ park, and logs _each_ _row_; a _run_ _set_ to _stop_ _writes_ no _script_ and _still_ _writes_ its _log_ (_test_ 3).
+5. **The SQL** (`TableSqlTests.cs`). A _table_ _comes_ out as GDAL's PGDump _wrote_ it, with its _names_, _types_, _dates_ and _shapes_.
+6. **One table** (`TablesTests.cs`). GeoJSON in, SQL or a `Failure` out, _each_ _way_ a _table_ can _end_, with no GDAL.
+7. **The unions** (`ClosedTypeTests.cs`). Every _record_ that derives from `Verdict` or `Failure` is _one_ of its _named_ _cases_.
+8. **End to end** (`RunTests.cs`). GDAL _builds_ a ***geodatabase*** with _one_ _fault_ of _each_ _kind_; the _run_ _keeps_ 3 of 7 cafés, _swaps_ _one_ _back_, _repairs_ a _crossing_ park, and logs _each_ _row_; a _run_ _set_ to _stop_ _writes_ no _script_ and _still_ _writes_ its _log_ (_test_ 3).
 
 The _first_ _four_ _need_ no GDAL and _run_ in _about_ a _second_.
 
