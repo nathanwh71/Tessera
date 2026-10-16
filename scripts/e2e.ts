@@ -17,7 +17,7 @@ import { resolve } from 'node:path';
 import { $, type ProcessPromise } from 'zx';
 import { waitForDatabase, waitForHealth } from './lib/database.ts';
 import { checkEdge } from './lib/edge.ts';
-import { nginxArguments } from './lib/plan.ts';
+import { databaseUrl, nginxArguments } from './lib/plan.ts';
 
 /**
  * The containers' names differ from npm start's tessera-db and tessera-nginx, so a test run never
@@ -50,7 +50,7 @@ const nginxPort = await freePort();
 // S-07: the office, here, is 127.0.0.4 to 127.0.0.7. Linux answers every 127.x.x.x address on
 // this machine, so the checks can ask from inside the office and from outside it.
 const officeNetwork = '127.0.0.4/30';
-const url = (user: string, password: string) => `postgresql://${user}:${password}@127.0.0.1:${databasePort}/${name}`;
+const url = (user: string, password: string) => databaseUrl(user, password, { host: '127.0.0.1', port: String(databasePort), name });
 /** The program npm run build writes, in Release, so the tests meet the build the office runs. */
 const service = resolve('src/Tessera/bin/Release/net10.0/Tessera.dll');
 
