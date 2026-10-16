@@ -1,7 +1,8 @@
 // testing/axe.ts: an accessibility scan with axe, a library that checks a page against the web's
 // accessibility rules, for the component tests that run in jsdom, a pretend browser inside the test
-// runner with no screen. It proves that every control can be reached and named without a mouse. The
-// testing module holds the fakes and helpers for tests alone; the page and control tests call this.
+// runner with no screen. It checks that every control has a name and a role a screen reader can
+// announce; `tabOrder` in App.test.tsx and the Tab test in e2e/map.spec.ts check that the keyboard
+// reaches each one. The testing module holds the fakes and helpers for tests alone; the page and control tests call this.
 
 import axe from "axe-core";
 
