@@ -26,20 +26,16 @@ public sealed class LiveCatalogue(
     TimeSpan retry,
     ILogger log) : BackgroundService
 {
-    // One request reads the list while the loop may swap in the next, so both go through this lock:
-    // a request sees the whole list another thread swapped in last, never a half-written one.
-    private readonly Lock _gate = new();
-    private Maybe<LayerCatalogue> _current;
+    // Null before the first load. The field stays a plain reference, not a Maybe, so the loop can
+    // swap a whole list in with one step that no request can see half done (Interlocked.Exchange),
+    // which a Maybe, a struct, cannot do; Current hands it out as a Maybe.
+    private LayerCatalogue? _current;
 
-    /// <summary>The list as it stands, or none before the first load.</summary>
-    public Maybe<LayerCatalogue> Current
-    {
-        get
-        {
-            lock (_gate)
-                return _current;
-        }
-    }
+    /// <summary>
+    /// The list as it stands, or none before the first load. Volatile.Read makes each request see the
+    /// list another thread swapped in last, never a stale copy held in a processor's memory.
+    /// </summary>
+    public Maybe<LayerCatalogue> Current => Volatile.Read(ref _current).AsMaybe();
 
     /// <summary>
     /// Reads the list once; on success it becomes the current list. The loop below calls it; it is
@@ -57,11 +53,9 @@ public sealed class LiveCatalogue(
             return;
         }
 
-        Maybe<LayerCatalogue> old;
-        lock (_gate)
-            (old, _current) = (_current, loaded.Value);
+        var old = Interlocked.Exchange(ref _current, loaded.Value);
         // The log speaks only when the set of layers changes, not at every refresh, so it stays short.
-        if (old.Map(list => !list.Layers.Keys.ToHashSet().SetEquals(loaded.Value.Layers.Keys)).GetValueOrDefault(true))
+        if (old is null || !old.Layers.Keys.ToHashSet().SetEquals(loaded.Value.Layers.Keys))
             log.LogInformation("The service publishes {Count} layers.", loaded.Value.Layers.Count);
     }
 
