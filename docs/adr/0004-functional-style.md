@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | _Accepted_; _amended_ 16 _October_ 2026: Tessera _keeps_ a `Result` of its _own_ (ADR 0010) |
+| Status | _Accepted_; _amended_ 16 _October_ 2026: `Maybe` from CSharpFunctionalExtensions in _place_ of `T?` |
 | Date | 13 _October_ 2026 |
 | Decider | The _maintainer_ |
 | Covers | Every _line_ of the _back_ _end_, in C# 14 on .NET 10, in `nathanwh71/Tessera`; the _map_ and the _scripts_ _follow_ the _same_ _style_ in TypeScript 6 |
@@ -10,13 +10,13 @@
 
 ## Decision
 
-Tessera's _code_ is _written_ in a ***functional style***: immutable _values_, ***pure functions*** and _referential_ transparency. An _expected_ _failure_ is a `Result<T, E>`, from `src/Tessera/Common/Result.cs`, and _never_ an exception. A _value_ that may be _missing_ is a ***nullable type***, `T?`, which the _compiler_ _checks_.
+Tessera's _code_ is _written_ in a ***functional style***: immutable _values_, ***pure functions*** and _referential_ transparency. An _expected_ _failure_ is a `Result<T, E>`, and _never_ an exception. A _value_ that may be _missing_ is a `Maybe<T>`, and _never_ `null`. Both _come_ from the CSharpFunctionalExtensions _library_.
 
 ## Why
 
 - **Code the maintainer reads at a glance.** The _maintainer_ _comes_ from F#, and will _read_ and _change_ this _code_ for _years_. Immutable _values_ and `Result` ***pipelines*** _read_ the _way_ an F# _programmer_ _thinks_.
-- **A small type of our own.** Tessera _used_ CSharpFunctionalExtensions until 16 _October_ 2026, and _called_ _nine_ of its _members_: `Success`, `Failure`, `IsSuccess`, `IsFailure`, `Value`, `Error`, `Map`, `Match` and `GetValueOrDefault`. _About_ sixty _lines_ in `Common/Result.cs` _give_ the _same_ _nine_, with _tests_, and a _reader_ _finds_ the _whole_ _type_ in _one_ _file_. The ETL _compiles_ the _same_ _file_, so the repository has _one_ `Result`.
-- **The compiler watches for missing values.** With `Nullable` on and every _warning_ an _error_, the _compiler_ _makes_ _each_ _caller_ _decide_ what _happens_ when a `T?` is _missing_.
+- **A library, not code of our own.** CSharpFunctionalExtensions _gives_ `Result` and `Maybe`, with `Map`, `Bind`, `Match` and `GetValueOrDefault` on both, so Tessera _need_ not _write_ or _test_ either. For _one_ _day_, 16 _October_ 2026, Tessera _kept_ a `Result` of its _own_; the _library_ _came_ _back_ with `Maybe`, which a home-made _type_ would _also_ have had to _give_.
+- **A missing value says so in its type.** A `Maybe<T>` is the F# `option`: the _caller_ _cannot_ _reach_ the _value_ _without_ _saying_ what _happens_ when there is _none_, _through_ `TryGetValue`, `Match` or `GetValueOrDefault`. No stand-in _object_, such as an _empty_ _list_ or a _default_ _record_, _hides_ a _value_ that is _missing_. `Nullable` _stays_ on, so a _null_ that slips in from a _library_ _still_ _fails_ the _build_ where it would be _used_.
 - **Tests without a database.** A _pure_ _function_ _reads_ _only_ its ***parameters***, so FsCheck and xUnit _test_ it with no _database_, no _network_ and no _clock_.
 
 ## The three habits
@@ -27,20 +27,24 @@ Tessera's _code_ is _written_ in a ***functional style***: immutable _values_, *
 
 **Referential transparency.** A _function_ _reads_ _only_ its _parameters_. The _clock_, the _environment_, the _settings_ and the _database_ _reach_ it as _values_ _passed_ in, _never_ _through_ `DateTime.Now`, a `static` _field_ or a _hidden_ _service_. The _same_ _inputs_ _give_ the _same_ _output_.
 
+## Where null remains
+
+A _library_ _sometimes_ _hands_ over a _null_, or _demands_ _one_: Dapper for 'no row', the configuration for a _missing_ _setting_, _System_.Text.Json for the _text_ `null`, ASP.NET Core's ***endpoint filters***. Tessera _turns_ _each_ into a `Maybe` at that _edge_, with `AsMaybe()`, and _opens_ a `Maybe` _back_ into a _null_ _only_ where a _library_ _demands_ _one_. In the ETL, a _row_'s _values_ _keep_ JSON's `null`, _since_ it is _data_ that must _come_ _back_ out in the GeoJSON _unchanged_. _System_.Text.Json _knows_ no `Maybe`, so `tools/Tessera.Etl/MaybeJson.cs` _teaches_ it: a JSON `null` or a _missing_ _key_ _reads_ as _none_.
+
 ## Early returns where they read better
 
-A _chain_ of `Bind` _steps_ _suits_ _work_ that _passes_ _one_ _value_ along. A _route_ that _refuses_ for _several_ _reasons_ _reads_ _better_ _top_ to _bottom_, _one_ `if` and _one_ `return` for _each_ _refusal_. The _tile_ _route_ in `src/Tessera/Tiles/Tiles.cs` does this:
+A _chain_ of `Bind` _steps_ _suits_ _work_ that _passes_ _one_ _value_ along. A _route_ that _refuses_ for _several_ _reasons_ _reads_ _better_ _top_ to _bottom_, _one_ `if` and _one_ `return` for _each_ _refusal_. The _tile_ _route_ in `src/Tessera/Modules/Tessera/Features/Tiles.cs` does this:
 
 ```csharp
-if (catalogue() is not { } layers)
+if (!catalogue().TryGetValue(out var layers))
     return Problems.Unavailable("The list of layers is not ready yet.");
-if (layers.Find(layer) is not { } found)
+if (!layers.Find(layer).TryGetValue(out var found))
     return Problems.NotFound("No published layer has that name.");
-if (TileAddress.Of(z, x, y, settings.MinZoom, settings.MaxZoom) is not { } tile)
+if (!TileAddress.Of(z, x, y, settings.MinZoom, settings.MaxZoom).TryGetValue(out var tile))
     return Problems.NotFound("No tile has those coordinates.");
 ```
 
-The _database_'s _answer_ then _arrives_ as a `Result`, and `Match` _turns_ _each_ _case_ into an _answer_.
+_Each_ of the _three_ _calls_ _returns_ a `Maybe`, and `TryGetValue` _opens_ it. The _database_'s _answer_ then _arrives_ as a `Result`, and `Match` _turns_ _each_ _case_ into an _answer_.
 
 ## Types that say what a value is
 
@@ -63,14 +67,15 @@ JavaScript's pipe operator is a _proposal_ at _stage_ 2 of 4, and TypeScript _ca
 
 | Option | Why not |
 |---|---|
-| CSharpFunctionalExtensions | _Used_ until 16 _October_ 2026; Tessera _called_ _nine_ of its _many_ _members_, and a _package_ to track _cost_ more than sixty _lines_ of its _own_ |
-| An `Option<T>` of Tessera's own | The _compiler_'s _nullable_ _checks_ _already_ _give_ it |
+| A `Result` of Tessera's own, with `T?` for missing values | _Tried_ on 16 _October_ 2026; it _covered_ `Result` _alone_, and `T?` _lets_ a _caller_ forget the _missing_ _case_ _wherever_ a _null_ _check_ _passes_ the _compiler_ |
 | LanguageExt | A _large_ _library_ with a _style_ of its _own_, for the _two_ or _three_ _functions_ Tessera _needs_ |
 | Exceptions for expected failures | A _caller_ _cannot_ _see_ from a _function_'s _type_ that it may _fail_ |
 
 ## Consequences
 
-- _Absence_ has _one_ _form_, `T?`, and the _compiler_ _checks_ it; it _lacks_ `Map` and `Bind`, so a _chain_ that may _find_ _nothing_ _uses_ an _early_ _return_ _instead_.
+- _Absence_ has _one_ _form_, `Maybe<T>`, with `Map` and `Bind`; an _early_ _return_ with `TryGetValue` _serves_ where it _reads_ _better_.
+- `Maybe<T>` is a struct, so it _cannot_ be _swapped_ in _one_ atomic _step_; `LiveCatalogue` _guards_ its _list_ with a _lock_.
+- CSharpFunctionalExtensions has an `IResult` of its _own_, so a _file_ that _uses_ ASP.NET Core's _names_ it with a `using` alias.
 - C# 14 has no _closed_ _unions_, so `Match` _takes_ the _place_ of F#'s _exhaustive_ `match`.
 - _Each_ wrapper _type_ _costs_ a _little_ _code_ at the _edge_, where a _plain_ _number_ _arrives_ and is wrapped _once_.
 

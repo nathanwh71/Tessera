@@ -133,11 +133,11 @@ _Two_ _attacks_ are _closed_ by _design_. Every _value_ from a _request_ _travel
 
 ## What is where
 
-The _service_ is _one_ _program_, _one_ _project_ laid out as the modular-monolith _template_: `Common`, which every ***module*** may _use_, and _one_ _module_, `Modules/Tessera`, in _three_ _layers_. _Six_ ***architecture tests*** _keep_ _each_ _layer_ to its _own_ _work_ (ADR 0010). It _borrows_ what _libraries_ do _well_: ASP.NET Core _reads_ its _settings_, _writes_ its _problem_ _documents_, _tags_ _each_ _tile_, _answers_ 304 and `/health`; Dapper and Npgsql _talk_ to the _database_; DbUp _runs_ the _seed_ _scripts_ (ADR 0009); Nginx _keeps_, _packs_ and _guards_ (ADR 0008). `Result` is the _service_'s _own_, in `Common/Result.cs` (ADR 0004).
+The _service_ is _one_ _program_, _one_ _project_ laid out as the modular-monolith _template_: `Common`, which every ***module*** may _use_, and _one_ _module_, `Modules/Tessera`, in _three_ _layers_. _Six_ ***architecture tests*** _keep_ _each_ _layer_ to its _own_ _work_ (ADR 0010). It _borrows_ what _libraries_ do _well_: ASP.NET Core _reads_ its _settings_, _writes_ its _problem_ _documents_, _tags_ _each_ _tile_, _answers_ 304 and `/health`; Dapper and Npgsql _talk_ to the _database_; DbUp _runs_ the _seed_ _scripts_ (ADR 0009); Nginx _keeps_, _packs_ and _guards_ (ADR 0008). CSharpFunctionalExtensions _gives_ `Result` and `Maybe` (ADR 0004).
 
 | Folder | What it holds |
 |---|---|
-| `src/Tessera/Common` | `Result.cs`; `Api/Problems.cs`, the _shape_ of every _problem_ _document_; `Infrastructure/Settings.cs`, how a _section_ of `tessera.json` is _read_ and _checked_ |
+| `src/Tessera/Common` | `Api/Problems.cs`, the _shape_ of every _problem_ _document_; `Infrastructure/Settings.cs`, how a _section_ of `tessera.json` is _read_ and _checked_ |
 | `src/Tessera/Modules/Tessera/Domain` | _Records_ and ***pure functions***: a _tile_'s _address_, the _layers_ and their ***catalogue***, the _area_ and _tile_ _settings_ |
 | `src/Tessera/Modules/Tessera/Infrastructure` | Every SQL _text_, in `Sql/Queries.cs`, and the _code_ that _talks_ to the _database_; the _list_ of _layers_, _reread_ every `Catalogue.RefreshSeconds`; the ***health checks***; the `seed` _command_'s DbUp _run_, in `Seeding/` |
 | `src/Tessera/Modules/Tessera/Features` | The _routes_: the _tiles_, the _map_'s _page_ with the _area_ _written_ in, and `/health` |
@@ -158,7 +158,7 @@ The _service_ is _one_ _program_, _one_ _project_ laid out as the modular-monoli
 - `docs/adr/0001-modular-monolith.md`: why the _service_ is _one_ _program_ with _modules_
 - `docs/adr/0002-scripts-in-typescript-with-zx.md`: why the _scripts_ are TypeScript on Node.js 26
 - `docs/adr/0003-settings-file.md`: why _settings_ _live_ in `tessera.json` and the _environment_, and every _key_
-- `docs/adr/0004-functional-style.md`: why the _code_ is _functional_, with `Result` and ***nullable types***
+- `docs/adr/0004-functional-style.md`: why the _code_ is _functional_, with `Result` and `Maybe`
 - `docs/adr/0005-cluster-in-the-browser.md`: why the _map_ ***clusters*** the _places_ _itself_, from the _tiles_ it has _loaded_
 - `docs/adr/0006-the-map-and-the-service.md`: why the _map_ _lives_ in `web/`, and the _contract_ _between_ the _map_ and the _service_
 - `docs/adr/0007-limits-in-nginx.md`: why Nginx _answers_ the _office_ _alone_ and _caps_ _each_ _machine_, and why the _service_ _keeps_ no _resilience_ _library_

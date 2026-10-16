@@ -35,7 +35,7 @@ What surprises a newcomer:
 
 What surprises a newcomer:
 
-- **No method throws for a database failure.** _Each_ _returns_ a `Result`, the _service_'s _own_ _type_ in `src/Tessera/Common/Result.cs`, which _holds_ the _answer_ or the _reason_ (ADR 0004). _Read_ `Result<T, DatabaseError>` as 'a `T`, or a `DatabaseError`'.
+- **No method throws for a database failure.** _Each_ _returns_ a `Result`, from the CSharpFunctionalExtensions _library_, which _holds_ the _answer_ or the _reason_ (ADR 0004). _Read_ `Result<T, DatabaseError>` as 'a `T`, or a `DatabaseError`'.
 - **`await using` returns the connection.** When the _block_ _ends_, _even_ _through_ an _error_, the _connection_ _goes_ _back_ to the _pool_. No _code_ _closes_ _one_ by _hand_.
 - **`Ping` keeps two clocks.** A _cancel_ _signal_ _takes_ it out of the _pool_'s _queue_ _after_ a _second_, and `WaitAsync` _stops_ the _wait_ _after_ a _second_ _even_ when a _frozen_ _database_ _ignores_ the _cancel_.
 

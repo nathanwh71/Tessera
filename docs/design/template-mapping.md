@@ -10,7 +10,7 @@ The _request_ _sets_ _three_ constraints, and _four_ _things_ must not _move_:
 
 | Constraint | What it means here |
 |---|---|
-| Keep the coding style | ADR 0004 _holds_: read-only _records_, _pure_ _functions_, `Result<T, E>` for _failures_ the _caller_ _expects_, ***nullable types*** and _early_ _returns_, Dapper with _plain_ SQL, DbUp for ***seed scripts***, _comments_ for a _school_ _student_ |
+| Keep the coding style | ADR 0004 _holds_: read-only _records_, _pure_ _functions_, `Result<T, E>` for _failures_ the _caller_ _expects_, `Maybe<T>` for _values_ that may be _missing_, _early_ _returns_, Dapper with _plain_ SQL, DbUp for ***seed scripts***, _comments_ for a _school_ _student_ |
 | Prefer ASP.NET Core to hand-written code | Where the _framework_ _already_ does a _job_, Tessera's _own_ _code_ for it _goes_; where it does not, Tessera's _code_ _stays_ |
 | Guard the boundaries with ArchUnitNET | _Tests_, not _project_ _references_, _keep_ _each_ _layer_ and _each_ _module_ in its _place_ |
 
@@ -30,7 +30,6 @@ src/Tessera/                   one project; each folder's path is its namespace
   Program.cs                   serve, or seed
   TesseraHost.cs               the template's Host: builds the service from Common and the module
   Common/
-    Result.cs                  Result<T, TError>, the repository's one Result
     Api/Problems.cs            the problem answers every module shares
     Infrastructure/Settings.cs AddFile, Section<T>, Check: reads and checks a settings section
   Modules/Tessera/
@@ -104,7 +103,7 @@ The _layers_ _fit_ ADR 0004 _without_ strain, _since_ they _divide_ the _code_ w
 - **Domain** _holds_ the read-only _records_ and the _pure_ _functions_: `TileAddress.Of`, `LayerCatalogue.Find`, the _settings_ _records_ with their _own_ _checks_. It _knows_ no _database_ and no _web_, and a _rule_ _says_ so.
 - **Infrastructure** _holds_ every _effect_ on the _database_. It _speaks_ `Result<T, DatabaseError>`, as `Database` does _now_, and _never_ _throws_ for a _failure_ the _caller_ _expects_.
 - **Features** is the _edge_ where a `Result` _becomes_ an _answer_: `Match` _turns_ _success_ into a _tile_ and _each_ `DatabaseError` into 404, 503 or 500, as `TileServer.Answer` does _now_. `Map.Render` _stays_ a _pure_ _function_ that the _route_ _calls_.
-- **One `Result` type** for the _whole_ repository: `Common/Result.cs`, _about_ sixty _lines_ with the _nine_ _members_ the _code_ _used_ of CSharpFunctionalExtensions. The ETL _compiles_ the _same_ _file_, and the _package_ has _gone_.
+- **One `Result` and one `Maybe`** for the _whole_ repository, both from CSharpFunctionalExtensions. A _value_ that may be _missing_ is a `Maybe<T>`, _never_ `null` or a stand-in _object_; a _null_ from a _library_ _becomes_ a `Maybe` at that _edge_ (ADR 0004).
 
 The _comments_ _move_ with their _code_. _Each_ _moved_ _file_ _keeps_ its _reasons_, and _each_ _new_ _file_, such as `TesseraModule.cs`, _gets_ _comments_ _written_ the _same_ _way_.
 
@@ -243,13 +242,14 @@ _Each_ _step_ is _one_ _commit_, and _left_ every _test_ _passing_, the URLs the
 2. **The tree.** The _eight_ _projects_ folded into _one_, the _files_ _moved_ with `git mv`, and `TileSource` _went_.
 3. **The boundary rules,** with IDE0130 in `src/Tessera/.editorconfig`, _run_ _first_ by `npm test` and the _build_ on GitHub.
 4. **The split start-up:** `TesseraHost` _builds_ the _program_; `AddTessera` and `MapTessera` are the _module_'s _door_.
-5. **The home-made `Result`,** with _seven_ ***unit tests***; CSharpFunctionalExtensions _left_ the repository.
+5. **A home-made `Result`,** _later_ undone: CSharpFunctionalExtensions _came_ _back_ the _same_ _day_, with `Maybe` in _place_ of `null` (_step_ 12).
 6. **The ETag and 304** from `TypedResults.Bytes`, with a _test_ that a _matching_ _tag_ _gets_ 304.
 7. **`/health`'s status** from _two_ ***health checks*** and `ResultStatusCodes`, with a _test_ of `CatalogueReady`.
 8. **The map's headers** from an endpoint filter on the _page_'s _routes_.
 9. **The dropped-column reread cut:** 42703 _still_ _answers_ 503, and the _list_ heals at its _next_ refresh.
 10. **The leaner seed:** `Tessera seed` _reads_ the _publisher_'s URL _alone_, with a _test_ that a _bad_ `Tiles` _section_ does not _stop_ it.
 11. **The docs:** ADR 0001 superseded in _part_, ADR 0004 and ADR 0008 _amended_, the README and the _reading_ _guides_ on the _new_ _paths_.
+12. **CSharpFunctionalExtensions back,** with its `Result`, and its `Maybe` in _place_ of `null` and stand-in _objects_, _first_ in the _service_, then in the ETL; ADR 0004 _amended_.
 
 OpenTelemetry from `ServiceDefaults` and `AddServerHeader = false` _stay_ _optional_, and are not _done_.
 
@@ -257,7 +257,7 @@ The ETL in `tools/`, the _scripts_, the _map_ in `web/`, the _seed_ _scripts_ an
 
 ## What Common holds
 
-The _template_'s `Common` is _empty_, so _nothing_ in it competes with Tessera's _code_, and the _design_ _keeps_ no _open_ _question_ _about_ it. Tessera _supplies_ every _shared_ _piece_: `Problems` in `Common/Api`, `Section<T>` in `Common/Infrastructure`, and its _own_ `Result` in `Common/Result.cs`. _Each_ _piece_ _moves_ as it _stands_, so the _move_ _adds_ no _shared_ _code_. _Only_ the _sample_ _modules_ may _still_ _use_ EF _Core_ or a mediator, and they _go_.
+The _template_'s `Common` is _empty_, so _nothing_ in it competes with Tessera's _code_, and the _design_ _keeps_ no _open_ _question_ _about_ it. Tessera _supplies_ every _shared_ _piece_: `Problems` in `Common/Api`, `Section<T>` in `Common/Infrastructure`, and CSharpFunctionalExtensions for `Result` and `Maybe`. _Each_ _piece_ _moves_ as it _stands_, so the _move_ _adds_ no _shared_ _code_. _Only_ the _sample_ _modules_ may _still_ _use_ EF _Core_ or a mediator, and they _go_.
 
 ## As built
 
@@ -266,6 +266,6 @@ The _code_ _follows_ this _design_, with _four_ _differences_:
 | Design | Built | Reason |
 |---|---|---|
 | A Host project beside the module's | `TesseraHost.cs` at the _project_'s _root_, in the global namespace | _One_ _project_ _holds_ the _whole_ _service_, so the _Host_ is a _file_, not a _project_ |
-| `Result` as two nested cases, `Ok` and `Fail`, for pattern matching | _One_ _sealed_ _record_ with `IsSuccess`, `Value`, `Error`, `Map`, `Match` and `GetValueOrDefault` | A _pattern_ on a nested _generic_ _case_ _reads_ `Result<IReadOnlyList<string>, string>.Fail(var error)`: _longer_ than the `if (ran.IsFailure)` it would _replace_. The _record_ _keeps_ every _call_ _site_ as it was |
+| A home-made `Result` in `Common/Result.cs` | CSharpFunctionalExtensions' `Result` and `Maybe` | The _maintainer_ _chose_ the _library_, so `Maybe` could _replace_ `null` and stand-in _objects_ _too_; a home-made _type_ would have had to _give_ both |
 | `Database.Ping` keeps one limit | Both _limits_ _stay_ | The _second_, `WaitAsync`, _bounds_ the _ping_ _even_ when a _frozen_ _database_ _holds_ Npgsql _past_ its _own_ _cancel_; `/health` must _answer_ _within_ a _second_ (N-25) |
 | `Layer`, `LayerCatalogue` and `FromRows` in Domain | `FromRows` and `ToLayer` in the Infrastructure, as `CatalogueReader` | _Turning_ a _row_ into a _layer_ _quotes_ its _names_ with `Queries.Quote`, so it _belongs_ _beside_ the SQL; the _first_ _rule_ would _refuse_ it in Domain |
