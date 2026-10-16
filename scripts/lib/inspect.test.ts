@@ -3,7 +3,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { nextScript, plain, readInspectArguments, readLayers, readValues, starter, summary } from './inspect.ts';
 
-// What GDAL 3.8's `ogrinfo -json -so -al` writes for a geodatabase of cafés and bus routes, cut down.
+// What GDAL 3.8.4's `ogrinfo -json -so -al` writes for a geodatabase of cafés and bus routes, cut
+// down to the keys readLayers reads. 3.8.4 is the ogrinfo installed on the machine that checked the
+// sample; a machine with none runs gdalImage's 3.11.4 instead. Both write the layout GDAL fixes in
+// `ogrinfo_output.schema.json`, and readLayers gives each missing key a plain default, so the
+// sample stands for either. A geodatabase allows no space in a layer's name; 'Bus Routes 2026'
+// holds two to test `plain`.
 const described = JSON.stringify({
   layers: [
     { name: 'Cafes', featureCount: 7, fields: [{ name: 'id' }, { name: 'Name' }],
