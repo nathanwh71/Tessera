@@ -1,6 +1,6 @@
 using FsCheck;
 using FsCheck.Xunit;
-using Modules.Tessera.Infrastructure.Sql;
+using Modules.Tessera.Domain;
 
 namespace Tessera.UnitTests;
 
@@ -9,13 +9,13 @@ public sealed class SqlTests
 {
     [Fact]
     public void Quotes_a_name_and_doubles_each_inner_quote() =>
-        Assert.Equal("\"odd \"\"name\"\"\"", Queries.Quote("odd \"name\""));
+        Assert.Equal("\"odd \"\"name\"\"\"", SqlName.Quote("odd \"name\"").Sql);
 
     // Every name, however odd, opens with a quote, closes with one, and holds no lone quote between.
     [Property]
     public bool Quotes_every_name_safely(NonNull<string> name)
     {
-        var quoted = Queries.Quote(name.Get);
+        var quoted = SqlName.Quote(name.Get).Sql;
         return quoted.StartsWith('"') && quoted.EndsWith('"')
             && !quoted[1..^1].Replace("\"\"", "", StringComparison.Ordinal).Contains('"');
     }

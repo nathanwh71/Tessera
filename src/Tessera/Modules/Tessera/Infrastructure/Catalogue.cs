@@ -24,8 +24,8 @@ public static class CatalogueReader
     /// <summary>Turns a row into a <b><i>layer</i></b>, quoting every name on the way in (S-01 c3).</summary>
     public static Layer ToLayer(CatalogueRow row) => new(
         $"{row.Schema}.{row.Name}",
-        $"{Queries.Quote(row.Schema)}.{Queries.Quote(row.Name)}",
-        Queries.Quote(row.GeometryColumn),
+        SqlName.Qualified(row.Schema, row.Name),
+        SqlName.Quote(row.GeometryColumn),
         row.Srid,
         row.GeometryType,
         Names(row.Columns),
@@ -33,8 +33,8 @@ public static class CatalogueReader
 
     // The query writes each list of names as JSON, so this reads its own output. The reader gives
     // null for the JSON text 'null', which the query never writes; none then means no names.
-    private static ImmutableArray<string> Names(string json) =>
-        JsonSerializer.Deserialize<string[]>(json) is { } names ? [.. names.Select(Queries.Quote)] : [];
+    private static ImmutableArray<SqlName> Names(string json) =>
+        JsonSerializer.Deserialize<string[]>(json) is { } names ? [.. names.Select(SqlName.Quote)] : [];
 
     /// <summary>
     /// Builds the catalogue from the query's rows, keyed by id. The ordinal comparer matches ids

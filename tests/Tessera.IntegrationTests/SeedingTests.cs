@@ -72,7 +72,7 @@ public sealed class SeedingTests(DatabaseFixture database) : IClassFixture<Datab
         await using var reader = Database.Open(database.Reader, new DatabaseSettings());
         var catalogue = (await CatalogueReader.Load(reader, TestContext.Current.CancellationToken)).Value;
         Assert.Equal((4326, "Point"), catalogue.Find("transport.buses") is { } buses ? (buses.Srid, buses.GeometryType) : default);
-        Assert.Equal(["\"fid\""], catalogue.Find("food.cafes")!.Order);
+        Assert.Equal(["\"fid\""], catalogue.Find("food.cafes")!.Order.Select(name => name.Sql));
     }
 
     // US-24 c6: a script that fails changes nothing, and stays out of the journal, so it runs again

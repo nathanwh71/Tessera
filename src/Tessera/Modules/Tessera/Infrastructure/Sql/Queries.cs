@@ -2,19 +2,12 @@ using Modules.Tessera.Domain;
 
 // Every SQL text Tessera sends lives in this file (S-01 c2), so a reviewer reads them all in one
 // place. Values travel as named parameters, such as @z, never in the text. A name, such as a table's,
-// cannot travel as a parameter, so it enters the text quoted by Quote.
+// cannot travel as a parameter, so it enters the text as a SqlName, which only quoting makes.
 
 namespace Modules.Tessera.Infrastructure.Sql;
 
 public static class Queries
 {
-    /// <summary>
-    /// Wraps a table, schema or column name in double quotes, doubling any quote inside, so the
-    /// database reads it as one name and never as part of a command (S-01 c3): <c>x; DROP TABLE cafes</c>
-    /// stays one odd name, and <b><i>SQL injection</i></b>, SQL hidden in a request, finds no way in.
-    /// </summary>
-    public static string Quote(string name) => $"\"{name.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
-
     /// <summary>
     /// The smallest question: an answer proves the database is up and lets the service sign in (N-25).
     /// </summary>
@@ -78,18 +71,18 @@ public static class Queries
     public static Query Tile(Layer layer, TileAddress tile, TileSettings limits)
     {
         // Each property the tile carries, after its shape, such as ', "name", "type"'.
-        var properties = string.Concat(layer.Properties.Select(name => $", {name}"));
+        var properties = string.Concat(layer.Properties.Select(name => $", {name.Sql}"));
         // A table's key fixes the order of features (US-24 test 2); a view has no key, so no order.
         var order = layer.Order.IsDefaultOrEmpty
             ? ""
-            : "\n  ORDER BY " + string.Join(", ", layer.Order.Select(name => $"t.{name}"));
+            : "\n  ORDER BY " + string.Join(", ", layer.Order.Select(name => $"t.{name.Sql}"));
         return new(
             $"""
             SELECT ST_AsMVT(tile.*, @layer, @resolution, 'tessera_shape') FROM (
-              SELECT ST_AsMVTGeom(ST_Transform(t.{layer.Geometry}, 3857), ST_TileEnvelope(@z, @x, @y),
+              SELECT ST_AsMVTGeom(ST_Transform(t.{layer.Geometry.Sql}, 3857), ST_TileEnvelope(@z, @x, @y),
                                   @resolution, @buffer, true) AS tessera_shape{properties}
-              FROM {layer.Table} AS t
-              WHERE t.{layer.Geometry} && ST_Transform(ST_TileEnvelope(@z, @x, @y, margin => @margin), @srid){order}
+              FROM {layer.Table.Sql} AS t
+              WHERE t.{layer.Geometry.Sql} && ST_Transform(ST_TileEnvelope(@z, @x, @y, margin => @margin), @srid){order}
               LIMIT @limit
             ) AS tile
             """,
@@ -106,5 +99,5 @@ public static class Queries
     /// run (ADR 0009). DbUp makes the table but not its schema, so the seed sends this first. It lives
     /// here since every SQL text sits in this file (S-01 c2); IF NOT EXISTS lets it run at every start.
     /// </summary>
-    public static Query JournalSchema(string schema) => new($"CREATE SCHEMA IF NOT EXISTS {schema}");
+    public static Query JournalSchema(SqlName schema) => new($"CREATE SCHEMA IF NOT EXISTS {schema.Sql}");
 }

@@ -54,8 +54,8 @@ public sealed class CatalogueTests
         var layer = CatalogueReader.ToLayer(Cafes);
 
         Assert.Equal("food.cafes", layer.Id);
-        Assert.Equal("\"food\".\"cafes\"", layer.Table);
-        Assert.Equal(["\"layer\"", "\"name\""], layer.Properties);
+        Assert.Equal("\"food\".\"cafes\"", layer.Table.Sql);
+        Assert.Equal(["\"layer\"", "\"name\""], layer.Properties.Select(name => name.Sql));
         Assert.Equal(4326, layer.Srid);
     }
 

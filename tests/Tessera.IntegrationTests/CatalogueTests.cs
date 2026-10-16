@@ -87,7 +87,7 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
         await using var reader = Database.Open(database.Reader, new DatabaseSettings());
         var catalogue = await Load(reader);
 
-        Assert.Equal(["\"id\""], catalogue.Find("stage.granted")!.Order);
+        Assert.Equal(["\"id\""], catalogue.Find("stage.granted")!.Order.Select(name => name.Sql));
         Assert.Empty(catalogue.Find("stage.granted_view")!.Order);
     }
 

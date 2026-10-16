@@ -7,7 +7,7 @@ namespace Modules.Tessera.Domain;
 
 /// <summary>
 /// One table or view the service may serve as map <b><i>tiles</i></b>: a <b><i>layer</i></b> (US-03).
-/// Every name here, but the id, is already quoted for SQL, so it can go into a query's text as it is.
+/// Every name here, but the id, is a <see cref="SqlName"/>, quoted, so it can go into a query's text as it is.
 /// </summary>
 /// <param name="Id">
 /// The layer's id: its <b><i>schema</i></b>, the named folder that holds the table, and its name, such
@@ -23,8 +23,8 @@ namespace Modules.Tessera.Domain;
 /// <param name="Properties">The quoted columns each tile carries beside the shape (US-07).</param>
 /// <param name="Order">The quoted primary key, which fixes the order of features; empty for a view.</param>
 public sealed record Layer(
-    string Id, string Table, string Geometry, int Srid, string GeometryType,
-    ImmutableArray<string> Properties, ImmutableArray<string> Order);
+    string Id, SqlName Table, SqlName Geometry, int Srid, string GeometryType,
+    ImmutableArray<SqlName> Properties, ImmutableArray<SqlName> Order);
 
 /// <summary>
 /// The <b><i>catalogue</i></b>: the list of layers at one moment. Once built it never changes, so a

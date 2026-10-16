@@ -1,5 +1,6 @@
 using CSharpFunctionalExtensions;
 using DbUp;
+using Modules.Tessera.Domain;
 using Modules.Tessera.Infrastructure.Sql;
 using Npgsql;
 
@@ -43,7 +44,7 @@ public static class SeedScripts
         {
             using var session = new NpgsqlConnection(connection);
             session.Open();
-            using var command = new NpgsqlCommand(Queries.JournalSchema(Queries.Quote(JournalSchema)).Text, session);
+            using var command = new NpgsqlCommand(Queries.JournalSchema(SqlName.Quote(JournalSchema)).Text, session);
             command.ExecuteNonQuery();
         }
         catch (NpgsqlException error)
