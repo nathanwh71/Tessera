@@ -112,7 +112,7 @@ Filters _run_ in the _order_ _listed_, _each_ on the _rows_ the _one_ _before_ _
 
 **Adding a filter.** The _pipeline_ _lives_ in `etl/`, in Python. _Each_ filter is _one_ ***module*** in `etl/src/tessera_etl/core/filters/`. It _holds_ the filter's _name_, what it does, a _model_ of its _own_ _settings_, its _checks_, and a _function_ that _returns_ the filter as a _step_ of the _chain_. The filter _itself_ is a _judge_: a _function_ that _gives_ _each_ _row_ a verdict, _keep_, _fix_ or _fail_, and `filter_step`, in `core/steps.py`, does the _dropping_, _logging_ and _stopping_ for every filter alike. A _new_ filter is _one_ _new_ _module_, _modelled_ on `inside_area.py`, and _one_ _line_ in `KINDS`. _Each_ filter _reads_ _only_ its _own_ _settings_, so the _pipeline_ _file_ _refuses_ a _setting_ that _belongs_ to another filter, or _one_ that is _missing_.
 
-**Filters in code.** Filters _join_ with `>>`, which _runs_ the _left_ _one_, then the _right_ _one_ on the _rows_ it _kept_, and _stops_ at the _first_ _stop_. _Each_ _step_ is a _handler_ in Giraffe's _shape_, which _receives_ the _rest_ of the _chain_ (`kernel/pipes.py`):
+**Filters in code.** Filters _join_ with `>>`, which _runs_ the _left_ _one_, then the _right_ _one_ on the _rows_ it _kept_, and _stops_ at the _first_ _stop_. _Each_ _step_ is a _function_ that _takes_ a _table_, its _log_ and _any_ _reason_ to _stop_, and _returns_ them _changed_ (`kernel/pipes.py`):
 
 ```python
 clean_cafes = (
@@ -165,7 +165,7 @@ The _service_ is _one_ _program_, _one_ _project_ laid out as the modular-monoli
 - `docs/adr/0008-nginx-in-front.md`: why Nginx _stands_ in _front_, and what it does in _place_ of the _service_
 - `docs/adr/0009-seed-with-dbup.md`: why the _places_ _arrive_ as SQL _scripts_ that DbUp _runs_ _once_
 - `docs/adr/0010-template-layout-guarded-by-tests.md`: why the _service_ _follows_ the modular-monolith _template_, with _architecture_ _tests_ at its _borders_
-- `docs/design/etl-pipeline.md`: how the ETL _pipeline_ _cleans_ _places_ into _seed_ _scripts_, as a _chain_ of Giraffe-style _handlers_
+- `docs/design/etl-pipeline.md`: how the ETL _pipeline_ _cleans_ _places_ into _seed_ _scripts_, as a _chain_ of _steps_ _joined_ with `>>`
 - `docs/design/template-mapping.md`: how Tessera _maps_ onto the modular-monolith _template_, and which _jobs_ ASP.NET Core does
 - `docs/guides/delivery-plan.md`: how to _build_ _Parts_ A and B in _four_ iterations, from 19 _October_ to the _release_ of 7 December 2026, and what _follows_
 - `docs/guides/reading-the-code.md`: _fifteen_ _steps_ _through_ the backend and the _map_, in the _order_ a _tile_ _travels_
