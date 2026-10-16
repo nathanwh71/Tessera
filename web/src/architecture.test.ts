@@ -117,9 +117,10 @@ function codeFiles(): { file: string; text: string }[] {
 }
 
 describe("the thin edge", () => {
-	// The code that talks to MapLibre, the library that draws the map, keeps its changing state and
-	// its event wiring in two files, so a component, a function that turns values into what you see,
-	// holds no `let` and registers no listener of its own: decisions live in pure code.
+	// Changing state and event wiring stay at the edge, so decisions live in pure code. Among the files
+	// the page ships, only maplibre.ts and map-handle.ts, the two that drive MapLibre, the library that
+	// draws the map, may declare a `let`, a variable the code can change; only maplibre.ts may register
+	// a listener with `.on("…")` or `.once("…")`.
 	const MAY_HOLD_STATE = [join("map", "maplibre.ts"), join("map", "map-handle.ts")];
 	const MAY_LISTEN = [join("map", "maplibre.ts")];
 
