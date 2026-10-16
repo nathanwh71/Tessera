@@ -18,7 +18,7 @@ public sealed class SeedingTests(DatabaseFixture database) : IClassFixture<Datab
     private static IReadOnlyList<string> Run(string connection, string folder) =>
         SeedScripts.Run(connection, folder).Match(ran => ran, error => throw new Xunit.Sdk.XunitException(error));
 
-    // A folder of scripts for one test, written as the converter would leave them.
+    // A folder of scripts for one test, written as npm run etl writes them.
     private static string Folder(params (string Name, string Sql)[] scripts)
     {
         var folder = Directory.CreateTempSubdirectory("tessera-seed-").FullName;
