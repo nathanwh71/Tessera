@@ -233,6 +233,8 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         Assert.Contains("<div id=\"root\"></div>", html, StringComparison.Ordinal);
         Assert.Contains("default-src 'self'", answer.Headers.GetValues("Content-Security-Policy").Single(), StringComparison.Ordinal);
         Assert.True(answer.Headers.CacheControl?.NoCache);
+        Assert.Equal("nosniff", answer.Headers.GetValues("X-Content-Type-Options").Single());
+        Assert.Equal("no-referrer", answer.Headers.GetValues("Referrer-Policy").Single());
 
         var script = System.Text.RegularExpressions.Regex.Match(html, @"src=""(/assets/[^""]+\.js)""").Groups[1].Value;
         using var asset = await Get(script);

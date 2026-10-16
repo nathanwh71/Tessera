@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Text.Json;
 using Common.Api;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.FileProviders;
 using Modules.Tessera.Domain;
 
@@ -59,12 +60,15 @@ public static class MapRoutes
             });
         }
 
+        // The page's routes share one group, so the page's headers join them alone (PageHeaders).
+        var pages = app.MapGroup("");
+        pages.AddEndpointFilter(PageHeaders);
         // GET fetches the page; HEAD asks for its headers alone, as a watcher or a checking cache may.
         string[] read = [HttpMethods.Get, HttpMethods.Head];
-        app.MapMethods("/", read, () => Answer(page, settings));
+        pages.MapMethods("/", read, () => Answer(page, settings));
         // Any other single name, such as /index.html, is not found, so each view of the map has one
         // address.
-        app.MapMethods("/{file}", read, (string file) =>
+        pages.MapMethods("/{file}", read, (string file) =>
             LayerOf(file) is null ? Problems.NotFound() : Answer(page, settings));
         return app;
     }
@@ -106,31 +110,26 @@ public static class MapRoutes
             : null;
 
     /// <summary>
-    /// Adds the page's headers to every HTML answer, at the last moment, once its type is known.
+    /// An <b><i>endpoint filter</i></b>, a step ASP.NET Core runs around each of the page's routes. It
+    /// adds the page's headers when the answer is the page; a 404 keeps the problem document's own.
     /// <c>no-cache</c> makes a browser check for a newer page each time, so a new release shows at once,
     /// while the files the page names, each named by its hash, stay in the browser's <b><i>cache</i></b>.
     /// The Content Security Policy blocks scripts from elsewhere; <c>nosniff</c> stops a browser
     /// guessing a file's type and running text as a script; <c>no-referrer</c> keeps the page's address
     /// from the sites it links to.
     /// </summary>
-    public static WebApplication UseMapHeaders(this WebApplication app)
+    internal static async ValueTask<object?> PageHeaders(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
-        app.Use((context, next) =>
+        var answer = await next(context).ConfigureAwait(false);
+        if (answer is ContentHttpResult { ContentType: { } type } && type.StartsWith("text/html", StringComparison.OrdinalIgnoreCase))
         {
-            context.Response.OnStarting(() =>
-            {
-                if (context.Response.ContentType?.StartsWith("text/html", StringComparison.OrdinalIgnoreCase) == true)
-                {
-                    context.Response.Headers.CacheControl = "no-cache";
-                    context.Response.Headers.ContentSecurityPolicy = Policy;
-                    context.Response.Headers.XContentTypeOptions = "nosniff";
-                    context.Response.Headers["Referrer-Policy"] = "no-referrer";
-                }
+            var headers = context.HttpContext.Response.Headers;
+            headers.CacheControl = "no-cache";
+            headers.ContentSecurityPolicy = Policy;
+            headers.XContentTypeOptions = "nosniff";
+            headers["Referrer-Policy"] = "no-referrer";
+        }
 
-                return Task.CompletedTask;
-            });
-            return next(context);
-        });
-        return app;
+        return answer;
     }
 }

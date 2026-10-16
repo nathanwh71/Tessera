@@ -70,8 +70,6 @@ public static class TesseraModule
     public static WebApplication MapTessera(this WebApplication app)
     {
         var catalogue = app.Services.GetRequiredService<LiveCatalogue>();
-        // Before the routes run, so its hook joins every answer, whichever route or step writes it.
-        app.UseMapHeaders();
         app.MapHealth();
         app.MapTiles(
             catalogue,
