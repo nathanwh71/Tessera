@@ -86,8 +86,8 @@ export function useLatest<T>(value: T): RefObject<T> {
  */
 export function useLanding(latest: RefObject<CanvasInputs>) {
 	const [landing, setLanding] = useState<Landing>(START);
-	// True a frame, one redraw of the screen, after the drops are drawn, so the browser sees each pin
-	// start above its place and fall.
+	// True once the browser has painted the drops at their start, above their places, so each pin
+	// then falls rather than appearing where it lands.
 	const [falling, setFalling] = useState(false);
 	const advance = useCallback((event: LandingEvent) => setLanding((at) => step(at, event)), []);
 
@@ -99,6 +99,10 @@ export function useLanding(latest: RefObject<CanvasInputs>) {
 			return;
 		}
 		if (landing.stage !== "dropping") return;
+		// `requestAnimationFrame` runs its function just before the browser's next frame, one redraw of
+		// the screen. One call alone may land before the frame that first paints the drops, and the
+		// browser would then see only the end and skip the fall; the second call waits for the frame
+		// after that one, so the start has been painted.
 		const frame = requestAnimationFrame(() => requestAnimationFrame(() => setFalling(true)));
 		const timer = window.setTimeout(() => advance({ name: "dropsDone" }), landing.ms);
 		return () => {
