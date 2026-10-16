@@ -55,9 +55,11 @@ export interface MapCanvasProps {
 	 * that waits until MapLibre has started.
 	 */
 	readonly handle: MapHandle;
-	// Each callback below becomes the message of the same name, so the model keeps the view (UI-09),
-	// the pointer (UI-19), the cluster's zoom (UI-10, criterion 3), the tile's problem (US-23,
-	// criterion 8) and the end of the drop (UI-15, criterion 6).
+	// App.tsx turns each callback below into a message, so the model keeps the view (UI-09), the
+	// pointer (UI-19), the cluster's zoom (UI-10, criterion 3), the tile's problem (US-23, criterion 8)
+	// and the end of the drop (UI-15, criterion 6): `onViewChange` becomes `viewChanged`, `onPointer`
+	// `pointerMoved`, `onClusterOpen` `clusterOpened`, `onTileFailed` `tileFailed` and `onLanded`
+	// `pinsLanded`.
 	readonly onViewChange: (view: View) => void;
 	readonly onPointer: (position: LngLat | null) => void;
 	readonly onClusterOpen: (center: LngLat, expansionLevel: Level) => void;
