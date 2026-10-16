@@ -20,6 +20,7 @@ when it is not.
 """
 
 import argparse
+import difflib
 import itertools
 import re
 import subprocess
@@ -240,9 +241,15 @@ def compare_text(before: str, after: str, findings: Findings) -> None:
 
 
 def compare_logs(before: str, after: str, findings: Findings) -> None:
-    """Lists the log lines that differ, less the first, which holds the time of the run."""
-    pairs = itertools.zip_longest(before.splitlines()[1:], after.splitlines()[1:])
-    findings.notes.extend(f"log line differs:\n  before {old}\n  after  {new}" for old, new in pairs if old != new)
+    """Lists the log lines that differ, less the first, which holds the time of the run.
+
+    The lines are matched as a diff matches them, so one line more or less shows as itself.
+    """
+    old, new = before.splitlines()[1:], after.splitlines()[1:]
+    for kind, start, end, first, last in difflib.SequenceMatcher(a=old, b=new, autojunk=False).get_opcodes():
+        if kind != "equal":
+            lines = [f"  before {line}" for line in old[start:end]] + [f"  after  {line}" for line in new[first:last]]
+            findings.notes.append("log lines differ:\n" + "\n".join(lines))
 
 
 def compare(before: Path, after: Path) -> Findings:

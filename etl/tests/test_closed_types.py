@@ -20,13 +20,14 @@ def cases(union: TypeAliasType) -> set[type]:
 
 
 def records(module: ModuleType, field: str) -> set[type]:
-    """The records in a module whose first field holds a row, as every verdict's does."""
+    """The records in a module made of a row's number and one text, as every verdict is."""
     return {
         found
         for _, found in inspect.getmembers(module, inspect.isclass)
         if found.__module__ == module.__name__
         and dataclasses.is_dataclass(found)
-        and [(item.name, item.type) for item in dataclasses.fields(found)][:1] == [(field, rows.Row)]
+        and [(item.name, item.type) for item in dataclasses.fields(found)][:1] == [(field, int)]
+        and [item.type for item in dataclasses.fields(found)][1:] == [str]
     }
 
 

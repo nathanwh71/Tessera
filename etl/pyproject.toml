@@ -75,11 +75,19 @@ addopts = "-q"
 root_package = "tessera_etl"
 include_external_packages = true
 
+# geopandas may hold a table in the core, since a table in memory touches no file; pyogrio,
+# which reads files for geopandas, stays out.
 [[tool.importlinter.contracts]]
 name = "The kernel and the core are pure: no files, no programs, no pyogrio"
 type = "forbidden"
 source_modules = ["tessera_etl.kernel", "tessera_etl.core"]
-forbidden_modules = ["pyogrio", "pathlib", "os", "subprocess", "shutil", "tempfile", "geopandas", "tessera_etl.shell"]
+forbidden_modules = ["pyogrio", "pathlib", "os", "subprocess", "shutil", "tempfile", "tessera_etl.shell"]
+
+[[tool.importlinter.contracts]]
+name = "The kernel knows nothing of places: no tables, no shapes"
+type = "forbidden"
+source_modules = ["tessera_etl.kernel"]
+forbidden_modules = ["geopandas", "pandas", "shapely", "numpy", "tessera_etl.core"]
 
 [[tool.importlinter.contracts]]
 name = "The shell calls the core, and the core calls the kernel, never the other way"

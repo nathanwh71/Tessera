@@ -5,12 +5,15 @@ A place with no name has no label on the map and cannot be told from its neighbo
 
 from collections.abc import Sequence
 
+import pandas as pd
+from geopandas import GeoDataFrame
+
 from ...kernel.pipes import Step
 from .. import judge as measure
 from ..filter_kind import FilterKind
 from ..plan import Area, Model, OnFail, OnFailSetting, Text
-from ..rows import Cleaning, Fail, Keep, Row, Verdict
-from ..steps import each_row, filter_step
+from ..rows import Cleaning, Judged
+from ..steps import failures, filter_step
 
 NAME = "requireFields"
 """The name a pipeline file uses; the log and the tests name the filter by it too."""
@@ -26,16 +29,20 @@ class Settings(Model):
 
 
 def create(fields: Sequence[str | None], on_fail: OnFail = OnFail.DROP) -> Step[Cleaning]:
-    """Builds the filter from plain values, so a test can make one without a pipeline file."""
+    """Builds the filter from plain values, so a test can make one without a pipeline file.
+
+    A row names the first field it lacks, in the order given.
+    """
     names = tuple(fields)
 
-    def judge(row: Row) -> Verdict:
-        for field in names:
-            if measure.is_blank(None if field is None else row.value(field)):
-                return Fail(row, f"{field or ''} is missing")
-        return Keep(row)
+    def judge(frame: GeoDataFrame) -> Judged:
+        reason = pd.Series(None, index=frame.index, dtype=object)
+        for field in reversed(names):
+            missing = measure.blank(frame[field]) if field is not None and field in frame.columns else reason.isna() | True
+            reason = reason.mask(missing, f"{field or ''} is missing")
+        return Judged(frame, failures(reason.notna(), reason))
 
-    return filter_step(NAME, on_fail, each_row(judge))
+    return filter_step(NAME, on_fail, judge)
 
 
 def _check(settings: Settings, area: Area | None) -> tuple[str, ...]:

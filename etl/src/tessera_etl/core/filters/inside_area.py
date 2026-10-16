@@ -4,12 +4,15 @@ The map shows one area alone, so a place outside it is a mistake in the data, su
 sign on a coordinate, and no ***tile*** of the map would ever show it.
 """
 
+import pandas as pd
+from geopandas import GeoDataFrame
+
 from ...kernel.pipes import Step
 from .. import judge as measure
 from ..filter_kind import FilterKind, needs_area
 from ..plan import Area, Model, OnFail, OnFailSetting
-from ..rows import Cleaning, Fail, Keep, Row, Verdict
-from ..steps import each_row, filter_step
+from ..rows import Cleaning, Judged
+from ..steps import failures, filter_step
 
 NAME = "insideArea"
 """The name a pipeline file uses; the log and the tests name the filter by it too."""
@@ -25,10 +28,11 @@ def create(area: Area, on_fail: OnFail = OnFail.DROP) -> Step[Cleaning]:
     """Builds the filter from plain values, so a test can make one without a pipeline file."""
     area_box = measure.box(area)
 
-    def judge(row: Row) -> Verdict:
-        return Keep(row) if measure.inside(row.shape, area_box) else Fail(row, "its shape lies outside the area")
+    def judge(frame: GeoDataFrame) -> Judged:
+        outside = pd.Series(~measure.inside(frame.geometry.to_numpy(), area_box), index=frame.index)
+        return Judged(frame, failures(outside, "its shape lies outside the area"))
 
-    return filter_step(NAME, on_fail, each_row(judge))
+    return filter_step(NAME, on_fail, judge)
 
 
 def _create(settings: Settings, area: Area | None) -> Step[Cleaning]:

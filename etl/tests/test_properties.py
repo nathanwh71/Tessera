@@ -9,13 +9,15 @@ from dataclasses import dataclass, replace
 from functools import reduce
 from typing import Any
 
-from helpers import clean, place
+import numpy as np
+import pandas as pd
+from helpers import clean, kept, place
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from tessera_etl.core import judge, pipeline, table_sql
-from tessera_etl.core.filters import drop_duplicate_ids, require_fields, tidy_text
-from tessera_etl.core.rows import Act, Cleaning, Value
+from tessera_etl.core.filters import drop_duplicate_ids, drop_near_duplicates, require_fields, tidy_text
+from tessera_etl.core.rows import Act, Cleaning, Value, values
 from tessera_etl.kernel.pipes import Step
 
 
@@ -73,15 +75,15 @@ def test_a_filter_keeps_or_drops_every_row_it_reads(found: list[str | None]) -> 
     done: Cleaning = clean(require_fields.create(["name"]), rows)
 
     dropped = [line for line in done.log if line.act is Act.DROPPED]
-    assert len(done.rows) + len(dropped) == len(rows)
-    assert all(not judge.is_blank(row.value("name")) for row in done.rows)
+    assert len(kept(done)) + len(dropped) == len(rows)
+    assert not any(judge.is_blank(name) for name in values(done.frame, "name"))
 
 
 @given(st.lists(st.one_of(st.none(), st.integers(0, 5), st.sampled_from(["x", "y", " "])), max_size=30))
 def test_kept_rows_never_share_an_id(ids: list[Value]) -> None:
     rows = [place(number, 113.55, 22.19, id=found) for number, found in enumerate(ids, start=1)]
-    kept = [judge.text(row.value("id")) for row in clean(drop_duplicate_ids.create("id"), rows).rows]
-    present = [found for found in kept if found is not None]
+    left = [judge.text(found) for found in values(clean(drop_duplicate_ids.create("id"), rows).frame, "id")]
+    present = [found for found in left if found is not None]
     assert len(present) == len(set(present))
 
 
@@ -92,11 +94,55 @@ def test_tidy_text_is_settled_after_one_pass(text: str) -> None:
     assert once is None or ("  " not in once and once == once.strip(" "))
 
 
+@given(st.lists(st.text(), max_size=10))
+def test_tidies_a_column_as_it_tidies_each_text(texts: list[str]) -> None:
+    column = judge.tidied(pd.Series(texts, dtype=object))
+    assert [found or None for found in column] == [judge.tidy_text(text) for text in texts]
+
+
 @given(st.dictionaries(st.sampled_from(["a", "b", "c"]), st.one_of(st.none(), st.text(max_size=6), st.integers()), max_size=3))
-def test_tidying_twice_fixes_nothing_more(values: dict[str, Value]) -> None:
-    first = clean(tidy_text.create(), [place(1, 113.55, 22.19, **values)])
-    second = clean(tidy_text.create(), first.rows)
+def test_tidying_twice_fixes_nothing_more(found: dict[str, Value]) -> None:
+    first = clean(tidy_text.create(), [place(1, 113.55, 22.19, **found)])
+    second = tidy_text.create()(Cleaning.start(first.table, first.frame))
     assert second.log == ()
+
+
+def near_duplicates_one_by_one(rows: list[tuple[str | None, float, float]], metres: float) -> list[int]:
+    """The rows dropNearDuplicates fails, found the plain way: each row against every earlier kept row."""
+    seen: dict[str, list[tuple[float, float]]] = {}
+    failed: list[int] = []
+    for number, (name, lon, lat) in enumerate(rows, start=1):
+        key = None if name is None else judge.tidy_text(name)
+        if key is None:
+            continue
+        earlier = seen.setdefault(judge.folded(pd.Series([key])).iloc[0], [])
+        here = np.array([[lon, lat]])
+        if any(judge.metres(here, np.array([other]))[0] <= metres for other in earlier):
+            failed.append(number)
+        else:
+            earlier.append((lon, lat))
+    return failed
+
+
+@settings(max_examples=200)
+@given(
+    st.lists(
+        st.tuples(
+            st.one_of(st.none(), st.sampled_from(["a", "A ", "b", " "])),
+            st.sampled_from([113.55, 113.5501, 113.5503, 179.9999, -179.9999, 0.0]),
+            st.sampled_from([22.19, 22.1901, 89.9999, -89.9999, 0.0]),
+        ),
+        max_size=12,
+    ),
+    st.sampled_from([5.0, 25.0, 100.0]),
+)
+def test_finds_near_duplicates_as_comparing_every_pair_would(rows: list[tuple[str | None, float, float]], metres: float) -> None:
+    # The spatial index only narrows the search; the rows it fails must be those a plain
+    # comparison of each row with every earlier kept row fails, at the poles and the 180th
+    # meridian too.
+    places = [place(number, lon, lat, name=name) for number, (name, lon, lat) in enumerate(rows, start=1)]
+    done = clean(drop_near_duplicates.create("name", metres), places)
+    assert [line.row for line in done.log] == near_duplicates_one_by_one(rows, metres)
 
 
 @given(st.text())

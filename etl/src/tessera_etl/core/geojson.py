@@ -1,20 +1,21 @@
-"""Features, the form every reader hands its places in, and the rows the ***filters*** clean.
+"""Features, the form every reader hands its places in, and the table the ***filters*** clean.
 
-The C# tool had GDAL write each table as ***GeoJSON***, the text form of places, and read that
-text back. The Python build reads the source directly (shell/extract.py), but builds the same
-features GDAL's GeoJSON would have held, so this module turns either into rows the same way.
+***GeoJSON*** is the text form of places that GDAL's ogr2ogr writes. The pipeline reads most
+sources with pyogrio (shell/extract.py), and builds the same features ogr2ogr's GeoJSON would
+hold, so this module turns either into a table the same way.
 """
 
 import json
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, cast
 
+from geopandas import GeoDataFrame
 from shapely.geometry.base import BaseGeometry
 
 from ..kernel.result import Err, Ok, Result
 from . import shapes
-from .rows import Row, Value, frozen_values
+from .rows import Value, table_of
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,50 +40,33 @@ class Feature:
 
 @dataclass(frozen=True, slots=True)
 class Extract:
-    """A table's rows, numbered from 1 in the source's order, and its columns in their order."""
+    """A table read from its source: its rows, numbered from 1 in the source's order, and the
+    rows that lack each column.
 
-    rows: tuple[Row, ...]
-    columns: tuple[str, ...]
+    A GeoJSON feature may leave a property out, where a table of fields holds every column in
+    every row. A column no kept row holds then stays out of the script, as GDAL's PGDump driver
+    leaves it out; `absent` names, for each column some rows lack, the rows that lack it.
+    """
+
+    frame: GeoDataFrame
+    absent: Mapping[str, frozenset[int]]
 
 
-def rows_of(features: Iterable[Feature]) -> Extract:
-    """The rows of a table, and its columns in the order they first appear.
+def rows_of(features: Sequence[Feature]) -> Extract:
+    """The table of the features, with its columns in the order they first appear.
 
     GDAL writes a text field named id as the feature's own id, outside its properties; it
     comes back here as the id column, first, as it stood in the source.
     """
-    rows: list[Row] = []
-    columns: list[str] = []
-    seen: set[str] = set()
-    for number, feature in enumerate(features, start=1):
-        values: dict[str, Value] = {}
-        if feature.id is not None:
-            if "id" not in seen:
-                columns.insert(0, "id")
-                seen.add("id")
-            values["id"] = feature.id.value
-        for name, value in feature.properties:
-            if name not in seen:
-                columns.append(name)
-                seen.add(name)
-            values[name] = value
-        rows.append(Row(number, feature.shape, frozen_values(values)))
-    return Extract(tuple(rows), tuple(columns))
-
-
-def columns(rows: Sequence[Row], source_columns: Sequence[str]) -> tuple[str, ...]:
-    """The columns to write, taken from the kept rows themselves.
-
-    So a filter that adds a column reaches the script, and one that removes a column leaves no
-    empty one behind. The source's columns come first, in their order; new ones follow, by the
-    first row that holds them, and by name within that row, since a row keeps no order of its
-    own among its values. A column no kept row holds is left out; an empty source column stays,
-    since each row still holds its key, with null.
-    """
-    held = {column for row in rows for column in row.values}
-    source = set(source_columns)
-    added = dict.fromkeys(column for row in rows for column in sorted(row.values) if column not in source)
-    return (*(column for column in source_columns if column in held), *added)
+    cells = [{**({"id": feature.id.value} if feature.id is not None else {}), **dict(feature.properties)} for feature in features]
+    order = dict.fromkeys(["id"] if any(feature.id is not None for feature in features) else [])
+    order |= dict.fromkeys(name for feature in features for name, _ in feature.properties)
+    columns = {name: [cell.get(name) for cell in cells] for name in order}
+    lacking = {name: frozenset(number for number, cell in enumerate(cells, start=1) if name not in cell) for name in order}
+    return Extract(
+        table_of([feature.shape for feature in features], columns, range(1, len(features) + 1)),
+        {name: rows for name, rows in lacking.items() if rows},
+    )
 
 
 def read(text: str) -> Result[Extract, str]:

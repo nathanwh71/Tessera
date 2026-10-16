@@ -6,13 +6,15 @@ script must hold the columns the last filter left.
 
 from dataclasses import dataclass, replace
 
-from helpers import MACAU, clean, log_lines, place
+import pandas as pd
+from geopandas import GeoDataFrame
+from helpers import MACAU, clean, kept, log_lines, place
 
-from tessera_etl.core import geojson, table_sql
+from tessera_etl.core import table_sql
 from tessera_etl.core.filters import inside_area, require_fields, swap_coordinates
 from tessera_etl.core.plan import OnFail, TablePlan
-from tessera_etl.core.rows import Cleaning, Fix, Row, frozen_values
-from tessera_etl.core.steps import IDENTITY, chain, each_row, filter_step
+from tessera_etl.core.rows import Cleaning, Judged
+from tessera_etl.core.steps import IDENTITY, chain, filter_step
 from tessera_etl.kernel.pipes import Step
 from tessera_etl.kernel.result import Ok
 
@@ -43,8 +45,9 @@ def test_runs_steps_in_the_order_written_and_hands_back_the_context() -> None:
 def test_joins_a_list_of_steps_into_one_chain() -> None:
     rows = [place(1, 113.55, 22.19, name="A"), place(2, 0.5, 51.5, name="Far"), place(3, 113.55, 22.19)]
     joined = chain([inside_area.create(MACAU), require_fields.create(["name"])])
-    assert clean(joined, rows) == clean(inside_area.create(MACAU) >> require_fields.create(["name"]), rows)
-    assert clean(chain([]), rows) == clean(IDENTITY, rows)
+    by_hand = clean(inside_area.create(MACAU) >> require_fields.create(["name"]), rows)
+    assert (kept(clean(joined, rows)), clean(joined, rows).log) == (kept(by_hand), by_hand.log)
+    assert kept(clean(chain([]), rows)) == kept(clean(IDENTITY, rows)) == [1, 2, 3]
 
 
 def test_runs_no_step_after_a_stop() -> None:
@@ -55,7 +58,7 @@ def test_runs_the_second_filter_on_what_the_first_kept_and_joins_their_logs() ->
     steps = swap_coordinates.create(MACAU) >> inside_area.create(MACAU) >> require_fields.create(["name"])
     outcome = clean(steps, [place(1, 22.19, 113.55, name="Swapped"), place(2, 0.5, 51.5, name="Far"), place(3, 113.55, 22.19)])
 
-    assert [row.number for row in outcome.rows] == [1]
+    assert kept(outcome) == [1]
     assert log_lines(outcome) == [
         "Row 1: fixed by swapCoordinates: swapped longitude and latitude",
         "Row 2: dropped by insideArea: its shape lies outside the area",
@@ -84,26 +87,25 @@ def test_starts_with_a_step_that_changes_nothing() -> None:
         clean(IDENTITY >> inside_area.create(MACAU), rows),
         clean(inside_area.create(MACAU) >> IDENTITY, rows),
     ):
-        assert chained.rows == alone.rows
+        assert kept(chained) == kept(alone)
         assert chained.log == alone.log
 
 
 def test_writes_a_column_a_filter_adds_and_drops_one_a_filter_removes() -> None:
     rows = [place(1, 113.55, 22.19, name="A", owner_phone="123", note=None)]
 
-    def add_area(row: Row) -> Fix:
-        return Fix(replace(row, values=frozen_values({**row.values, "area_m2": 12.5})), "added area_m2")
+    def add_area(frame: GeoDataFrame) -> Judged:
+        return Judged(frame.assign(area_m2=pd.Series(12.5, index=frame.index, dtype=object)), ())
 
-    def drop_phone(row: Row) -> Fix:
-        kept = {column: value for column, value in row.values.items() if column != "owner_phone"}
-        return Fix(replace(row, values=frozen_values(kept)), "removed owner_phone")
+    def drop_phone(frame: GeoDataFrame) -> Judged:
+        return Judged(frame.drop(columns=["owner_phone"]), ())
 
-    steps = filter_step("addArea", OnFail.DROP, each_row(add_area)) >> filter_step("dropPhone", OnFail.DROP, each_row(drop_phone))
-    kept = clean(steps, rows).rows
+    steps = filter_step("addArea", OnFail.DROP, add_area) >> filter_step("dropPhone", OnFail.DROP, drop_phone)
+    done = clean(steps, rows).frame
 
     # The empty source column stays; the removed one goes; the new one follows the source's.
-    assert geojson.columns(kept, ["name", "owner_phone", "note"]) == ("name", "note", "area_m2")
-    sql = table_sql.statements(TablePlan.model_validate({"table": "food.cafes"}), kept, ["name", "owner_phone", "note"])
+    assert table_sql.written(done, {}) == ["name", "note", "area_m2"]
+    sql = table_sql.statements(TablePlan.model_validate({"table": "food.cafes"}), done, {})
     assert isinstance(sql, Ok)
     assert 'ALTER TABLE "food"."cafes" ADD COLUMN "area_m2" FLOAT8;' in sql.value
     assert not any("owner_phone" in statement for statement in sql.value)

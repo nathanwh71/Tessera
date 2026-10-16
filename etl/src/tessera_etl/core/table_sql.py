@@ -17,16 +17,17 @@ leaves out of every tile.
 import math
 import re
 from collections import Counter
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping
 
+from geopandas import GeoDataFrame
 from shapely.geometry import LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon
 from shapely.geometry.base import BaseGeometry
 
 from ..kernel.result import Err, Ok, Result
-from . import geojson
+from . import rows
 from .judge import number_text
 from .plan import TablePlan
-from .rows import Row, Value
+from .rows import Value, columns, numbers, values
 from .seed_script import schema_and_name
 from .shapes import ewkb_hex
 
@@ -34,17 +35,29 @@ from .shapes import ewkb_hex
 _NAME_BYTES = 63
 
 
-def statements(table: TablePlan, rows: Sequence[Row], source_columns: Sequence[str]) -> Result[tuple[str, ...], str]:
+def written(frame: GeoDataFrame, absent: Mapping[str, frozenset[int]]) -> list[str]:
+    """The columns to write: each column of the table that some kept row holds.
+
+    A filter may add a column or remove one, so the columns come from the cleaned table itself.
+    A column every kept row lacks, as a GeoJSON feature may lack a property, is left out; a
+    column of nulls stays, since each row still holds it.
+    """
+    kept = frozenset(numbers(frame))
+    return [column for column in columns(frame) if not kept <= absent.get(column, frozenset())]
+
+
+def statements(table: TablePlan, frame: GeoDataFrame, absent: Mapping[str, frozenset[int]]) -> Result[tuple[str, ...], str]:
     """The table's statements, one after another, ready for the script; or why there are none.
 
     There are none for no rows, or for two columns whose names become one.
     """
     # A table with no rows is refused.
-    if not rows:
+    if frame.empty:
         return Err(f"{table.table}: no rows to write.")
 
     schema, name = schema_and_name(table)
-    columns = geojson.columns(rows, source_columns)
+    columns = written(frame, absent)
+    cells = {column: values(frame, column) for column in columns}
     names = [launder(column) for column in columns]
     # Two columns that become one name, such as 'Name' and 'name', or a column named as the key
     # or the shape, would make a script the database refuses; the run stops here instead.
@@ -53,8 +66,8 @@ def statements(table: TablePlan, rows: Sequence[Row], source_columns: Sequence[s
     if clash is not None:
         return Err(f'{table.table}: two columns become "{clash}"; rename one in the source.')
 
-    types = [type_of(row.value(column) for row in rows) for column in columns]
-    shapes = [_kept_shape(row.shape, table.lines) for row in rows]
+    types = [type_of(cells[column]) for column in columns]
+    shapes = [_kept_shape(shape, table.lines) for shape in rows.shapes(frame)]
     kinds = list(dict.fromkeys(shape.geom_type.upper() for shape in shapes if shape is not None))
     quoted = f"{_quote(schema)}.{_quote(name)}"
 
@@ -71,13 +84,13 @@ def statements(table: TablePlan, rows: Sequence[Row], source_columns: Sequence[s
     out.extend(f"ALTER TABLE {quoted} ADD COLUMN {_quote(column)} {kind};" for column, kind in zip(names, types, strict=True))
 
     listed = ", ".join(_quote(column) for column in names)
-    for row, shape in zip(rows, shapes, strict=True):
-        values = ", ".join(literal(row.value(column), kind) for column, kind in zip(columns, types, strict=True))
+    for position, shape in enumerate(shapes):
+        listing = ", ".join(literal(cells[column][position], kind) for column, kind in zip(columns, types, strict=True))
         # A row with no shape leaves the column out, so it holds NULL, as GDAL wrote it.
         if shape is not None:
-            out.append(f"INSERT INTO {quoted} (\"geom\", {listed}) VALUES ('{_ewkb(shape)}', {values});")
+            out.append(f"INSERT INTO {quoted} (\"geom\", {listed}) VALUES ('{_ewkb(shape)}', {listing});")
         else:
-            out.append(f"INSERT INTO {quoted} ({listed}) VALUES ({values});")
+            out.append(f"INSERT INTO {quoted} ({listed}) VALUES ({listing});")
 
     # The spatial index lets the tile query read only the rows inside one tile.
     out.append(f'CREATE INDEX {_quote(f"{name}_geom_geom_idx")} ON {quoted} USING GIST ("geom");')

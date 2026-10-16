@@ -11,12 +11,15 @@ from dataclasses import replace
 from functools import reduce
 from typing import assert_never
 
+import pandas as pd
+from geopandas import GeoDataFrame
+
 from ..kernel.pipes import Step
 from .plan import OnFail, StopWhen
-from .rows import Act, Cleaning, Fail, Fix, Keep, LogLine, Row, Verdict
+from .rows import Act, Cleaning, Failed, Fixed, Judged, LogLine, Verdict
 
-type Judge = Callable[[tuple[Row, ...]], tuple[Verdict, ...]]
-"""A function that gives one verdict for each row of a table, in order."""
+type Judge = Callable[[GeoDataFrame], Judged]
+"""A function that judges a whole table at once: it mends some rows and fails others."""
 
 IDENTITY: Step[Cleaning] = Step(lambda cleaning: cleaning)
 """The step that changes nothing: the start of a fold, so a list of no filters is a chain too."""
@@ -31,49 +34,58 @@ def chain(steps: Iterable[Step[Cleaning]]) -> Step[Cleaning]:
     return reduce(operator.rshift, steps, IDENTITY)  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
 
 
+def fixes(mask: "pd.Series[bool]", did: "str | pd.Series[str]") -> tuple[Fixed, ...]:
+    """A Fixed verdict for each row the ***mask*** marks, a mask being a column of true and false.
+
+    `did` says what changed: the same words for every row, or a column of words by row.
+    """
+    marked = mask[mask].index
+    words = [did] * len(marked) if isinstance(did, str) else did.loc[marked].tolist()
+    return tuple(Fixed(int(row), word) for row, word in zip(marked, words, strict=True))
+
+
+def failures(mask: "pd.Series[bool]", reason: "str | pd.Series[str]") -> tuple[Failed, ...]:
+    """A Failed verdict for each row the mask marks, with the same reason or a reason by row."""
+    marked = mask[mask].index
+    words = [reason] * len(marked) if isinstance(reason, str) else reason.loc[marked].tolist()
+    return tuple(Failed(int(row), word) for row, word in zip(marked, words, strict=True))
+
+
+def in_row_order(*groups: tuple[Verdict, ...]) -> tuple[Verdict, ...]:
+    """Verdicts of several kinds, merged into the order of the rows, as the log lists them."""
+    return tuple(sorted((verdict for group in groups for verdict in group), key=lambda verdict: verdict.row))
+
+
 def filter_step(name: str, on_fail: OnFail, judge: Judge) -> Step[Cleaning]:
     """Turns a judge into a step.
 
-    Kept and mended rows pass on to the next step; a failed row is dropped and logged. With
-    `OnFail.STOP`, the first failed row ends the run instead: the step returns the context with
-    the reason, so no later step runs.
+    Mended rows pass on as mended; each failed row is dropped and logged. With `OnFail.STOP`,
+    the first failed row ends the run instead: the step returns the context with the reason,
+    so no later step runs.
     """
 
     def step(cleaning: Cleaning) -> Cleaning:
-        kept: list[Row] = []
+        judged = judge(cleaning.frame)
         log: list[LogLine] = []
-        for verdict in judge(cleaning.rows):
-            number = verdict.row.number
+        for verdict in judged.verdicts:
             match verdict:
-                case Fail(_, reason):
-                    if on_fail is OnFail.STOP:
-                        # A stop hands back the rows it was given, unjudged: the run ends
-                        # and writes no script, so nothing uses them as kept rows.
-                        log.append(LogLine(number, name, Act.STOPPED, reason))
-                        return replace(
-                            cleaning,
-                            log=cleaning.log + tuple(log),
-                            stop=f"{name} stopped the run at row {number}: {reason}.",
-                        )
-                    log.append(LogLine(number, name, Act.DROPPED, reason))
-                case Fix(row, did):
-                    log.append(LogLine(number, name, Act.FIXED, did))
-                    kept.append(row)
-                case Keep(row):
-                    kept.append(row)
+                case Fixed(row, did):
+                    log.append(LogLine(row, name, Act.FIXED, did))
+                case Failed(row, reason) if on_fail is OnFail.STOP:
+                    # A stop hands back the rows it was given, unjudged: the run ends and
+                    # writes no script, so nothing uses them as kept rows.
+                    log.append(LogLine(row, name, Act.STOPPED, reason))
+                    return replace(
+                        cleaning, log=cleaning.log + tuple(log), stop=f"{name} stopped the run at row {row}: {reason}."
+                    )
+                case Failed(row, reason):
+                    log.append(LogLine(row, name, Act.DROPPED, reason))
                 case _:
                     assert_never(verdict)
-        return replace(cleaning, rows=tuple(kept), log=cleaning.log + tuple(log))
+        dropped = [verdict.row for verdict in judged.verdicts if isinstance(verdict, Failed)]
+        return replace(cleaning, frame=judged.frame.drop(index=dropped), log=cleaning.log + tuple(log))
 
     return Step(step)
-
-
-def each_row(judge: Callable[[Row], Verdict]) -> Judge:
-    """A judge of one row at a time, for filters that need no other row to decide.
-
-    Only the two duplicate filters must see the rows before each one.
-    """
-    return lambda rows: tuple(judge(row) for row in rows)
 
 
 def stop_when(rules: StopWhen) -> Step[Cleaning]:
@@ -85,10 +97,11 @@ def stop_when(rules: StopWhen) -> Step[Cleaning]:
     """
 
     def step(cleaning: Cleaning) -> Cleaning:
+        kept = len(cleaning.frame)
         percent = 0.0 if cleaning.read == 0 else 100.0 * cleaning.dropped / cleaning.read
         least, most = rules.rows_under, rules.dropped_over_percent
-        if least is not None and len(cleaning.rows) < least:
-            reason = f"only {len(cleaning.rows)} rows remain, fewer than the {least} required"
+        if least is not None and kept < least:
+            reason = f"only {kept} rows remain, fewer than the {least} required"
         elif most is not None and percent > most:
             reason = (
                 f"{cleaning.dropped} of {cleaning.read} rows were dropped "

@@ -32,10 +32,10 @@ def load(plan: CleaningPlan, extract: Result[geojson.Extract, str]) -> Result[Lo
             return Err(Unreadable(plan.table, why))
         case Ok(read):
             pass
-    done = plan.chain(Cleaning.start(plan.table, read.rows))
+    done = plan.chain(Cleaning.start(plan.table, read.frame))
     if done.stop is not None:
         return Err(Stopped(done.outcome, done.stop))
-    match table_sql.statements(plan.table, done.rows, read.columns):
+    match table_sql.statements(plan.table, done.frame, read.absent):
         case Ok(sql):
             return Ok(Loaded(done.outcome, sql))
         case Err(why):

@@ -4,12 +4,15 @@ An id must name one place alone, or two places would claim one key. A row with n
 passes, since requireFields is the ***filter*** that asks for one.
 """
 
+import pandas as pd
+from geopandas import GeoDataFrame
+
 from ...kernel.pipes import Step
 from .. import judge as measure
 from ..filter_kind import FilterKind
 from ..plan import Area, Model, OnFail, OnFailSetting, Text
-from ..rows import Cleaning, Fail, Keep, Row, Verdict
-from ..steps import filter_step
+from ..rows import Cleaning, Judged, values
+from ..steps import failures, filter_step
 
 NAME = "dropDuplicateIds"
 """The name a pipeline file uses; the log and the tests name the filter by it too."""
@@ -25,22 +28,17 @@ class Settings(Model):
 def create(field: str, on_fail: OnFail = OnFail.DROP) -> Step[Cleaning]:
     """Builds the filter from plain values, so a test can make one without a pipeline file.
 
-    Each run starts a fresh table of ids, since one table's ids say nothing about another's.
+    Each run compares a table's ids alone, since one table's ids say nothing about another's.
     """
 
-    def judge(rows: tuple[Row, ...]) -> tuple[Verdict, ...]:
-        first: dict[str, int] = {}
-        verdicts: list[Verdict] = []
-        for row in rows:
-            found = measure.text(row.value(field))
-            if found is None:
-                verdicts.append(Keep(row))
-            elif found in first:
-                verdicts.append(Fail(row, f"it repeats {field} '{found}' of row {first[found]}"))
-            else:
-                first[found] = row.number
-                verdicts.append(Keep(row))
-        return tuple(verdicts)
+    def judge(frame: GeoDataFrame) -> Judged:
+        ids = pd.Series(values(frame, field), index=frame.index, dtype=object).map(measure.text)
+        present = ids.notna()
+        firsts = present & ~ids.duplicated()
+        first_row = dict(zip(ids[firsts], frame.index[firsts], strict=True))
+        repeats = present & ~firsts
+        reason = ids[repeats].map(lambda found: f"it repeats {field} '{found}' of row {first_row[found]}")
+        return Judged(frame, failures(repeats, reason))
 
     return filter_step(NAME, on_fail, judge)
 

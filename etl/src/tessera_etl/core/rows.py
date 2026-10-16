@@ -1,90 +1,104 @@
-"""The values a table's chain passes along: rows, verdicts, log lines and the context.
+"""The values a table's chain passes along: the table, the filters' verdicts, log lines and the context.
 
-Each is a frozen record: a step never changes one, but returns a changed copy, made with
-`dataclasses.replace`. That keeps every step a ***pure function***, one that reads only its
-inputs and changes nothing else, so the tests check each rule with values alone.
+A table is a ***GeoDataFrame***, geopandas' table of rows with a column of shapes. Its index
+numbers each row as the source does, counting from 1, so the log can name it; its shapes are in
+longitude and latitude, or None; and each other column holds plain values of any kind. A step
+never changes a table or a record, but returns a changed copy, so each step stays a ***pure
+function***, one that reads only its inputs and changes nothing else.
 """
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
-from types import MappingProxyType
 
+import numpy as np
+import pandas as pd
+from geopandas import GeoDataFrame, GeoSeries
 from shapely.geometry.base import BaseGeometry
 
 from .plan import TablePlan
 
 type Value = str | int | float | bool | None
-"""A value in a row: text, a whole number, a number with a fraction, true or false, or null.
-
-Rows keep null as a value in its own right, the mark of an empty cell, as GeoJSON does."""
+"""A value in a row: text, a whole number, a number with a fraction, true or false, or null."""
 
 
-def frozen_values(values: Mapping[str, Value]) -> Mapping[str, Value]:
-    """A read-only view of a copy of the values, so no step can change a row in place."""
-    return MappingProxyType(dict(values))
+def table_of(
+    shapes: Sequence[BaseGeometry | None], columns: Mapping[str, Sequence[Value]], numbers: Sequence[int]
+) -> GeoDataFrame:
+    """A table from its shapes, its columns of values, and each row's number in the source.
 
-
-@dataclass(frozen=True, slots=True)
-class Row:
-    """One place read from the source.
-
-    Its number in the source, counting from 1, so the log can name it; its shape, in
-    longitude and latitude, or none; and its other values, by column name.
+    Each column keeps Python's own values, as an 'object' column, so a column may mix text with
+    numbers, and a whole number never turns into a fraction, as pandas would make it beside a
+    null.
     """
+    index = pd.Index(numbers, name="row")
+    frame = {name: pd.Series(list(values), index=index, dtype=object) for name, values in columns.items()}
+    shapes_array = np.empty(len(shapes), dtype=object)
+    shapes_array[:] = list(shapes)
+    return GeoDataFrame(frame, geometry=GeoSeries(shapes_array, index=index, crs="EPSG:4326"), index=index)
 
-    number: int
-    shape: BaseGeometry | None
-    values: Mapping[str, Value]
 
-    def value(self, column: str) -> Value:
-        """The value in `column`, or None when the row has none.
+def columns(frame: GeoDataFrame) -> list[str]:
+    """The table's columns of values, in order: every column but the shapes."""
+    return [str(name) for name in frame.columns if name != frame.geometry.name]
 
-        A missing column and an empty one mean the same to a ***filter***, a step that checks
-        or mends rows.
-        """
-        return self.values.get(column)
+
+def shapes(frame: GeoDataFrame) -> list[BaseGeometry | None]:
+    """The table's shapes, in row order."""
+    return list(frame.geometry.to_numpy())
+
+
+def values(frame: GeoDataFrame, column: str) -> list[Value]:
+    """A column's values, in row order; None in each row for a column the table lacks."""
+    return list(frame[column].to_numpy()) if column in frame.columns else [None] * len(frame)
+
+
+def numbers(frame: GeoDataFrame) -> list[int]:
+    """Each row's number in the source, in row order."""
+    return [int(number) for number in frame.index]
 
 
 class Act(Enum):
-    """What a filter did to one row. Kept rows leave no line in the log; the rest do."""
+    """What a filter did to one row it touched. Kept rows leave no line in the log."""
 
-    KEPT = "kept"
     FIXED = "fixed"
     DROPPED = "dropped"
     STOPPED = "stopped"
 
 
 @dataclass(frozen=True, slots=True)
-class Keep:
-    """The row passes as it is."""
+class Fixed:
+    """The filter mended the row, and the log says what changed."""
 
-    row: Row
-
-
-@dataclass(frozen=True, slots=True)
-class Fix:
-    """The row passes as the mended `row`, and the log says what changed."""
-
-    row: Row
+    row: int
     did: str
 
 
 @dataclass(frozen=True, slots=True)
-class Fail:
+class Failed:
     """The row cannot pass, for the reason given: it is dropped, or the run stops."""
 
-    row: Row
+    row: int
     reason: str
 
 
-type Verdict = Keep | Fix | Fail
-"""A filter's word on one row: keep it, keep a mended copy, or fail it.
+type Verdict = Fixed | Failed
+"""A filter's word on one row it does not pass as it is: mended, or failed.
 
-The three cases form a ***union***, as F#'s `Keep of Row | Fix of Row * string | Fail of Row *
-string` would: a verdict is always exactly one of them, and each carries only what it needs, so
-a kept row has no detail to leave empty. A `match` over a verdict ends with `assert_never`, so
-the type checker refuses one that misses a case."""
+The two cases form a ***union***, as F#'s `Fixed of int * string | Failed of int * string`
+would: a verdict is always exactly one of them. A row with no verdict passes as it is. A `match`
+over a verdict ends with `assert_never`, so the type checker refuses one that misses a case."""
+
+
+@dataclass(frozen=True, slots=True)
+class Judged:
+    """What a filter made of a table: the table with each mended row mended, and its verdicts.
+
+    The table still holds every row, failed ones too; the verdicts come in row order.
+    """
+
+    frame: GeoDataFrame
+    verdicts: tuple[Verdict, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -124,28 +138,28 @@ class Outcome:
 class Cleaning:
     """The ***context*** every step of a table's chain reads and hands on.
 
-    The table; the rows read from the source; the rows still kept; a log line for each row a
-    filter fixed, dropped or stopped at; and, once a step stops the run, the reason. `read`
-    stays fixed, so the stop rules can count what the filters dropped.
+    The table's plan; the number of rows read from the source; the rows still kept; a log line
+    for each row a filter fixed, dropped or stopped at; and, once a step stops the run, the
+    reason. `read` stays fixed, so the stop rules can count what the filters dropped.
     """
 
     table: TablePlan
     read: int
-    rows: tuple[Row, ...]
+    frame: GeoDataFrame
     log: tuple[LogLine, ...]
     stop: str | None
 
     @staticmethod
-    def start(table: TablePlan, rows: tuple[Row, ...]) -> "Cleaning":
+    def start(table: TablePlan, frame: GeoDataFrame) -> "Cleaning":
         """A table's rows as they were read, before any step has run."""
-        return Cleaning(table, len(rows), rows, (), None)
+        return Cleaning(table, len(frame), frame, (), None)
 
     @property
     def dropped(self) -> int:
         """The rows lost, counted from the rows read, whichever filter dropped them."""
-        return self.read - len(self.rows)
+        return self.read - len(self.frame)
 
     @property
     def outcome(self) -> Outcome:
         """What the log needs of a cleaned table, without its rows."""
-        return Outcome(self.table, self.read, len(self.rows), self.log)
+        return Outcome(self.table, self.read, len(self.frame), self.log)

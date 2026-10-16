@@ -1,22 +1,22 @@
 """The SQL that makes and fills one table, core/table_sql.py.
 
 It is checked against the text GDAL's PGDump driver wrote for the same rows, so a new script
-loads as the old ones did. (C#: TableSqlTests.cs)
+loads as the old ones did.
 """
 
 import pytest
-from helpers import shaped, table
+from helpers import Place, frame_of, shaped, table
 from shapely.geometry import LineString, MultiLineString, Point
 
 from tessera_etl.core import table_sql
-from tessera_etl.core.rows import Row, Value
+from tessera_etl.core.rows import Value
 from tessera_etl.kernel.result import Err, Ok
 
 CAFES = table("food.cafes")
 
 
-def statements(rows: list[Row], columns: list[str], lines: bool = False) -> tuple[str, ...]:
-    found = table_sql.statements(table("food.cafes", lines=lines), rows, columns)
+def statements(rows: list[Place], lines: bool = False) -> tuple[str, ...]:
+    found = table_sql.statements(table("food.cafes", lines=lines), frame_of(rows), {})
     assert isinstance(found, Ok), found
     return found.value
 
@@ -26,7 +26,7 @@ def test_writes_a_table_as_GDAL_wrote_it() -> None:
     # the statistics the script adds. The shape's hex is GDAL's own, for the point 113.55, 22.19.
     rows = [shaped(1, Point(113.55, 22.19), id="cafes-001", name="O'Neil's", open=True)]
 
-    assert statements(rows, ["id", "name", "open"]) == (
+    assert statements(rows) == (
         "SET standard_conforming_strings = ON;",
         'DROP TABLE IF EXISTS "food"."cafes" CASCADE;',
         'CREATE TABLE "food"."cafes"();',
@@ -45,18 +45,18 @@ def test_writes_a_table_as_GDAL_wrote_it() -> None:
 def test_leaves_out_a_shape_a_row_lacks() -> None:
     # A row with no shape leaves the column out of its INSERT, so it holds NULL; a value it
     # lacks is NULL too.
-    assert 'INSERT INTO "food"."cafes" ("name") VALUES (NULL);' in statements([shaped(1, None, name=None)], ["name"])
+    assert 'INSERT INTO "food"."cafes" ("name") VALUES (NULL);' in statements([shaped(1, None, name=None)])
 
 
 def test_gives_the_column_the_one_type_its_shapes_share() -> None:
     # A table of lines or areas stores one part as a set of one, so the column keeps one type,
     # as GDAL's PROMOTE_TO_MULTI did; shapes of two kinds take the column type that holds any.
     line = LineString([(113.55, 22.19), (113.56, 22.2)])
-    promoted = statements([shaped(1, line), shaped(2, MultiLineString([line]))], [], lines=True)
+    promoted = statements([shaped(1, line), shaped(2, MultiLineString([line]))], lines=True)
 
     assert "SELECT AddGeometryColumn('food','cafes','geom',4326,'MULTILINESTRING',2);" in promoted
     assert all("'0105000020E6100000" in insert for insert in promoted if insert.startswith("INSERT"))
-    mixed = statements([shaped(1, Point(113.55, 22.19)), shaped(2, line)], [])
+    mixed = statements([shaped(1, Point(113.55, 22.19)), shaped(2, line)])
     assert "SELECT AddGeometryColumn('food','cafes','geom',4326,'GEOMETRY',2);" in mixed
 
 
@@ -142,10 +142,18 @@ def test_refuses_two_columns_that_become_one_name() -> None:
     # Two columns that become one name would make a script the database refuses, so the run stops.
     rows = [shaped(1, Point(113.55, 22.19), Name="A", name="B")]
 
-    assert table_sql.statements(CAFES, rows, ["Name", "name"]) == Err(
+    assert table_sql.statements(CAFES, frame_of(rows), {}) == Err(
         'food.cafes: two columns become "name"; rename one in the source.'
     )
 
 
 def test_refuses_a_table_with_no_rows() -> None:
-    assert table_sql.statements(CAFES, [], []) == Err("food.cafes: no rows to write.")
+    assert table_sql.statements(CAFES, frame_of([]), {}) == Err("food.cafes: no rows to write.")
+
+
+def test_leaves_out_a_column_no_kept_row_holds() -> None:
+    # A GeoJSON feature may lack a property; when every kept row lacks it, the column stays out.
+    rows = [shaped(1, Point(113.55, 22.19), name="A", late=None), shaped(2, Point(113.55, 22.19), name="B", late=None)]
+
+    assert table_sql.written(frame_of(rows), {"late": frozenset({1, 2})}) == ["name"]
+    assert table_sql.written(frame_of(rows), {"late": frozenset({1})}) == ["name", "late"]

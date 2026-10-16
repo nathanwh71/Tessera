@@ -6,14 +6,16 @@ shape that comes out empty fails, since nothing is left to draw.
 """
 
 import re
-from dataclasses import replace
+
+import pandas as pd
+import shapely
+from geopandas import GeoDataFrame, GeoSeries
 
 from ...kernel.pipes import Step
 from ..filter_kind import FilterKind
 from ..plan import Area, Model, OnFail, OnFailSetting
-from ..rows import Cleaning, Fail, Fix, Keep, Row, Verdict
-from ..shapes import invalid_reason, make_valid_ring
-from ..steps import each_row, filter_step
+from ..rows import Cleaning, Judged
+from ..steps import failures, filter_step, fixes, in_row_order
 
 NAME = "repairShapes"
 """The name a pipeline file uses; the log and the tests name the filter by it too."""
@@ -38,18 +40,26 @@ def create(on_fail: OnFail = OnFail.DROP) -> Step[Cleaning]:
     collapse to lines or points.
     """
 
-    def judge(row: Row) -> Verdict:
-        shape = row.shape
-        if shape is None or shape.is_empty or shape.is_valid:
-            return Keep(row)
-        why = _PLACE.sub("", invalid_reason(shape)) or "invalid"
-        mended = make_valid_ring(shape)
-        # A repair is a fix; a shape that comes out empty fails, so it obeys onFail.
-        if mended.is_empty:
-            return Fail(row, "its shape is invalid and cannot be repaired")
-        return Fix(replace(row, shape=mended), f"repaired a shape that was invalid ({why})")
+    def judge(frame: GeoDataFrame) -> Judged:
+        shapes = frame.geometry.to_numpy()
+        broken = ~shapely.is_missing(shapes) & ~shapely.is_empty(shapes) & ~shapely.is_valid(shapes)
+        mended = shapes.copy()
+        mended[broken] = shapely.make_valid(shapes[broken], method="structure", keep_collapsed=False)
+        why = pd.Series(shapely.is_valid_reason(shapes), index=frame.index).str.replace(_PLACE, "", regex=True)
+        lost = pd.Series(broken & shapely.is_empty(mended), index=frame.index)
+        repaired = pd.Series(broken, index=frame.index) & ~lost
+        # A shape that comes out empty fails, so it obeys onFail; the row keeps its shape.
+        mended[lost.to_numpy()] = shapes[lost.to_numpy()]
+        return Judged(
+            frame.set_geometry(GeoSeries(mended, index=frame.index, crs=frame.crs)),
+            in_row_order(
+                # Series.replace swaps whole values, so a reason left empty reads 'invalid'.
+                fixes(repaired, "repaired a shape that was invalid (" + why.replace("", "invalid") + ")"),
+                failures(lost, "its shape is invalid and cannot be repaired"),
+            ),
+        )
 
-    return filter_step(NAME, on_fail, each_row(judge))
+    return filter_step(NAME, on_fail, judge)
 
 
 def _create(settings: Settings, area: Area | None) -> Step[Cleaning]:

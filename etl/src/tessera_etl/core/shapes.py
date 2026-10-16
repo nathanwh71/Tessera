@@ -20,6 +20,21 @@ type Points = NDArray[np.float64]
 _shapely: Any = shapely
 
 
+def bounds(shapes: NDArray[np.object_]) -> NDArray[np.float64]:
+    """Each shape's box as west, south, east, north; not a number for no shape or an empty one."""
+    return cast(NDArray[np.float64], _shapely.bounds(shapes))
+
+
+def type_ids(shapes: NDArray[np.object_]) -> NDArray[np.int32]:
+    """GEOS's number for each shape's type: 0 for a point, -1 for no shape."""
+    return cast(NDArray[np.int32], _shapely.get_type_id(shapes))
+
+
+def points(coordinates: NDArray[np.float64]) -> NDArray[np.object_]:
+    """A point for each row of x and y."""
+    return cast(NDArray[np.object_], _shapely.points(coordinates))
+
+
 def is_many(shape: BaseGeometry) -> bool:
     """True for a many-part shape or a collection, whose parts `parts` lists."""
     return isinstance(shape, BaseMultipartGeometry)

@@ -4,18 +4,17 @@ A shape outside the area whose swapped copy falls inside it is swapped back; any
 left alone.
 """
 
-from dataclasses import replace
-
 import numpy as np
-from numpy.typing import NDArray
+import pandas as pd
+import shapely
+from geopandas import GeoDataFrame, GeoSeries
 
 from ...kernel.pipes import Step
 from .. import judge as measure
 from ..filter_kind import FilterKind, needs_area
 from ..plan import Area, Model, OnFail
-from ..rows import Cleaning, Fix, Keep, Row, Verdict
-from ..shapes import transform
-from ..steps import each_row, filter_step
+from ..rows import Cleaning, Judged
+from ..steps import filter_step, fixes
 
 NAME = "swapCoordinates"
 """The name a pipeline file uses; the log and the tests name the filter by it too."""
@@ -28,27 +27,28 @@ class Settings(Model):
     """
 
 
-def _swap(points: NDArray[np.float64]) -> NDArray[np.float64]:
-    """Each point's two numbers swapped, so (latitude, longitude) becomes (longitude, latitude)."""
-    return points[:, ::-1].copy()
-
-
 def create(area: Area) -> Step[Cleaning]:
     """Builds the filter from plain values, so a test can make one without a pipeline file."""
     area_box = measure.box(area)
 
-    def judge(row: Row) -> Verdict:
-        shape = row.shape
-        if shape is None or shape.is_empty or measure.inside(shape, area_box):
-            return Keep(row)
-        # shapely makes a new shape, so the row read stays as it was.
-        turned = transform(shape, _swap)
-        return (
-            Fix(replace(row, shape=turned), "swapped longitude and latitude") if measure.inside(turned, area_box) else Keep(row)
+    def judge(frame: GeoDataFrame) -> Judged:
+        shapes = frame.geometry.to_numpy()
+        outside = ~shapely.is_missing(shapes) & ~shapely.is_empty(shapes) & ~measure.inside(shapes, area_box)
+        # shapely hands the points of every shape as one table, x then y; reversing its two
+        # columns swaps each point's numbers. shapely makes new shapes, so the table read stays.
+        turned = shapely.transform(shapes[outside], lambda points: points[:, ::-1].copy())
+        lands = measure.inside(turned, area_box)
+        swapped = np.zeros(len(shapes), dtype=bool)
+        swapped[np.flatnonzero(outside)[lands]] = True
+        mended = shapes.copy()
+        mended[swapped] = turned[lands]
+        return Judged(
+            frame.set_geometry(GeoSeries(mended, index=frame.index, crs=frame.crs)),
+            fixes(pd.Series(swapped, index=frame.index).astype(bool), "swapped longitude and latitude"),
         )
 
     # It never fails a row, so OnFail.DROP never comes into play.
-    return filter_step(NAME, OnFail.DROP, each_row(judge))
+    return filter_step(NAME, OnFail.DROP, judge)
 
 
 def _create(settings: Settings, area: Area | None) -> Step[Cleaning]:

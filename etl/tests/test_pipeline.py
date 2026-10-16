@@ -1,18 +1,18 @@
 """The ***pipeline file***, the ***stop rules***, the log, and GDAL's arguments.
 
-Each is checked without running GDAL, so they run fast and on any machine. (C#: PipelineTests.cs)
+Each is checked without running GDAL, so they run fast and on any machine.
 """
 
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from helpers import MACAU, clean, place, table
+from helpers import MACAU, Place, clean, frame_of, place, table
 
 from tessera_etl.core import geojson, pipeline, report, seed_script
 from tessera_etl.core.filters import require_fields, tidy_text
 from tessera_etl.core.pipeline import DEFAULTS, CleaningPlan, Plan
 from tessera_etl.core.plan import OnFail, StopWhen, TablePlan
-from tessera_etl.core.rows import Cleaning, Row
+from tessera_etl.core.rows import Cleaning
 from tessera_etl.core.steps import chain, stop_when
 from tessera_etl.kernel.pipes import Step
 from tessera_etl.kernel.result import Err, Ok, Result
@@ -107,9 +107,9 @@ def plan_of(rules: StopWhen | None, *steps: tuple[str, Step[Cleaning]]) -> Clean
     return CleaningPlan(cafes(rules), tuple(name for name, _ in steps), joined)
 
 
-def clean_plan(plan: CleaningPlan, rows: list[Row]) -> Cleaning:
+def clean_plan(plan: CleaningPlan, rows: list[Place]) -> Cleaning:
     """Runs a plan's chain on the rows, as the program does for each table."""
-    return plan.chain(Cleaning.start(plan.table, tuple(rows)))
+    return plan.chain(Cleaning.start(plan.table, frame_of(rows)))
 
 
 def require_name() -> tuple[str, Step[Cleaning]]:
@@ -117,7 +117,7 @@ def require_name() -> tuple[str, Step[Cleaning]]:
     return (require_fields.NAME, require_fields.create(["name"]))
 
 
-def ten(named: int) -> list[Row]:
+def ten(named: int) -> list[Place]:
     """Ten places, the first `named` of them with a name.
 
     With ten rows, each unnamed row is ten per cent of the table: one row meets the default
@@ -236,8 +236,8 @@ def test_reads_a_features_own_id_as_the_id_column() -> None:
     found = geojson.read(text)
 
     assert isinstance(found, Ok)
-    assert found.value.columns == ("id", "name")
-    assert found.value.rows[0].value("id") == "cafes-001"
+    assert list(found.value.frame.columns) == ["id", "name", "geometry"]
+    assert found.value.frame.at[1, "id"] == "cafes-001"
 
 
 @pytest.mark.parametrize(
