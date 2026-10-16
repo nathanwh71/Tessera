@@ -50,7 +50,7 @@ public sealed record Cleaning(TablePlan Table, int Read, ImmutableArray<Row> Row
                               ImmutableArray<LogLine> Log, Maybe<string> Stop);
 ```
 
-A verdict is a _union_: _always_ _exactly_ _one_ of its _three_ _cases_, _each_ _carrying_ _only_ what it _needs_. C# 14 has no _unions_, so `[Closed]` _names_ the _cases_, and the ExhaustiveMatching analyser _stops_ the _build_ when a _switch_ over a verdict misses _one_. The analyser does not _notice_ a _record_ that derives from `Verdict` _without_ being _named_, so `VerdictTests` _checks_ that the _names_ and the _records_ agree. C# 15's `union` and `closed` will do both _jobs_, and the _package_ can then _go_.
+A verdict is a _union_: _always_ _exactly_ _one_ of its _three_ _cases_, _each_ _carrying_ _only_ what it _needs_. C# 14 has no _unions_, so `[Closed]` _names_ the _cases_, and the ExhaustiveMatching analyser _stops_ the _build_ when a _switch_ over a verdict misses _one_. The analyser does not _notice_ a _record_ that derives from `Verdict` _without_ being _named_, so `ClosedTypeTests` _checks_ that the _names_ and the _records_ agree. C# 15's `union` and `closed` will do both _jobs_, and the _package_ can then _go_.
 
 `Read` _keeps_ the _number_ of _rows_ extracted, which the _stop_ _rules_ _need_ _after_ the filters have _dropped_ _some_. _Each_ _value_ is a read-only _record_, and _each_ _step_ _returns_ a _changed_ _copy_ with `with`.
 

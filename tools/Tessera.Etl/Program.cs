@@ -96,26 +96,22 @@ try
             await script.WriteAsync(line + "\n");
         for (var i = 0; i < tables.Length; i++)
         {
-            var (plan, table) = (tables[i], tables[i].Table);
-            var extract = await extracts[i];
-            if (extract.IsFailure)
-                return Finish(1, $"{table.Table}: extraction failed. {extract.Error}");
+            var plan = tables[i];
+            var loaded = (await extracts[i])
+                .MapError(why => (Failure)new Failure.NotExtracted(plan.Table, why))
+                .Bind(_ => Load(plan, File.ReadAllText(Extracted(plan.Table))));
+            if (loaded.IsFailure)
+            {
+                // A stop or a refusal comes after the cleaning, so its counts still reach the log.
+                if (loaded.Error.Cleaned.TryGetValue(out var counted))
+                    cleaned.Add((plan, counted));
+                return Finish(1, loaded.Error.Message);
+            }
 
-            var geoJson = GeoJson.Read(File.ReadAllText(Extracted(table)));
-            if (geoJson.IsFailure)
-                return Finish(1, $"{table.Table}: GDAL's GeoJSON could not be read. {geoJson.Error}");
-            var (rows, columns) = geoJson.Value;
-            // The whole transform step: the table's chain of filters and stop rules, run on its rows.
-            var done = plan.Chain.Run(Cleaning.Start(table, rows));
-            cleaned.Add((plan, done.Outcome));
-            if (done.Stop.TryGetValue(out var stop))
-                return Finish(1, $"stopped. {stop} No script written.");
-
-            Console.WriteLine($"{table.Table}: read {done.Read}, kept {done.Rows.Length}, dropped {done.Dropped}.");
-            var sql = TableSql.Statements(table, done.Rows, columns);
-            if (sql.IsFailure)
-                return Finish(1, sql.Error);
-            foreach (var statement in sql.Value)
+            var (outcome, sql) = loaded.Value;
+            cleaned.Add((plan, outcome));
+            Console.WriteLine($"{plan.Table.Table}: read {outcome.Read}, kept {outcome.Kept}, dropped {outcome.Dropped}.");
+            foreach (var statement in sql)
                 await script.WriteAsync(statement + "\n");
         }
     }
@@ -129,6 +125,23 @@ finally
     // A run that stops early may leave extracts still running; they finish before their folder goes.
     await Task.WhenAll(extracts);
     Directory.Delete(work, recursive: true);
+}
+
+// One table, from GDAL's GeoJSON to its SQL: read the rows, run the table's chain of filters and
+// stop rules on them (the whole transform step), and write them as SQL.
+static Result<(Outcome Outcome, ImmutableArray<string> Sql), Failure> Load(CleaningPlan plan, string geoJson)
+{
+    var read = GeoJson.Read(geoJson);
+    if (read.IsFailure)
+        return new Failure.Unreadable(plan.Table, read.Error);
+    var (rows, columns) = read.Value;
+    var done = plan.Chain.Run(Cleaning.Start(plan.Table, rows));
+    if (done.Stop.TryGetValue(out var stop))
+        return new Failure.Stopped(done.Outcome, stop);
+    var sql = TableSql.Statements(plan.Table, done.Rows, columns);
+    if (sql.IsFailure)
+        return new Failure.Refused(done.Outcome, sql.Error);
+    return (done.Outcome, sql.Value);
 }
 
 // Where a table's extract is written in the work folder.
