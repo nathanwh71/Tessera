@@ -28,7 +28,7 @@ DECLARED = declared()
 
 
 def test_lists_every_filter_declared_in_the_filters_folder() -> None:
-    # The eight filters of the user story. A fixed count also fails when a filter's module and
+    # The eight filters of US-36 c1. A fixed count also fails when a filter's module and
     # its line in the list vanish together, which the two checks below would let pass.
     assert len(DECLARED) == 8
     assert all(kind in filters.KINDS for kind in DECLARED)

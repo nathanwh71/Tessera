@@ -38,8 +38,8 @@ KINDS: tuple[AnyKind, ...] = (
     drop_duplicate_ids.KIND,
     drop_near_duplicates.KIND,
 )
-"""The filters in the order the user story lists them, which is also the order an error
-message lists them in when a pipeline file names one that does not exist."""
+"""The filters in the order US-36 c1 lists them, which is also the order an error message lists
+them in when a pipeline file names one that does not exist."""
 
 
 def find(name: str) -> AnyKind | None:

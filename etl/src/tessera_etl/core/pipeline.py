@@ -48,9 +48,9 @@ class Plan:
 
 
 DEFAULTS = StopWhen.model_validate({"droppedOverPercent": 10.0, "rowsUnder": 1})
-"""The ***stop rules*** when the file sets none: stop when more than 10 % of a table's rows are
-dropped, or when none remain. Stopping is the default, so a publisher who accepts more loss
-must say so in the file."""
+"""The ***stop rules*** when the file sets none (US-36 c3): stop when more than 10 % of a table's
+rows are dropped, or when none remain. Stopping is the default, so a publisher who accepts more
+loss must say so in the file."""
 
 # A plain lower-case name needs no quotes in SQL and reads the same in a tile's address.
 _PLAIN_NAME = re.compile(r"^[a-z_][a-z0-9_]*$")
