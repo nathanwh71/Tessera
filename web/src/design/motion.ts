@@ -1,7 +1,7 @@
 // design/motion.ts: how long things move, for code that animates outside CSS, the page's styles
-// (UI-15, criteria 7 and 8). Pure functions, which read only their inputs, and numbers of the design
-// module; the map's handle and its landing use them, and styles.css holds the same times for what
-// CSS animates.
+// (UI-15, criteria 7 and 8). It holds numbers of the design module and pure functions, which read
+// only their inputs; `prefersReducedMotion` alone is not pure, since it asks the browser. The map's
+// handle and its landing use them, and styles.css holds the same times for what CSS animates.
 
 /**
  * The durations of Material, Google's design system, in milliseconds, as the design sets them:
