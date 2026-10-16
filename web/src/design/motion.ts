@@ -30,8 +30,11 @@ export function movementMs(reduced: boolean): number {
  * Material's emphasised easing, the curve `cubic-bezier(0.2, 0, 0, 1)` that starts fast and settles
  * slowly, as a function of time from 0 to 1. MapLibre, the library that draws the map, takes a
  * function for its camera rather than a CSS curve. The curve gives x and y from a parameter u, so
- * this finds the u whose x is t by Newton's method, a guess improved by the slope a few times, then
- * returns that u's y.
+ * this finds the u whose x is t by Newton's method, then returns that u's y. Newton's method starts
+ * from a guess, here u = t, and moves it by the miss divided by the curve's slope there; each step
+ * roughly doubles the correct digits. It stops when x misses t by under a millionth (1e-6), far finer
+ * than any frame or pixel shows; after 8 steps, a cap that ends the work should a guess fail to
+ * settle; or where the slope is 0, which a step would divide by.
  */
 export function emphasised(t: number): number {
 	const [x1, y1, x2, y2] = [0.2, 0, 0, 1];
