@@ -1,6 +1,4 @@
-using Microsoft.AspNetCore.Http;
-
-namespace Tessera;
+namespace Common.Api;
 
 /// <summary>
 /// Every error the service answers is a <b><i>problem document</i></b>, a short report in JSON in the

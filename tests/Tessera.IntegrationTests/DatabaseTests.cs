@@ -1,8 +1,8 @@
 using System.Security.Cryptography;
 using DotNet.Testcontainers.Builders;
-using Tessera.Catalogue;
-using Tessera.Seeding;
-using Tessera.Sql;
+using Modules.Tessera.Infrastructure;
+using Modules.Tessera.Infrastructure.Seeding;
+using Modules.Tessera.Infrastructure.Sql;
 
 namespace Tessera.IntegrationTests;
 
@@ -14,7 +14,7 @@ public sealed class DatabaseTests(DatabaseFixture database) : IClassFixture<Data
     public async Task Signs_in_as_the_shipped_reader_role()
     {
         await using var reader = Database.Open(database.Reader);
-        var catalogue = await LayerCatalogue.Load(reader, TestContext.Current.CancellationToken);
+        var catalogue = await CatalogueReader.Load(reader, TestContext.Current.CancellationToken);
 
         // A load that succeeds proves the sign-in worked; an empty list proves the role starts with
         // no grant, since this fresh database has had none (US-03).

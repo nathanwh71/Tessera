@@ -1,7 +1,7 @@
-using Tessera.Catalogue;
-using Tessera.Settings;
-using Tessera.Sql;
-using Tessera.Tiles;
+using Modules.Tessera.Domain;
+using Modules.Tessera.Features;
+using Modules.Tessera.Infrastructure;
+using Modules.Tessera.Infrastructure.Sql;
 
 namespace Tessera.IntegrationTests;
 
@@ -55,7 +55,7 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
     /// own message rather than failing later on an empty list.
     /// </summary>
     private async Task<LayerCatalogue> Load(Database reader) =>
-        (await LayerCatalogue.Load(reader, TestContext.Current.CancellationToken))
+        (await CatalogueReader.Load(reader, TestContext.Current.CancellationToken))
             .Match(found => found, error => throw new Xunit.Sdk.XunitException(error.Message));
 
     [Fact]
@@ -159,7 +159,7 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
         await using var reader = Database.Open(database.Reader);
         // A refresh every 200 ms and a retry every 100 ms, in place of the service's 30 and 5
         // seconds, so each change shows within the test's five-second wait.
-        var live = new LiveCatalogue(cancel => LayerCatalogue.Load(reader, cancel), TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(100), Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance);
+        var live = new LiveCatalogue(cancel => CatalogueReader.Load(reader, cancel), TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(100), Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance);
         await live.StartAsync(TestContext.Current.CancellationToken);
 
         await Until(() => live.Current?.Layers.ContainsKey("stage.granted") == true);

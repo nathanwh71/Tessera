@@ -1,6 +1,6 @@
 using FsCheck;
 using FsCheck.Xunit;
-using Tessera.Sql;
+using Modules.Tessera.Infrastructure.Sql;
 
 namespace Tessera.UnitTests;
 

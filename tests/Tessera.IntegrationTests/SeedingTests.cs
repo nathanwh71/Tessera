@@ -1,6 +1,6 @@
-using Tessera.Catalogue;
-using Tessera.Seeding;
-using Tessera.Sql;
+using Modules.Tessera.Infrastructure;
+using Modules.Tessera.Infrastructure.Seeding;
+using Modules.Tessera.Infrastructure.Sql;
 
 namespace Tessera.IntegrationTests;
 
@@ -34,7 +34,7 @@ public sealed class SeedingTests(DatabaseFixture database) : IClassFixture<Datab
     private async Task<string[]> Published()
     {
         await using var reader = Database.Open(database.Reader);
-        return (await LayerCatalogue.Load(reader, TestContext.Current.CancellationToken))
+        return (await CatalogueReader.Load(reader, TestContext.Current.CancellationToken))
             .Match(found => found.Layers.Keys.Order(StringComparer.Ordinal).ToArray(), error => throw new Xunit.Sdk.XunitException(error.Message));
     }
 
@@ -70,7 +70,7 @@ public sealed class SeedingTests(DatabaseFixture database) : IClassFixture<Datab
 
         await database.GrantPlaces();
         await using var reader = Database.Open(database.Reader);
-        var catalogue = (await LayerCatalogue.Load(reader, TestContext.Current.CancellationToken)).Value;
+        var catalogue = (await CatalogueReader.Load(reader, TestContext.Current.CancellationToken)).Value;
         Assert.Equal((4326, "Point"), (catalogue.Find("transport.buses")?.Srid, catalogue.Find("transport.buses")?.GeometryType));
         Assert.Equal(["\"fid\""], catalogue.Find("food.cafes")?.Order);
     }

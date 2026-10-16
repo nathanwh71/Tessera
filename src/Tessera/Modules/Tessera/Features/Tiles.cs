@@ -1,11 +1,9 @@
 using System.Security.Cryptography;
+using Common.Api;
 using CSharpFunctionalExtensions;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
-using Tessera.Catalogue;
-using Tessera.Settings;
-using Tessera.Sql;
+using Modules.Tessera.Domain;
+using Modules.Tessera.Infrastructure;
+using Modules.Tessera.Infrastructure.Sql;
 using IResult = Microsoft.AspNetCore.Http.IResult;
 
 // The request at the heart of Tessera: 'send me this tile of this layer' (US-07). A vector tile is
@@ -13,21 +11,7 @@ using IResult = Microsoft.AspNetCore.Http.IResult;
 // Nginx, in front, keeps tiles, packs them and answers 304 (ADR 0008), so this file builds each tile
 // it is asked for.
 
-namespace Tessera.Tiles;
-
-/// <summary>
-/// One <b><i>tile</i></b>'s address: zoom level z, column x and row y. Level 0 is one square of the
-/// world; each level splits every square into four, so level z has 2^z columns and 2^z rows.
-/// </summary>
-public sealed record TileAddress(int Z, int X, int Y)
-{
-    /// <summary>
-    /// The address, or null when no such tile exists: z outside the levels served, or x and y outside
-    /// that level's grid. <c>z &gt; 30</c> keeps <c>1 &lt;&lt; z</c> inside a 32-bit number.
-    /// </summary>
-    public static TileAddress? Of(int z, int x, int y, int minZoom = 0, int maxZoom = 22) =>
-        z < minZoom || z > maxZoom || z > 30 || x < 0 || y < 0 || x >= 1 << z || y >= 1 << z ? null : new(z, x, y);
-}
+namespace Modules.Tessera.Features;
 
 /// <summary>
 /// Runs the tile query and gives the tile's bytes, or null for an empty tile. A test passes a stand-in.
@@ -79,7 +63,7 @@ public sealed class TileServer(
         if (TileAddress.Of(z, x, y, settings.MinZoom, settings.MaxZoom) is not { } tile)
             return Problems.NotFound("No tile has those coordinates.");
 
-        var built = await read(Queries.Tile(found.Source, tile.Z, tile.X, tile.Y, settings), cancel).ConfigureAwait(false);
+        var built = await read(Queries.Tile(found, tile, settings), cancel).ConfigureAwait(false);
         // An empty tile is still a tile: 200 with no bytes, so the map draws nothing there, and the
         // browser and Nginx keep the empty answer like any other.
         return built.Match(
@@ -112,8 +96,8 @@ public sealed class TileServer(
 }
 
 /// <summary>
-/// Adds the tile routes to the web service; Service.cs calls it, so the program needs to know nothing
-/// of how a tile is built.
+/// Adds the tile routes to the web service; TesseraModule.cs calls it, so the program needs to know
+/// nothing of how a tile is built.
 /// </summary>
 public static class TileRoutes
 {

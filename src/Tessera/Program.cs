@@ -1,12 +1,10 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+using Common.Infrastructure;
 using Microsoft.Extensions.Options;
-using Tessera;
-using Tessera.Seeding;
-using Tessera.Settings;
-using Tessera.Sql;
+using Modules.Tessera;
+using Modules.Tessera.Infrastructure.Seeding;
+using Modules.Tessera.Infrastructure.Sql;
 
-// The program's starting point. One program does both jobs (ADR 0001):
+// The program's starting point, the template's Host. One program does both jobs (ADR 0001, ADR 0010):
 //   Tessera                  serves tiles and the map, behind Nginx (ADR 0008)
 //   Tessera seed             runs each new SQL script of places once, then stops (US-24, ADR 0009)
 // It ends with an exit code: 0 for success, 1 for a failure, 2 for a command it did not understand.
@@ -25,14 +23,14 @@ static async Task<int> Serve()
     Microsoft.AspNetCore.Builder.WebApplication app;
     try
     {
-        app = TesseraService.Build();
+        app = TesseraModule.Build();
     }
     // The three ways a settings check fails: a value outside its limits, several problems at once,
     // and a key the binder cannot place. Any other exception is a fault, and escapes.
     catch (Exception error)
         when (error is OptionsValidationException or AggregateException or InvalidOperationException)
     {
-        return Fail(TesseraSettings.Problems(error));
+        return Fail(Settings.Problems(error));
     }
 
     await app.RunAsync();
@@ -44,18 +42,18 @@ static async Task<int> Serve()
 static int Seed()
 {
     var builder = Host.CreateApplicationBuilder();
-    TesseraSettings.AddFile(builder.Configuration);
-    TesseraSettings.Register(builder.Services);
-    DatabaseConnections.Register(builder.Services, builder.Configuration, TesseraSettings.PublisherDatabase);
+    Settings.AddFile(builder.Configuration);
+    TesseraModule.AddSettings(builder.Services);
+    DatabaseConnections.Register(builder.Services, builder.Configuration, DatabaseConnections.PublisherDatabase);
     using var host = builder.Build();
     try
     {
-        TesseraSettings.Check(host.Services);
+        Settings.Check(host.Services);
     }
     catch (Exception error)
         when (error is OptionsValidationException or AggregateException or InvalidOperationException)
     {
-        return Fail(TesseraSettings.Problems(error));
+        return Fail(Settings.Problems(error));
     }
 
     var connection = host.Services.GetRequiredService<IOptions<DatabaseConnection>>().Value.Text;

@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Http.HttpResults;
-using Tessera.Map;
-using Tessera.Settings;
+using Modules.Tessera.Domain;
+using Modules.Tessera.Features;
 
 namespace Tessera.UnitTests;
 

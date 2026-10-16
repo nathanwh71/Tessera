@@ -2,13 +2,12 @@ using System.Collections.Immutable;
 using CSharpFunctionalExtensions;
 using Dapper;
 using Npgsql;
-using Tessera.Settings;
 
-// The door to PostgreSQL: the query a module hands over, the reasons the database may refuse it, and
-// the one class that sends every query through the pool (ADR 0001, rule 4). Each database failure
+// The door to PostgreSQL: the query the code hands over, the reasons the database may refuse it, and
+// the one class that sends every query through the pool (ADR 0010, rule 2). Each database failure
 // comes back as a value, never an exception, so each caller must decide what it means (ADR 0004).
 
-namespace Tessera.Sql;
+namespace Modules.Tessera.Infrastructure.Sql;
 
 /// <summary>
 /// A query ready to send: the SQL text, and the values that travel beside it as bound

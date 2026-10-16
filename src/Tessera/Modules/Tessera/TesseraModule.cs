@@ -1,27 +1,37 @@
-using Microsoft.AspNetCore.Builder;
+using Common.Api;
+using Common.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Tessera.Catalogue;
-using Tessera.Map;
-using Tessera.Settings;
-using Tessera.Sql;
-using Tessera.Tiles;
+using Modules.Tessera.Domain;
+using Modules.Tessera.Features;
+using Modules.Tessera.Infrastructure;
+using Modules.Tessera.Infrastructure.Sql;
 
-namespace Tessera;
+namespace Modules.Tessera;
 
 /// <summary>
-/// Puts the <b><i>modules</i></b> together into one web service. The service is a
+/// Puts the Tessera <b><i>module</i></b>'s layers together into one web service. The service is a
 /// <b><i>modular monolith</i></b>, one program built from modules with guarded borders, so one
-/// release serves everything while each module stays small (ADR 0001). Program.cs builds it once,
+/// release serves everything while each part stays small (ADR 0010). Program.cs builds it once,
 /// then runs it.
 /// </summary>
-public static class TesseraService
+public static class TesseraModule
 {
+    /// <summary>
+    /// Binds each of the module's sections of tessera.json to its record (Settings.Section). The
+    /// database's URL is read apart, by DatabaseConnections.Register, since only the Infrastructure
+    /// knows the database client.
+    /// </summary>
+    public static void AddSettings(IServiceCollection services)
+    {
+        Settings.Section<DatabaseSettings>(services, "Database");
+        Settings.Section<TileSettings>(services, "Tiles");
+        Settings.Section<MapSettings>(services, "Map");
+        Settings.Section<CatalogueSettings>(services, "Catalogue");
+        Settings.Section<AreaSettings>(services, "Area");
+    }
+
     /// <summary>
     /// Builds the service on ASP.NET Core's standard start-up, which reads tessera.json, the
     /// <b><i>settings file</i></b>, its <c>Urls</c> and <c>Logging</c> sections included, and the
@@ -32,10 +42,10 @@ public static class TesseraService
     public static WebApplication Build(IDictionary<string, string?>? overrides = null)
     {
         var builder = WebApplication.CreateBuilder();
-        TesseraSettings.AddFile(builder.Configuration);
+        Settings.AddFile(builder.Configuration);
         builder.Configuration.AddInMemoryCollection(overrides ?? new Dictionary<string, string?>());
-        TesseraSettings.Register(builder.Services);
-        DatabaseConnections.Register(builder.Services, builder.Configuration, TesseraSettings.ReaderDatabase);
+        AddSettings(builder.Services);
+        DatabaseConnections.Register(builder.Services, builder.Configuration, DatabaseConnections.ReaderDatabase);
         // Every error answers as a problem document of one shape, so no route writes its own (US-07 c5).
         builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = Problems.Shape);
 
@@ -48,7 +58,7 @@ public static class TesseraService
         // answers from its first moment (N-23 c3). Before the first load it tries every five seconds,
         // as N-23 c3 sets: the same wait Retry-After asks of each browser.
         builder.Services.AddSingleton(services => new LiveCatalogue(
-            cancel => LayerCatalogue.Load(services.GetRequiredService<Database>(), cancel),
+            cancel => CatalogueReader.Load(services.GetRequiredService<Database>(), cancel),
             TimeSpan.FromSeconds(services.GetRequiredService<IOptions<CatalogueSettings>>().Value.RefreshSeconds),
             TimeSpan.FromSeconds(Problems.RetryAfterSeconds),
             services.GetRequiredService<ILoggerFactory>().CreateLogger("Tessera.Catalogue")));
@@ -58,7 +68,7 @@ public static class TesseraService
         builder.Services.AddHealthChecks().AddCheck<DatabaseAnswers>("database");
 
         var app = builder.Build();
-        TesseraSettings.Check(app.Services);
+        Settings.Check(app.Services);
         var catalogue = app.Services.GetRequiredService<LiveCatalogue>();
         // The first catches a crash and the second an empty error, such as a 404 for an address no
         // route knows; both answer with a problem document.

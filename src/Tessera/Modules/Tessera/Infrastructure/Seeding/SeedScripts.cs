@@ -1,9 +1,9 @@
 using CSharpFunctionalExtensions;
 using DbUp;
+using Modules.Tessera.Infrastructure.Sql;
 using Npgsql;
-using Tessera.Sql;
 
-namespace Tessera.Seeding;
+namespace Modules.Tessera.Infrastructure.Seeding;
 
 /// <summary>
 /// Loads the places with DbUp: it runs each new <b><i>seed script</i></b>, a SQL file of places, once,

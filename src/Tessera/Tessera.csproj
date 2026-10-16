@@ -1,22 +1,35 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <!--
-    The program: Program.cs and Service.cs, which put the modules together (ADR 0001). Each module
-    is a project of its own, in a folder here, so this project compiles none of their files and
-    names each one below.
+    The whole service in one project, laid out as the modular-monolith template (ADR 0010):
+      Common/            what every module may use: the problem answers, the settings, Result
+      Modules/Tessera/   the one module, in three layers: Domain, Infrastructure and Features
+      Program.cs         serve, or seed
+    The architecture tests in tests/Tessera.ArchitectureTests guard the borders between the layers.
   -->
   <PropertyGroup>
+    <!-- The program keeps its name, so 'Tessera seed', the runbook and the start-up task still work. -->
+    <AssemblyName>Tessera</AssemblyName>
+    <!--
+      No root namespace, so each folder's path is its namespace, such as Modules.Tessera.Domain, and
+      rule IDE0130 can check that every file's namespace matches its folder. The boundary rules trust
+      the namespaces, so a file that claimed another layer's would slip past them.
+    -->
+    <RootNamespace></RootNamespace>
     <!-- The map's files go out as Vite built them; the SDK's static-web-assets pipeline stays off. -->
     <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
-    <DefaultItemExcludes>$(DefaultItemExcludes);Catalogue/**;Map/**;Problems/**;Seeding/**;Settings/**;Sql/**;Tiles/**</DefaultItemExcludes>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="Catalogue/Tessera.Catalogue.csproj" />
-    <ProjectReference Include="Map/Tessera.Map.csproj" />
-    <ProjectReference Include="Problems/Tessera.Problems.csproj" />
-    <ProjectReference Include="Seeding/Tessera.Seeding.csproj" />
-    <ProjectReference Include="Settings/Tessera.Settings.csproj" />
-    <ProjectReference Include="Sql/Tessera.Sql.csproj" />
-    <ProjectReference Include="Tiles/Tessera.Tiles.csproj" />
+    <!-- The database client, and the library that fills records from its rows (S-01). -->
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="Dapper" />
+    <!-- Runs each seed script once (ADR 0009). -->
+    <PackageReference Include="dbup-postgresql" />
+    <PackageReference Include="CSharpFunctionalExtensions" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The tests may read internal members, such as MapRoutes.Answer, without making them public. -->
+    <InternalsVisibleTo Include="Tessera.UnitTests" />
+    <InternalsVisibleTo Include="Tessera.IntegrationTests" />
   </ItemGroup>
   <ItemGroup>
     <!-- tessera.json sits beside the program, where the service looks for it (ADR 0003). -->

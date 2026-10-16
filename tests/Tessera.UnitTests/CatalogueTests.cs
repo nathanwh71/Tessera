@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
-using Tessera.Catalogue;
-using Tessera.Sql;
+using Modules.Tessera.Domain;
+using Modules.Tessera.Infrastructure;
+using Modules.Tessera.Infrastructure.Sql;
 
 namespace Tessera.UnitTests;
 
@@ -21,7 +22,7 @@ public sealed class CatalogueTests
     /// which layers the list holds.
     /// </summary>
     private static LayerCatalogue With(params string[] tables) =>
-        LayerCatalogue.FromRows(tables.Select(table => new CatalogueRow("food", table, "geom", 4326, "POINT", "[]")));
+        CatalogueReader.FromRows(tables.Select(table => new CatalogueRow("food", table, "geom", 4326, "POINT", "[]")));
 
     /// <summary>
     /// Stand-ins for a load that succeeds and one that fails, so a test decides each answer the
@@ -49,7 +50,7 @@ public sealed class CatalogueTests
     [Fact]
     public void Turns_a_row_into_a_layer_whose_id_is_schema_dot_name()
     {
-        var layer = LayerCatalogue.ToLayer(Cafes);
+        var layer = CatalogueReader.ToLayer(Cafes);
 
         Assert.Equal("food.cafes", layer.Id);
         Assert.Equal("\"food\".\"cafes\"", layer.Table);
@@ -62,7 +63,7 @@ public sealed class CatalogueTests
     [Fact]
     public void Finds_a_layer_exactly_and_case_sensitively()
     {
-        var catalogue = LayerCatalogue.FromRows([Cafes]);
+        var catalogue = CatalogueReader.FromRows([Cafes]);
 
         Assert.NotNull(catalogue.Find("food.cafes"));
         Assert.Null(catalogue.Find("Food.Cafes"));

@@ -1,27 +1,10 @@
-using System.Collections.Immutable;
-using Tessera.Settings;
+using Modules.Tessera.Domain;
 
 // Every SQL text Tessera sends lives in this file (S-01 c2), so a reviewer reads them all in one
 // place. Values travel as named parameters, such as @z, never in the text. A name, such as a table's,
 // cannot travel as a parameter, so it enters the text quoted by Quote.
 
-namespace Tessera.Sql;
-
-/// <summary>
-/// What the <b><i>tile</i></b> query needs to know of a <b><i>layer</i></b>. Every name but the id is
-/// already quoted for SQL. The Catalogue <b><i>module</i></b> builds one from each layer, so Sql needs
-/// nothing of Catalogue's (ADR 0001).
-/// </summary>
-/// <param name="Id">
-/// The layer's id: its <b><i>schema</i></b>, the named folder that holds the table, and its name, such
-/// as <c>food.cafes</c>.
-/// </param>
-/// <param name="Table">The quoted table, such as <c>"food"."cafes"</c>.</param>
-/// <param name="Geometry">The quoted column that holds each place's shape.</param>
-/// <param name="Srid">The layer's <b><i>SRID</i></b>, the number of its coordinate system.</param>
-/// <param name="Properties">The quoted columns each tile carries beside the shape (US-07).</param>
-/// <param name="Order">The quoted primary key, which fixes the order of features; empty for a view.</param>
-public sealed record TileSource(string Id, string Table, string Geometry, int Srid, ImmutableArray<string> Properties, ImmutableArray<string> Order);
+namespace Modules.Tessera.Infrastructure.Sql;
 
 public static class Queries
 {
@@ -80,7 +63,7 @@ public static class Queries
         ORDER BY n.nspname, c.relname, a.attnum
         """);
 
-    /// <summary>One tile of one layer, built inside the database (US-07).</summary>
+    /// <summary>One <b><i>tile</i></b> of one <b><i>layer</i></b>, built inside the database (US-07).</summary>
     /// <remarks>
     /// The WHERE clause turns the tile's square into the layer's own coordinate system, never the
     /// table's shapes into the tile's, so the <b><i>spatial index</i></b> applies and the tile reads
@@ -92,7 +75,7 @@ public static class Queries
     /// order, so the same name wins a clash every time. LIMIT caps the features at
     /// <c>Tiles.MaxFeatures</c>, so a crowded square stays small and quick to build.
     /// </remarks>
-    public static Query Tile(TileSource layer, int z, int x, int y, TileSettings limits)
+    public static Query Tile(Layer layer, TileAddress tile, TileSettings limits)
     {
         // Each property the tile carries, after its shape, such as ', "name", "type"'.
         var properties = string.Concat(layer.Properties.Select(name => $", {name}"));
@@ -112,7 +95,7 @@ public static class Queries
             """,
             new
             {
-                layer = layer.Id, resolution = limits.Resolution, z, x, y,
+                layer = layer.Id, resolution = limits.Resolution, z = tile.Z, x = tile.X, y = tile.Y,
                 buffer = limits.Buffer, margin = (double)limits.Buffer / limits.Resolution, srid = layer.Srid,
                 limit = limits.MaxFeatures,
             });

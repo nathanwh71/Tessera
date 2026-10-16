@@ -1,5 +1,6 @@
-using Tessera.Catalogue;
-using Tessera.Sql;
+using Modules.Tessera.Domain;
+using Modules.Tessera.Infrastructure;
+using Modules.Tessera.Infrastructure.Sql;
 
 namespace Tessera.IntegrationTests;
 
@@ -34,13 +35,13 @@ public sealed class PoolTests(DatabaseFixture database) : IClassFixture<Database
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     // One connection, and a wait long enough that no request gives up while the others run.
-    private static readonly Settings.DatabaseSettings OneConnection = new() { PoolSize = 1, QueryTimeoutSeconds = 30, ConnectionWaitSeconds = 30 };
+    private static readonly DatabaseSettings OneConnection = new() { PoolSize = 1, QueryTimeoutSeconds = 30, ConnectionWaitSeconds = 30 };
 
     /// <summary>
     /// A buffer fixed here, apart from the shipped 256, as in the other tile tests; these tests
     /// time the queue, so any fixed buffer serves.
     /// </summary>
-    private static readonly Settings.TileSettings Limits = new() { Buffer = 64 };
+    private static readonly TileSettings Limits = new() { Buffer = 64 };
 
     // N-26 c1 and test 1: five tiles asked for a moment apart, on a pool of one connection, finish
     // in the order they were asked for. Each is a different tile, at levels 0 to 4, so the
@@ -57,7 +58,7 @@ public sealed class PoolTests(DatabaseFixture database) : IClassFixture<Database
         {
             var (x, y) = TileOf(113.54, 22.19, zoom);
             var mine = zoom;
-            asks.Add(reader.Single<byte[]>(Queries.Tile(layer.Source, zoom, x, y, Limits), TestContext.Current.CancellationToken)
+            asks.Add(reader.Single<byte[]>(Queries.Tile(layer, new TileAddress(zoom, x, y), Limits), TestContext.Current.CancellationToken)
                 .ContinueWith(_ => finished.Enqueue(mine), TaskScheduler.Default));
             // Long enough for each request to join the queue before the next; far shorter than one query.
             await Task.Delay(50, TestContext.Current.CancellationToken);
@@ -76,7 +77,7 @@ public sealed class PoolTests(DatabaseFixture database) : IClassFixture<Database
         await using var reader = Database.Open(database.Reader, OneConnection);
         var layer = await Layer(reader, "stage.queue_hold");
         var (x, y) = TileOf(113.54, 22.19, 0);
-        var hold = reader.Single<byte[]>(Queries.Tile(layer.Source, 0, x, y, Limits), TestContext.Current.CancellationToken);
+        var hold = reader.Single<byte[]>(Queries.Tile(layer, new TileAddress(0, x, y), Limits), TestContext.Current.CancellationToken);
         // Long enough for the held query to take the only connection; far shorter than its three
         // seconds.
         await Task.Delay(300, TestContext.Current.CancellationToken);
@@ -100,7 +101,7 @@ public sealed class PoolTests(DatabaseFixture database) : IClassFixture<Database
         await using var reader = Database.Open(database.Reader, OneConnection);
         var layer = await Layer(reader, "stage.queue_hold");
         var (x, y) = TileOf(113.54, 22.19, 0);
-        var hold = reader.Single<byte[]>(Queries.Tile(layer.Source, 0, x, y, Limits), TestContext.Current.CancellationToken);
+        var hold = reader.Single<byte[]>(Queries.Tile(layer, new TileAddress(0, x, y), Limits), TestContext.Current.CancellationToken);
         // As above: the held query takes the only connection before the second query asks.
         await Task.Delay(300, TestContext.Current.CancellationToken);
 
@@ -110,7 +111,7 @@ public sealed class PoolTests(DatabaseFixture database) : IClassFixture<Database
         var (x1, y1) = TileOf(113.54, 22.19, 1);
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            reader.Single<byte[]>(Queries.Tile(layer.Source, 1, x1, y1, Limits), leave.Token));
+            reader.Single<byte[]>(Queries.Tile(layer, new TileAddress(1, x1, y1), Limits), leave.Token));
         Assert.True(clock.Elapsed < TimeSpan.FromSeconds(1), $"took {clock.Elapsed}");
         await hold;
     }
@@ -120,7 +121,7 @@ public sealed class PoolTests(DatabaseFixture database) : IClassFixture<Database
     /// layer throws, so the test stops with the reason rather than timing a query that never ran.
     /// </summary>
     private async Task<Layer> Layer(Database reader, string id) =>
-        (await LayerCatalogue.Load(reader, TestContext.Current.CancellationToken))
+        (await CatalogueReader.Load(reader, TestContext.Current.CancellationToken))
             .Match(found => found, error => throw new Xunit.Sdk.XunitException(error.Message))
             .Find(id) ?? throw new Xunit.Sdk.XunitException($"{id} is not in the list");
 

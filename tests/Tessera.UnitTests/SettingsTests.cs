@@ -3,8 +3,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using Tessera.Settings;
-using Tessera.Sql;
+using Modules.Tessera;
+using Modules.Tessera.Domain;
+using Modules.Tessera.Infrastructure;
+using Modules.Tessera.Infrastructure.Sql;
 
 namespace Tessera.UnitTests;
 
@@ -32,9 +34,9 @@ public sealed class SettingsTests
         var builder = Microsoft.Extensions.Hosting.Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings());
         builder.Configuration
             .AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(json)))
-            .AddInMemoryCollection(new Dictionary<string, string?>(environment ?? []) { [TesseraSettings.ReaderDatabase] = url });
-        TesseraSettings.Register(builder.Services);
-        DatabaseConnections.Register(builder.Services, builder.Configuration, TesseraSettings.ReaderDatabase);
+            .AddInMemoryCollection(new Dictionary<string, string?>(environment ?? []) { [DatabaseConnections.ReaderDatabase] = url });
+        TesseraModule.AddSettings(builder.Services);
+        DatabaseConnections.Register(builder.Services, builder.Configuration, DatabaseConnections.ReaderDatabase);
         return builder.Build();
     }
 
@@ -45,7 +47,7 @@ public sealed class SettingsTests
     private static T Settings<T>(string json, Dictionary<string, string?>? environment = null) where T : class
     {
         using var host = Host(json, environment: environment);
-        TesseraSettings.Check(host.Services);
+        Common.Infrastructure.Settings.Check(host.Services);
         return host.Services.GetRequiredService<IOptions<T>>().Value;
     }
 
@@ -55,12 +57,12 @@ public sealed class SettingsTests
         using var host = Host(json, url);
         try
         {
-            TesseraSettings.Check(host.Services);
+            Common.Infrastructure.Settings.Check(host.Services);
             return "";
         }
         catch (Exception error)
         {
-            return string.Join("; ", TesseraSettings.Problems(error));
+            return string.Join("; ", Common.Infrastructure.Settings.Problems(error));
         }
     }
 

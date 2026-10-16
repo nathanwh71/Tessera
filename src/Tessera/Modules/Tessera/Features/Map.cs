@@ -1,11 +1,10 @@
 using System.Collections.Immutable;
 using System.Text.Json;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
+using Common.Api;
 using Microsoft.Extensions.FileProviders;
-using Tessera.Settings;
+using Modules.Tessera.Domain;
 
-namespace Tessera.Map;
+namespace Modules.Tessera.Features;
 
 /// <summary>
 /// Serves the map people view in a browser: the page at <c>/</c>, the same page opened on one
