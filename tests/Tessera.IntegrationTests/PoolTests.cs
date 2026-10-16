@@ -123,7 +123,7 @@ public sealed class PoolTests(DatabaseFixture database) : IClassFixture<Database
     private async Task<Layer> Layer(Database reader, string id) =>
         (await CatalogueReader.Load(reader, TestContext.Current.CancellationToken))
             .Match(found => found, error => throw new Xunit.Sdk.XunitException(error.Message))
-            .Find(id) ?? throw new Xunit.Sdk.XunitException($"{id} is not in the list");
+            .Find(id).GetValueOrThrow(new Xunit.Sdk.XunitException($"{id} is not in the list"));
 
     // The web map's tile that holds a point: x counts columns from 180° west, y rows from the north.
     private static (int X, int Y) TileOf(double longitude, double latitude, int zoom)

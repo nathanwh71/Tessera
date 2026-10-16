@@ -13,9 +13,9 @@ namespace Modules.Tessera.Infrastructure.Sql;
 /// A query ready to send: the SQL text, and the values that travel beside it as bound
 /// <b><i>parameters</i></b> (S-01). The database never reads a parameter as SQL, so no value from a
 /// request can change what a query does: <b><i>SQL injection</i></b>, SQL hidden in a request, has no
-/// way in. Every text lives in Queries.cs.
+/// way in. Every text lives in Queries.cs. A query with no values, such as the ping, has none.
 /// </summary>
-public sealed record Query(string Text, object? Parameters = null);
+public sealed record Query(string Text, Maybe<object> Parameters = default);
 
 /// <summary>Why the database refused a query: its SQLSTATE code, five characters, and its message.</summary>
 public sealed record DatabaseError(string SqlState, string Message)
@@ -68,13 +68,11 @@ public sealed class Database : IAsyncDisposable
     /// </summary>
     private static readonly TimeSpan PingLimit = TimeSpan.FromSeconds(1);
 
-    /// <summary>Opens the pool within the given limits, or the defaults.</summary>
+    /// <summary>Opens the pool within the given limits.</summary>
     /// <param name="connection">Npgsql's connection string, made from the database URL.</param>
-    /// <param name="limits">The pool's limits (N-22).</param>
-    public static Database Open(string connection, DatabaseSettings? limits = null)
-    {
-        var pool = limits ?? new DatabaseSettings();
-        return new(NpgsqlDataSource.Create(new NpgsqlConnectionStringBuilder(connection)
+    /// <param name="pool">The pool's limits (N-22).</param>
+    public static Database Open(string connection, DatabaseSettings pool) =>
+        new(NpgsqlDataSource.Create(new NpgsqlConnectionStringBuilder(connection)
         {
             // The name shows in pg_stat_activity, so the maintainer can tell Tessera's connections apart.
             ApplicationName = "tessera",
@@ -88,7 +86,6 @@ public sealed class Database : IAsyncDisposable
             MaxAutoPrepare = 32,
             AutoPrepareMinUsages = 3,
         }.ConnectionString));
-    }
 
     /// <summary>
     /// Runs a query and turns each row into a <typeparamref name="T"/>, matching columns to fields by
@@ -99,11 +96,12 @@ public sealed class Database : IAsyncDisposable
             (await connection.QueryAsync<T>(Command(query, cancel)).ConfigureAwait(false)).ToImmutableArray(), cancel);
 
     /// <summary>
-    /// Runs a query that returns one value, or null for none; the <b><i>tile</i></b> route reads a
-    /// null as an empty tile. T must be a class, so null can stand for 'no row'.
+    /// Runs a query that returns one value, or none when no row comes back; the <b><i>tile</i></b>
+    /// route reads none as an empty tile. Dapper gives null for 'no row', so the value becomes a
+    /// <b><i>Maybe</i></b> here, at the edge, and no null travels further.
     /// </summary>
-    public Task<Result<T?, DatabaseError>> Single<T>(Query query, CancellationToken cancel = default) where T : class =>
-        Run(connection => connection.QuerySingleOrDefaultAsync<T>(Command(query, cancel)), cancel);
+    public Task<Result<Maybe<T>, DatabaseError>> Single<T>(Query query, CancellationToken cancel = default) where T : class =>
+        Run(async connection => (await connection.QuerySingleOrDefaultAsync<T>(Command(query, cancel)).ConfigureAwait(false)).AsMaybe(), cancel);
 
     /// <summary>
     /// True when the database answers <c>SELECT 1</c> within a second, the wait for a free connection
@@ -179,7 +177,7 @@ public sealed class Database : IAsyncDisposable
     };
 
     // Bundles the text, the parameters and the cancel token for Dapper, so no query leaves without
-    // all three.
+    // all three. Dapper takes null for 'no parameters', so the Maybe opens here, at the edge.
     private static CommandDefinition Command(Query query, CancellationToken cancel) =>
-        new(query.Text, query.Parameters, cancellationToken: cancel);
+        new(query.Text, query.Parameters.GetValueOrDefault(), cancellationToken: cancel);
 }

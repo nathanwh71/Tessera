@@ -31,9 +31,12 @@ public static class CatalogueReader
         Names(row.Columns),
         Names(row.KeyColumns));
 
-    // The query writes each list of names as JSON, so this reads its own output.
+    // The query writes each list of names as JSON, so this reads its own output. The reader gives
+    // null for the JSON text 'null', which the query never writes; none then means no names.
     private static ImmutableArray<string> Names(string json) =>
-        [.. (JsonSerializer.Deserialize<string[]>(json) ?? []).Select(Queries.Quote)];
+        JsonSerializer.Deserialize<string[]>(json).AsMaybe()
+            .Map(names => names.Select(Queries.Quote).ToImmutableArray())
+            .GetValueOrDefault([]);
 
     /// <summary>
     /// Builds the catalogue from the query's rows, keyed by id. The ordinal comparer matches ids

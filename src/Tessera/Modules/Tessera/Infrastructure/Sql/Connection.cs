@@ -14,9 +14,9 @@ public sealed class DatabaseConnection : IValidatableObject
     public string Variable { get; set; } = DatabaseConnections.ReaderDatabase;
 
     /// <summary>
-    /// The URL as the environment gave it; null when the variable is missing, so the check can say so.
+    /// The URL as the environment gave it; none when the variable is missing, so the check can say so.
     /// </summary>
-    public string? Url { get; set; }
+    public Maybe<string> Url { get; set; }
 
     /// <summary>Npgsql's connection string, or empty text while the URL fails the check.</summary>
     public string Text => DatabaseConnections.ConnectionString(Url).GetValueOrDefault("");
@@ -53,7 +53,7 @@ public static class DatabaseConnections
     /// </summary>
     public static void Register(IServiceCollection services, IConfiguration configuration, string variable) =>
         services.AddOptions<DatabaseConnection>()
-            .Configure(connection => (connection.Variable, connection.Url) = (variable, configuration[variable]))
+            .Configure(connection => (connection.Variable, connection.Url) = (variable, configuration[variable].AsMaybe()))
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
@@ -62,9 +62,9 @@ public static class DatabaseConnections
     /// with no port, PostgreSQL's usual 5432. A password may hold any character, so a character such
     /// as '@' arrives percent-encoded, here %40.
     /// </summary>
-    public static Result<string, string> ConnectionString(string? url)
+    public static Result<string, string> ConnectionString(Maybe<string> given)
     {
-        if (string.IsNullOrEmpty(url))
+        if (!given.TryGetValue(out var url) || url.Length == 0)
             return Result.Failure<string, string>("missing or empty");
         // PostgreSQL's own tools accept both 'postgresql' and 'postgres', so a URL copied from them
         // reads.

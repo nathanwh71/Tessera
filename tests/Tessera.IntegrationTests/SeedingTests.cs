@@ -33,7 +33,7 @@ public sealed class SeedingTests(DatabaseFixture database) : IClassFixture<Datab
     /// </summary>
     private async Task<string[]> Published()
     {
-        await using var reader = Database.Open(database.Reader);
+        await using var reader = Database.Open(database.Reader, new DatabaseSettings());
         return (await CatalogueReader.Load(reader, TestContext.Current.CancellationToken))
             .Match(found => found.Layers.Keys.Order(StringComparer.Ordinal).ToArray(), error => throw new Xunit.Sdk.XunitException(error.Message));
     }
@@ -69,10 +69,10 @@ public sealed class SeedingTests(DatabaseFixture database) : IClassFixture<Datab
         Assert.DoesNotContain("food.cafes", await Published());
 
         await database.GrantPlaces();
-        await using var reader = Database.Open(database.Reader);
+        await using var reader = Database.Open(database.Reader, new DatabaseSettings());
         var catalogue = (await CatalogueReader.Load(reader, TestContext.Current.CancellationToken)).Value;
-        Assert.Equal((4326, "Point"), (catalogue.Find("transport.buses")?.Srid, catalogue.Find("transport.buses")?.GeometryType));
-        Assert.Equal(["\"fid\""], catalogue.Find("food.cafes")?.Order);
+        Assert.Equal((4326, "Point"), catalogue.Find("transport.buses").Map(layer => (layer.Srid, layer.GeometryType)).Value);
+        Assert.Equal(["\"fid\""], catalogue.Find("food.cafes").Value.Order);
     }
 
     // US-24 c6: a script that fails changes nothing, and stays out of the journal, so it runs again

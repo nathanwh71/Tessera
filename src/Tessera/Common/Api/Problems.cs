@@ -11,10 +11,13 @@ public static class Problems
     public const int RetryAfterSeconds = 5;
 
     /// <summary>
-    /// 404: no such <b><i>layer</i></b>, <b><i>tile</i></b> or page (US-07 c4). The detail is
-    /// optional, since the status alone often says enough.
+    /// 404: no such <b><i>layer</i></b>, <b><i>tile</i></b> or page (US-07 c4), with no detail, since
+    /// the status alone often says enough.
     /// </summary>
-    public static IResult NotFound(string? detail = null) =>
+    public static IResult NotFound() => TypedResults.Problem(statusCode: StatusCodes.Status404NotFound);
+
+    /// <summary>404, with a detail that says what was not found.</summary>
+    public static IResult NotFound(string detail) =>
         TypedResults.Problem(detail, statusCode: StatusCodes.Status404NotFound);
 
     /// <summary>503: the service is well but cannot answer now, such as while the database is down.</summary>

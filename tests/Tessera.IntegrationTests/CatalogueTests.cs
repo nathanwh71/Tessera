@@ -61,7 +61,7 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
     [Fact]
     public async Task Publishes_what_is_granted_and_nothing_else()
     {
-        await using var reader = Database.Open(database.Reader);
+        await using var reader = Database.Open(database.Reader, new DatabaseSettings());
         var ids = (await Load(reader)).Layers.Keys.Order(StringComparer.Ordinal).ToArray();
 
         // c1, c2 and c4 publish; c3 (never granted), c5 (a function) and an untyped column do not.
@@ -72,11 +72,11 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
     [Fact]
     public async Task Gives_each_layer_its_srid_and_type()
     {
-        await using var reader = Database.Open(database.Reader);
+        await using var reader = Database.Open(database.Reader, new DatabaseSettings());
         var catalogue = await Load(reader);
 
-        Assert.Equal((4326, "Point"), (catalogue.Find("stage.granted")?.Srid, catalogue.Find("stage.granted")?.GeometryType));
-        Assert.Equal((3857, "Point"), (catalogue.Find("stage.mercator")?.Srid, catalogue.Find("stage.mercator")?.GeometryType));
+        Assert.Equal((4326, "Point"), catalogue.Find("stage.granted").Map(layer => (layer.Srid, layer.GeometryType)).Value);
+        Assert.Equal((3857, "Point"), catalogue.Find("stage.mercator").Map(layer => (layer.Srid, layer.GeometryType)).Value);
     }
 
     // US-24 test 2: a table's primary key fixes the order of its features; a view has no key,
@@ -84,18 +84,18 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
     [Fact]
     public async Task Gives_each_table_its_key_and_each_view_none()
     {
-        await using var reader = Database.Open(database.Reader);
+        await using var reader = Database.Open(database.Reader, new DatabaseSettings());
         var catalogue = await Load(reader);
 
-        Assert.Equal(["\"id\""], catalogue.Find("stage.granted")?.Order);
-        Assert.Empty(catalogue.Find("stage.granted_view")!.Order);
+        Assert.Equal(["\"id\""], catalogue.Find("stage.granted").Value.Order);
+        Assert.Empty(catalogue.Find("stage.granted_view").Value.Order);
     }
 
     // c4: the awkward name is published and served.
     [Fact]
     public async Task Serves_the_awkward_name()
     {
-        await using var reader = Database.Open(database.Reader);
+        await using var reader = Database.Open(database.Reader, new DatabaseSettings());
         var catalogue = await Load(reader);
 
         var answer = await Server(catalogue, reader).Answer("stage.odd \"name\"", 0, 0, 0, TestContext.Current.CancellationToken);
@@ -108,7 +108,7 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
     public async Task Answers_404_for_a_table_revoked_after_start_up()
     {
         await database.Owner("CREATE TABLE IF NOT EXISTS stage.revoked (id int PRIMARY KEY, geom geometry(Point, 4326)); GRANT SELECT ON stage.revoked TO tessera_reader;");
-        await using var reader = Database.Open(database.Reader);
+        await using var reader = Database.Open(database.Reader, new DatabaseSettings());
         var catalogue = await Load(reader);
         await database.Owner("REVOKE SELECT ON stage.revoked FROM tessera_reader;");
 
@@ -121,7 +121,7 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
     [Fact]
     public async Task Answers_503_when_the_database_cannot_be_reached()
     {
-        await using var reader = Database.Open(database.Reader);
+        await using var reader = Database.Open(database.Reader, new DatabaseSettings());
         var catalogue = await Load(reader);
         // A port FreePort has just found unused, so nothing answers there: a database that cannot be
         // reached. A one-second wait keeps the test short.
@@ -156,20 +156,20 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
     public async Task Sees_a_grant_and_a_revoke_within_one_refresh()
     {
         await database.Owner("CREATE TABLE IF NOT EXISTS stage.late (id int PRIMARY KEY, geom geometry(Point, 4326)); REVOKE SELECT ON stage.late FROM tessera_reader;");
-        await using var reader = Database.Open(database.Reader);
+        await using var reader = Database.Open(database.Reader, new DatabaseSettings());
         // A refresh every 200 ms and a retry every 100 ms, in place of the service's 30 and 5
         // seconds, so each change shows within the test's five-second wait.
         var live = new LiveCatalogue(cancel => CatalogueReader.Load(reader, cancel), TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(100), Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance);
         await live.StartAsync(TestContext.Current.CancellationToken);
 
-        await Until(() => live.Current?.Layers.ContainsKey("stage.granted") == true);
-        Assert.False(live.Current!.Layers.ContainsKey("stage.late"));
+        await Until(() => live.Current.Map(list => list.Layers.ContainsKey("stage.granted")).GetValueOrDefault(false));
+        Assert.False(live.Current.Value.Layers.ContainsKey("stage.late"));
 
         await database.Owner("GRANT SELECT ON stage.late TO tessera_reader;");
-        await Until(() => live.Current?.Layers.ContainsKey("stage.late") == true);
+        await Until(() => live.Current.Map(list => list.Layers.ContainsKey("stage.late")).GetValueOrDefault(false));
 
         await database.Owner("REVOKE SELECT ON stage.late FROM tessera_reader;");
-        await Until(() => live.Current?.Layers.ContainsKey("stage.late") == false);
+        await Until(() => live.Current.Map(list => !list.Layers.ContainsKey("stage.late")).GetValueOrDefault(false));
 
         await live.StopAsync(TestContext.Current.CancellationToken);
     }

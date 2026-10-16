@@ -13,7 +13,7 @@ public sealed class DatabaseTests(DatabaseFixture database) : IClassFixture<Data
     [Fact]
     public async Task Signs_in_as_the_shipped_reader_role()
     {
-        await using var reader = Database.Open(database.Reader);
+        await using var reader = Database.Open(database.Reader, new DatabaseSettings());
         var catalogue = await CatalogueReader.Load(reader, TestContext.Current.CancellationToken);
 
         // A load that succeeds proves the sign-in worked; an empty list proves the role starts with

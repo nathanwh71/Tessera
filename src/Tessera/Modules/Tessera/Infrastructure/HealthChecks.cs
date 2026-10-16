@@ -23,5 +23,5 @@ public sealed class DatabaseAnswers(Database database) : IHealthCheck
 public sealed class CatalogueReady(LiveCatalogue catalogue) : IHealthCheck
 {
     public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default) =>
-        Task.FromResult(catalogue.Current is null ? HealthCheckResult.Degraded() : HealthCheckResult.Healthy());
+        Task.FromResult(catalogue.Current.HasNoValue ? HealthCheckResult.Degraded() : HealthCheckResult.Healthy());
 }
