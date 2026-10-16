@@ -36,8 +36,9 @@ The thirty _stories_ in `docs/user-stories/user-stories.md` _fix_ what Tessera m
 | Command | What it does |
 |---|---|
 | `npm run build` | _Builds_ the _map_, then the _service_ with the _map_ _inside_ it (US-00 c1) |
-| `npm test` | _Runs_ every _test_: the _scripts_', the _map_'s, the _service_'s _two_ _suites_, the _pipeline_'s, and the _browser_ _tests_ _through_ Nginx (US-00 c3) |
-| `dotnet build` | _Builds_ the _service_, the _pipeline_ and the _three_ _test_ _suites_ _alone_; _needs_ `web/dist` from a _map_ _build_ |
+| `npm test` | _Runs_ every _test_: the _scripts_', the _map_'s, the _service_'s _borders_ and its _two_ _suites_, the _pipeline_'s, and the _browser_ _tests_ _through_ Nginx (US-00 c3) |
+| `dotnet build` | _Builds_ the _service_, the _pipeline_ and the _four_ _test_ _suites_ _alone_; _needs_ `web/dist` from a _map_ _build_ |
+| `dotnet run --project tests/Tessera.ArchitectureTests` | _Checks_ the _borders_ _between_ the _service_'s _layers_ on the _built_ _program_: _eight_ _seconds_ (ADR 0010) |
 | `dotnet run --project tests/Tessera.UnitTests` | _Runs_ the _unit_ and ***property tests***: no _database_, a _second_ or _two_ |
 | `dotnet run --project tests/Tessera.IntegrationTests` | _Starts_ the _packaged_ _database_ in Docker and _tests_ _through_ it and _through_ _real_ HTTP (US-00 c3) |
 | `npm install` | _Installs_ the _scripts_' _tools_: zx and TypeScript |
@@ -132,22 +133,20 @@ _Two_ _attacks_ are _closed_ by _design_. Every _value_ from a _request_ _travel
 
 ## What is where
 
-The _service_ is _one_ _program_, with _each_ ***module*** a _project_ of its _own_ in a _folder_ of `src/Tessera`; the _compiler_ _keeps_ _each_ _module_ to the _neighbours_ its _project_ _file_ _names_ (ADR 0001). It _borrows_ what _libraries_ do _well_: ASP.NET Core _reads_ its _settings_, _writes_ its _problem_ _documents_ and _answers_ `/health`; Dapper and Npgsql _talk_ to the _database_; CSharpFunctionalExtensions _gives_ `Result` (ADR 0004); DbUp _runs_ the _seed_ _scripts_ (ADR 0009); Nginx _keeps_, _packs_ and _guards_ (ADR 0008).
+The _service_ is _one_ _program_, _one_ _project_ laid out as the modular-monolith _template_: `Common`, which every ***module*** may _use_, and _one_ _module_, `Modules/Tessera`, in _three_ _layers_. _Six_ ***architecture tests*** _keep_ _each_ _layer_ to its _own_ _work_ (ADR 0010). It _borrows_ what _libraries_ do _well_: ASP.NET Core _reads_ its _settings_, _writes_ its _problem_ _documents_, _tags_ _each_ _tile_, _answers_ 304 and `/health`; Dapper and Npgsql _talk_ to the _database_; DbUp _runs_ the _seed_ _scripts_ (ADR 0009); Nginx _keeps_, _packs_ and _guards_ (ADR 0008). `Result` is the _service_'s _own_, in `Common/Result.cs` (ADR 0004).
 
 | Folder | What it holds |
 |---|---|
-| `src/Tessera/Settings` | Every _setting_, its _default_ and its _limits_ |
-| `src/Tessera/Sql` | Every SQL _text_, in `Queries.cs`, and the _code_ _through_ which the _service_ _talks_ to the _database_ |
-| `src/Tessera/Catalogue` | The _list_ of _layers_: every _table_ _granted_ to the _service_, _reread_ every `Catalogue.RefreshSeconds` |
-| `src/Tessera/Seeding` | The `seed` _command_: DbUp _runs_ _each_ _new_ _script_ in `db/seed` _once_ |
-| `src/Tessera/Tiles` | The _tile_ _route_ and its _answers_ |
-| `src/Tessera/Map` | _Serving_ the _map_'s _page_, with the _area_ _written_ in, and its _files_ |
-| `src/Tessera/Problems` | The _shape_ of every _problem_ _document_ |
+| `src/Tessera/Common` | `Result.cs`; `Api/Problems.cs`, the _shape_ of every _problem_ _document_; `Infrastructure/Settings.cs`, how a _section_ of `tessera.json` is _read_ and _checked_ |
+| `src/Tessera/Modules/Tessera/Domain` | _Records_ and ***pure functions***: a _tile_'s _address_, the _layers_ and their ***catalogue***, the _area_ and _tile_ _settings_ |
+| `src/Tessera/Modules/Tessera/Infrastructure` | Every SQL _text_, in `Sql/Queries.cs`, and the _code_ that _talks_ to the _database_; the _list_ of _layers_, _reread_ every `Catalogue.RefreshSeconds`; the ***health checks***; the `seed` _command_'s DbUp _run_, in `Seeding/` |
+| `src/Tessera/Modules/Tessera/Features` | The _routes_: the _tiles_, the _map_'s _page_ with the _area_ _written_ in, and `/health` |
+| `src/Tessera/Modules/Tessera/TesseraModule.cs` | The _module_'s _door_: `AddTessera` and `MapTessera` |
 | `tools/Tessera.Etl` | The _pipeline_ that _cleans_ a _file_ of _places_ into a _seed_ _script_; the _service_ _never_ _runs_ it (ADR 0009) |
-| `src/Tessera` | `Program.cs`, the _two_ _commands_; `Service.cs`, the _service_ _put_ _together_ and `/health`; `Directory.Build.props`, the _rules_ every _module_ _project_ _shares_ |
+| `src/Tessera` | `Program.cs`, the _two_ _commands_; `TesseraHost.cs`, the _service_ _put_ _together_, the _template_'s _Host_; `.editorconfig`, which _makes_ _each_ namespace _match_ its _folder_ |
 | `nginx/` | Nginx's _file_, which `npm start` and the _browser_ _tests_ _run_ (ADR 0008) |
 | `web/` | The _map_: TypeScript, React, MapLibre GL JS, react-elmish, Valibot and Tailwind CSS (ADR 0006) |
-| `tests/` | _Unit_, _property_ and ***integration tests*** of the _service_, and the _pipeline_'s _tests_ |
+| `tests/` | The _architecture_ _tests_, the _unit_, _property_ and ***integration tests*** of the _service_, and the _pipeline_'s _tests_ |
 | `db/` | The _packaged_ _database_: PostgreSQL 18 with PostGIS 3.6, the _role_ _script_, the _seed_ _scripts_ in `db/seed`, and, _beside_ _each_ _script_ `npm run etl` _writes_, its _log_ in `db/seed-logs` |
 | `data/` | The _seed_'s _source_: 900 _places_ in longitude and latitude, and `macau.pipeline.json`, which _cleans_ them into a _seed_ _script_ |
 | `scripts/` | The _scripts_, in TypeScript with zx (ADR 0002): `start.ts`, `boot.ts` and `boot-task.ts`, `publish.ts`, `inspect.ts`, `etl.ts`, which _hands_ a _pipeline_ _file_ to the C# _pipeline_, `office-port.ts`, the _test_ and _build_ _runners_, and the Nginx _checks_ in `scripts/lib/edge.ts` |
@@ -165,7 +164,9 @@ The _service_ is _one_ _program_, with _each_ ***module*** a _project_ of its _o
 - `docs/adr/0007-limits-in-nginx.md`: why Nginx _answers_ the _office_ _alone_ and _caps_ _each_ _machine_, and why the _service_ _keeps_ no _resilience_ _library_
 - `docs/adr/0008-nginx-in-front.md`: why Nginx _stands_ in _front_, and what it does in _place_ of the _service_
 - `docs/adr/0009-seed-with-dbup.md`: why the _places_ _arrive_ as SQL _scripts_ that DbUp _runs_ _once_
+- `docs/adr/0010-template-layout-guarded-by-tests.md`: why the _service_ _follows_ the modular-monolith _template_, with _architecture_ _tests_ at its _borders_
 - `docs/design/etl-pipeline.md`: how the ETL _pipeline_ _cleans_ _places_ into _seed_ _scripts_, as a _chain_ of Giraffe-style _handlers_
+- `docs/design/template-mapping.md`: how Tessera _maps_ onto the modular-monolith _template_, and what ASP.NET Core _took_ over
 - `docs/guides/delivery-plan.md`: _Parts_ A and B rebuilt in _four_ iterations, from 19 _October_ to the _release_ of 7 December 2026, and what _follows_
 - `docs/guides/reading-the-code.md`: _fifteen_ _steps_ _through_ the backend and the _map_, in the _order_ a _tile_ _travels_
 - `docs/guides/reading-the-frontend.md`: _fifteen_ _steps_ _through_ the _map_ _alone_, from the _page_ that _starts_ to the _tests_ that _state_ its _rules_
