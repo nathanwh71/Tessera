@@ -4,7 +4,7 @@ namespace Tessera.IntegrationTests;
 
 /// <summary>
 /// US-00 c4 and test 2, N-23 c3, and ADR 0009: the program stops when a setting is missing, for
-/// serving and for seeding alike, and starts when only the database is.
+/// serving and for seeding alike, and starts when only the database is down.
 /// </summary>
 public sealed class StartTests
 {
@@ -52,7 +52,8 @@ public sealed class StartTests
     {
         var (code, errors) = await Run();
 
-        // The port defaults to pg_tileserv's 7800 (ADR 0003); the database has no default.
+        // With no variables, the program stops and names DATABASE_URL, the one setting for serving
+        // that tessera.json leaves out (ADR 0003).
         Assert.Equal(1, code);
         Assert.Contains("DATABASE_URL", errors, StringComparison.Ordinal);
     }
