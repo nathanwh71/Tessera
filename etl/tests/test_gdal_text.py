@@ -1,8 +1,9 @@
 """Values after GDAL's GeoJSON writer, core/gdal_text.py.
 
-The pipeline reads most sources straight from GDAL's memory, and a few through ogr2ogr's GeoJSON;
-each number goes through the rounding GDAL's writer gives it, so both ways give the same values.
-When the machine has ogr2ogr, the rounding is checked against it on 3,000 numbers.
+The pipeline reads most sources straight from GDAL's memory, and a few through a GeoPackage that
+ogr2ogr writes; each number goes through the rounding GDAL's writer gives it, so both ways give
+the same values. When the machine has ogr2ogr, the rounding is checked against it on 3,000
+numbers.
 """
 
 import json

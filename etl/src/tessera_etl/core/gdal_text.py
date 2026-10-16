@@ -2,10 +2,10 @@
 
 Writing a number as text can round it: GDAL writes a coordinate with 15 decimals, and trims a
 tail of noise digits from both coordinates and other numbers. The pipeline reads most sources
-with pyogrio, straight from GDAL's memory, and a few through ogr2ogr's GeoJSON (shell/extract.py).
-Putting every value through the same round trip here, which follows GDAL's own code
-(ogr/ogrutils.cpp and ogr/ogrsf_frmts/geojson/ogrgeojsonwriter.cpp, version 3.8.4), gives the
-same numbers, dates and text whichever way a table is read.
+with pyogrio, straight from GDAL's memory, and a few through a GeoPackage that ogr2ogr writes
+(shell/extract.py). Putting every value through the same round trip here, which follows GDAL's
+own code (ogr/ogrutils.cpp and ogr/ogrsf_frmts/geojson/ogrgeojsonwriter.cpp, version 3.8.4),
+gives the same numbers, dates and text whichever way a table is read.
 """
 
 import math
