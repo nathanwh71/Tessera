@@ -68,7 +68,8 @@ try {
   // A layer that takes two seconds to build any tile, for the checks of a crowd and of the cap on
   // requests at once (N-24, S-30). The pause runs once for each query, not once for each place.
   // The grant repeats scripts/publish.ts's, since that script names npm start's container,
-  // tessera-db, and this run's database lives in tessera-e2e.
+  // tessera-db, and this run's database lives in tessera-e2e. A schema added to that grant must
+  // join this one too.
   const slow = 'CREATE VIEW food.slow_cafes AS SELECT c.fid, c.geom, c.name FROM (SELECT pg_sleep(2)) AS pause CROSS JOIN food.cafes AS c;';
   const grant = `${slow} GRANT USAGE ON SCHEMA food, outdoors, culture, transport TO tessera_reader; GRANT SELECT ON ALL TABLES IN SCHEMA food, outdoors, culture, transport TO tessera_reader;`;
   await $({ env: { ...process.env, PGPASSWORD: publisher } })`docker exec --env PGPASSWORD ${container} psql --quiet --host 127.0.0.1 --username tessera_publisher --dbname ${name} --command ${grant}`;

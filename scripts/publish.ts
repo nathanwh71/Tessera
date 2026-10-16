@@ -24,6 +24,10 @@ if (notReady !== undefined) {
   process.exit(1);
 }
 
+// A schema is a named group of tables in one database. The service sees only the schemas this grant
+// names, so a seed script that makes a new one, such as `places`, which npm run inspect's starting
+// pipeline file uses, must add it here and to scripts/e2e.ts's grant, or the service never serves
+// its tables.
 const grant = [
   'GRANT USAGE ON SCHEMA food, outdoors, culture, transport TO tessera_reader;',
   'GRANT SELECT ON ALL TABLES IN SCHEMA food, outdoors, culture, transport TO tessera_reader;',
