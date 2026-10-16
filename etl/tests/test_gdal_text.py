@@ -19,6 +19,7 @@ from hypothesis import strategies as st
 from tessera_etl.core import gdal_text
 
 
+# Each text is what ogr2ogr 3.8.4 wrote for the number beside it.
 @pytest.mark.parametrize(
     ("value", "text"),
     [
@@ -33,7 +34,6 @@ from tessera_etl.core import gdal_text
         (3.0, "3.0"),
     ],
 )
-# Each text below is what ogr2ogr 3.8.4 wrote for the number.
 def test_rounds_a_coordinate_as_GDAL_did(value: float, text: str) -> None:
     assert gdal_text.coordinate(value) == float(text)
 
