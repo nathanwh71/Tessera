@@ -5,12 +5,12 @@
 | Status | _Accepted_ |
 | Date | 16 _October_ 2026 |
 | Decider | The _maintainer_ |
-| Covers | The ***pipeline***, `nathanwh71/tessera-etl-python`; the _service_, `nathanwh71/Tessera`, and its ***seed scripts*** in `db/seed` |
+| Covers | The ***pipeline***, in `etl/`; the _service_, and its ***seed scripts*** in `db/seed`; all in `nathanwh71/Tessera` |
 | Related | ADR 0001, ADR 0002, ADR 0004, ADR 0008, ADR 0010; US-01, US-03, US-24, US-36 |
 
 ## Decision
 
-A _pipeline_ in Python, in a repository of its _own_, `nathanwh71/tessera-etl-python`, _turns_ _each_ _file_ of _places_ into a SQL _script_ in _three_ _steps_. GDAL **extracts** _each_ _table_ into _rows_; ***filters*** the ***pipeline file*** _names_ **transform** the _rows_, _cleaning_ them; and the _pipeline_ **loads** the _cleaned_ _rows_ as SQL, in the _form_ of GDAL's PGDump _driver_ (`core/table_sql.py`). `npm run etl -- PIPELINE.json` _runs_ it. The _maintainer_ _reads_ the _script_ and its _log_, and _commits_ both. `Tessera seed`, _signed_ in as `tessera_publisher`, _runs_ _each_ _script_ DbUp has not _run_ _before_, _once_, in the _order_ of the _scripts_' _names_. A ***grant*** _publishes_ _each_ _table_.
+A _pipeline_ in Python, in the _folder_ `etl/`, _turns_ _each_ _file_ of _places_ into a SQL _script_ in _three_ _steps_. GDAL **extracts** _each_ _table_ into _rows_; ***filters*** the ***pipeline file*** _names_ **transform** the _rows_, _cleaning_ them; and the _pipeline_ **loads** the _cleaned_ _rows_ as SQL, in the _form_ of GDAL's PGDump _driver_ (`core/table_sql.py`). `npm run etl -- PIPELINE.json` _runs_ it. The _maintainer_ _reads_ the _script_ and its _log_, and _commits_ both. `Tessera seed`, _signed_ in as `tessera_publisher`, _runs_ _each_ _script_ DbUp has not _run_ _before_, _once_, in the _order_ of the _scripts_' _names_. A ***grant*** _publishes_ _each_ _table_.
 
 ## Why
 
@@ -18,7 +18,7 @@ A _pipeline_ in Python, in a repository of its _own_, `nathanwh71/tessera-etl-py
 - **Clean before it lands.** _Real_ _data_ _holds_ _empty_ _shapes_, invalid _areas_, _swapped_ longitude and latitude, stray _spaces_, _missing_ _names_ and _places_ _entered_ _twice_. A filter _catches_ _each_ _before_ it _reaches_ a _script_, and the _log_ _names_ every _row_ it touched.
 - **Stop rather than guess.** A filter _set_ to _stop_, or a _table_ that _loses_ _too_ _many_ _rows_, _ends_ the _run_ with no _script_ _written_, so _bad_ _data_ _never_ _reaches_ the _database_ by _default_.
 - **Pure code, tested alone.** The filters are ***pure functions*** in the _style_ of ADR 0004. The _pipeline_'s `kernel` and `core` _read_ no _file_ and _run_ no _program_, and import-linter _enforces_ it; _only_ `shell` _reads_ _files_, _runs_ pyogrio and `ogr2ogr`, and _prints_. pytest and hypothesis _test_ the _cleaning_ with _values_ _alone_, and pyright _checks_ the _types_ in strict _mode_.
-- **A repository of its own.** The _pipeline_ is a _tool_ the _publisher_ _runs_, not a _part_ of the _service_, so its _packages_ _never_ _reach_ the _service_'s _release_.
+- **A folder of its own.** The _pipeline_ is a _tool_ the _publisher_ _runs_, not a _part_ of the _service_, so it _lives_ in `etl/`, _apart_ from the _service_'s _projects_, and its _packages_ _never_ _reach_ the _service_'s _release_.
 - **SQL to read, once.** DbUp _runs_ _each_ _script_ _once_ and _records_ it; its PostgreSQL _package_ has 24.6 million _downloads_. A _script_ is _plain_ SQL, so the _maintainer_ _reads_ _exactly_ what will _enter_ the _database_ _before_ it does.
 
 ## How it works
@@ -27,7 +27,7 @@ A _pipeline_ in Python, in a repository of its _own_, `nathanwh71/tessera-etl-py
 |---|---|---|
 | Inspect | `npm run inspect -- SOURCE [--split FIELD]`, a _script_ in TypeScript with zx (ADR 0002) | GDAL's `ogrinfo` _describes_ _each_ ***layer***: its _rows_, its _shape_, its _system_ and its _fields_; the _command_ _prints_ a _starting_ _pipeline_ _file_, with the _next_ _script_'s _number_ |
 | Write the pipeline file | The _maintainer_ | _Edits_ the _starting_ _file_: _each_ _table_'s ***schema***, _name_ and filters, such as `data/macau.pipeline.json` |
-| Run it | `npm run etl -- PIPELINE.json` | _Runs_ `uv run --project ../tessera-etl-python tessera-etl PIPELINE.json`, or the _folder_ `TESSERA_ETL_PYTHON` _names_. Extracts, _cleans_ and _loads_ _each_ _table_; _writes_ the _script_, such as `db/seed/0002-parks.sql`, and its _log_ in `db/seed-logs/` |
+| Run it | `npm run etl -- PIPELINE.json` | _Runs_ `uv run --project etl tessera-etl PIPELINE.json`, or the _pipeline_ in the _folder_ `TESSERA_ETL_PYTHON` _names_. Extracts, _cleans_ and _loads_ _each_ _table_; _writes_ the _script_, such as `db/seed/0002-parks.sql`, and its _log_ in `db/seed-logs/` |
 | Review | The _maintainer_ | _Reads_ the _log_ and the _script_, then _commits_ both; _together_ they _record_ what _entered_ the _database_, and what was _left_ out and why |
 | Seed | `Tessera seed`, which `npm start` _runs_ at every _start_ | DbUp _runs_ _each_ _new_ _script_ in a _transaction_ of its _own_ and _records_ it in `tessera.schemaversions` |
 | Publish | `npm run publish` | _Grants_ the schemas and their _tables_ to `tessera_reader` (US-24 c5) |
@@ -82,7 +82,7 @@ _Each_ _choice_ of the extract and the _load_:
 - _Each_ _table_ has a `fid` _column_, which its _tiles_ _carry_ as a _property_, _beside_ _any_ `id` from the _source_.
 - A _replaced_ _table_ _leaves_ the _map_ until `npm run publish`. Meanwhile Nginx _serves_ its _kept_ _tiles_ for _up_ to `Tiles.CacheSeconds`.
 - A _script_'s SQL _never_ _changes_ _once_ it has _run_; a _comment_ may, _since_ DbUp _knows_ a _script_ by its _name_ _alone_. _New_ or _corrected_ _data_ _goes_ in a _new_ _script_, with the _next_ _number_.
-- `npm run etl` _needs_ uv, Python's _project_ _tool_, and the _pipeline_ _cloned_ _beside_ this repository, as `../tessera-etl-python`, or in the _folder_ `TESSERA_ETL_PYTHON` _names_. uv _installs_ the _pipeline_'s _packages_, _among_ them pyogrio, shapely, GeoPandas and pydantic; the _service_ _loads_ _none_ of them.
+- `npm run etl` _needs_ uv, Python's _project_ _tool_, and _runs_ from the repository's _root_. uv _installs_ the _pipeline_'s _packages_, _among_ them pyogrio, shapely, GeoPandas and pydantic; the _service_ _loads_ _none_ of them.
 - _Without_ a local `ogr2ogr`, the _pipeline_ _runs_ GDAL's Docker _image_, `ghcr.io/osgeo/gdal:alpine-small-3.11.4`, for the _four_ _cases_ that _need_ it; that _path_ is untested.
 - GDAL _writes_ a _text_ _field_ _named_ `id` as a GeoJSON _feature_'s _own_ id; the _pipeline_ _reads_ it _back_ as the `id` _column_.
 

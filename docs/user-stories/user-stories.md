@@ -178,7 +178,7 @@ The _service_ _builds_ from the _database_ _up_: the _database_, then the _layer
 | Culture | `culture` | `museums`, `libraries` |
 | Transport | `transport` | `trains`, `buses` |
 
-The _places_ _arrive_ as _files_ the _data_ _publisher_ _owns_, _each_ with _columns_ of its _own_; for Macau, `data/macau-pois.geojson`, a **GeoJSON** _file_ of _points_ with their _properties_. A ***pipeline***, in its _own_ repository, _reads_ _each_ _file_ _through_ GDAL and _turns_ it into a SQL _script_, and DbUp _runs_ _each_ _script_ _once_ (ADR 0009). The _tables_ _store_ _each_ _shape_ in longitude and latitude in **WGS 84** (SRID 4326), _whatever_ _system_ the _file_ _uses_. The _tiles_ _use_ **Web Mercator** (EPSG:3857), which _measures_ in _metres_ _east_ and _north_: a ***vector tile*** _stores_ _each_ _point_ as a _position_ _inside_ a _Web_ Mercator _square_, so the _tile_ _query_ _converts_ the _places_ it _returns_ (US-07). No _client_ _sees_ that _conversion_; it _turns_ the _tile_ _back_ into longitude and latitude on its _own_. _Each_ _group_ _becomes_ a **schema**, a _named_ _folder_ of _tables_, and _each_ _layer_ a _table_ in it, so the _layer_ `food.cafes` _carries_ its _group_ in its _name_. You _publish_ the _tables_ by a **grant**, the _database_'s _word_ for a _permission_. A _library_ _buys_ a _book_ (the _seed_), but the _book_ _reaches_ the _open_ _shelf_ _only_ when the librarian _says_ so (the _grant_).
+The _places_ _arrive_ as _files_ the _data_ _publisher_ _owns_, _each_ with _columns_ of its _own_; for Macau, `data/macau-pois.geojson`, a **GeoJSON** _file_ of _points_ with their _properties_. A ***pipeline***, in `etl/`, _reads_ _each_ _file_ _through_ GDAL and _turns_ it into a SQL _script_, and DbUp _runs_ _each_ _script_ _once_ (ADR 0009). The _tables_ _store_ _each_ _shape_ in longitude and latitude in **WGS 84** (SRID 4326), _whatever_ _system_ the _file_ _uses_. The _tiles_ _use_ **Web Mercator** (EPSG:3857), which _measures_ in _metres_ _east_ and _north_: a ***vector tile*** _stores_ _each_ _point_ as a _position_ _inside_ a _Web_ Mercator _square_, so the _tile_ _query_ _converts_ the _places_ it _returns_ (US-07). No _client_ _sees_ that _conversion_; it _turns_ the _tile_ _back_ into longitude and latitude on its _own_. _Each_ _group_ _becomes_ a **schema**, a _named_ _folder_ of _tables_, and _each_ _layer_ a _table_ in it, so the _layer_ `food.cafes` _carries_ its _group_ in its _name_. You _publish_ the _tables_ by a **grant**, the _database_'s _word_ for a _permission_. A _library_ _buys_ a _book_ (the _seed_), but the _book_ _reaches_ the _open_ _shelf_ _only_ when the librarian _says_ so (the _grant_).
 
 > **Story.** **As** a _data_ _publisher_, **I want** _each_ _file_ of _places_ I _own_ _turned_ into a SQL _script_, _each_ _new_ _script_ _loaded_ _once_, and the _tables_ _published_ by _grant_, **so that** _office_ _machines_ can _load_ the _places_ as _tiles_, _layer_ by _layer_.
 
@@ -197,7 +197,7 @@ The _places_ _arrive_ as _files_ the _data_ _publisher_ _owns_, _each_ with _col
 2. **Publish by grant, and only then.** With no _grant_, the catalogue _lists_ no _layer_ from the _four_ schemas; _after_ the _grant_, all _nine_ _appear_, in SRID 4326, in the _order_ of `fid`.
 3. **A failed script changes nothing.** A _script_ that _drops_ a _table_, then _fails_, _leaves_ the _table_ _whole_, and _stays_ out of the journal.
 4. **A replaced table waits for its grant.** A _new_ _script_ that _replaces_ a _granted_ _table_ _leaves_ it unpublished until the _next_ _grant_.
-5. **The pipeline's own rules.** ***Unit tests*** in the _pipeline_'s _own_ repository, `nathanwh71/tessera-etl-python`: INSERT _statements_, a _numbered_ _key_, EPSG:4326, GDAL's _own_ _transaction_ _taken_ out, and a _misspelt_ _pipeline_ _file_ _refused_.
+5. **The pipeline's own rules.** ***Unit tests*** in `etl/tests`: INSERT _statements_, a _numbered_ _key_, EPSG:4326, GDAL's _own_ _transaction_ _taken_ out, and a _misspelt_ _pipeline_ _file_ _refused_.
 
 **Open to talk**
 
@@ -1004,7 +1004,7 @@ _One_ _story_ _cleans_ the _places_ _before_ they _become_ a _script_, so _fault
 
 **Tests to write first**
 
-The _pipeline_'s _own_ repository, `nathanwh71/tessera-etl-python`, _holds_ these _tests_.
+`etl/tests` _holds_ these _tests_.
 
 1. **Each filter alone.** _Pure_ _tests_: what _each_ _keeps_, _fixes_ and _drops_, and the _stop_ at the _first_ _bad_ _row_.
 2. **The stop rules.** A _table_ that _drops_ 2 of 10 _rows_ _stops_ _under_ the _default_ 10 %, and _passes_ when its _own_ _rule_ _allows_ 25 %.

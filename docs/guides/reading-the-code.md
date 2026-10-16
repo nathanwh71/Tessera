@@ -56,7 +56,7 @@
 
 ### Step 9 · How the places enter the database
 
-- **Open:** `data/macau.pipeline.json`, then, in the _pipeline_'s _own_ repository, `nathanwh71/tessera-etl-python`, `src/tessera_etl/shell/program.py`, `kernel/pipes.py`, `core/steps.py`, `core/table_sql.py` and _one_ ***filter*** in `core/filters/`, such as `inside_area.py`; then, here, `db/seed/0001-macau-places.sql` (the _first_ _lines_ _alone_), `src/Tessera/Modules/Tessera/Infrastructure/Seeding/SeedScripts.cs`, and ADR 0009.
+- **Open:** `data/macau.pipeline.json`, then, in `etl/`, `src/tessera_etl/shell/program.py`, `kernel/pipes.py`, `core/steps.py`, `core/table_sql.py` and _one_ ***filter*** in `core/filters/`, such as `inside_area.py`; then, here, `db/seed/0001-macau-places.sql` (the _first_ _lines_ _alone_), `src/Tessera/Modules/Tessera/Infrastructure/Seeding/SeedScripts.cs`, and ADR 0009.
 - **Look for:** pyogrio, a Python _library_, _reads_ _each_ _table_ _through_ GDAL; the ***pipeline file***'s filters, _joined_ into _one_ _chain_ of _handlers_ with `>>` and _ended_ by the ***stop rules***, _clean_ its _rows_ in _turn_; `table_sql.py` _writes_ the _cleaned_ _rows_ as SQL; DbUp _runs_ _each_ _new_ _script_ _once_ and _records_ it in `tessera.schemaversions`; `npm run publish` _grants_ the _tables_.
 - **Check yourself:** you _find_ a _wrong_ _address_ in a _script_ that has _run_. What do you _change_?
 

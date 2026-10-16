@@ -245,7 +245,7 @@ ArchUnitNET does not _see_ _calls_ _made_ _through_ reflection. Tessera _makes_ 
 
 ## What stays outside the template
 
-The ***pipeline***, a repository of its _own_ (`nathanwh71/tessera-etl-python`, ADR 0009), the _scripts_, the _map_ in `web/`, the _seed_ _scripts_ and the Nginx _settings_ _stay_ _outside_ the _template_. The _pipeline_ is a _tool_ the _publisher_ _runs_, not a _module_ the _Host_ _serves_.
+The ***pipeline*** in `etl/` (ADR 0009), the _scripts_, the _map_ in `web/`, the _seed_ _scripts_ and the Nginx _settings_ _stay_ _outside_ the _template_. The _pipeline_ is a _tool_ the _publisher_ _runs_, not a _module_ the _Host_ _serves_.
 
 ## What Common holds
 

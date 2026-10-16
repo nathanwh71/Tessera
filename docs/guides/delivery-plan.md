@@ -18,7 +18,7 @@ The _work_ _comes_ as 30 **user stories** in _six_ _parts_, in `docs/user-storie
 | E · Nginx guards the door | S-30, N-29 | 4 | _After_ 8 December |
 | F · Clean places | US-36 | 3 | _After_ 8 December |
 
-You _build_ both _ends_ of _one_ _program_. The _service_ is C# 14 on .NET 10, with ASP.NET Core, Npgsql, Dapper and DbUp; the _map_ is TypeScript 6 with React, MapLibre GL JS and react-elmish; the _scripts_ are TypeScript with zx on Node.js 26; the _database_ is PostgreSQL 18 with PostGIS 3.6 in Docker, and Nginx _stands_ in _front_ of the _service_. The ***pipeline*** that _cleans_ the _places_ (US-36) is Python, in its _own_ repository, `nathanwh71/tessera-etl-python`, and `npm run etl` _runs_ it. You _work_ on Ubuntu 24.04 _inside_ WSL2 on _Windows_ 11, and the _office_ _machine_ _runs_ the _same_ set-up.
+You _build_ both _ends_ of _one_ _program_. The _service_ is C# 14 on .NET 10, with ASP.NET Core, Npgsql, Dapper and DbUp; the _map_ is TypeScript 6 with React, MapLibre GL JS and react-elmish; the _scripts_ are TypeScript with zx on Node.js 26; the _database_ is PostgreSQL 18 with PostGIS 3.6 in Docker, and Nginx _stands_ in _front_ of the _service_. The ***pipeline*** that _cleans_ the _places_ (US-36) is Python, in `etl/`, and `npm run etl` _runs_ it. You _work_ on Ubuntu 24.04 _inside_ WSL2 on _Windows_ 11, and the _office_ _machine_ _runs_ the _same_ set-up.
 
 _Four_ _rules_ _shape_ every _day_ of the _plan_:
 

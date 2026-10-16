@@ -21,7 +21,7 @@ The thirty _stories_ in `docs/user-stories/user-stories.md` _fix_ what Tessera m
 | US-23 and UI-09 to UI-19, the map | _Built_ and _tested_: the _map_ in `web/` (ADR 0006), and its ***browser tests*** _pass_ _through_ Nginx |
 | N-18 to N-20, tiles that cost less | _Built_ and _tested_: a _tile_ _carries_ `max-age` and a _weak_ `ETag`, and Nginx _keeps_ it, _answers_ 304, and _packs_ it with gzip (ADR 0008) |
 | N-21 to N-28, steady when the database is not | _Built_ and _tested_: 503 with `Retry-After`, ***grants*** _seen_ _within_ `Catalogue.RefreshSeconds`, _one_ _query_ for a _crowd_, `/health`, and _queries_ _served_ in the _order_ they _arrive_. _While_ the _database_ is _down_, Nginx _serves_ every _tile_ it _holds_. The _service_ and the _database_ _start_ in _any_ _order_ |
-| US-36 Clean places | _Built_ and _tested_: _eight_ ***filters***, ***stop rules*** and a _log_ for _each_ _run_ of `npm run etl`, in the Python ***pipeline***, nathanwh71/tessera-etl-python (ADR 0009) |
+| US-36 Clean places | _Built_ and _tested_: _eight_ ***filters***, ***stop rules*** and a _log_ for _each_ _run_ of `npm run etl`, in the Python ***pipeline*** in `etl/` (ADR 0009) |
 | S-07, S-30 and N-29, Nginx guards the door | _Built_ and _tested_: Nginx _answers_ the _office_'s _network_ _alone_, _caps_ _each_ _machine_ at 100 _tiles_ a _second_ with a burst of 300 (ADR 0007), and _shares_ _requests_ _between_ _two_ _copies_ of the _service_, either of which can _carry_ them all (ADR 0008); a ***start-up task*** _starts_ them _again_ _after_ the _machine_ _restarts_, and _needs_ a _first_ _run_ on the _office_ _machine_ |
 
 ## What you need
@@ -29,7 +29,7 @@ The thirty _stories_ in `docs/user-stories/user-stories.md` _fix_ what Tessera m
 - The .NET 10 SDK, 10.0.100 or _later_: the _tools_ that _build_ and _run_ C# 14
 - Docker Engine, which _runs_ the _database_ and Nginx in _containers_: _sealed_ _boxes_ with their _own_ _files_
 - Node.js 26, which _runs_ the _scripts_ and _builds_ the _map_ (ADR 0002)
-- For `npm run etl`: uv, Python's _project_ _tool_, and the _pipeline_ _cloned_ _beside_ this repository, as `../tessera-etl-python`, or in the _folder_ `TESSERA_ETL_PYTHON` _names_
+- For `npm run etl`: uv, Python's _project_ _tool_, which _installs_ Python and the _pipeline_'s _packages_ for `etl/` on the _first_ _run_
 - GDAL's `ogrinfo`, for `npm run inspect` _alone_; _without_ it, the _script_ _runs_ GDAL's Docker _image_
 
 ## The commands
@@ -110,7 +110,7 @@ A _table_ of a geodatabase _names_ its ***feature class*** as `layer`; a _table_
 
 Filters _run_ in the _order_ _listed_, _each_ on the _rows_ the _one_ _before_ _kept_. A _row_ that _fails_ is _dropped_, or, with `"onFail": "stop"`, _ends_ the _whole_ _run_. A _table_ _also_ _stops_ the _run_ when more than `droppedOverPercent` of its _rows_ were _dropped_, 10 by _default_, or _fewer_ than `rowsUnder` _remain_, 1 by _default_; `stopWhen` _sets_ them for the _whole_ _file_ or for _one_ _table_. A _stopped_ _run_ _writes_ no _script_, but _always_ _writes_ its _log_. The _area_ _comes_ from the _pipeline_'s _own_ `area`, or _else_ from `tessera.json`. `lines: true` _stores_ _lines_ and _areas_ as many-part _shapes_, so _one_ _table_ _holds_ both _kinds_.
 
-**Adding a filter.** The _pipeline_ _lives_ in its _own_ repository, nathanwh71/tessera-etl-python, in Python. _Each_ filter is _one_ ***module*** in `src/tessera_etl/core/filters/`. It _holds_ the filter's _name_, what it does, a _model_ of its _own_ _settings_, its _checks_, and a _function_ that _returns_ the filter as a _step_ of the _chain_. The filter _itself_ is a _judge_: a _function_ that _gives_ _each_ _row_ a verdict, _keep_, _fix_ or _fail_, and `filter_step`, in `core/steps.py`, does the _dropping_, _logging_ and _stopping_ for every filter alike. A _new_ filter is _one_ _new_ _module_, _modelled_ on `inside_area.py`, and _one_ _line_ in `KINDS`. _Each_ filter _reads_ _only_ its _own_ _settings_, so the _pipeline_ _file_ _refuses_ a _setting_ that _belongs_ to another filter, or _one_ that is _missing_.
+**Adding a filter.** The _pipeline_ _lives_ in `etl/`, in Python. _Each_ filter is _one_ ***module*** in `etl/src/tessera_etl/core/filters/`. It _holds_ the filter's _name_, what it does, a _model_ of its _own_ _settings_, its _checks_, and a _function_ that _returns_ the filter as a _step_ of the _chain_. The filter _itself_ is a _judge_: a _function_ that _gives_ _each_ _row_ a verdict, _keep_, _fix_ or _fail_, and `filter_step`, in `core/steps.py`, does the _dropping_, _logging_ and _stopping_ for every filter alike. A _new_ filter is _one_ _new_ _module_, _modelled_ on `inside_area.py`, and _one_ _line_ in `KINDS`. _Each_ filter _reads_ _only_ its _own_ _settings_, so the _pipeline_ _file_ _refuses_ a _setting_ that _belongs_ to another filter, or _one_ that is _missing_.
 
 **Filters in code.** Filters _join_ with `>>`, which _runs_ the _left_ _one_, then the _right_ _one_ on the _rows_ it _kept_, and _stops_ at the _first_ _stop_. _Each_ _step_ is a _handler_ in Giraffe's _shape_, which _receives_ the _rest_ of the _chain_ (`kernel/pipes.py`):
 
@@ -145,6 +145,7 @@ The _service_ is _one_ _program_, _one_ _project_ laid out as the modular-monoli
 | `src/Tessera` | `Program.cs`, the _two_ _commands_; `TesseraHost.cs`, the _service_ _put_ _together_, the _template_'s _Host_; `.editorconfig`, which _makes_ _each_ namespace _match_ its _folder_ |
 | `nginx/` | Nginx's _file_, which `npm start` and the _browser_ _tests_ _run_ (ADR 0008) |
 | `web/` | The _map_: TypeScript, React, MapLibre GL JS, react-elmish, Valibot and Tailwind CSS (ADR 0006) |
+| `etl/` | The _pipeline_ that _cleans_ a _file_ of _places_ into a _seed_ _script_, in Python; the _service_ _never_ _runs_ it (ADR 0009, `etl/README.md`) |
 | `tests/` | The _architecture_ _tests_, and the _unit_, _property_ and ***integration tests*** of the _service_ |
 | `db/` | The _packaged_ _database_: PostgreSQL 18 with PostGIS 3.6, the _role_ _script_, the _seed_ _scripts_ in `db/seed`, and, _beside_ _each_ _script_ `npm run etl` _writes_, its _log_ in `db/seed-logs` |
 | `data/` | The _seed_'s _source_: 900 _places_ in longitude and latitude, and `macau.pipeline.json`, which _cleans_ them into a _seed_ _script_ |

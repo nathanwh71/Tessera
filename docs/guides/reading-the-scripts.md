@@ -71,7 +71,7 @@ _Two_ helpers are not _pure_, _since_ their _work_ is to _talk_ to the _world_: 
 ### Step 8 · Handing a pipeline file to Python
 
 - **Open:** `scripts/etl.ts`, then `scripts/lib/etl.ts`.
-- **Look for:** a _script_ that does _little_ on _purpose_. The ***pipeline*** _itself_ is Python, in its _own_ repository, `nathanwh71/tessera-etl-python` (ADR 0009), _cloned_ _beside_ this _one_ or in the _folder_ `TESSERA_ETL_PYTHON` _names_. This _script_ _checks_ the _command_, the _file_, the _pipeline_'s _folder_ and uv, Python's _project_ _tool_, _first_, so _each_ _mistake_ _gets_ a _plain_ _answer_, then _runs_ the _pipeline_ with `uv run`, from the _arguments_ `uvArguments` _builds_, and _ends_ with its exit _code_.
+- **Look for:** a _script_ that does _little_ on _purpose_. The ***pipeline*** _itself_ is Python, in `etl/` (ADR 0009), or in the _folder_ `TESSERA_ETL_PYTHON` _names_. This _script_ _checks_ the _command_, the _file_, the _pipeline_'s _folder_ and uv, Python's _project_ _tool_, _first_, so _each_ _mistake_ _gets_ a _plain_ _answer_, then _runs_ the _pipeline_ with `uv run`, from the _arguments_ `uvArguments` _builds_, and _ends_ with its exit _code_.
 - **Check yourself:** why _check_ for uv here, when `uv run` would _fail_ _anyway_?
 
 ## Part D · The office machine
