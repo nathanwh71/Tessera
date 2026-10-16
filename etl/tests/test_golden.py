@@ -1,10 +1,11 @@
 """The pipeline against its recorded outcomes, kept as golden files.
 
-Each case under tests/fixtures/cases ran once (tests/golden/make_golden.py), and its outcome was
-checked by meaning against the outcome before it (tools/compare_meaning.py). Here the pipeline
-runs on the same files, and must print the same lines, return the same exit code, and write the
-same script and the same log, less its first line, which holds the time of the run. The faulty
-pipeline files of tests/golden/pipelines.json must give the recorded words for each fault.
+tests/golden/make_golden.py ran each case under tests/fixtures/cases once, and
+tools/compare_meaning.py checked its outcome by meaning against the outcome before it. Here the
+pipeline runs on the same files, and must print the same lines, return the same exit code, and
+write the same script and the same log, less its first line, which holds the time of the run.
+The faulty pipeline files of tests/golden/pipelines.json must give the recorded words for each
+fault.
 """
 
 import contextlib

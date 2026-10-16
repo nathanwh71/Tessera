@@ -3,7 +3,7 @@
     uv run python tests/golden/make_pipeline_golden.py
 
 Each case is the text of a pipeline file. The pipeline reads it in an empty folder, so a file
-that passes every check stops at its missing source; a case marked "settings" runs beside a
+that passes every check stops at its missing source; a case marked `settings` runs beside a
 copy of tessera.json, whose area some filters need. Read each message the run records before
 committing it: the golden test then holds the pipeline to it.
 """

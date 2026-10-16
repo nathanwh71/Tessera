@@ -17,15 +17,15 @@ _NUMBER = re.compile(r"-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][-+]?[0-9]+)?")
 
 
 def _whole(value: object) -> object:
-    """A whole number given as text, such as "25", read as the number; anything else as it is.
+    """A whole number given as text, such as `"25"`, read as the number; anything else as it is.
 
-    The text must hold digits alone, so "1e2" stays text, and the model refuses it.
+    The text must hold digits alone, so `"1e2"` stays text, and the model refuses it.
     """
     return int(value) if isinstance(value, str) and re.fullmatch(r"-?[0-9]+", value) else value
 
 
 def _fraction(value: object) -> object:
-    """A number given as text, such as "12.5", read as the number; anything else as it is."""
+    """A number given as text, such as `"12.5"`, read as the number; anything else as it is."""
     return float(value) if isinstance(value, str) and _NUMBER.fullmatch(value) else value
 
 
@@ -48,7 +48,8 @@ class OnFail(Enum):
 
 
 def _on_fail(value: object) -> object:
-    """onFail in any case, such as "Stop", or as a number: 1, or "1", is stop, and any other drop."""
+    """onFail in any case, such as `"Stop"`, or as a number: `1`, or `"1"`, is stop, and any other
+    drop."""
     if isinstance(value, str):
         if re.fullmatch(r"-?[0-9]+", value):
             value = int(value)

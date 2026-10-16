@@ -200,7 +200,7 @@ json_values = st.recursive(
 @given(json_values, st.text(alphabet="/*\n ab", max_size=8))
 @example(value=None, words="**//")  # one removal of '*/' from '**//' leaves '*/'
 def test_a_comment_changes_nothing_but_a_string_keeps_its_marks(value: Any, words: str) -> None:
-    # Text inside a string, such as "http://x" or "a /* b", stays as it is; a comment goes.
+    # Text inside a string, such as `"http://x"` or `"a /* b"`, stays as it is; a comment goes.
     text = json.dumps({"words": words, "value": value})
     # A block comment ends at its first */, so the words inside it must hold none. Removing */
     # once is not enough: '**//' loses its middle and becomes '*/' again, so remove until none is

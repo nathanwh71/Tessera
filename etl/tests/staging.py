@@ -1,7 +1,7 @@
 """Stages a golden case in a fresh folder, runs a tool there, and keeps what it left behind.
 
-The golden files under tests/golden were made by running the pipeline this way
-(tests/golden/make_golden.py); the golden tests run it the same way and compare.
+tests/golden/make_golden.py made the golden files under tests/golden by running the pipeline
+this way; the golden tests run it the same way and compare.
 """
 
 import json
