@@ -8,11 +8,11 @@
 import { spawn } from 'node:child_process';
 import { appendFileSync, existsSync, openSync, renameSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { heading, logName, needsRoll } from './lib/boot.ts';
+import { heading, logName, mustMoveAside } from './lib/boot.ts';
 
 const repo = resolve(import.meta.dirname, '..');
 const log = resolve(repo, logName);
-if (existsSync(log) && needsRoll(statSync(log).size)) renameSync(log, `${log}.1`);
+if (existsSync(log) && mustMoveAside(statSync(log).size)) renameSync(log, `${log}.1`);
 appendFileSync(log, heading(new Date()));
 
 // The same command as npm start, in package.json, with its output sent to the log.

@@ -1,7 +1,7 @@
 // Tests of the start-up task's pure parts; node --test runs them, with no Windows and no WSL2.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { dockerSteps, heading, largestLog, linuxPath, needsRoll, registerSteps, taskArgument } from './boot.ts';
+import { dockerSteps, heading, largestLog, linuxPath, mustMoveAside, registerSteps, taskArgument } from './boot.ts';
 
 // A made-up machine, with Node.js under nvm as many installs have it, so each test reads plain paths.
 const place = { distro: 'Ubuntu-24.04', repo: '/home/ana/tessera', node: '/home/ana/.nvm/versions/node/v26.11.1/bin/node', path: '/usr/bin:/bin' };
@@ -34,7 +34,7 @@ test('asks for Docker to start with Ubuntu, unless it already does', () => {
 });
 
 test('moves a large log aside, and marks each start with its time', () => {
-  assert.equal(needsRoll(largestLog), false);
-  assert.equal(needsRoll(largestLog + 1), true);
+  assert.equal(mustMoveAside(largestLog), false);
+  assert.equal(mustMoveAside(largestLog + 1), true);
   assert.equal(heading(new Date(Date.UTC(2026, 9, 15, 8, 55))), '\n=== Started by the start-up task at 2026-10-15T08:55:00.000Z ===\n');
 });

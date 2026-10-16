@@ -14,8 +14,7 @@ export const logName = 'start.log';
 /** A log larger than this moves aside to start.log.1 at the next start, so it cannot fill the disk. */
 export const largestLog = 10 * 1024 * 1024;
 
-/** True when the log has grown large enough to move aside before this start. */
-export const needsRoll = (bytes: number): boolean => bytes > largestLog;
+export const mustMoveAside = (bytes: number): boolean => bytes > largestLog;
 
 /** The line that opens each start in the log, so a reader can tell one start from the next. */
 export const heading = (now: Date): string => `\n=== Started by the start-up task at ${now.toISOString()} ===\n`;
