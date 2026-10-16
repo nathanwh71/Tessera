@@ -1,5 +1,4 @@
 using System.Collections.Immutable;
-using System.Text;
 using System.Text.Json;
 using CSharpFunctionalExtensions;
 using NetTopologySuite.Geometries;
@@ -8,13 +7,12 @@ using NetTopologySuite.IO.Converters;
 namespace Tessera.Etl;
 
 /// <summary>
-/// Reads and writes GeoJSON, the text form of places that sits between the steps: GDAL extracts
-/// each table to GeoJSON, the <b><i>filters</i></b> clean its rows, and GDAL loads the cleaned
-/// GeoJSON into SQL.
+/// Reads GeoJSON, the text form of places GDAL extracts each table to, into the rows the
+/// <b><i>filters</i></b> clean; TableSql then writes the cleaned rows as SQL.
 /// </summary>
 public static class GeoJson
 {
-    // NetTopologySuite's converter turns a GeoJSON geometry into a shape and back. These options
+    // NetTopologySuite's converter turns a GeoJSON geometry into a shape. These options
     // stand apart from the pipeline file's strict ones: GDAL writes the GeoJSON, so no key in it
     // can be a publisher's typing mistake.
     private static readonly JsonSerializerOptions Shapes = new() { Converters = { new GeoJsonConverterFactory() } };
@@ -98,56 +96,5 @@ public static class GeoJson
             .Where(column => !sourceColumns.Contains(column))
             .Distinct();
         return [.. sourceColumns.Where(held.Contains), .. added];
-    }
-
-    /// <summary>
-    /// The rows as a FeatureCollection, with the columns <see cref="Columns"/> picks, for GDAL to
-    /// load. Every row writes every column, null where it holds none, so GDAL sees one set of
-    /// columns and makes one table.
-    /// </summary>
-    public static string Write(ImmutableArray<Row> rows, ImmutableArray<string> sourceColumns)
-    {
-        var columns = Columns(rows, sourceColumns);
-        using var buffer = new MemoryStream();
-        using (var writer = new Utf8JsonWriter(buffer))
-        {
-            writer.WriteStartObject();
-            writer.WriteString("type", "FeatureCollection");
-            writer.WriteStartArray("features");
-            foreach (var row in rows)
-            {
-                writer.WriteStartObject();
-                writer.WriteString("type", "Feature");
-                writer.WriteStartObject("properties");
-                foreach (var column in columns)
-                {
-                    writer.WritePropertyName(column);
-                    if (!row.Value(column).TryGetValue(out var value))
-                    {
-                        writer.WriteNullValue();
-                        continue;
-                    }
-                    switch (value)
-                    {
-                        case string text: writer.WriteStringValue(text); break;
-                        case long whole: writer.WriteNumberValue(whole); break;
-                        case double fraction: writer.WriteNumberValue(fraction); break;
-                        case bool flag: writer.WriteBooleanValue(flag); break;
-                        // Any other value a filter set is written as raw JSON. Read keeps lists and
-                        // objects as text, so they meet the string case above, not this one.
-                        // object.ToString may give null; that becomes none here, written as JSON's null.
-                        case var other: writer.WriteRawValue(other.ToString().AsMaybe().GetValueOrDefault("null")); break;
-                    }
-                }
-                writer.WriteEndObject();
-                writer.WritePropertyName("geometry");
-                if (row.Shape.TryGetValue(out var shape)) JsonSerializer.Serialize(writer, shape, Shapes);
-                else writer.WriteNullValue();
-                writer.WriteEndObject();
-            }
-            writer.WriteEndArray();
-            writer.WriteEndObject();
-        }
-        return Encoding.UTF8.GetString(buffer.ToArray());
     }
 }

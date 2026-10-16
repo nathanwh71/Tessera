@@ -101,8 +101,8 @@ public sealed class ChainTests
 
         // The empty source column stays; the removed one goes; the new one follows the source's.
         Assert.Equal(["name", "note", "area_m2"], columns);
-        var (again, _) = GeoJson.Read(GeoJson.Write(kept, ["name", "owner_phone", "note"])).Value;
-        Assert.Equal(12.5, again[0].Value("area_m2"));
-        Assert.False(again[0].Values.ContainsKey("owner_phone"));
+        var sql = TableSql.Statements(new TablePlan("food.cafes"), kept, ["name", "owner_phone", "note"]).Value;
+        Assert.Contains("ALTER TABLE \"food\".\"cafes\" ADD COLUMN \"area_m2\" FLOAT8;", sql);
+        Assert.DoesNotContain(sql, statement => statement.Contains("owner_phone", StringComparison.Ordinal));
     }
 }

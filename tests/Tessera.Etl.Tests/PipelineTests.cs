@@ -202,27 +202,6 @@ public sealed class PipelineTests
         Assert.Equal(["-f", "GPKG", "/work/source.gpkg", "/data/places.geojson"],
             SeedScript.CopyArguments("/data/places.geojson", "/work/source.gpkg"));
 
-    [Fact]
-    public void Loads_lines_and_areas_as_multiple_parts_and_points_as_they_are()
-    {
-        Assert.DoesNotContain("PROMOTE_TO_MULTI", SeedScript.LoadArguments("/work/c.geojson", "/work/c.sql", Cafes()));
-        Assert.Contains("PROMOTE_TO_MULTI", SeedScript.LoadArguments("/work/p.geojson", "/work/p.sql", Cafes() with { Lines = true }));
-        Assert.Equal(["--config", "PG_USE_COPY", "NO", "-f", "PGDump", "/work/c.sql", "/work/c.geojson"], SeedScript.LoadArguments("/work/c.geojson", "/work/c.sql", Cafes()).Take(7));
-    }
-
-    [Fact]
-    public void Joins_the_tables_without_GDALs_own_transaction()
-    {
-        var sql = string.Join('\n', "BEGIN;", "INSERT INTO \"food\".\"cafes\" VALUES ('COMMIT;", "COMMIT;", "');", "COMMIT;", "");
-
-        var lines = SeedScript.Join("p.json", [(Cafes(), sql)]).Value.Split('\n');
-
-        Assert.DoesNotContain("BEGIN;", lines);
-        Assert.Single(lines, line => line == "COMMIT;");
-        Assert.Contains("CREATE SCHEMA IF NOT EXISTS \"food\";", lines);
-        Assert.Contains("ANALYZE \"food\".\"cafes\";", lines);
-    }
-
     // GDAL writes a text field named id as the feature's own id, outside its properties.
     [Fact]
     public void Reads_a_features_own_id_as_the_id_column()
@@ -243,18 +222,4 @@ public sealed class PipelineTests
     [InlineData("""{"type":"FeatureCollection","features":{}}""")]
     public void Refuses_GeoJSON_that_is_no_FeatureCollection(string json) =>
         Assert.True(GeoJson.Read(json).IsFailure);
-
-    [Fact]
-    public void Keeps_columns_in_order_and_values_by_kind_through_GeoJSON()
-    {
-        var json = """{"type":"FeatureCollection","features":[{"type":"Feature","properties":{"name":"A","floors":3,"height":2.5,"open":true,"note":null},"geometry":{"type":"Point","coordinates":[113.55,22.19]}}]}""";
-
-        var (rows, columns) = GeoJson.Read(json).Value;
-        var (again, _) = GeoJson.Read(GeoJson.Write(rows, columns)).Value;
-
-        Assert.Equal(["name", "floors", "height", "open", "note"], columns);
-        Assert.Equal(rows[0].Values, again[0].Values);
-        Assert.Equal(3L, Assert.IsType<long>(again[0].Values["floors"]));
-        Assert.Equal(new Coordinate(113.55, 22.19), again[0].Shape.GetValueOrThrow().Coordinate);
-    }
 }

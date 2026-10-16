@@ -9,10 +9,11 @@ using Tessera.Etl;
 //   npm run etl -- data/macau.pipeline.json
 //
 // Extract: GDAL's ogr2ogr reads each table from the source, such as a geodatabase's feature class,
-//          into GeoJSON, in longitude and latitude.
+//          into GeoJSON, in longitude and latitude; the tables' extracts run side by side.
 // Transform: a chain of steps cleans each table's rows: the pipeline file's filters, in the order
 //          it lists them, then the stop rules (Pipes.cs, Steps.cs).
-// Load:    ogr2ogr writes the cleaned rows as SQL, and the tables join into one numbered script.
+// Load:    the program writes each table's cleaned rows as SQL (TableSql.cs), one table after
+//          another, into one numbered script.
 //
 // Every run that passes its checks writes a log beside the scripts' folder, in db/seed-logs/, of
 // what each filter did to each row; a wrong command, pipeline file, source or script name stops
@@ -41,18 +42,20 @@ if (File.Exists(pipeline.Output))
     return Fail(2, $"{pipeline.Output} already exists. Give new data a new script, with the next number.");
 
 var logFile = Path.Combine($"{Path.GetDirectoryName(pipeline.Output)}-logs", Path.ChangeExtension(Path.GetFileName(pipeline.Output), ".log"));
-// A fresh folder for the GeoJSON between the steps, kept out of the repository and deleted at the
-// end, however the run ends.
+// A fresh folder for the GeoJSON between the steps and the script as it grows, kept out of the
+// repository and deleted at the end, however the run ends.
 var work = Directory.CreateTempSubdirectory("tessera-etl-").FullName;
 // The folders GDAL's Docker image must see: the source's, to read it, and the work folder, for the
-// GeoJSON and each table's SQL. The script is written there too, and moved out only when whole, so
-// the scripts' folder needs no mount.
+// GeoJSON. The program writes the script itself, so the scripts' folder needs no mount.
 var folders = new[] { Path.GetDirectoryName(source)!, work };
 // Each table's counts and log lines, for the log; its rows go once its SQL is written, so the run
 // holds one table's rows at a time, not every table's.
 var cleaned = ImmutableArray.CreateBuilder<(CleaningPlan, Outcome)>();
-// Each table and the file in the work folder that holds its SQL.
-var parts = ImmutableArray.CreateBuilder<(TablePlan Table, string SqlFile)>();
+// Room for as many extracts at once as the machine has processors. It lives outside the try below,
+// so it outlasts any extract still running when a run stops early.
+using var slots = new SemaphoreSlim(Environment.ProcessorCount);
+// Each table's extract, started at once and awaited in the tables' order.
+var extracts = ImmutableArray<Task<Result<string, string>>>.Empty;
 try
 {
     // GeoJSON has no index, so for a pipeline of several tables GDAL copies it once into a
@@ -67,60 +70,69 @@ try
             return Finish(1, $"{pipeline.Source}: the copy failed. {copy.Error}");
     }
 
-    foreach (var plan in tables)
+    // The extracts run side by side, as many at once as the machine has processors: each is a GDAL
+    // run that mostly waits on the disk. The cleaning stays one table at a time, in the file's order,
+    // so the log and the script come out the same whichever extract finishes first.
+    extracts = [.. tables.Select(async plan =>
     {
-        var table = plan.Table;
-        Console.WriteLine($"{table.Table}: extracting{(table.Layer is { } layer ? $" {layer}" : "")}...");
-        var extracted = Path.Combine(work, $"{table.Table}.extracted.geojson");
-        var extract = await Gdal.Run(SeedScript.ExtractArguments(reading, extracted, table), folders);
-        if (extract.IsFailure)
-            return Finish(1, $"{table.Table}: extraction failed. {extract.Error}");
+        await slots.WaitAsync();
+        try
+        {
+            return await Gdal.Run(SeedScript.ExtractArguments(reading, Extracted(plan.Table), plan.Table), folders);
+        }
+        finally
+        {
+            slots.Release();
+        }
+    })];
+    Console.WriteLine($"extracting {tables.Length} tables...");
 
-        var geoJson = GeoJson.Read(File.ReadAllText(extracted));
-        if (geoJson.IsFailure)
-            return Finish(1, $"{table.Table}: GDAL's GeoJSON could not be read. {geoJson.Error}");
-        var (rows, columns) = geoJson.Value;
-        // The whole transform step: the table's chain of filters and stop rules, run on its rows.
-        var done = plan.Chain.Run(Cleaning.Start(table, rows));
-        cleaned.Add((plan, done.Outcome));
-        if (done.Stop.TryGetValue(out var stop))
-            return Finish(1, $"stopped. {stop} No script written.");
-
-        Console.WriteLine($"{table.Table}: read {done.Read}, kept {done.Rows.Length}, dropped {done.Dropped}.");
-        var cleanFile = Path.Combine(work, $"{table.Table}.cleaned.geojson");
-        File.WriteAllText(cleanFile, GeoJson.Write(done.Rows, columns));
-        var sqlFile = Path.Combine(work, $"{table.Table}.sql");
-        var load = await Gdal.Run(SeedScript.LoadArguments(cleanFile, sqlFile, table), folders);
-        if (load.IsFailure)
-            return Finish(1, $"{table.Table}: loading failed. {load.Error}");
-        parts.Add((table, sqlFile));
-    }
-
-    // The script is written in the work folder, one table's SQL at a time, and moved to its place
-    // only once every table has passed, so a run that stops still leaves no script (US-36 c2).
+    // The script is written in the work folder as each table passes, and moved to its place only
+    // once every table has passed, so a run that stops still leaves no script (US-36 c2).
     var draft = Path.Combine(work, "script.sql");
     await using (var script = new StreamWriter(draft))
     {
-        foreach (var line in SeedScript.Head(pipelineFile, parts.Select(part => part.Table)))
+        foreach (var line in SeedScript.Head(pipelineFile, tables.Select(plan => plan.Table)))
             await script.WriteAsync(line + "\n");
-        foreach (var (table, sqlFile) in parts)
+        for (var i = 0; i < tables.Length; i++)
         {
-            var part = SeedScript.Part(table, await File.ReadAllTextAsync(sqlFile));
-            if (part.IsFailure)
-                return Finish(1, part.Error);
-            foreach (var piece in part.Value)
-                await script.WriteAsync(piece + "\n");
+            var (plan, table) = (tables[i], tables[i].Table);
+            var extract = await extracts[i];
+            if (extract.IsFailure)
+                return Finish(1, $"{table.Table}: extraction failed. {extract.Error}");
+
+            var geoJson = GeoJson.Read(File.ReadAllText(Extracted(table)));
+            if (geoJson.IsFailure)
+                return Finish(1, $"{table.Table}: GDAL's GeoJSON could not be read. {geoJson.Error}");
+            var (rows, columns) = geoJson.Value;
+            // The whole transform step: the table's chain of filters and stop rules, run on its rows.
+            var done = plan.Chain.Run(Cleaning.Start(table, rows));
+            cleaned.Add((plan, done.Outcome));
+            if (done.Stop.TryGetValue(out var stop))
+                return Finish(1, $"stopped. {stop} No script written.");
+
+            Console.WriteLine($"{table.Table}: read {done.Read}, kept {done.Rows.Length}, dropped {done.Dropped}.");
+            var sql = TableSql.Statements(table, done.Rows, columns);
+            if (sql.IsFailure)
+                return Finish(1, sql.Error);
+            foreach (var statement in sql.Value)
+                await script.WriteAsync(statement + "\n");
         }
     }
     Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(pipeline.Output))!);
     File.Move(draft, pipeline.Output);
     var kept = cleaned.Sum(table => table.Item2.Kept);
-    return Finish(0, $"wrote {pipeline.Output}: {parts.Count} tables, {kept} rows. Read it, then commit it; 'Tessera seed' runs it once.");
+    return Finish(0, $"wrote {pipeline.Output}: {tables.Length} tables, {kept} rows. Read it, then commit it; 'Tessera seed' runs it once.");
 }
 finally
 {
+    // A run that stops early may leave extracts still running; they finish before their folder goes.
+    await Task.WhenAll(extracts);
     Directory.Delete(work, recursive: true);
 }
+
+// Where a table's extract is written in the work folder.
+string Extracted(TablePlan table) => Path.Combine(work, $"{table.Table}.extracted.geojson");
 
 // Writes the log, prints the result and returns the exit code. Every success, stop and
 // failure after the checks comes through here, so a stopped run leaves a log as surely as a
