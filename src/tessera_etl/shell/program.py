@@ -166,13 +166,18 @@ class _Run:
                     case Ok(done):
                         self.cleaned.append((plan, done.outcome))
                         outcome = done.outcome
-                        print(f"{plan.table.table}: read {outcome.read}, kept {outcome.kept}, dropped {outcome.dropped}.", flush=True)
+                        print(
+                            f"{plan.table.table}: read {outcome.read}, kept {outcome.kept}, dropped {outcome.dropped}.",
+                            flush=True,
+                        )
                         for statement in done.sql:
                             script.write(statement + "\n")
         os.makedirs(os.path.dirname(os.path.abspath(file.output)), exist_ok=True)
         shutil.move(draft, file.output)
         kept = sum(outcome.kept for _, outcome in self.cleaned)
-        return self._finish(0, f"wrote {file.output}: {len(plans)} tables, {kept} rows. Read it, then commit it; 'Tessera seed' runs it once.")
+        return self._finish(
+            0, f"wrote {file.output}: {len(plans)} tables, {kept} rows. Read it, then commit it; 'Tessera seed' runs it once."
+        )
 
     def _finish(self, code: int, result: str) -> int:
         """Writes the log, prints the result and returns the exit code.

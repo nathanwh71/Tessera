@@ -802,9 +802,11 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "geopandas" },
+    { name = "numpy" },
     { name = "pyarrow" },
     { name = "pydantic" },
     { name = "pyogrio" },
+    { name = "pyproj" },
     { name = "shapely" },
 ]
 
@@ -824,9 +826,11 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "geopandas", specifier = ">=1.2.0" },
+    { name = "numpy", specifier = ">=2.5.4" },
     { name = "pyarrow", specifier = ">=26.0.0" },
     { name = "pydantic", specifier = ">=2.14.1" },
     { name = "pyogrio", specifier = ">=0.13.0" },
+    { name = "pyproj", specifier = ">=3.8.0" },
     { name = "shapely", specifier = ">=2.2.0" },
 ]
 

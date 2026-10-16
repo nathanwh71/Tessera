@@ -42,7 +42,7 @@ CASES: dict[str, str] = {
     "lines null": pipeline('[ { "table": "a.b", "lines": null } ]'),
     "layer a number": pipeline('[ { "table": "a.b", "layer": 5 } ]'),
     "where null": pipeline('[ { "table": "a.b", "where": null } ]'),
-    "on fail halt": filters('{ "filter": "insideArea", "onFail": "halt" }') ,
+    "on fail halt": filters('{ "filter": "insideArea", "onFail": "halt" }'),
     "on fail Stop": filters('{ "filter": "requireFields", "fields": ["a"], "onFail": "Stop" }'),
     "on fail one": filters('{ "filter": "requireFields", "fields": ["a"], "onFail": 1 }'),
     "on fail two": filters('{ "filter": "requireFields", "fields": ["a"], "onFail": 2 }'),
@@ -98,10 +98,16 @@ CASES: dict[str, str] = {
     "stop a number": pipeline(extra=', "stopWhen": 5'),
     "area a number": pipeline(extra=', "area": 5'),
     "area empty": pipeline(extra=', "area": { }'),
-    "area as text": pipeline(extra=', "area": { "minLongitude": "113.5", "minLatitude": 22.1, "maxLongitude": 113.6, "maxLatitude": 22.2 }'),
-    "area null value": pipeline(extra=', "area": { "minLongitude": null, "minLatitude": 22.1, "maxLongitude": 113.6, "maxLatitude": 22.2 }'),
+    "area as text": pipeline(
+        extra=', "area": { "minLongitude": "113.5", "minLatitude": 22.1, "maxLongitude": 113.6, "maxLatitude": 22.2 }'
+    ),
+    "area null value": pipeline(
+        extra=', "area": { "minLongitude": null, "minLatitude": 22.1, "maxLongitude": 113.6, "maxLatitude": 22.2 }'
+    ),
     "area backwards": pipeline(extra=', "area": { "minLongitude": 3, "minLatitude": 1, "maxLongitude": 2, "maxLatitude": 2 }'),
-    "area unknown key": pipeline(extra=', "area": { "minLongitude": 1, "minLatitude": 1, "maxLongitude": 2, "maxLatitude": 2, "name": "x" }'),
+    "area unknown key": pipeline(
+        extra=', "area": { "minLongitude": 1, "minLatitude": 1, "maxLongitude": 2, "maxLatitude": 2, "name": "x" }'
+    ),
     "every file fault": '{ "source": "", "output": "", "tables": [] , "area": { "minLongitude": 3, "minLatitude": 1, "maxLongitude": 2, "maxLatitude": 2 } }',
     "output badly named": '{ "source": "x.gdb", "output": "db/seed/2-x.sql", "tables": [ { "table": "a.b" } ] }',
     "five faults": '{ "source": "x.gdb", "output": "db/seed/parks.sql", "tables": [ { "table": "Food.Cafes", "filters": [ { "filter": "dropDuplicates" }, { "filter": "dropNearDuplicates", "field": "name" } ] }, { "table": "outdoors.parks", "filters": [ { "filter": "insideArea" } ] } ] }',

@@ -8,7 +8,6 @@ from dataclasses import replace
 from typing import ClassVar
 
 import numpy as np
-import shapely
 from numpy.typing import NDArray
 
 from ...kernel.pipes import Handler
@@ -16,6 +15,7 @@ from .. import judge as measure
 from ..filter_kind import FilterKind, needs_area, settings_name
 from ..plan import Area, Model, OnFail
 from ..rows import Cleaning, Fix, Keep, Row, Verdict
+from ..shapes import transform
 from ..steps import each_row, filter_step
 
 NAME = "swapCoordinates"
@@ -45,8 +45,10 @@ def create(area: Area) -> Handler[Cleaning]:
         if shape is None or shape.is_empty or measure.inside(shape, area_box):
             return Keep(row)
         # shapely makes a new shape, so the row read stays as it was.
-        turned = shapely.transform(shape, _swap)
-        return Fix(replace(row, shape=turned), "swapped longitude and latitude") if measure.inside(turned, area_box) else Keep(row)
+        turned = transform(shape, _swap)
+        return (
+            Fix(replace(row, shape=turned), "swapped longitude and latitude") if measure.inside(turned, area_box) else Keep(row)
+        )
 
     # It never fails a row, so OnFail.DROP never comes into play.
     return filter_step(NAME, OnFail.DROP, each_row(judge))

@@ -6,6 +6,7 @@ The Python build must write the same script and log, byte for byte, as the C# bu
 numbers (tests/test_dotnet.py keeps the cases).
 """
 
+import math
 from decimal import ROUND_HALF_UP, Context, Decimal
 
 # .NET keeps 15 significant digits of a number before it applies a pattern such as '0.#', so a
@@ -16,10 +17,7 @@ _WIDE = Context(prec=1000)
 # The characters .NET counts as white space: tab to carriage return, the next-line mark U+0085,
 # and Unicode's space, line and paragraph separators. Python's own list adds U+001C to U+001F,
 # so the set is written out here.
-WHITE_SPACE = frozenset(
-    "\t\n\v\f\r \x85\xa0          "
-    "      　"
-)
+WHITE_SPACE = frozenset("\t\n\v\f\r \x85\xa0                　")
 
 
 def is_null_or_white_space(text: str) -> bool:
@@ -52,7 +50,7 @@ def number_text(value: float) -> str:
     between 0.0001 and 10 to the 17th, and in ***scientific notation***, such as 1E+21 or
     1E-05, outside that range.
     """
-    if value != value:
+    if math.isnan(value):
         return "NaN"
     if value in (float("inf"), float("-inf")):
         return "Infinity" if value > 0 else "-Infinity"

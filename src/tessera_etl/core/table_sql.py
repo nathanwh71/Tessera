@@ -15,7 +15,6 @@ import re
 from collections import Counter
 from collections.abc import Iterable, Sequence
 
-import shapely
 from shapely.geometry import LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon
 from shapely.geometry.base import BaseGeometry
 
@@ -24,6 +23,7 @@ from . import dotnet, geojson
 from .plan import TablePlan
 from .rows import Row, Value
 from .seed_script import schema_and_name
+from .shapes import ewkb_hex
 
 # PostgreSQL keeps a name to 63 bytes, and cuts a longer one; GDAL cuts it first, and so does this.
 _NAME_BYTES = 63
@@ -236,5 +236,4 @@ def _ewkb(shape: BaseGeometry) -> str:
     significant byte first, x and y alone, with SRID 4326 inside, since the extract put every
     shape in longitude and latitude.
     """
-    with_srid = shapely.set_srid(shape, 4326)
-    return str(shapely.to_wkb(with_srid, hex=True, output_dimension=2, byte_order=1, include_srid=True))
+    return ewkb_hex(shape, 4326)

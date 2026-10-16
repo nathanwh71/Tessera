@@ -52,7 +52,8 @@ class SyntaxFault:
     place: Place
 
     def __str__(self) -> str:
-        return f"{self.message} Path: {path_text(self.path)} | LineNumber: {self.place.line} | BytePositionInLine: {self.place.byte}."
+        place = f"LineNumber: {self.place.line} | BytePositionInLine: {self.place.byte}"
+        return f"{self.message} Path: {path_text(self.path)} | {place}."
 
 
 def path_text(path: Path) -> str:
@@ -60,10 +61,24 @@ def path_text(path: Path) -> str:
     return "$" + "".join(f"[{step}]" if isinstance(step, int) else f".{step}" for step in path)
 
 
-class _Fault(Exception):
+class _FaultError(Exception):
     def __init__(self, fault: SyntaxFault) -> None:
         super().__init__(fault.message)
         self.fault = fault
+
+
+# .NET's own words for text that is not JSON, kept whole so a message matches it exactly.
+_OBJECT_COMMA = (
+    "The JSON object contains a trailing comma at the end which is not supported in this mode. Change the reader options."
+)
+_ARRAY_COMMA = (
+    "The JSON array contains a trailing comma at the end which is not supported in this mode. Change the reader options."
+)
+_OPEN = "Expected depth to be zero at the end of the JSON payload. There is an open JSON object or array that should be closed."
+_NO_TOKENS = (
+    "The input does not contain any JSON tokens. Expected the input to start with a valid JSON token, when isFinalBlock is true."
+)
+_CUT_SHORT = "Expected start of a property name or value, but instead reached end of data."
 
 
 _WHITE = b" \t\r\n"
@@ -83,8 +98,8 @@ class _Reader:
     def place(self, at: int | None = None) -> Place:
         return Place(self.line, (self.at if at is None else at) - self.line_start)
 
-    def fail(self, message: str, path: Path | None = None, at: int | None = None) -> _Fault:
-        return _Fault(SyntaxFault(message, tuple(self.stack) if path is None else path, self.place(at)))
+    def fail(self, message: str, path: Path | None = None, at: int | None = None) -> _FaultError:
+        return _FaultError(SyntaxFault(message, tuple(self.stack) if path is None else path, self.place(at)))
 
     def skip(self) -> None:
         """Steps over white space and comments, which the pipeline file may hold."""
@@ -120,7 +135,7 @@ class _Reader:
     def value(self, path: Path) -> JsonValue:
         byte = self.peek()
         if byte is None:
-            raise self.fail("Expected start of a property name or value, but instead reached end of data.")
+            raise self.fail(_CUT_SHORT)
         if byte == ord("{"):
             self.at += 1
             self.places[path] = self.place()
@@ -140,9 +155,14 @@ class _Reader:
                 # .NET names the rest of the text from the literal on, and points at the first
                 # letter that differs.
                 rest = self.data[self.at :]
-                wrong = next((index for index in range(1, len(word)) if index >= len(rest) or rest[index] != word[index]), len(word))
+                wrong = next(
+                    (index for index in range(1, len(word)) if index >= len(rest) or rest[index] != word[index]), len(word)
+                )
                 found = rest.decode("utf-8", "replace")
-                raise self.fail(f"'{found}' is an invalid JSON literal. Expected the literal '{word.decode()}'.", at=self.at + min(wrong, len(rest)))
+                raise self.fail(
+                    f"'{found}' is an invalid JSON literal. Expected the literal '{word.decode()}'.",
+                    at=self.at + min(wrong, len(rest)),
+                )
             self.at += len(word)
             self.places[path] = self.place()
             self.ends[path] = self.place()
@@ -203,9 +223,9 @@ class _Reader:
             self.skip()
             byte = self.peek()
             if byte is None:
-                raise self.fail("Expected start of a property name or value, but instead reached end of data.", at=comma)
+                raise self.fail(_CUT_SHORT, at=comma)
             if byte == ord("}"):
-                raise self.fail("The JSON object contains a trailing comma at the end which is not supported in this mode. Change the reader options.")
+                raise self.fail(_OBJECT_COMMA)
             if byte != ord('"'):
                 raise self.fail(f"'{self.shown(byte)}' is an invalid start of a property name. Expected a '\"'.")
             key = self.string()
@@ -213,7 +233,7 @@ class _Reader:
             byte = self.peek()
             if byte != ord(":"):
                 if byte is None:
-                    raise self.fail("Expected depth to be zero at the end of the JSON payload. There is an open JSON object or array that should be closed.")
+                    raise self.fail(_OPEN)
                 raise self.fail(f"'{self.shown(byte)}' is invalid after a property name. Expected a ':'.")
             self.at += 1
             self.skip()
@@ -231,7 +251,7 @@ class _Reader:
                 self.ends[path] = self.place()
                 return result
             if byte is None:
-                raise self.fail("Expected depth to be zero at the end of the JSON payload. There is an open JSON object or array that should be closed.")
+                raise self.fail(_OPEN)
             raise self.fail(f"'{self.shown(byte)}' is invalid after a value. Expected either ',', '}}', or ']'.")
 
     def array(self, path: Path) -> list[JsonValue]:
@@ -248,11 +268,11 @@ class _Reader:
             byte = self.peek()
             if byte == ord("]") and result:
                 raise self.fail(
-                    "The JSON array contains a trailing comma at the end which is not supported in this mode. Change the reader options.",
+                    _ARRAY_COMMA,
                     path=(*path, len(result)),
                 )
             if byte is None:
-                raise self.fail("Expected start of a property name or value, but instead reached end of data.", at=comma)
+                raise self.fail(_CUT_SHORT, at=comma)
             result.append(self.value((*path, len(result))))
             self.stack[:] = list(path)
             self.skip()
@@ -266,7 +286,7 @@ class _Reader:
                 self.ends[path] = self.place()
                 return result
             if byte is None:
-                raise self.fail("Expected depth to be zero at the end of the JSON payload. There is an open JSON object or array that should be closed.")
+                raise self.fail(_OPEN)
             raise self.fail(f"'{self.shown(byte)}' is invalid after a value. Expected either ',', '}}', or ']'.")
 
 
@@ -276,16 +296,14 @@ def parse(text: str) -> Parsed | SyntaxFault:
     try:
         reader.skip()
         if reader.peek() is None:
-            raise reader.fail(
-                "The input does not contain any JSON tokens. Expected the input to start with a valid JSON token, when isFinalBlock is true."
-            )
+            raise reader.fail(_NO_TOKENS)
         value = reader.value(())
         reader.stack.clear()
         reader.skip()
         byte = reader.peek()
         if byte is not None:
             raise reader.fail(f"'{reader.shown(byte)}' is invalid after a single JSON value. Expected end of data.")
-    except _Fault as fault:
+    except _FaultError as fault:
         return fault.fault
     return Parsed(value, reader.places, reader.ends)
 

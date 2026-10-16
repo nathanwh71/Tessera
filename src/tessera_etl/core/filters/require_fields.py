@@ -9,7 +9,7 @@ from typing import ClassVar
 from ...kernel.pipes import Handler
 from .. import judge as measure
 from ..filter_kind import FilterKind, settings_name
-from ..plan import Area, Model, Text, OnFail, OnFailSetting
+from ..plan import Area, Model, OnFail, OnFailSetting, Text
 from ..rows import Cleaning, Fail, Keep, Row, Verdict
 from ..steps import each_row, filter_step
 

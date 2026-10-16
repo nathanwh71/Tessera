@@ -18,9 +18,7 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-CSHARP = os.environ.get(
-    "TESSERA_CSHARP", "/home/claude/tessera/tools/Tessera.Etl/bin/Release/net10.0/Tessera.Etl.dll"
-)
+CSHARP = os.environ.get("TESSERA_CSHARP", "/home/claude/tessera/tools/Tessera.Etl/bin/Release/net10.0/Tessera.Etl.dll")
 DOTNET = os.environ.get("DOTNET", "/opt/dotnet/dotnet")
 PYTHON_TOOL = [sys.executable, "-m", "tessera_etl"]
 
@@ -66,7 +64,9 @@ def compare(folder: Path, pipeline: str = "p.json") -> list[str]:
     differences: list[str] = []
     for name in ("code", "out", "err", "script", "log"):
         if getattr(csharp, name) != getattr(python, name):
-            differences.append(f"{name} differs:\n  C#:     {str(getattr(csharp, name))[:600]!r}\n  Python: {str(getattr(python, name))[:600]!r}")
+            differences.append(
+                f"{name} differs:\n  C#:     {str(getattr(csharp, name))[:600]!r}\n  Python: {str(getattr(python, name))[:600]!r}"
+            )
     return differences
 
 

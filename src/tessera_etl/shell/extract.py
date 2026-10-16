@@ -26,12 +26,11 @@ import geopandas
 import numpy as np
 import pyarrow as pa
 import pyogrio  # pyright: ignore[reportMissingTypeStubs]
-import shapely
 from numpy.typing import NDArray
 from pyproj import CRS
 from shapely.geometry.base import BaseGeometry
 
-from ..core import gdal_text, geojson, seed_script
+from ..core import gdal_text, geojson, seed_script, shapes
 from ..core.geojson import Extract, Feature, Some
 from ..core.plan import TablePlan
 from ..core.rows import Value
@@ -121,7 +120,7 @@ def _copy(source: str, copy: str) -> frozenset[str]:
     info = _read_info(source, None)
     meta, table = _read_arrow(source, datetime_as_string=True)
     json_columns: set[str] = set()
-    columns: dict[str, pa.Array | pa.ChunkedArray] = {}
+    columns: dict[str, Any] = {}
     for index, name in enumerate(cast(Sequence[str], meta["fields"])):
         kind, subtype = info["ogr_types"][index], info["ogr_subtypes"][index]
         column = table.column(name)
@@ -135,7 +134,7 @@ def _copy(source: str, copy: str) -> frozenset[str]:
     geometry_name = meta.get("geometry_name") or "wkb_geometry"
     if geometry_name in table.column_names:
         columns["geom"] = table.column(geometry_name)
-    copied = pa.table(columns)
+    copied = pa.table(columns)  # pyright: ignore[reportUnknownMemberType]
     pyogrio.write_arrow(  # pyright: ignore[reportUnknownMemberType]
         copied,
         copy,
@@ -180,45 +179,45 @@ def read_table(reader: Reader, table: TablePlan) -> Result[Result[Extract, str],
         meta, arrow = _read_arrow(path, layer=table.layer, where=table.where, datetime_as_string=True, return_fids=reader.native)
     except Exception:  # noqa: BLE001 - ogr2ogr names the fault, in the C# tool's words
         return _with_ogr2ogr(reader, table)
-    shapes = _shapes(meta, arrow)
-    if shapes is None:
+    series = _shapes(meta, arrow)
+    flat = None if series is None else _flat_lonlat(series)
+    if flat is None:
         return _with_ogr2ogr(reader, table)
-    match _flat_lonlat(shapes, meta.get("crs")):
-        case None:
-            return _with_ogr2ogr(reader, table)
-        case flat:
-            pass
     if reader.native:
         return Ok(Ok(geojson.rows_of(_native_features(reader, table, info, meta, arrow, flat))))
     return Ok(Ok(geojson.rows_of(_features(info, meta, arrow, flat, reader.json_columns))))
 
 
-def _shapes(meta: dict[str, Any], arrow: pa.Table) -> list[BaseGeometry | None] | None:
-    """The shapes of the rows, or None when one is a type only GDAL can straighten."""
+def _shapes(meta: dict[str, Any], arrow: pa.Table) -> geopandas.GeoSeries | None:
+    """The shapes of the rows, as a GeoSeries (geopandas' column of shapes, which carries its
+    coordinate system), or None when one is a type only GDAL can straighten."""
     name = meta.get("geometry_name") or "wkb_geometry"
-    if name not in arrow.column_names:
-        return [None] * arrow.num_rows
-    blobs = np.array(arrow.column(name).to_pylist(), dtype=object)
+    blobs: list[bytes | None] = (
+        cast(list[bytes | None], arrow.column(name).to_pylist()) if name in arrow.column_names else [None] * arrow.num_rows
+    )
     try:
-        shapes = cast(NDArray[np.object_], shapely.from_wkb(blobs))
-    except (shapely.errors.GEOSException, NotImplementedError):
+        series = geopandas.GeoSeries(shapes.from_wkb(blobs), crs=meta.get("crs"))  # pyright: ignore[reportArgumentType]
+    except (shapes.GEOSException, NotImplementedError):
         return None
-    found: list[BaseGeometry | None] = list(shapes)
-    if any(shape is not None and not _plain(shape) for shape in found):
+    if any(shape is not None and not _plain(shape) for shape in _listed(series)):
         return None
-    return found
+    return series
+
+
+def _listed(series: geopandas.GeoSeries) -> list[BaseGeometry | None]:
+    return [cast(BaseGeometry | None, shape) for shape in series.to_numpy()]  # pyright: ignore[reportUnknownMemberType]
 
 
 def _plain(shape: BaseGeometry) -> bool:
     """True when the shape and every part of it is a type GeoJSON can hold as it is."""
-    if int(shapely.get_type_id(shape)) not in _PLAIN_TYPES:
+    if shapes.type_id(shape) not in _PLAIN_TYPES:
         return False
-    if isinstance(shape, shapely.GeometryCollection):
-        return all(_plain(part) for part in shape.geoms)
+    if shapes.is_many(shape):
+        return all(_plain(part) for part in shapes.parts(shape))
     return True
 
 
-def _flat_lonlat(shapes: list[BaseGeometry | None], crs_text: str | None) -> list[BaseGeometry | None] | None:
+def _flat_lonlat(series: geopandas.GeoSeries) -> list[BaseGeometry | None] | None:
     """The shapes flat, with each number as GDAL's writer left it, when they are in longitude
     and latitude already.
 
@@ -227,19 +226,16 @@ def _flat_lonlat(shapes: list[BaseGeometry | None], crs_text: str | None) -> lis
     pyproj's in the last digit of a number, and since it refuses a table with no system in its
     own words.
     """
-    present = [shape for shape in shapes if shape is not None]
-    if not present:
-        return shapes
-    if crs_text is None:
+    found = _listed(series)
+    if all(shape is None for shape in found):
+        return found
+    crs = series.crs
+    if crs is None:
         return None
-    crs = CRS.from_user_input(crs_text)
     flat_crs = crs.to_2d() if crs.is_geographic else crs
     if not flat_crs.equals(CRS.from_epsg(4326), ignore_axis_order=True):
         return None
-    series = geopandas.GeoSeries(shapes, crs=crs)
-    flat = shapely.force_2d(np.asarray(series.values, dtype=object))
-    rounded = shapely.transform(flat, _round_points)
-    return [None if shape is None else cast(BaseGeometry, shape) for shape in rounded]
+    return shapes.transform_all(shapes.force_2d(found), _round_points)
 
 
 _COORDINATE: Callable[[NDArray[np.float64]], NDArray[np.float64]] = np.vectorize(gdal_text.coordinate, otypes=[np.float64])
@@ -329,11 +325,13 @@ def _columns(info: dict[str, Any], meta: dict[str, Any], arrow: pa.Table, json_c
         subtype = "OFSTJSON" if name in json_columns else info["ogr_subtypes"][index]
         column = arrow.column(name).combine_chunks()
         if isinstance(column, pa.DictionaryArray):
-            codes = cast(list[Any], column.indices.to_pylist())
-            words = cast(list[Any], column.dictionary.to_pylist())
+            coded = cast(Any, column)
+            codes = cast(list[Any], coded.indices.to_pylist())
+            words = cast(list[Any], coded.dictionary.to_pylist())
             values = [_value(kind, subtype, code) for code in codes]
             resolved = [
-                words[code] if code is not None and 0 <= code < len(words) and words[code] is not None else _ABSENT for code in codes
+                words[code] if code is not None and 0 <= code < len(words) and words[code] is not None else _ABSENT
+                for code in codes
             ]
             columns.append(_Column(name, values, resolved))
         else:
@@ -342,12 +340,12 @@ def _columns(info: dict[str, Any], meta: dict[str, Any], arrow: pa.Table, json_c
 
 
 def _features(
-    info: dict[str, Any], meta: dict[str, Any], arrow: pa.Table, shapes: list[BaseGeometry | None], json_columns: frozenset[str]
+    info: dict[str, Any], meta: dict[str, Any], arrow: pa.Table, outlines: list[BaseGeometry | None], json_columns: frozenset[str]
 ) -> list[Feature]:
     """Features from a source GDAL reads with no GeoJSON of its own: every field, in order."""
     columns = _columns(info, meta, arrow, json_columns)
     features: list[Feature] = []
-    for row, shape in enumerate(shapes):
+    for row, shape in enumerate(outlines):
         properties: list[tuple[str, Value]] = []
         for column in columns:
             value = column.values[row]
@@ -360,7 +358,12 @@ def _features(
 
 
 def _native_features(
-    reader: Reader, table: TablePlan, info: dict[str, Any], meta: dict[str, Any], arrow: pa.Table, shapes: list[BaseGeometry | None]
+    reader: Reader,
+    table: TablePlan,
+    info: dict[str, Any],
+    meta: dict[str, Any],
+    arrow: pa.Table,
+    outlines: list[BaseGeometry | None],
 ) -> list[Feature]:
     """Features from a GeoJSON source GDAL reads itself, as ogr2ogr's GeoJSON held them.
 
@@ -377,7 +380,7 @@ def _native_features(
     columns = _columns(info, meta, arrow, frozenset())
     kinds = dict(zip(cast(Sequence[str], meta["fields"]), cast(Sequence[str], info["ogr_types"]), strict=True))
     features: list[Feature] = []
-    for row, (fid, shape) in enumerate(zip(fids, shapes, strict=True)):
+    for row, (fid, shape) in enumerate(zip(fids, outlines, strict=True)):
         own, keys, raw = sources[position[fid]]
         properties: list[tuple[str, Value]] = []
         for column in columns:
@@ -394,7 +397,9 @@ def _native_features(
         found_id: Some | None = None
         if own is not _ABSENT:
             found_id = Some(_own_id(own))
-            properties = [(name, value) for name, value in properties if not (name == "id" and _same_id(own, value, kinds.get("id")))]
+            properties = [
+                (name, value) for name, value in properties if not (name == "id" and _same_id(own, value, kinds.get("id")))
+            ]
         features.append(Feature(found_id, tuple(properties), shape))
     return features
 
@@ -436,7 +441,7 @@ def _own_id(own: Any) -> Value:
 def _native_json(raw: Any, value: Value) -> Value:
     """A JSON field's value as GDAL wrote it from the feature's own JSON."""
     if isinstance(raw, (dict, list)):
-        return geojson.jsonc_text(raw)
+        return geojson.jsonc_text(cast(object, raw))
     return value
 
 
@@ -448,9 +453,9 @@ def _source_features(reader: Reader) -> list[tuple[Any, frozenset[str], dict[str
         found: list[tuple[Any, frozenset[str], dict[str, Any]]] = []
         shared: dict[frozenset[str], frozenset[str]] = {}
         for item in cast(list[dict[str, Any]], document.get("features", [])):
-            properties = item.get("properties")
-            keys = frozenset(properties) if isinstance(properties, dict) else frozenset()
-            raw = {key: value for key, value in cast(dict[str, Any], properties or {}).items() if isinstance(value, (dict, list))}
+            properties = cast(dict[str, Any], item.get("properties") if isinstance(item.get("properties"), dict) else {})
+            keys = frozenset(properties)
+            raw: dict[str, Any] = {key: value for key, value in properties.items() if isinstance(value, (dict, list))}
             found.append((item.get("id", _ABSENT), shared.setdefault(keys, keys), raw))
         reader.native_features = found
     return reader.native_features

@@ -61,7 +61,7 @@ def _describe(annotation: Any) -> tuple[str, Any]:
         return "list", get_args(inner)[0]
     if origin is dict or inner is dict:
         return "object", None
-    return "value", inner
+    return "value", cast(Any, inner)
 
 
 def _fields(model: type[BaseModel]) -> Mapping[str, _Field]:
@@ -103,10 +103,16 @@ def _fault(root: type[Named], parsed: Parsed, error: ErrorDetails) -> _Fault:
     kind = error["type"]
     if kind == "missing":
         owner = _owner(root, loc[:-1])
-        return _Fault(parsed.ends[loc[:-1]], f"JSON deserialization for type '{owner.dotnet_name}' was missing required properties including: '{loc[-1]}'.")
+        return _Fault(
+            parsed.ends[loc[:-1]],
+            f"JSON deserialization for type '{owner.dotnet_name}' was missing required properties including: '{loc[-1]}'.",
+        )
     if kind == "extra_forbidden":
         owner = _owner(root, loc[:-1])
-        return _Fault(parsed.places[loc], f"The JSON property '{loc[-1]}' could not be mapped to any .NET member contained in type '{owner.dotnet_name}'.")
+        return _Fault(
+            parsed.places[loc],
+            f"The JSON property '{loc[-1]}' could not be mapped to any .NET member contained in type '{owner.dotnet_name}'.",
+        )
     value: JsonValue = at_path(parsed.value, loc)
     place = parsed.places[loc]
     where = f" Path: {path_text(loc)} | LineNumber: {place.line} | BytePositionInLine: {place.byte}."
@@ -144,7 +150,8 @@ def _target(root: type[Named], loc: Path) -> Any:
         if kind == "list":
             target = inner
         else:
-            assert kind == "model" and isinstance(step, str)
+            assert kind == "model"
+            assert isinstance(step, str)
             model = cast(type[BaseModel], inner)
             field = _fields(model)[step]
             target = model.model_fields[field.name].annotation

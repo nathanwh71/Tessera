@@ -13,7 +13,7 @@ from ...kernel.pipes import Handler
 from .. import dotnet
 from .. import judge as measure
 from ..filter_kind import FilterKind, settings_name
-from ..plan import Area, Model, Text, OnFail
+from ..plan import Area, Model, OnFail, Text
 from ..rows import Cleaning, Fix, Keep, Row, Value, Verdict, frozen_values
 from ..steps import each_row, filter_step
 

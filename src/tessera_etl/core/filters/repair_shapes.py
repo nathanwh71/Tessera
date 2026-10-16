@@ -9,13 +9,12 @@ import re
 from dataclasses import replace
 from typing import ClassVar
 
-import shapely
-
 from ...kernel.pipes import Handler
 from .. import fixer
 from ..filter_kind import FilterKind, settings_name
 from ..plan import Area, Model, OnFail, OnFailSetting
 from ..rows import Cleaning, Fail, Fix, Keep, Row, Verdict
+from ..shapes import invalid_reason
 from ..steps import each_row, filter_step
 
 NAME = "repairShapes"
@@ -46,7 +45,7 @@ def create(on_fail: OnFail = OnFail.DROP) -> Handler[Cleaning]:
         shape = row.shape
         if shape is None or shape.is_empty or shape.is_valid:
             return Keep(row)
-        why = _PLACE.sub("", shapely.is_valid_reason(shape)) or "invalid"
+        why = _PLACE.sub("", invalid_reason(shape)) or "invalid"
         mended = fixer.fix(shape)
         # A repair is a fix; a shape that comes out empty fails, so it obeys onFail.
         if mended.is_empty:

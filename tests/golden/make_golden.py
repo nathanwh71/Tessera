@@ -12,7 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from staging import CASES, run, save  # noqa: E402
+from staging import CASES, run, save
 
 CSHARP = os.environ.get("TESSERA_CSHARP", "/home/claude/tessera/tools/Tessera.Etl/bin/Release/net10.0/Tessera.Etl.dll")
 DOTNET = os.environ.get("DOTNET", "/opt/dotnet/dotnet")

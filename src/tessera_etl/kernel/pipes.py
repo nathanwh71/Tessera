@@ -40,7 +40,7 @@ class Handler[C]:
         return Handler(lambda rest: first(second(rest)))
 
 
-def identity[C]() -> Handler[C]:
+def identity[C]() -> Handler[C]:  # pyright: ignore[reportInvalidTypeVarUse] - C# writes Identity<TContext>() too
     """The step that passes the context straight on.
 
     It starts a fold, so a list of steps joins into one chain, and an empty list gives a chain

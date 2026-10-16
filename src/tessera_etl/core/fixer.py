@@ -15,7 +15,6 @@ import math
 from collections.abc import Sequence
 from typing import cast
 
-import shapely
 from shapely.geometry import (
     GeometryCollection,
     LinearRing,
@@ -27,6 +26,8 @@ from shapely.geometry import (
     Polygon,
 )
 from shapely.geometry.base import BaseGeometry
+
+from .shapes import difference, intersects, is_many, make_valid_ring, parts, union
 
 
 def fix(shape: BaseGeometry) -> BaseGeometry:
@@ -47,22 +48,22 @@ def fix(shape: BaseGeometry) -> BaseGeometry:
         case Polygon():
             return _polygon_element(shape) or Polygon()
         case MultiPoint():
-            points = [fixed for part in shape.geoms if not part.is_empty and (fixed := _point(part)) is not None]
+            points = [fixed for part in parts(shape) if isinstance(part, Point) and (fixed := _point(part)) is not None]
             return MultiPoint(points)
         case MultiLineString():
             return _multi_line(shape)
         case MultiPolygon():
             return _multi_polygon(shape)
         case GeometryCollection():
-            return GeometryCollection([fix(part) for part in shape.geoms])
+            return GeometryCollection([fix(part) for part in parts(shape)])
         case _:
             return shape
 
 
 def _parts(shape: BaseGeometry) -> int:
     """How many parts NTS counts: a shape with none, such as an empty collection, is copied."""
-    if isinstance(shape, (MultiPoint, MultiLineString, MultiPolygon, GeometryCollection)):
-        return len(shape.geoms)
+    if is_many(shape):
+        return len(parts(shape))
     return 1
 
 
@@ -102,7 +103,7 @@ def _ring_element(ring: LinearRing) -> BaseGeometry | None:
 
 
 def _multi_line(shape: MultiLineString) -> BaseGeometry:
-    fixed = [line for part in shape.geoms if not part.is_empty and (line := _line_element(part)) is not None]
+    fixed = [line for part in parts(shape) if isinstance(part, LineString) and (line := _line_element(part)) is not None]
     return MultiLineString(fixed)
 
 
@@ -111,7 +112,7 @@ def _fix_ring(ring: LinearRing) -> BaseGeometry:
 
     GEOS's repair of a one-ring area does exactly this, and its corners come out as NTS's do.
     """
-    return shapely.make_valid(Polygon(ring), method="structure", keep_collapsed=False)
+    return make_valid_ring(Polygon(ring))
 
 
 def _polygon_element(polygon: Polygon) -> BaseGeometry | None:
@@ -121,9 +122,9 @@ def _polygon_element(polygon: Polygon) -> BaseGeometry | None:
     if not polygon.interiors:
         return shell
     holes_fixed = [_fix_ring(hole) for hole in polygon.interiors]
-    holes = [hole for hole in holes_fixed if shapely.intersects(shell, hole)]
-    shells = [hole for hole in holes_fixed if not shapely.intersects(shell, hole)]
-    with_holes = shell if not holes else shapely.difference(shell, _union(holes))
+    holes = [hole for hole in holes_fixed if intersects(shell, hole)]
+    shells = [hole for hole in holes_fixed if not intersects(shell, hole)]
+    with_holes = shell if not holes else difference(shell, _union(holes))
     if not shells:
         return with_holes
     return _union([*shells, with_holes])
@@ -150,8 +151,8 @@ def _union(shapes: Sequence[BaseGeometry]) -> BaseGeometry:
 def _polygons(shape: BaseGeometry) -> list[Polygon]:
     if isinstance(shape, Polygon):
         return [] if shape.is_empty else [shape]
-    if isinstance(shape, (MultiPolygon, GeometryCollection)):
-        return [polygon for part in shape.geoms for polygon in _polygons(part)]
+    if is_many(shape) and not isinstance(shape, (MultiPoint, MultiLineString)):
+        return [polygon for part in parts(shape) for polygon in _polygons(part)]
     return []
 
 
@@ -245,9 +246,7 @@ def _safe(first: BaseGeometry | None, second: BaseGeometry | None) -> BaseGeomet
         return second
     if second is None:
         return first
-    # A size of 0 asks GEOS for its robust overlay with no shortcut: GEOS otherwise sets two
-    # areas whose boxes do not meet side by side untouched, where NTS rebuilds their corners.
-    united = shapely.union(first, second, grid_size=0)
+    united = union(first, second)
     if isinstance(united, (Polygon, MultiPolygon)):
         return united
     polygons = _polygons(united)
@@ -255,7 +254,11 @@ def _safe(first: BaseGeometry | None, second: BaseGeometry | None) -> BaseGeomet
 
 
 def _multi_polygon(shape: MultiPolygon) -> BaseGeometry:
-    fixed = [part for polygon in shape.geoms if (part := _polygon_element(polygon)) is not None and not part.is_empty]
+    fixed = [
+        part
+        for polygon in parts(shape)
+        if isinstance(polygon, Polygon) and (part := _polygon_element(polygon)) is not None and not part.is_empty
+    ]
     if not fixed:
         return MultiPolygon()
     result = _union(fixed)

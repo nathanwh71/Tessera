@@ -21,7 +21,9 @@ def stamp(when: datetime) -> str:
     return f"{when:%Y-%m-%d %H:%M:%S} {sign}{abs(minutes) // 60:02d}:{abs(minutes) % 60:02d}"
 
 
-def log(pipeline_file: str, pipeline: Pipeline, tables: Sequence[tuple[CleaningPlan, Outcome]], result: str, when: datetime) -> str:
+def log(
+    pipeline_file: str, pipeline: Pipeline, tables: Sequence[tuple[CleaningPlan, Outcome]], result: str, when: datetime
+) -> str:
     """The source, then for each table its counts and touched rows; then the result.
 
     For each table: the rows read, a count for each ***filter***, and one line for each row a

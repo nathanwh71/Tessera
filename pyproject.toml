@@ -1,16 +1,18 @@
 [project]
 name = "tessera-etl"
 version = "0.1.0"
-description = "Add your description here"
+description = "Tessera's ETL tool in Python: a pipeline file in, one SQL seed script out, byte for byte as the C# tool wrote it."
 authors = [
     { name = "Claude", email = "noreply@anthropic.com" }
 ]
 requires-python = ">=3.13"
 dependencies = [
     "geopandas>=1.2.0",
+    "numpy>=2.5.4",
     "pyarrow>=26.0.0",
     "pydantic>=2.14.1",
     "pyogrio>=0.13.0",
+    "pyproj>=3.8.0",
     "shapely>=2.2.0",
 ]
 
@@ -33,3 +35,52 @@ dev = [
     "types-geopandas>=1.1.4.20261006",
     "types-shapely>=2.1.0.20260728",
 ]
+
+[tool.ruff]
+line-length = 130
+target-version = "py313"
+extend-exclude = ["tests/fixtures/make_fixtures.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "N", "BLE", "C4", "PIE", "PT", "RET", "PL", "ARG"]
+ignore = [
+    "PLR0911",  # a match with one return per case reads better than a table of exits
+    "PLR0912",
+    "PLR0913",
+    "PLR0917",
+    "PLR2004",  # 63 bytes, 32 bits: each number is named in a comment beside it
+    "ARG001",   # a filter's create function takes settings and area, used or not, to fit FilterKind
+    "RUF001",   # the tests hold letters such as 'é' on purpose
+    "RUF002",
+    "RUF003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["PLR0915", "N802"]
+"tests/golden/*.py" = ["E501"]
+
+[tool.pyright]
+include = ["src", "tests", "tools"]
+exclude = ["tests/fixtures/make_fixtures.py", "**/__pycache__"]
+pythonVersion = "3.13"
+typeCheckingMode = "strict"
+reportMissingTypeStubs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.importlinter]
+root_package = "tessera_etl"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "The kernel and the core are pure: no files, no programs, no pyogrio"
+type = "forbidden"
+source_modules = ["tessera_etl.kernel", "tessera_etl.core"]
+forbidden_modules = ["pyogrio", "pathlib", "os", "subprocess", "shutil", "tempfile", "geopandas", "tessera_etl.shell"]
+
+[[tool.importlinter.contracts]]
+name = "The shell calls the core, and the core calls the kernel, never the other way"
+type = "layers"
+layers = ["tessera_etl.shell", "tessera_etl.core", "tessera_etl.kernel"]

@@ -8,13 +8,12 @@ features GDAL's GeoJSON would have held, so this module turns either into rows t
 import json
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
-import shapely
 from shapely.geometry.base import BaseGeometry
 
 from ..kernel.result import Err, Ok, Result
-from . import dotnet, json_text
+from . import dotnet, json_text, shapes
 from .rows import Row, Value, frozen_values
 
 
@@ -82,9 +81,7 @@ def columns(rows: Sequence[Row], source_columns: Sequence[str]) -> tuple[str, ..
     """
     held = {column for row in rows for column in row.values}
     source = set(source_columns)
-    added = dict.fromkeys(
-        column for row in rows for column in sorted(row.values, key=dotnet.ordinal_key) if column not in source
-    )
+    added = dict.fromkeys(column for row in rows for column in sorted(row.values, key=dotnet.ordinal_key) if column not in source)
     return (*(column for column in source_columns if column in held), *added)
 
 
@@ -107,7 +104,7 @@ def read(text: str) -> Result[Extract, str]:
     if not isinstance(features, list):
         return Err(_wrong_kind("Array", features))
     read_features: list[Feature] = []
-    for item in features:
+    for item in cast(list[object], features):
         if not isinstance(item, _Pairs):
             return Err(_wrong_kind("Object", item))
         geometry = item.get("geometry", _MISSING)
@@ -220,8 +217,8 @@ def _shape(geometry: "_Pairs") -> BaseGeometry | None:
     """A GeoJSON geometry as a shape, or None when it cannot be one."""
     plain = _plain(geometry)
     try:
-        return shapely.from_geojson(json.dumps(plain))
-    except (shapely.errors.GEOSException, ValueError, TypeError):
+        return shapes.from_geojson(json.dumps(plain))
+    except (shapes.GEOSException, ValueError, TypeError):
         return None
 
 
