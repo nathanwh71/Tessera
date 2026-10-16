@@ -18,8 +18,10 @@ const OUT = mkdtempSync(join(tmpdir(), "tessera-build-"));
 const scripts = (): Map<string, number> =>
 	new Map(
 		readdirSync(join(OUT, "assets"))
-			// MapLibre's worker, the script that cuts tiles away from the page, was a file of its own already;
-			// Rolldown's runtime, its 80 bytes that join the files, changes only with Rolldown.
+			// MapLibre's worker, the script that prepares tiles on a second thread, ships as a file
+			// of its own (map/maplibre.ts). Rolldown, the part of Vite that joins modules into
+			// files, adds 80 bytes of its own code to link them, which change only with Rolldown.
+			// Neither belongs to the split this file checks.
 			.filter((f) => f.endsWith(".js") && !f.startsWith("maplibre-gl-worker") && !f.startsWith("rolldown-runtime"))
 			.map((f) => [f.replace(/-[\w-]{8}\.js$/, ""), statSync(join(OUT, "assets", f)).size] as const),
 	);

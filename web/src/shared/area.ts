@@ -1,7 +1,7 @@
 // shared/area.ts: the area the map serves, a setting of the service (`Area` in tessera.json) that
 // the office sets to Macau (US-23). The service writes it into the page itself, so the map needs no
-// extra request. The shared kernel holds the reader, and main.tsx calls `areaOf` once as the page
-// starts.
+// extra request. The shared kernel, the module of types and pure functions every other module may
+// use, holds the reader, and main.tsx calls `areaOf` once as the page starts.
 
 import * as v from "valibot";
 import { type Bounds, BoundsSchema, LngLatSchema, type View, level } from "./geo";

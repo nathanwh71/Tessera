@@ -2,7 +2,8 @@
 // service answers each request over HTTP, the web's rules for a request and its answer, and an
 // answer that fails carries a problem document: an error in JSON, the text form of a value that
 // programs exchange, in the shape RFC 9457, the internet standard for error answers, defines. The
-// shared kernel holds the reader; map/tiles.ts calls it for a tile request that failed.
+// shared kernel, the module every other module may use, holds the reader; map/tiles.ts calls it
+// for a tile request that failed.
 //
 // A problem travels as a value, in a message such as `tileFailed`, never as an exception to throw.
 

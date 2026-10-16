@@ -9,7 +9,8 @@
 // - for each long frame, one over 50 ms, the time each script file spent in it, from the browser's
 //   long-animation-frame records. The page's code is split into files (vite.config.ts), so the time
 //   in react-*.js and index-*.js is React's and the page's own work, and the time in maplibre-*.js is
-//   MapLibre's. That split says whether the React Compiler could help.
+//   MapLibre's. That split says whether the React Compiler, a build step that spares React work
+//   whose inputs have not changed, could help.
 
 import { expect, test } from "@playwright/test";
 import { BUSIEST, openMap, view } from "./map-page";
@@ -62,8 +63,9 @@ test("a drag over the busiest street, with every layer on", async ({ page }) => 
 				seen.longFrames += 1;
 				seen.longFrameMs += entry.duration;
 				for (const script of entry.scripts ?? []) {
-					// Vite names each built file with an 8-character hash of its content, such as
-					// react-Bx3k9aQz.js; the hash goes, so the time adds up under the file's plain name.
+					// Vite names each built file with an 8-character hash, a short code worked
+					// out from its content, such as react-Bx3k9aQz.js; the hash goes, so the time
+					// adds up under the file's plain name.
 					const file = (script.sourceURL.split("/").at(-1) ?? "other").replace(/-[\w-]{8}\.js$/, "") || "other";
 					seen.scripts[file] = (seen.scripts[file] ?? 0) + script.duration;
 				}

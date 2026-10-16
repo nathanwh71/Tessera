@@ -16,8 +16,10 @@ const groups = ["food", "outdoors", "culture", "transport"];
 export default defineConfig({
 	// The service serves the page at / and at /{layer}.html, and its assets from /assets/ (US-23).
 	base: "/",
-	// React's plugin compiles the components' JSX; Tailwind's turns styles.css and the class names
-	// into the page's stylesheet.
+	// The plugin of React, the library that draws the page, compiles the components' JSX, the
+	// HTML-like tags written inside the code, into plain JavaScript. The plugin of Tailwind, the
+	// library that makes styles from class names, turns styles.css and those names into the page's
+	// stylesheet.
 	plugins: [react(), tailwindcss()],
 	build: {
 		// The service's release copies the built page from dist/ (US-23, criterion 4).
@@ -26,8 +28,9 @@ export default defineConfig({
 		// Fonts and icons stay files under /assets/, never written into the page's code, so the office
 		// needs no CDN, a content delivery network that serves such files from the internet.
 		assetsInlineLimit: 0,
-		// MapLibre's own file is about 1 MB, which no setting shrinks; src/build.test.ts holds the page's
-		// own code under 250 kB instead, so this warns only if MapLibre itself grows.
+		// The file of MapLibre, the library that draws the map, is about 1 MB, which no setting
+		// shrinks; src/build.test.ts holds the page's own code under 250 kB instead, so this warns
+		// only if MapLibre itself grows.
 		chunkSizeWarningLimit: 1100,
 		rollupOptions: {
 			output: {
@@ -40,7 +43,7 @@ export default defineConfig({
 						{ name: "react", test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/ },
 					],
 				},
-				// The worker of MapLibre, the library that draws the map, ships as .mjs; many servers send
+				// MapLibre's worker ships as .mjs; many servers send
 				// that ending with no JavaScript type, which a module worker refuses.
 				assetFileNames: (asset) => (asset.names.some((n) => n.endsWith(".mjs")) ? "assets/[name]-[hash].js" : "assets/[name]-[hash][extname]"),
 			},

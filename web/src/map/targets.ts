@@ -98,10 +98,10 @@ export function nameClusters(map: MapLibreMap, names: ClusterNames, done: () => 
 		.map((f): unknown => f.properties["cluster_id"])
 		.filter((id): id is number => typeof id === "number" && !names.has(id));
 	if (ids.length === 0) return;
-	// Asks for as many leaves, from the first, as the label names (NAMED_IN_CLUSTER, in labels.ts),
-	// so the two can never disagree. A cluster may vanish before its names arrive, when the
-	// places change and MapLibre renumbers its clusters; the label then keeps its count alone until
-	// the next rest, so a failure is ignored.
+	// Asks for as many leaves, the single places a cluster holds, from the first, as the label
+	// names (NAMED_IN_CLUSTER, in labels.ts), so the two can never disagree. A cluster may vanish
+	// before its names arrive, when the places change and MapLibre renumbers its clusters; the
+	// label then keeps its count alone until the next rest, so a failure is ignored.
 	void Promise.all(
 		[...new Set(ids)].map((id) =>
 			source.getClusterLeaves(id, NAMED_IN_CLUSTER, 0).then((leaves) => names.set(id, leaves.map((l) => String(l.properties?.["name"] ?? "")))),

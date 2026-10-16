@@ -144,7 +144,7 @@ export function useMapLibre(
 	// theme, so reading again would cost time and change nothing.
 	const [theme] = useState<Theme>(readTheme);
 	// True once MapLibre has loaded its first style, its description of what to draw; after that it
-	// can diff every new one, and apply only what changed.
+	// can diff every new one, comparing it with the old to find what changed, and apply only that.
 	const [loaded, setLoaded] = useState(false);
 	// The pins and clusters in view, kept as state so the page redraws the invisible targets that
 	// let the keyboard and a screen reader reach them (UI-10, UI-11).

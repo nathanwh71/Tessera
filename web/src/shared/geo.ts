@@ -1,6 +1,6 @@
 // shared/geo.ts: positions, views and boxes on the map, in degrees of WGS 84, the longitude and
-// latitude system GPS uses. The shared kernel holds them, and the area, the map's model and its
-// controls all speak in them (UI-09, US-23).
+// latitude system GPS uses. The shared kernel, the module every other module may use, holds them,
+// and the area, the map's model and its controls all speak in them (UI-09, US-23).
 
 import * as v from "valibot";
 

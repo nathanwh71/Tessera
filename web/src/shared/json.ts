@@ -1,7 +1,7 @@
 // shared/json.ts: the first step of reading any JSON the service sends. JSON is the text form of a
 // value that programs exchange: an object of named fields, a list, text, a number, true, false or
-// null. The shared kernel holds these steps, and the readers of the area and of a problem document
-// use them before they trust a field.
+// null. The shared kernel, the module every other module may use, holds these steps, and the
+// readers of the area and of a problem document use them before they trust a field.
 
 import * as v from "valibot";
 import { type Result, err, ok } from "./result";

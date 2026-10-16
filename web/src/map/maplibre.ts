@@ -165,9 +165,10 @@ export function feedPlaces(map: MapLibreMap, state: () => FeedState, onFed: () =
 }
 
 /**
- * A failed request as MapLibre reports it: an AJAXError, which carries the answer's status, its
- * three-digit result, and its body. MapLibre's error event types the error only as something with a
- * message, so this schema checks its shape before the code reads the status and the body.
+ * A failed request as MapLibre reports it: an `AJAXError`, MapLibre's error for a request the page
+ * sends after it has opened, which carries the answer's status, its three-digit result, and its
+ * body. MapLibre's error event types the error only as something with a message, so this schema
+ * checks its shape before the code reads the status and the body.
  */
 const FailedRequest = v.object({ status: v.number(), statusText: v.string(), body: v.instance(Blob) });
 
@@ -207,8 +208,8 @@ export interface MapEvents {
 	/** The visitor clicked a cluster: its id, and its point in longitude and latitude. */
 	readonly onClusterClick: (clusterId: number, point: readonly [number, number]) => void;
 	/**
-	 * MapLibre has loaded its first style; from then on it can diff a new one, and the wait for the
-	 * first places starts.
+	 * MapLibre has loaded its first style; from then on it can diff a new one, comparing it with
+	 * the old to apply only what changed, and the wait for the first places starts.
 	 */
 	readonly onLoad: () => void;
 	/** The browser took WebGL away from the map, as it may when the graphics card resets. */

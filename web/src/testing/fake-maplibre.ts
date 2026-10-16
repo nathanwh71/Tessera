@@ -128,6 +128,6 @@ export class FakeMap {
 
 /**
  * The module the page imports as "maplibre-gl", faked. `setWorkerUrl` does nothing, since the fake
- * starts no worker, the background script that cuts ***tiles***.
+ * starts no worker, the script on a second thread that prepares ***tiles*** for drawing.
  */
 export const fakeMapLibre = { Map: FakeMap, setWorkerUrl: (): void => undefined };
