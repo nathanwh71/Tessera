@@ -12,7 +12,7 @@ pyogrio then reads:
   of them come from its own drawing rules, which shapely does not share;
 - a table in another coordinate system, since pyproj, the Python library that moves points
   between systems, gives other last digits than GDAL's own: on 6,000 points moved from Web
-  Mercator, 3,732 differed;
+  Mercator, the flat projection most web maps draw on, 3,732 differed;
 - a field whose domain is coded by text rather than whole numbers, since pyogrio hands over the
   words of whole-number codes alone.
 """
@@ -52,9 +52,9 @@ class Source:
     """Where each table is read from, and what the reads share.
 
     `path` is the source, or its GeoPackage copy for a GeoJSON source of several tables;
-    `native` says GDAL's GeoJSON driver reads the source itself, which keeps each feature's own
-    id and leaves out a property the feature lacks; `json_columns` names the copy's columns that
-    hold lists or JSON as text.
+    `native` says GDAL's GeoJSON driver, its part for that format, reads the source itself,
+    which keeps each feature's own id and leaves out a property the feature lacks;
+    `json_columns` names the copy's columns that hold lists or JSON as text.
     """
 
     path: Path
@@ -233,8 +233,9 @@ def _read(path: Path, table: TablePlan, native: bool, json_columns: frozenset[st
 def _text_coded(arrow: pa.Table) -> bool:
     """True when a field has a domain whose words pyogrio does not hand over.
 
-    pyogrio gives the words of a domain coded by whole numbers, as a dictionary column; a domain
-    coded by text, such as 'S' for 'Small', comes as plain text.
+    pyogrio gives the words of a domain coded by whole numbers, as a dictionary column, which
+    holds each word once and a code for each row; a domain coded by text, such as 'S' for
+    'Small', comes as plain text.
     """
     schema: Any = arrow.schema
     fields = [schema.field(name) for name in cast(list[str], schema.names)]

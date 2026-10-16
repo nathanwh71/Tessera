@@ -75,12 +75,13 @@ _BLANK = re.compile(f"{SPACE}*")
 _SPACES = re.compile(f"{SPACE}+")
 
 GAPS = "\t\n\v\f\r\x85\xa0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000"
-"""Each mark SPACE matches but the plain space, listed one by one, so that Arrow's patterns, which
-know only ASCII's white space as \\s, find the marks Python's do; a test checks the list."""
+"""Each mark SPACE matches but the plain space, listed one by one, so that the patterns of Arrow,
+the column format pandas reads text into, find the marks Python's do: Arrow's \\s knows only the
+white space of ASCII, the 128 marks of plain English text. A test checks the list."""
 
 _UNTIDY = "[" + "".join(f"\\x{{{ord(letter):x}}}" for letter in GAPS) + "]|  |^ | $"
 """Text that needs tidying: white space other than a plain space, two spaces in a row, or a
-space at either end, as Arrow, the column format pandas reads text into, writes the pattern."""
+space at either end, as Arrow writes the pattern."""
 
 _UNTIDY_PYTHON = re.compile(f"[{GAPS}]|  |^ | $")
 
@@ -153,8 +154,9 @@ def _untidy(text: "pd.Series[str]") -> NDArray[np.bool_]:
     """True for each text that tidying would change: most text is tidy already.
 
     Arrow runs the pattern over the whole column at once, much faster than Python runs it text
-    by text; Python checks the Unicode form, by its own tables. Text Arrow cannot hold, such as
-    half of a pair of UTF-16 surrogates, takes Python's pattern instead.
+    by text; Python checks the Unicode form, by its own tables. Python's pattern takes over for
+    text Arrow cannot hold, such as half of a pair of UTF-16 surrogates: UTF-16 writes a rare
+    mark, such as an emoji, as two codes called surrogates, and one alone is no valid text.
     """
     texts = text.to_numpy()
     try:

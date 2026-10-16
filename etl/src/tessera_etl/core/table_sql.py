@@ -3,9 +3,10 @@
 ***SQL*** is the language a database such as PostgreSQL takes its orders in; ***PostGIS*** is
 the PostgreSQL extension that stores and measures shapes.
 
-The SQL takes the form of GDAL's PGDump driver: drop the table, make it with a `fid` ***key***
-and a `geom` column in ***SRID*** 4326 (the code of longitude and latitude), one INSERT for each
-row in order, a ***spatial index***, and fresh statistics.
+The SQL takes the form of GDAL's PGDump driver, the part of GDAL that writes a PostgreSQL script
+(GDAL has a driver for each format it reads or writes): drop the table, make it with a `fid`
+***key*** and a `geom` column in ***SRID*** 4326 (the code of longitude and latitude), one INSERT
+for each row in order, a ***spatial index***, and fresh statistics.
 
 It keeps GDAL's choices where the map service depends on them, its typing of dates, times and
 date-times included, and departs from them in two places on purpose. A number with a fraction

@@ -44,8 +44,9 @@ class Extract:
     rows that lack each column.
 
     A GeoJSON feature may leave a property out, where a table of fields holds every column in
-    every row. A column no kept row holds then stays out of the script, as GDAL's PGDump driver
-    leaves it out; `absent` names, for each column some rows lack, the rows that lack it.
+    every row. A column no kept row holds then stays out of the script, as GDAL's PGDump driver,
+    the part of GDAL that writes a PostgreSQL script, leaves it out; `absent` names, for each
+    column some rows lack, the rows that lack it.
     """
 
     frame: GeoDataFrame
