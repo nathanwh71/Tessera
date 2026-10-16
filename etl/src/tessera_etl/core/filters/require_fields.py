@@ -38,7 +38,9 @@ def create(fields: Sequence[str | None], on_fail: OnFail = OnFail.DROP) -> Step[
     def judge(frame: GeoDataFrame) -> Judged:
         reason = pd.Series(None, index=frame.index, dtype=object)
         for field in reversed(names):
-            missing = measure.blank(frame[field]) if field is not None and field in frame.columns else reason.isna() | True
+            # A field the table lacks, or a null in place of a name, is missing in every row.
+            everywhere = pd.Series(True, index=frame.index)
+            missing = measure.blank(frame[field]) if field is not None and field in frame.columns else everywhere
             reason = reason.mask(missing, f"{field or ''} is missing")
         return Judged(frame, failures(reason.notna(), reason))
 
