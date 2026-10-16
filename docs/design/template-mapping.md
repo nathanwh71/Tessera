@@ -10,7 +10,7 @@ The _request_ _sets_ _three_ constraints, and _four_ _things_ must not _move_:
 
 | Constraint | What it means here |
 |---|---|
-| Keep the coding style | ADR 0004 _holds_: read-only _records_, _pure_ _functions_, `Result<T, E>` for _failures_ the _caller_ _expects_, `Maybe<T>` for _values_ that may be _missing_, _early_ _returns_, Dapper with _plain_ SQL, DbUp for ***seed scripts***, _comments_ for a _school_ _student_ |
+| Keep the coding style | ADR 0004 _holds_: read-only _records_, _pure_ _functions_, `Result<T, E>` for _failures_ the _caller_ _expects_, `T?` for _values_ that may be _missing_, smart constructors for _values_ with a _rule_, _early_ _returns_, Dapper with _plain_ SQL, DbUp for ***seed scripts***, _comments_ for a _school_ _student_ |
 | Prefer ASP.NET Core to hand-written code | Where the _framework_ _already_ does a _job_, Tessera's _own_ _code_ for it _goes_; where it does not, Tessera's _code_ _stays_ |
 | Guard the boundaries with ArchUnitNET | _Tests_, not _project_ _references_, _keep_ _each_ _layer_ and _each_ _module_ in its _place_ |
 
@@ -103,7 +103,7 @@ The _layers_ _fit_ ADR 0004 _without_ strain, _since_ they _divide_ the _code_ w
 - **Domain** _holds_ the read-only _records_ and the _pure_ _functions_: `TileAddress.Of`, `LayerCatalogue.Find`, the _settings_ _records_ with their _own_ _checks_. It _knows_ no _database_ and no _web_, and a _rule_ _says_ so.
 - **Infrastructure** _holds_ every _effect_ on the _database_. It _speaks_ `Result<T, DatabaseError>`, as `Database` does _now_, and _never_ _throws_ for a _failure_ the _caller_ _expects_.
 - **Features** is the _edge_ where a `Result` _becomes_ an _answer_: `Match` _turns_ _success_ into a _tile_ and _each_ `DatabaseError` into 404, 503 or 500, as `TileServer.Answer` does _now_. `Map.Render` _stays_ a _pure_ _function_ that the _route_ _calls_.
-- **One `Result` and one `Maybe`** for the _whole_ repository, both from CSharpFunctionalExtensions. A _value_ that may be _missing_ is a `Maybe<T>`, _never_ `null` or a stand-in _object_; a _null_ from a _library_ _becomes_ a `Maybe` at that _edge_ (ADR 0004).
+- **One `Result`** for the _whole_ repository, from CSharpFunctionalExtensions. A _value_ that may be _missing_ is a `T?`, which the _compiler_ _makes_ every _caller_ _check_, _never_ a stand-in _object_ (ADR 0004).
 
 The _comments_ _move_ with their _code_. _Each_ _moved_ _file_ _keeps_ its _reasons_, and _each_ _new_ _file_, such as `TesseraModule.cs`, _gets_ _comments_ _written_ the _same_ _way_.
 
@@ -250,6 +250,9 @@ _Each_ _step_ is _one_ _commit_, and _left_ every _test_ _passing_, the URLs the
 10. **The leaner seed:** `Tessera seed` _reads_ the _publisher_'s URL _alone_, with a _test_ that a _bad_ `Tiles` _section_ does not _stop_ it.
 11. **The docs:** ADR 0001 superseded in _part_, ADR 0004 and ADR 0008 _amended_, the README and the _reading_ _guides_ on the _new_ _paths_.
 12. **CSharpFunctionalExtensions back,** with its `Result`, and its `Maybe` in _place_ of `null` and stand-in _objects_, _first_ in the _service_, then in the ETL; ADR 0004 _amended_.
+13. **The C# ETL out,** for its Python _port_ in `nathanwh71/tessera-etl-python`; ADR 0009 superseded in _part_.
+14. **`Maybe` out again,** for `T?`, which the _compiler_ _already_ _checks_; ADR 0004 _amended_.
+15. **Smart constructors** for `TileAddress` and the _new_ `SqlName`, as for `ConnectionString` _before_ them.
 
 OpenTelemetry from `ServiceDefaults` and `AddServerHeader = false` _stay_ _optional_, and are not _done_.
 

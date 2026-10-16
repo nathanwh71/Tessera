@@ -30,7 +30,7 @@ ADR 0001's _choice_ of _one_ _service_, _built_ and _shipped_ as _one_ _unit_, _
 |---|---|---|
 | `Common/Api` | `Problems`: the _shape_ of every ***problem document*** | ASP.NET Core |
 | `Common/Infrastructure` | `Settings`: _reading_ `tessera.json` and the _environment_, _binding_ a _section_ to a _record_, and _checking_ it at _start_ (ADR 0003) | .NET's _options_ |
-| `Modules/Tessera/Domain` | The ***tile***'s _address_, the ***layers*** and their ***catalogue***, the _area_ and _tile_ _settings_: _records_ and _pure_ _functions_ | CSharpFunctionalExtensions' `Result` and `Maybe` |
+| `Modules/Tessera/Domain` | The ***tile***'s _address_, the ***layers*** and their ***catalogue***, the _area_ and _tile_ _settings_: _records_ and _pure_ _functions_ | CSharpFunctionalExtensions' `Result` |
 | `Modules/Tessera/Infrastructure` | Every SQL _text_, the _database_, the catalogue's timer, the _seed_ | Domain, Common, Npgsql, Dapper, DbUp |
 | `Modules/Tessera/Features` | The _tile_ _route_, the _map_, `/health` | Domain, Infrastructure, Common, ASP.NET Core |
 | `Modules/Tessera/TesseraModule.cs` | `AddTessera` and `MapTessera`: the _module_'s _one_ _door_ | All of the _module_ |

@@ -21,7 +21,7 @@ Tessera's _code_ is _written_ in a ***functional style***: immutable _values_, *
 
 ## The three habits
 
-**Immutability.** Every _value_ is a _positional_ `record` or a `readonly record struct`. Every _collection_ is an `ImmutableArray` or an `ImmutableDictionary`. A `with` _expression_ _makes_ a _changed_ _copy_; no _field_ _changes_ _after_ _construction_.
+**Immutability.** Every _value_ is a `record` or a `readonly record struct`, _positional_ _unless_ a smart constructor _guards_ it (_below_). Every _collection_ is an `ImmutableArray` or an `ImmutableDictionary`. A `with` _expression_ _makes_ a _changed_ _copy_; no _field_ _changes_ _after_ _construction_.
 
 **Pure functions.** _Decisions_ _live_ in `static` _functions_ that _take_ _values_ and _return_ _values_: _quoting_ a _name_, _building_ the ***tile query***'s _text_, _checking_ a ***tile***'s _address_. An _expected_ _failure_ _returns_ as a `Result`; no _function_ _throws_ for _one_.
 
@@ -52,10 +52,11 @@ F# _makes_ _illegal_ _states_ unrepresentable with its _types_, and Tessera _fol
 
 | Tool | Where Tessera uses it | What the compiler then refuses |
 |---|---|---|
-| A record in place of a long list of arguments | `TileAddress(Z, X, Y)` _names_ the _three_ _numbers_ of a _tile_ | _Arguments_ _swapped_ by _mistake_, which _compile_ _because_ they _share_ a _type_ |
+| A record in place of a long list of arguments | `TileAddress` _names_ the _three_ _numbers_ of a _tile_ | _Arguments_ _swapped_ by _mistake_, which _compile_ _because_ they _share_ a _type_ |
+| A smart constructor: a private constructor, properties with `get` alone, and one static function that checks the rule | `TileAddress.Of`, which _makes_ _only_ _tiles_ on the _grid_; `SqlName.Quote`, which _makes_ _only_ _quoted_ _names_; `ConnectionString.FromUrl`, which _makes_ _only_ well-formed _addresses_ | A _value_ that _breaks_ its _rule_, _made_ with `new` or _copied_ with `with`; a _name_ that _reaches_ SQL unquoted |
 | A branded type in TypeScript | The _map_'s `Level` and `MapZoom`: a ***web-map level*** and MapLibre's _zoom_ _differ_ by _one_ | _One_ _passed_ where the _other_ _belongs_, as F#'s _units_ of _measure_ would _refuse_ |
 
-_Wrap_ _only_ a _value_ that _travels_ _between_ _functions_ and could be mistaken for another; wrapping every _number_ _adds_ noise and _catches_ _nothing_.
+_Wrap_ _only_ a _value_ that _travels_ _between_ _functions_ and could be mistaken for another, or that _carries_ a _rule_ its _type_ _cannot_ _state_; wrapping every _number_ _adds_ noise and _catches_ _nothing_. A _positional_ _record_ _cannot_ be a smart constructor, _since_ its constructor is _always_ _public_, and `init` _properties_ would _let_ `with` _copy_ _past_ the _check_. A smart constructor _returns_ `T?` when it has _one_ _reason_ to _refuse_, and `Result<T, string>` when the _caller_ must _say_ why.
 
 ## The map and the scripts
 
