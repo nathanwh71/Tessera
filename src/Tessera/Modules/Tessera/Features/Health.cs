@@ -18,7 +18,6 @@ public static class HealthRoutes
     {
         app.MapHealthChecks("/health", new HealthCheckOptions
         {
-            // ASP.NET Core sets the status code from the worst result.
             ResultStatusCodes =
             {
                 [HealthStatus.Healthy] = StatusCodes.Status200OK,
@@ -27,8 +26,8 @@ public static class HealthRoutes
             },
             ResponseWriter = (context, report) =>
             {
-                // The usual health-check words. The answer names no fault, so a stranger learns
-                // nothing more.
+                // The status words of Spring Boot Actuator, a common health-check library for Java,
+                // which many watchers read. The answer names no fault, so a stranger learns nothing more.
                 var status = report.Status switch
                 {
                     HealthStatus.Healthy => "UP",
