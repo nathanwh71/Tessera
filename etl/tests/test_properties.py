@@ -5,6 +5,8 @@ shrinks it to the smallest value that still fails.
 """
 
 import json
+import re
+import sys
 from dataclasses import dataclass, replace
 from functools import reduce
 from typing import Any
@@ -94,10 +96,29 @@ def test_tidy_text_is_settled_after_one_pass(text: str) -> None:
     assert once is None or ("  " not in once and once == once.strip(" "))
 
 
-@given(st.lists(st.text(), max_size=10))
-def test_tidies_a_column_as_it_tidies_each_text(texts: list[str]) -> None:
-    column = judge.tidied(pd.Series(texts, dtype=object))
+# Letters and marks of white space, among them a combining accent, which follows a letter.
+spaced = st.text(
+    alphabet=st.sampled_from(["a", "é", "e", "\u0301", " ", "\t", "\v", "\x1c", "\u3000", "\xa0", "\u2028"]), max_size=8
+)
+
+
+@given(st.lists(spaced, max_size=10), st.sampled_from([object, str]))
+def test_tidies_a_column_as_it_tidies_each_text(texts: list[str], kind: type) -> None:
+    # pandas may hold text in Arrow's form, whose patterns know only ASCII's white space; the
+    # column must tidy as Python tidies each text, whichever form it comes in.
+    column = judge.tidied(pd.Series(texts, dtype=kind))
     assert [found or None for found in column] == [judge.tidy_text(text) for text in texts]
+
+
+def test_lists_every_mark_of_white_space_but_the_plain_space() -> None:
+    marks = {chr(code) for code in range(sys.maxunicode + 1) if re.fullmatch(judge.SPACE, chr(code))}
+    assert set(judge.GAPS) == marks - {" "}
+
+
+@given(st.lists(spaced, min_size=1, max_size=10))
+def test_the_filter_tidies_each_text_as_tidy_text_does(texts: list[str]) -> None:
+    done = clean(tidy_text.create(), [place(number, 113.55, 22.19, name=text) for number, text in enumerate(texts, start=1)])
+    assert values(done.frame, "name") == [judge.tidy_text(text) for text in texts]
 
 
 @given(st.dictionaries(st.sampled_from(["a", "b", "c"]), st.one_of(st.none(), st.text(max_size=6), st.integers()), max_size=3))

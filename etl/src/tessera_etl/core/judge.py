@@ -12,6 +12,8 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
+import pyarrow.compute as pc
 import shapely
 from numpy.typing import NDArray
 from shapely.geometry import box as shapely_box
@@ -71,6 +73,17 @@ a file and show no gap, so the class leaves them out."""
 
 _BLANK = re.compile(f"{SPACE}*")
 _SPACES = re.compile(f"{SPACE}+")
+# White space other than a plain space, two spaces in a row, or a space at either end.
+
+GAPS = "\t\n\v\f\r\x85\xa0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000"
+"""Each mark SPACE matches but the plain space, listed one by one, so that Arrow's patterns, which
+know only ASCII's white space as \\s, find the marks Python's do; a test checks the list."""
+
+_UNTIDY = "[" + "".join(f"\\x{{{ord(letter):x}}}" for letter in GAPS) + "]|  |^ | $"
+"""Text that needs tidying: white space other than a plain space, two spaces in a row, or a
+space at either end, as Arrow, the column format pandas reads text into, writes the pattern."""
+
+_UNTIDY_PYTHON = re.compile(f"[{GAPS}]|  |^ | $")
 
 
 def is_blank(value: Value) -> bool:
@@ -78,14 +91,24 @@ def is_blank(value: Value) -> bool:
     return value is None or (isinstance(value, str) and _BLANK.fullmatch(value) is not None)
 
 
+def as_text(column: "pd.Series[Any]") -> "pd.Series[str]":
+    """A column of text held as Python's own strings, so its .str methods follow Python's rules.
+
+    pandas may hold text in Arrow's form, whose .str methods match patterns by other rules: its
+    \\s, for one, knows only the white space of ASCII, and would leave a run of Chinese spaces
+    untouched.
+    """
+    return column.astype(object)
+
+
 def is_text(column: "pd.Series[Any]") -> "pd.Series[bool]":
     """True for each value that is text; pandas' .str methods make anything else 'not a number'."""
-    return column.map(lambda value: isinstance(value, str)).astype(bool)
+    return pd.Series([isinstance(value, str) for value in column.to_numpy()], index=column.index).astype(bool)
 
 
 def blank(column: "pd.Series[Any]") -> "pd.Series[bool]":
     """True for each value that is null, or text of spaces alone."""
-    text = column[is_text(column)].astype(str)
+    text = as_text(column[is_text(column)])
     return column.isna() | text.str.fullmatch(_BLANK.pattern).reindex(column.index, fill_value=False).astype(bool)
 
 
@@ -120,7 +143,26 @@ def tidied(column: "pd.Series[str]") -> "pd.Series[str]":
     NFC, the ***normal form*** most systems write, makes 'é' typed two ways compare equal. Text
     that tidies to nothing comes out empty.
     """
-    return column.str.normalize("NFC").str.replace(_SPACES.pattern, " ", regex=True).str.strip(" ")
+    text = as_text(column)
+    untidy = _untidy(text)
+    tidy = text.copy()
+    tidy[untidy] = text[untidy].str.normalize("NFC").str.replace(_SPACES.pattern, " ", regex=True).str.strip(" ")
+    return tidy
+
+
+def _untidy(text: "pd.Series[str]") -> NDArray[np.bool_]:
+    """True for each text that tidying would change: most text is tidy already.
+
+    Arrow runs the pattern over the whole column at once, much faster than Python runs it text
+    by text; Python checks the Unicode form, by its own tables. Text Arrow cannot hold, such as
+    half of a pair of UTF-16 surrogates, takes Python's pattern instead.
+    """
+    texts = text.to_numpy()
+    try:
+        marks = pc.match_substring_regex(pa.array(texts, type=pa.string()), _UNTIDY).to_numpy(zero_copy_only=False)
+    except (pa.ArrowException, UnicodeError):
+        marks = np.array([_UNTIDY_PYTHON.search(value) is not None for value in texts], dtype=bool)
+    return marks | np.array([not unicodedata.is_normalized("NFC", value) for value in texts], dtype=bool)
 
 
 def tidy_text(value: str) -> str | None:
@@ -135,7 +177,7 @@ def folded(column: "pd.Series[str]") -> "pd.Series[str]":
     end of a word, and the Turkish dotted I. Mapping those first keeps each letter one letter,
     lowered alone, so two spellings of a name compare letter for letter.
     """
-    return column.str.replace("İ", "i", regex=False).str.replace("Σ", "σ", regex=False).str.lower()
+    return as_text(column).str.replace("İ", "i", regex=False).str.replace("Σ", "σ", regex=False).str.lower()
 
 
 RADIUS = 6_371_008.8

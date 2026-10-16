@@ -37,7 +37,7 @@ def create(field: str, metres: float, on_fail: OnFail = OnFail.DROP) -> Step[Cle
     def judge(frame: GeoDataFrame) -> Judged:
         # A row with no name or no shape passes: requireFields and dropEmptyShapes judge those.
         # A name that tidies to nothing counts as no name.
-        texts = pd.Series(values(frame, field), index=frame.index, dtype=object).map(measure.text).dropna().astype(str)
+        texts = pd.Series(values(frame, field), index=frame.index, dtype=object).map(measure.text).dropna()
         names = measure.folded(measure.tidied(texts)).replace("", None).dropna()
         shapes = frame.geometry.to_numpy()
         usable = pd.Series(~shapely.is_missing(shapes) & ~shapely.is_empty(shapes), index=frame.index)

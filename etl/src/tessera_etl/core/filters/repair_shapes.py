@@ -45,7 +45,7 @@ def create(on_fail: OnFail = OnFail.DROP) -> Step[Cleaning]:
         broken = ~shapely.is_missing(shapes) & ~shapely.is_empty(shapes) & ~shapely.is_valid(shapes)
         mended = shapes.copy()
         mended[broken] = shapely.make_valid(shapes[broken], method="structure", keep_collapsed=False)
-        why = pd.Series(shapely.is_valid_reason(shapes), index=frame.index).str.replace(_PLACE, "", regex=True)
+        why = pd.Series(shapely.is_valid_reason(shapes), index=frame.index, dtype=object).str.replace(_PLACE, "", regex=True)
         lost = pd.Series(broken & shapely.is_empty(mended), index=frame.index)
         repaired = pd.Series(broken, index=frame.index) & ~lost
         # A shape that comes out empty fails, so it obeys onFail; the row keeps its shape.

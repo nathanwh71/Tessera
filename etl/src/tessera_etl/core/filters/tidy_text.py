@@ -42,7 +42,7 @@ def create(fields: Sequence[str | None] | None = None) -> Step[Cleaning]:
         # log line on every run.
         changed: dict[int, list[str]] = {}
         for name in sorted(name for name in columns(frame) if only is None or name in only):
-            texts = frame[name][measure.is_text(frame[name])].astype(str)
+            texts = measure.as_text(frame[name][measure.is_text(frame[name])])
             clean = measure.tidied(texts)
             # Empty text is untidy too: it becomes null, even though tidying leaves it as it was.
             moved = clean[(clean != texts) | (clean == "")]
