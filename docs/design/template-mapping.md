@@ -43,7 +43,7 @@ src/Tessera/                   one project; each folder's path is its namespace
     Features/                  Tiles.cs, Map.cs, Health.cs, Settings.cs (MapSettings)
 tests/
   Tessera.ArchitectureTests/   the six boundary rules
-  Tessera.UnitTests/, Tessera.IntegrationTests/, Tessera.Etl.Tests/   as before, with new namespaces
+  Tessera.UnitTests/, Tessera.IntegrationTests/   as before, with new namespaces
 ```
 
 The _whole_ _service_ is _one_ _project_. The _folders_ _match_ the _template_'s _names_, so a _reader_ who _knows_ the _template_ _finds_ _each_ _file_ where they _expect_ it. _Each_ namespace _matches_ its _folder_, and the _build_ _enforces_ it (_see_ the _rules_ _below_).
@@ -253,7 +253,7 @@ _Each_ _step_ is _one_ _commit_, and _left_ every _test_ _passing_, the URLs the
 
 OpenTelemetry from `ServiceDefaults` and `AddServerHeader = false` _stay_ _optional_, and are not _done_.
 
-The ETL in `tools/`, the _scripts_, the _map_ in `web/`, the _seed_ _scripts_ and the Nginx _settings_ _stay_ _outside_ the _template_. The ETL is a _tool_ the _publisher_ _runs_, not a _module_ the _Host_ _serves_.
+The ETL, _now_ a repository of its _own_, the _scripts_, the _map_ in `web/`, the _seed_ _scripts_ and the Nginx _settings_ _stay_ _outside_ the _template_. The ETL is a _tool_ the _publisher_ _runs_, not a _module_ the _Host_ _serves_.
 
 ## What Common holds
 

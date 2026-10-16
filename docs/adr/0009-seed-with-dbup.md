@@ -2,15 +2,15 @@
 
 | | |
 |---|---|
-| Status | _Accepted_ |
+| Status | _Accepted_; superseded in _part_ on 16 _October_ 2026: the ***pipeline*** is _now_ in Python, in its _own_ repository, `nathanwh71/tessera-etl-python`, and _writes_ the _same_ _scripts_ _byte_ for _byte_. The _seed_, DbUp and the ***pipeline file*** _stand_ as _decided_ here |
 | Date | 15 _October_ 2026 |
 | Decider | The _maintainer_ |
-| Covers | The _service_, `nathanwh71/Tessera`; its ***pipeline***, `tools/Tessera.Etl`; and its ***seed scripts*** in `db/seed` |
+| Covers | The _service_, `nathanwh71/Tessera`; its _pipeline_, _once_ `tools/Tessera.Etl` and _now_ `nathanwh71/tessera-etl-python`; and its ***seed scripts*** in `db/seed` |
 | Related | ADR 0001, ADR 0002, ADR 0004, ADR 0008; US-01, US-03, US-24 |
 
 ## Decision
 
-A _pipeline_ in C#, `tools/Tessera.Etl`, _turns_ _each_ _file_ of _places_ into a SQL _script_ in _three_ _steps_. GDAL's `ogr2ogr` **extracts** _each_ _table_ to GeoJSON; ***filters*** the ***pipeline file*** _names_ **transform** its _rows_, _cleaning_ them; and the _pipeline_ **loads** the _cleaned_ _rows_ as SQL, in the _form_ GDAL's PGDump _driver_ _wrote_ until 16 _October_ 2026 (`TableSql.cs`). The _maintainer_ _reads_ the _script_ and its _log_, and _commits_ both. `Tessera seed`, _signed_ in as `tessera_publisher`, _runs_ _each_ _script_ DbUp has not _run_ _before_, _once_, in the _order_ of the _scripts_' _names_. A ***grant*** _publishes_ _each_ _table_.
+A _pipeline_ in C#, `tools/Tessera.Etl`, _turns_ _each_ _file_ of _places_ into a SQL _script_ in _three_ _steps_. GDAL's `ogr2ogr` **extracts** _each_ _table_ to GeoJSON; ***filters*** the _pipeline_ _file_ _names_ **transform** its _rows_, _cleaning_ them; and the _pipeline_ **loads** the _cleaned_ _rows_ as SQL, in the _form_ GDAL's PGDump _driver_ _wrote_ until 16 _October_ 2026 (`TableSql.cs`). The _maintainer_ _reads_ the _script_ and its _log_, and _commits_ both. `Tessera seed`, _signed_ in as `tessera_publisher`, _runs_ _each_ _script_ DbUp has not _run_ _before_, _once_, in the _order_ of the _scripts_' _names_. A ***grant*** _publishes_ _each_ _table_.
 
 ## Why
 

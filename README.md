@@ -21,7 +21,7 @@ The thirty _stories_ in `docs/user-stories/user-stories.md` _fix_ what Tessera m
 | US-23 and UI-09 to UI-19, the map | _Built_ and _tested_: the _map_ in `web/` (ADR 0006), and its ***browser tests*** _pass_ _through_ Nginx |
 | N-18 to N-20, tiles that cost less | _Built_ and _tested_: a _tile_ _carries_ `max-age` and a _weak_ `ETag`, and Nginx _keeps_ it, _answers_ 304, and _packs_ it with gzip (ADR 0008) |
 | N-21 to N-28, steady when the database is not | _Built_ and _tested_: 503 with `Retry-After`, ***grants*** _seen_ _within_ `Catalogue.RefreshSeconds`, _one_ _query_ for a _crowd_, `/health`, and _queries_ _served_ in the _order_ they _arrive_. _While_ the _database_ is _down_, Nginx _serves_ every _tile_ it _holds_. The _service_ and the _database_ _start_ in _any_ _order_ |
-| US-36 Clean places | _Built_ and _tested_: _eight_ ***filters***, ***stop rules*** and a _log_ for _each_ _run_ of `npm run etl` (ADR 0009) |
+| US-36 Clean places | _Built_ and _tested_: _eight_ ***filters***, ***stop rules*** and a _log_ for _each_ _run_ of `npm run etl`, in the Python ***pipeline***, nathanwh71/tessera-etl-python (ADR 0009) |
 | S-07, S-30 and N-29, Nginx guards the door | _Built_ and _tested_: Nginx _answers_ the _office_'s _network_ _alone_, _caps_ _each_ _machine_ at 100 _tiles_ a _second_ with a burst of 300 (ADR 0007), and _shares_ _requests_ _between_ _two_ _copies_ of the _service_, either of which can _carry_ them all (ADR 0008); a ***start-up task*** _starts_ them _again_ _after_ the _machine_ _restarts_, and _needs_ a _first_ _run_ on the _office_ _machine_ |
 
 ## What you need
@@ -29,7 +29,8 @@ The thirty _stories_ in `docs/user-stories/user-stories.md` _fix_ what Tessera m
 - The .NET 10 SDK, 10.0.100 or _later_: the _tools_ that _build_ and _run_ C# 14
 - Docker Engine, which _runs_ the _database_ and Nginx in _containers_: _sealed_ _boxes_ with their _own_ _files_
 - Node.js 26, which _runs_ the _scripts_ and _builds_ the _map_ (ADR 0002)
-- GDAL's `ogr2ogr` and `ogrinfo`, for `npm run etl`, `npm run inspect` and the ***pipeline***'s _tests_ _alone_; _without_ them, the _pipeline_ _runs_ GDAL's Docker _image_
+- For `npm run etl`: uv, Python's _project_ _tool_, and the _pipeline_ _cloned_ _beside_ this repository, as `../tessera-etl-python`, or in the _folder_ `TESSERA_ETL_PYTHON` _names_
+- GDAL's `ogrinfo`, for `npm run inspect` _alone_; _without_ it, the _script_ _runs_ GDAL's Docker _image_
 
 ## The commands
 
@@ -37,15 +38,14 @@ The thirty _stories_ in `docs/user-stories/user-stories.md` _fix_ what Tessera m
 |---|---|
 | `npm run build` | _Builds_ the _map_, then the _service_ with the _map_ _inside_ it (US-00 c1) |
 | `npm test` | _Runs_ every _test_: the _scripts_', the _map_'s, the _service_'s _borders_ and its _two_ _suites_, the _pipeline_'s, and the _browser_ _tests_ _through_ Nginx (US-00 c3) |
-| `dotnet build` | _Builds_ the _service_, the _pipeline_ and the _four_ _test_ _suites_ _alone_; _needs_ `web/dist` from a _map_ _build_ |
+| `dotnet build` | _Builds_ the _service_ and its _three_ _test_ _suites_ _alone_; _needs_ `web/dist` from a _map_ _build_ |
 | `dotnet run --project tests/Tessera.ArchitectureTests` | _Checks_ the _borders_ _between_ the _service_'s _layers_ on the _built_ _program_: _eight_ _seconds_ (ADR 0010) |
 | `dotnet run --project tests/Tessera.UnitTests` | _Runs_ the _unit_ and ***property tests***: no _database_, a _second_ or _two_ |
 | `dotnet run --project tests/Tessera.IntegrationTests` | _Starts_ the _packaged_ _database_ in Docker and _tests_ _through_ it and _through_ _real_ HTTP (US-00 c3) |
 | `npm install` | _Installs_ the _scripts_' _tools_: zx and TypeScript |
 | `npm start` | _Starts_ the _database_, _runs_ _any_ _new_ ***seed script***, _starts_ _two_ _copies_ of the _service_ and Nginx in _front_ of them, then _waits_ for `/health` to _say_ `UP`; it _starts_ _again_ _any_ _copy_ that _stops_, until Ctrl+C (US-00 c2, N-25, N-29, ADR 0009) |
 | `npm run inspect -- SOURCE [--split FIELD]` | _Describes_ a _source_'s _layers_, _rows_, _shapes_, _systems_ and _fields_, and _prints_ a _starting_ ***pipeline file***; `--split` _makes_ _one_ _table_ for _each_ _value_ of a _field_ (ADR 0009) |
-| `npm run etl -- PIPELINE.json` | _Cleans_ a _file_ of _places_ into the _next_ _seed_ _script_ in `db/seed`, and logs _each_ _row_'s fate in `db/seed-logs` (US-24, ADR 0009) |
-| `dotnet run --project tests/Tessera.Etl.Tests` | _Runs_ the _pipeline_'s _tests_, _one_ of them on a ***geodatabase*** GDAL _builds_ |
+| `npm run etl -- PIPELINE.json` | _Runs_ the Python _pipeline_: it _cleans_ a _file_ of _places_ into the _next_ _seed_ _script_ in `db/seed`, and logs _each_ _row_'s fate in `db/seed-logs` (US-24, ADR 0009) |
 | `npm run publish` | _Grants_ the _nine_ _layers_ to the _service_, which _serves_ them _within_ `Catalogue.RefreshSeconds`, 30 by _default_ (US-24 c5, N-23) |
 | `npm run office-port` | _Checks_ that WSL2 _uses_ _mirrored_ _networking_, and _prints_ the _steps_ that _open_ _port_ 80 to the _office_ (US-35) |
 | `npm run boot-task` | _Prints_ the PowerShell that _makes_ _Windows_ _run_ `npm start` when the _office_ _machine_ _switches_ on, with its _output_ in `start.log` _beside_ `package.json` (N-29) |
@@ -71,7 +71,7 @@ _Machines_, _ports_ and _passwords_ _come_ from ***environment variables***: _va
 
 The _places_ _reach_ the _database_ as SQL _scripts_ in `db/seed`, which DbUp _runs_ _once_ _each_, in the _order_ of their _names_ (ADR 0009). A **pipeline file** _turns_ a _file_ of _places_ into the _next_ _script_, _cleaning_ it on the _way_: GDAL extracts _each_ _table_, filters _clean_ its _rows_, and the _pipeline_ _writes_ the SQL. To _add_ _places_:
 
-1. Inspect the _data_, such as `npm run inspect -- data/parks.gdb`, and _save_ the _starting_ _pipeline_ _file_ it _prints_ _beside_ the _data_, such as `data/parks.pipeline.json`. Then _set_ _each_ _table_'s ***schema*** and _name_, and its filters. It _names_ the _source_, the _script_ to _write_, and _each_ _table_ with its filters. GDAL _reads_ _file_ geodatabases, GeoJSON, shapefiles, GeoPackages, CSV and more, and _stores_ every _shape_ in longitude and latitude.
+1. Inspect the _data_, such as `npm run inspect -- data/parks.gdb`, and _save_ the _starting_ _pipeline_ _file_ it _prints_ _beside_ the _data_, such as `data/parks.pipeline.json`. Then _set_ _each_ _table_'s ***schema*** and _name_, and its filters. It _names_ the _source_, the _script_ to _write_, and _each_ _table_ with its filters. GDAL _reads_ _file_ ***geodatabases***, GeoJSON, shapefiles, GeoPackages, CSV and more, and _stores_ every _shape_ in longitude and latitude.
 2. _Run_ it: `npm run etl -- data/parks.pipeline.json`. It _writes_ the _script_, such as `db/seed/0002-parks.sql`, and a _log_ of what _each_ filter did to _each_ _row_, in `db/seed-logs/`.
 3. _Read_ the _log_ and the _script_, then _commit_ both. _Never_ _change_ a _script_'s SQL _once_ it has _run_: DbUp would not _run_ it _again_. A _comment_ may _change_, _since_ DbUp _knows_ a _script_ by its _name_ _alone_. _Put_ _new_ or _corrected_ _data_ in a _new_ _script_, with the _next_ _number_.
 4. _Run_ `npm start`, or `Tessera seed` as `tessera_publisher`, then `npm run publish`. A _script_ that _replaces_ a _table_ _takes_ its _grant_ with it, so the _table_ _waits_ for the _publish_.
@@ -110,17 +110,17 @@ A _table_ of a geodatabase _names_ its ***feature class*** as `layer`; a _table_
 
 Filters _run_ in the _order_ _listed_, _each_ on the _rows_ the _one_ _before_ _kept_. A _row_ that _fails_ is _dropped_, or, with `"onFail": "stop"`, _ends_ the _whole_ _run_. A _table_ _also_ _stops_ the _run_ when more than `droppedOverPercent` of its _rows_ were _dropped_, 10 by _default_, or _fewer_ than `rowsUnder` _remain_, 1 by _default_; `stopWhen` _sets_ them for the _whole_ _file_ or for _one_ _table_. A _stopped_ _run_ _writes_ no _script_, but _always_ _writes_ its _log_. The _area_ _comes_ from `tessera.json`, or from the _pipeline_'s _own_ `area`. `lines: true` _stores_ _lines_ and _areas_ as many-part _shapes_, so _one_ _table_ _holds_ both _kinds_.
 
-**Adding a filter.** _Each_ filter is _one_ _file_ in `tools/Tessera.Etl/Filters/`. It _holds_ the filter's _name_, what it does, a _record_ of its _own_ _settings_, its _checks_, and a `Create` _function_ that _returns_ the filter as a _step_ of the _chain_. The filter _itself_ is a _judge_: a _function_ that _gives_ _each_ _row_ a verdict, _keep_, _fix_ or _fail_, and `Steps.Filter` does the _dropping_, _logging_ and _stopping_ for every filter alike. A _new_ filter is _one_ _new_ _file_, _modelled_ on `InsideArea.cs`, and _one_ _line_ in `Filters/All.cs`. _Each_ filter _reads_ _only_ its _own_ _settings_, so the _pipeline_ _file_ _refuses_ a _setting_ that _belongs_ to another filter, or _one_ that is _missing_.
+**Adding a filter.** The _pipeline_ _lives_ in its _own_ repository, nathanwh71/tessera-etl-python, in Python. _Each_ filter is _one_ ***module*** in `src/tessera_etl/core/filters/`. It _holds_ the filter's _name_, what it does, a _model_ of its _own_ _settings_, its _checks_, and a _function_ that _returns_ the filter as a _step_ of the _chain_. The filter _itself_ is a _judge_: a _function_ that _gives_ _each_ _row_ a verdict, _keep_, _fix_ or _fail_, and the kernel does the _dropping_, _logging_ and _stopping_ for every filter alike. A _new_ filter is _one_ _new_ _module_, _modelled_ on `inside_area.py`, and _one_ _line_ in `KINDS`. _Each_ filter _reads_ _only_ its _own_ _settings_, so the _pipeline_ _file_ _refuses_ a _setting_ that _belongs_ to another filter, or _one_ that is _missing_.
 
-**Filters in code.** Filters _join_ with `>>`, which _runs_ the _left_ _one_, then the _right_ _one_ on the _rows_ it _kept_, and _stops_ at the _first_ _stop_. _Each_ _step_ is a _handler_ in Giraffe's _shape_, which _receives_ the _rest_ of the _chain_ (`Pipes.cs`):
+**Filters in code.** Filters _join_ with `>>`, which _runs_ the _left_ _one_, then the _right_ _one_ on the _rows_ it _kept_, and _stops_ at the _first_ _stop_. _Each_ _step_ is a _handler_ in Giraffe's _shape_, which _receives_ the _rest_ of the _chain_ (`kernel/pipes.py`):
 
-```csharp
-var cleanCafes =
-    DropEmptyShapes.Create(OnFail.Stop)
-    >> SwapCoordinates.Create(macau)
-    >> InsideArea.Create(macau, OnFail.Stop)
-    >> TidyText.Create()
-    >> RequireFields.Create(["id", "name"]);
+```python
+clean_cafes = (
+    drop_empty_shapes.create(OnFail.STOP)
+    >> swap_coordinates.create(macau)
+    >> inside_area.create(macau, OnFail.STOP)
+    >> tidy_text.create()
+    >> require_fields.create(["id", "name"]))
 ```
 
 The _pipeline_ _file_ _builds_ the _same_ _chain_ from its _list_, and _adds_ the _stop_ _rules_ as its _last_ _step_. A filter may _also_ _add_ or _remove_ a _column_: the _script_ _takes_ its _columns_ from the _cleaned_ _rows_.
@@ -133,7 +133,7 @@ _Two_ _attacks_ are _closed_ by _design_. Every _value_ from a _request_ _travel
 
 ## What is where
 
-The _service_ is _one_ _program_, _one_ _project_ laid out as the modular-monolith _template_: `Common`, which every ***module*** may _use_, and _one_ _module_, `Modules/Tessera`, in _three_ _layers_. _Six_ ***architecture tests*** _keep_ _each_ _layer_ to its _own_ _work_ (ADR 0010). It _borrows_ what _libraries_ do _well_: ASP.NET Core _reads_ its _settings_, _writes_ its _problem_ _documents_, _tags_ _each_ _tile_, _answers_ 304 and `/health`; Dapper and Npgsql _talk_ to the _database_; DbUp _runs_ the _seed_ _scripts_ (ADR 0009); Nginx _keeps_, _packs_ and _guards_ (ADR 0008). CSharpFunctionalExtensions _gives_ `Result` and `Maybe` (ADR 0004).
+The _service_ is _one_ _program_, _one_ _project_ laid out as the modular-monolith _template_: `Common`, which every _module_ may _use_, and _one_ _module_, `Modules/Tessera`, in _three_ _layers_. _Six_ ***architecture tests*** _keep_ _each_ _layer_ to its _own_ _work_ (ADR 0010). It _borrows_ what _libraries_ do _well_: ASP.NET Core _reads_ its _settings_, _writes_ its _problem_ _documents_, _tags_ _each_ _tile_, _answers_ 304 and `/health`; Dapper and Npgsql _talk_ to the _database_; DbUp _runs_ the _seed_ _scripts_ (ADR 0009); Nginx _keeps_, _packs_ and _guards_ (ADR 0008). CSharpFunctionalExtensions _gives_ `Result` and `Maybe` (ADR 0004).
 
 | Folder | What it holds |
 |---|---|
@@ -142,11 +142,10 @@ The _service_ is _one_ _program_, _one_ _project_ laid out as the modular-monoli
 | `src/Tessera/Modules/Tessera/Infrastructure` | Every SQL _text_, in `Sql/Queries.cs`, and the _code_ that _talks_ to the _database_; the _list_ of _layers_, _reread_ every `Catalogue.RefreshSeconds`; the ***health checks***; the `seed` _command_'s DbUp _run_, in `Seeding/` |
 | `src/Tessera/Modules/Tessera/Features` | The _routes_: the _tiles_, the _map_'s _page_ with the _area_ _written_ in, and `/health` |
 | `src/Tessera/Modules/Tessera/TesseraModule.cs` | The _module_'s _door_: `AddTessera` and `MapTessera` |
-| `tools/Tessera.Etl` | The _pipeline_ that _cleans_ a _file_ of _places_ into a _seed_ _script_; the _service_ _never_ _runs_ it (ADR 0009) |
 | `src/Tessera` | `Program.cs`, the _two_ _commands_; `TesseraHost.cs`, the _service_ _put_ _together_, the _template_'s _Host_; `.editorconfig`, which _makes_ _each_ namespace _match_ its _folder_ |
 | `nginx/` | Nginx's _file_, which `npm start` and the _browser_ _tests_ _run_ (ADR 0008) |
 | `web/` | The _map_: TypeScript, React, MapLibre GL JS, react-elmish, Valibot and Tailwind CSS (ADR 0006) |
-| `tests/` | The _architecture_ _tests_, the _unit_, _property_ and ***integration tests*** of the _service_, and the _pipeline_'s _tests_ |
+| `tests/` | The _architecture_ _tests_, and the _unit_, _property_ and ***integration tests*** of the _service_ |
 | `db/` | The _packaged_ _database_: PostgreSQL 18 with PostGIS 3.6, the _role_ _script_, the _seed_ _scripts_ in `db/seed`, and, _beside_ _each_ _script_ `npm run etl` _writes_, its _log_ in `db/seed-logs` |
 | `data/` | The _seed_'s _source_: 900 _places_ in longitude and latitude, and `macau.pipeline.json`, which _cleans_ them into a _seed_ _script_ |
 | `scripts/` | The _scripts_, in TypeScript with zx (ADR 0002): `start.ts`, `boot.ts` and `boot-task.ts`, `publish.ts`, `inspect.ts`, `etl.ts`, which _hands_ a _pipeline_ _file_ to the C# _pipeline_, `office-port.ts`, the _test_ and _build_ _runners_, and the Nginx _checks_ in `scripts/lib/edge.ts` |

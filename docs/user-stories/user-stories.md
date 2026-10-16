@@ -197,7 +197,7 @@ The _places_ _arrive_ as _files_ the _data_ _publisher_ _owns_, _each_ with _col
 2. **Publish by grant, and only then.** With no _grant_, the catalogue _lists_ no _layer_ from the _four_ schemas; _after_ the _grant_, all _nine_ _appear_, in SRID 4326, in the _order_ of `fid`.
 3. **A failed script changes nothing.** A _script_ that _drops_ a _table_, then _fails_, _leaves_ the _table_ _whole_, and _stays_ out of the journal.
 4. **A replaced table waits for its grant.** A _new_ _script_ that _replaces_ a _granted_ _table_ _leaves_ it unpublished until the _next_ _grant_.
-5. **The pipeline's own rules.** ***Unit tests*** in `tests/Tessera.Etl.Tests`: INSERT _statements_, a _numbered_ _key_, EPSG:4326, GDAL's _own_ _transaction_ _taken_ out, and a _misspelt_ _pipeline_ _file_ _refused_.
+5. **The pipeline's own rules.** ***Unit tests*** in the _pipeline_'s _own_ repository, `nathanwh71/tessera-etl-python`: INSERT _statements_, a _numbered_ _key_, EPSG:4326, GDAL's _own_ _transaction_ _taken_ out, and a _misspelt_ _pipeline_ _file_ _refused_.
 
 **Open to talk**
 
@@ -801,7 +801,7 @@ _Seven_ _stories_ _keep_ the _service_ steady when the _database_ is _slow_, _bu
 | Size | 1 _point_ |
 | Builds on | N-22 and N-23 |
 
-**In plain words.** A _health_ _check_ is an _address_ a _watcher_, a _script_ or a _person_, _asks_ to _learn_ _whether_ the _service_ can do its _job_. pg_tileserv _answers_ at `/health`; so does Tessera.
+**In plain words.** A ***health check*** is an _address_ a _watcher_, a _script_ or a _person_, _asks_ to _learn_ _whether_ the _service_ can do its _job_. pg_tileserv _answers_ at `/health`; so does Tessera.
 
 > **Story.** **As** the _maintainer_, **I want** `/health` to _say_ `UP` _only_ when the _service_ can _serve_ _tiles_, **so that** a _script_ can _wait_ for it and a _watcher_ can _see_ it _fail_.
 

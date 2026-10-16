@@ -71,7 +71,7 @@ _Two_ helpers are not _pure_, _since_ their _work_ is to _talk_ to the _world_: 
 ### Step 8 · Handing a pipeline file to C#
 
 - **Open:** `scripts/etl.ts`, then `scripts/lib/etl.ts`.
-- **Look for:** a _script_ that does _little_ on _purpose_. The ***pipeline*** _itself_ is C#, in `tools/Tessera.Etl` (ADR 0009); this _script_ _checks_ the _command_, the _file_ and .NET _first_, so _each_ _mistake_ _gets_ a _plain_ _answer_, then _runs_ the _pipeline_ and _ends_ with its exit _code_.
+- **Look for:** a _script_ that does _little_ on _purpose_. The ***pipeline*** _itself_ is Python, in its _own_ repository, `nathanwh71/tessera-etl-python` (ADR 0009); this _script_ _checks_ the _command_, the _file_, the _pipeline_'s _folder_ and uv _first_, so _each_ _mistake_ _gets_ a _plain_ _answer_, then _runs_ the _pipeline_ and _ends_ with its exit _code_.
 - **Check yourself:** why _check_ for `dotnet` here, when `dotnet run` would _fail_ _anyway_?
 
 ## Part D · The office machine
