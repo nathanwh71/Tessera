@@ -120,6 +120,10 @@ public static class PipelineFile
         }
         if (!read.TryGetValue(out var file) || file.Tables.IsDefault)
             return Result.Failure<Plan, ImmutableArray<string>>(["The pipeline file needs source, output and tables."]);
+        // The reader lets a null stand in a list, as in "tables": [null]; every check below reads each
+        // table's fields, so a null is refused here, before it reaches them.
+        if (file.Tables.Any(table => table is null))
+            return Result.Failure<Plan, ImmutableArray<string>>(["tables: each entry must be an object that names its table."]);
 
         var pipeline = file with { Area = file.Area ?? areaFromSettings.GetValueOrDefault() };
         var tables = pipeline.Tables.Select(table => Build(table, pipeline)).ToImmutableArray();

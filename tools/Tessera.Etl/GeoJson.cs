@@ -21,40 +21,52 @@ public static class GeoJson
 
     /// <summary>
     /// The rows of a FeatureCollection, numbered from 1 in the file's order, and its columns in the
-    /// order they first appear, so the cleaned file keeps them in that order.
+    /// order they first appear, so the cleaned file keeps them in that order. GDAL writes the file,
+    /// so it is well formed unless GDAL fails part-way; then the reason comes back instead of the
+    /// rows, and the run stops with its log written, rather than crashing.
     /// </summary>
-    public static (ImmutableArray<Row> Rows, ImmutableArray<string> Columns) Read(string json)
+    public static Result<(ImmutableArray<Row> Rows, ImmutableArray<string> Columns), string> Read(string json)
     {
-        using var document = JsonDocument.Parse(json);
-        var rows = ImmutableArray.CreateBuilder<Row>();
-        var columns = new List<string>();
-        var number = 0;
-        foreach (var feature in document.RootElement.GetProperty("features").EnumerateArray())
+        try
         {
-            number++;
-            // The converter gives null when it reads no shape; that becomes none here.
-            var shape = feature.TryGetProperty("geometry", out var geometry) && geometry.ValueKind == JsonValueKind.Object
-                ? geometry.Deserialize<Geometry>(Shapes).AsMaybe()
-                : Maybe<Geometry>.None;
-            var values = ImmutableDictionary.CreateBuilder<string, object?>(StringComparer.Ordinal);
-            // GDAL writes a text field named id as the feature's own id, outside its properties;
-            // it comes back here as the id column, first, as it stood in the source.
-            if (feature.TryGetProperty("id", out var id))
+            using var document = JsonDocument.Parse(json);
+            var rows = ImmutableArray.CreateBuilder<Row>();
+            var columns = new List<string>();
+            var number = 0;
+            foreach (var feature in document.RootElement.GetProperty("features").EnumerateArray())
             {
-                if (!columns.Contains("id")) columns.Insert(0, "id");
-                values["id"] = Value(id);
-            }
-            if (feature.TryGetProperty("properties", out var properties) && properties.ValueKind == JsonValueKind.Object)
-            {
-                foreach (var property in properties.EnumerateObject())
+                number++;
+                // The converter gives null when it reads no shape; that becomes none here.
+                var shape = feature.TryGetProperty("geometry", out var geometry) && geometry.ValueKind == JsonValueKind.Object
+                    ? geometry.Deserialize<Geometry>(Shapes).AsMaybe()
+                    : Maybe<Geometry>.None;
+                var values = ImmutableDictionary.CreateBuilder<string, object?>(StringComparer.Ordinal);
+                // GDAL writes a text field named id as the feature's own id, outside its properties;
+                // it comes back here as the id column, first, as it stood in the source.
+                if (feature.TryGetProperty("id", out var id))
                 {
-                    if (!columns.Contains(property.Name)) columns.Add(property.Name);
-                    values[property.Name] = Value(property.Value);
+                    if (!columns.Contains("id")) columns.Insert(0, "id");
+                    values["id"] = Value(id);
                 }
+                if (feature.TryGetProperty("properties", out var properties) && properties.ValueKind == JsonValueKind.Object)
+                {
+                    foreach (var property in properties.EnumerateObject())
+                    {
+                        if (!columns.Contains(property.Name)) columns.Add(property.Name);
+                        values[property.Name] = Value(property.Value);
+                    }
+                }
+                rows.Add(new Row(number, shape, values.ToImmutable()));
             }
-            rows.Add(new Row(number, shape, values.ToImmutable()));
+            return Result.Success<(ImmutableArray<Row>, ImmutableArray<string>), string>((rows.ToImmutable(), [.. columns]));
         }
-        return (rows.ToImmutable(), [.. columns]);
+        // The three ways a file that is not a FeatureCollection fails: text that is not JSON, a
+        // missing key such as features, and a value of the wrong kind. Any other exception is a fault
+        // in this code, and escapes.
+        catch (Exception error) when (error is JsonException or KeyNotFoundException or InvalidOperationException)
+        {
+            return Result.Failure<(ImmutableArray<Row>, ImmutableArray<string>), string>(error.Message);
+        }
     }
 
     // A JSON value as the plain .NET value a filter compares: text, a whole number, a number with a

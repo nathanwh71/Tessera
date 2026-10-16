@@ -65,6 +65,15 @@ public sealed class PipelineTests
             read.Error);
     }
 
+    // The JSON reader lets a null stand in a list; it is refused with a reason, not a crash.
+    [Fact]
+    public void Refuses_a_table_that_is_null()
+    {
+        var read = PipelineFile.Read("""{ "source": "data/places.gdb", "output": "db/seed/0002-places.sql", "tables": [null] }""", Macau);
+
+        Assert.Equal("tables: each entry must be an object that names its table.", Assert.Single(read.Error));
+    }
+
     [Fact]
     public void Names_every_fault_at_once()
     {
@@ -204,19 +213,28 @@ public sealed class PipelineTests
     {
         var json = """{"type":"FeatureCollection","features":[{"type":"Feature","id":"cafes-001","properties":{"name":"A"},"geometry":null}]}""";
 
-        var (rows, columns) = GeoJson.Read(json);
+        var (rows, columns) = GeoJson.Read(json).Value;
 
         Assert.Equal(["id", "name"], columns);
         Assert.Equal("cafes-001", rows[0].Value("id"));
     }
+
+    // GDAL may fail part-way and leave a file that is not a FeatureCollection; the reader says why,
+    // and the run stops with its log, rather than crashing.
+    [Theory]
+    [InlineData("""{"type":"FeatureCollection","features":[{"type":""")]
+    [InlineData("""{"type":"FeatureCollection"}""")]
+    [InlineData("""{"type":"FeatureCollection","features":{}}""")]
+    public void Refuses_GeoJSON_that_is_no_FeatureCollection(string json) =>
+        Assert.True(GeoJson.Read(json).IsFailure);
 
     [Fact]
     public void Keeps_columns_in_order_and_values_by_kind_through_GeoJSON()
     {
         var json = """{"type":"FeatureCollection","features":[{"type":"Feature","properties":{"name":"A","floors":3,"height":2.5,"open":true,"note":null},"geometry":{"type":"Point","coordinates":[113.55,22.19]}}]}""";
 
-        var (rows, columns) = GeoJson.Read(json);
-        var (again, _) = GeoJson.Read(GeoJson.Write(rows, columns));
+        var (rows, columns) = GeoJson.Read(json).Value;
+        var (again, _) = GeoJson.Read(GeoJson.Write(rows, columns)).Value;
 
         Assert.Equal(["name", "floors", "height", "open", "note"], columns);
         Assert.Equal(rows[0].Values, again[0].Values);

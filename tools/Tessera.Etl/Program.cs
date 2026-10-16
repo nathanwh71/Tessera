@@ -60,7 +60,10 @@ try
         if (extract.IsFailure)
             return Finish(1, $"{table.Table}: extraction failed. {extract.Error}");
 
-        var (rows, columns) = GeoJson.Read(File.ReadAllText(extracted));
+        var geoJson = GeoJson.Read(File.ReadAllText(extracted));
+        if (geoJson.IsFailure)
+            return Finish(1, $"{table.Table}: GDAL's GeoJSON could not be read. {geoJson.Error}");
+        var (rows, columns) = geoJson.Value;
         // The whole transform step: the table's chain of filters and stop rules, run on its rows.
         var done = plan.Chain.Run(Cleaning.Start(table, rows));
         cleaned.Add((plan, done));
