@@ -12,6 +12,7 @@ from typing import ClassVar
 import shapely
 
 from ...kernel.pipes import Handler
+from .. import fixer
 from ..filter_kind import FilterKind, settings_name
 from ..plan import Area, Model, OnFail, OnFailSetting
 from ..rows import Cleaning, Fail, Fix, Keep, Row, Verdict
@@ -37,8 +38,8 @@ _PLACE = re.compile(r"\[[^\]]*\]$")
 def create(on_fail: OnFail = OnFail.DROP) -> Handler[Cleaning]:
     """Builds the filter from plain values, so a test can make one without a pipeline file.
 
-    The repair is GEOS's 'structure' method, the port of the GeometryFixer the C# tool used,
-    which keeps parts that collapse to lines or points out of the result.
+    The repair follows NetTopologySuite's GeometryFixer, which the C# tool used (core/fixer.py),
+    and leaves out parts that collapse to lines or points.
     """
 
     def judge(row: Row) -> Verdict:
@@ -46,7 +47,7 @@ def create(on_fail: OnFail = OnFail.DROP) -> Handler[Cleaning]:
         if shape is None or shape.is_empty or shape.is_valid:
             return Keep(row)
         why = _PLACE.sub("", shapely.is_valid_reason(shape)) or "invalid"
-        mended = shapely.make_valid(shape, method="structure", keep_collapsed=False)
+        mended = fixer.fix(shape)
         # A repair is a fix; a shape that comes out empty fails, so it obeys onFail.
         if mended.is_empty:
             return Fail(row, "its shape is invalid and cannot be repaired")
