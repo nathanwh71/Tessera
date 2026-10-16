@@ -1,7 +1,6 @@
 using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
-using Modules.Tessera;
 using Modules.Tessera.Infrastructure.Seeding;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO.VectorTiles.Mapbox;
@@ -50,7 +49,7 @@ public sealed class ServiceFixture : IAsyncLifetime
         // The real service, as Program.cs builds it, on a free port and the test database, so each
         // test reaches it through real HTTP (US-00 c2). It serves the built map, which the service's
         // project reference copies beside the tests (US-23 c4). A 64-unit buffer keeps the tiles small.
-        _app = TesseraModule.Build(new Dictionary<string, string?>
+        _app = TesseraHost.Build(new Dictionary<string, string?>
         {
             ["Urls"] = $"http://127.0.0.1:{Port}",
             ["DATABASE_URL"] = Database.ReaderUrl,

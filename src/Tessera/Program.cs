@@ -23,7 +23,7 @@ static async Task<int> Serve()
     Microsoft.AspNetCore.Builder.WebApplication app;
     try
     {
-        app = TesseraModule.Build();
+        app = TesseraHost.Build();
     }
     // The three ways a settings check fails: a value outside its limits, several problems at once,
     // and a key the binder cannot place. Any other exception is a fault, and escapes.

@@ -1,7 +1,5 @@
 using Common.Api;
 using Common.Infrastructure;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Modules.Tessera.Domain;
 using Modules.Tessera.Features;
@@ -11,10 +9,10 @@ using Modules.Tessera.Infrastructure.Sql;
 namespace Modules.Tessera;
 
 /// <summary>
-/// Puts the Tessera <b><i>module</i></b>'s layers together into one web service. The service is a
-/// <b><i>modular monolith</i></b>, one program built from modules with guarded borders, so one
-/// release serves everything while each part stays small (ADR 0010). Program.cs builds it once,
-/// then runs it.
+/// The Tessera <b><i>module</i></b>'s one door: what the Host calls to add the module to the
+/// program. <see cref="AddTessera"/> adds its services and <see cref="MapTessera"/> its routes, as
+/// ASP.NET Core's own <c>AddHealthChecks</c> and <c>MapHealthChecks</c> do. A second module would
+/// bring a door of its own, and the Host would call it too (ADR 0010).
 /// </summary>
 public static class TesseraModule
 {
@@ -33,21 +31,13 @@ public static class TesseraModule
     }
 
     /// <summary>
-    /// Builds the service on ASP.NET Core's standard start-up, which reads tessera.json, the
-    /// <b><i>settings file</i></b>, its <c>Urls</c> and <c>Logging</c> sections included, and the
-    /// environment (ADR 0003). Every setting is checked here, before anything runs, and a failed
-    /// check throws with every problem, so one failed start names all there is to fix (N-21 c4).
+    /// Adds the module's settings, its one pool of database connections, the list of layers that
+    /// loads in the background, and the database's <b><i>health check</i></b>.
     /// </summary>
-    /// <param name="overrides">Settings a test lays over the file and the environment.</param>
-    public static WebApplication Build(IDictionary<string, string?>? overrides = null)
+    public static IHostApplicationBuilder AddTessera(this IHostApplicationBuilder builder)
     {
-        var builder = WebApplication.CreateBuilder();
-        Settings.AddFile(builder.Configuration);
-        builder.Configuration.AddInMemoryCollection(overrides ?? new Dictionary<string, string?>());
         AddSettings(builder.Services);
         DatabaseConnections.Register(builder.Services, builder.Configuration, DatabaseConnections.ReaderDatabase);
-        // Every error answers as a problem document of one shape, so no route writes its own (US-07 c5).
-        builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = Problems.Shape);
 
         // One Database for the whole program, since it holds the one pool of connections that every
         // request shares within the limits of N-22.
@@ -66,37 +56,20 @@ public static class TesseraModule
         builder.Services.AddHostedService(services => services.GetRequiredService<LiveCatalogue>());
         // N-25: the database must answer a ping within a second, through the same pool as the tiles.
         builder.Services.AddHealthChecks().AddCheck<DatabaseAnswers>("database");
+        return builder;
+    }
 
-        var app = builder.Build();
-        Settings.Check(app.Services);
+    /// <summary>
+    /// Adds the module's routes: <c>/health</c>, the tiles, and the map, whose files the release keeps
+    /// in wwwroot beside the program (Tessera.csproj, US-23 c4). Each route's pattern, not this order,
+    /// decides which one answers.
+    /// </summary>
+    public static WebApplication MapTessera(this WebApplication app)
+    {
         var catalogue = app.Services.GetRequiredService<LiveCatalogue>();
-        // The first catches a crash and the second an empty error, such as a 404 for an address no
-        // route knows; both answer with a problem document.
-        app.UseExceptionHandler();
-        app.UseStatusCodePages();
-        // Before the routes, so its hook joins every answer, whichever route or step writes it.
+        // Before the routes run, so its hook joins every answer, whichever route or step writes it.
         app.UseMapHeaders();
-        // Routing picks each request's route here, so the steps above run for every request first.
-        app.UseRouting();
-        app.MapHealthChecks("/health", new HealthCheckOptions
-        {
-            ResponseWriter = (context, report) =>
-            {
-                // The usual health-check words. DOWN outranks OUT_OF_SERVICE, the state while the first
-                // list of layers loads. The answer names no fault, so a stranger learns nothing more.
-                var status = report.Status != HealthStatus.Healthy ? "DOWN"
-                    : catalogue.Current is null ? "OUT_OF_SERVICE"
-                    : "UP";
-                context.Response.StatusCode =
-                    status == "UP" ? StatusCodes.Status200OK : StatusCodes.Status503ServiceUnavailable;
-                // No copy is kept, since a kept 'UP' would hide a failure from the watcher (N-25 c3).
-                context.Response.Headers.CacheControl = "no-store";
-                context.Response.ContentType = "application/json";
-                return context.Response.WriteAsync($$"""{"status":"{{status}}"}""");
-            },
-        });
-        // The tiles, then the map, whose files the release keeps in wwwroot beside the program
-        // (Tessera.csproj, US-23 c4). Each route's pattern, not this order, decides which one answers.
+        app.MapHealth(catalogue);
         app.MapTiles(
             catalogue,
             app.Services.GetRequiredService<Database>(),
@@ -106,15 +79,5 @@ public static class TesseraModule
             app.Services.GetRequiredService<IOptions<MapSettings>>().Value,
             Path.Combine(AppContext.BaseDirectory, "wwwroot"));
         return app;
-    }
-
-    // Pings the database; the ping waits a second at most, so /health answers within one.
-    private sealed class DatabaseAnswers(Database database) : IHealthCheck
-    {
-        public async Task<HealthCheckResult> CheckHealthAsync(
-            HealthCheckContext context, CancellationToken cancellationToken = default) =>
-            await database.Ping(cancellationToken).ConfigureAwait(false)
-                ? HealthCheckResult.Healthy()
-                : HealthCheckResult.Unhealthy();
     }
 }
