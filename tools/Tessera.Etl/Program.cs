@@ -45,12 +45,14 @@ var logFile = Path.Combine($"{Path.GetDirectoryName(pipeline.Output)}-logs", Pat
 // end, however the run ends.
 var work = Directory.CreateTempSubdirectory("tessera-etl-").FullName;
 // The folders GDAL's Docker image must see: the source's, to read it, and the work folder, for the
-// GeoJSON. The SQL comes back on standard output, so the scripts' folder needs no mount.
+// GeoJSON and each table's SQL. The script is written there too, and moved out only when whole, so
+// the scripts' folder needs no mount.
 var folders = new[] { Path.GetDirectoryName(source)!, work };
 // Each table's counts and log lines, for the log; its rows go once its SQL is written, so the run
 // holds one table's rows at a time, not every table's.
 var cleaned = ImmutableArray.CreateBuilder<(CleaningPlan, Outcome)>();
-var parts = ImmutableArray.CreateBuilder<(TablePlan, string)>();
+// Each table and the file in the work folder that holds its SQL.
+var parts = ImmutableArray.CreateBuilder<(TablePlan Table, string SqlFile)>();
 try
 {
     // GeoJSON has no index, so for a pipeline of several tables GDAL copies it once into a
@@ -87,17 +89,31 @@ try
         Console.WriteLine($"{table.Table}: read {done.Read}, kept {done.Rows.Length}, dropped {done.Dropped}.");
         var cleanFile = Path.Combine(work, $"{table.Table}.cleaned.geojson");
         File.WriteAllText(cleanFile, GeoJson.Write(done.Rows, columns));
-        var load = await Gdal.Run(SeedScript.LoadArguments(cleanFile, table), folders);
+        var sqlFile = Path.Combine(work, $"{table.Table}.sql");
+        var load = await Gdal.Run(SeedScript.LoadArguments(cleanFile, sqlFile, table), folders);
         if (load.IsFailure)
             return Finish(1, $"{table.Table}: loading failed. {load.Error}");
-        parts.Add((table, load.Value));
+        parts.Add((table, sqlFile));
     }
 
-    var script = SeedScript.Join(pipelineFile, parts.ToImmutable());
-    if (script.IsFailure)
-        return Finish(1, script.Error);
+    // The script is written in the work folder, one table's SQL at a time, and moved to its place
+    // only once every table has passed, so a run that stops still leaves no script (US-36 c2).
+    var draft = Path.Combine(work, "script.sql");
+    await using (var script = new StreamWriter(draft))
+    {
+        foreach (var line in SeedScript.Head(pipelineFile, parts.Select(part => part.Table)))
+            await script.WriteAsync(line + "\n");
+        foreach (var (table, sqlFile) in parts)
+        {
+            var part = SeedScript.Part(table, await File.ReadAllTextAsync(sqlFile));
+            if (part.IsFailure)
+                return Finish(1, part.Error);
+            foreach (var piece in part.Value)
+                await script.WriteAsync(piece + "\n");
+        }
+    }
     Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(pipeline.Output))!);
-    File.WriteAllText(pipeline.Output, script.Value);
+    File.Move(draft, pipeline.Output);
     var kept = cleaned.Sum(table => table.Item2.Kept);
     return Finish(0, $"wrote {pipeline.Output}: {parts.Count} tables, {kept} rows. Read it, then commit it; 'Tessera seed' runs it once.");
 }

@@ -60,14 +60,16 @@ public static class SeedScript
     ///   names its coordinate system, as 4326 (US-24, criterion 2).
     /// - PROMOTE_TO_MULTI, for lines and areas, stores one part and many parts in one column type.
     /// - DROP_TABLE stays at GDAL's default, IF_EXISTS, so a new script replaces the table whole.
+    /// GDAL writes the SQL to <paramref name="sqlFile"/>, in the work folder, so the program reads
+    /// one table's SQL at a time rather than hold every table's until the end.
     /// </summary>
-    public static ImmutableArray<string> LoadArguments(string geoJson, TablePlan table)
+    public static ImmutableArray<string> LoadArguments(string geoJson, string sqlFile, TablePlan table)
     {
         var (schema, name) = SchemaAndName(table);
         return
         [
             "--config", "PG_USE_COPY", "NO",
-            "-f", "PGDump", "/vsistdout/", geoJson,
+            "-f", "PGDump", sqlFile, geoJson,
             "-nln", name,
             "-lco", $"SCHEMA={schema}",
             "-lco", "CREATE_SCHEMA=OFF",
@@ -89,30 +91,45 @@ public static class SeedScript
     }
 
     /// <summary>
-    /// Joins the tables' SQL into one script. DbUp runs the script in one transaction, so all of it
-    /// takes effect or none does; GDAL's own BEGIN and COMMIT lines would end that transaction early,
-    /// so they go. Fresh statistics after each table let PostgreSQL plan the tile query well.
+    /// Joins the tables' SQL into one script: the <see cref="Head"/>, then each table's
+    /// <see cref="Part"/>, each piece ending in a line break. The program writes the same pieces to a
+    /// file one table at a time; this joins them in memory, for the tests.
     /// </summary>
     public static Result<string, string> Join(string pipelineFile, ImmutableArray<(TablePlan Table, string Sql)> parts)
     {
-        // A table with no rows is refused (US-24, criterion 3). When every part has rows, TryFirst
-        // gives none.
-        if (parts.TryFirst(part => !part.Sql.Contains("INSERT INTO", StringComparison.Ordinal)).TryGetValue(out var empty))
-            return Result.Failure<string, string>($"{empty.Table.Table}: GDAL wrote no rows.");
+        var pieces = new List<string>(Head(pipelineFile, parts.Select(part => part.Table)));
+        foreach (var (table, sql) in parts)
+        {
+            var part = Part(table, sql);
+            if (part.IsFailure) return Result.Failure<string, string>(part.Error);
+            pieces.AddRange(part.Value);
+        }
+        return Result.Success<string, string>(string.Concat(pieces.Select(piece => piece + "\n")));
+    }
 
-        var schemas = parts.Select(part => SchemaAndName(part.Table).Schema).Distinct();
-        return Result.Success<string, string>(string.Join('\n',
-        [
-            $"-- Made by 'npm run etl' from {pipelineFile}. DbUp runs this script once (ADR 0009).",
-            "-- Never change its SQL after it has run: DbUp would not run it again. Write a new script instead.",
-            .. schemas.Select(schema => $"CREATE SCHEMA IF NOT EXISTS \"{schema}\";"),
-            .. parts.SelectMany(part => new[]
-            {
-                WithoutTransaction(part.Sql),
-                $"ANALYZE \"{SchemaAndName(part.Table).Schema}\".\"{SchemaAndName(part.Table).Name}\";",
-            }),
-            "",
-        ]));
+    /// <summary>
+    /// The script's first lines: who made it, a warning never to change it, and each
+    /// <b><i>schema</i></b> its tables need, made once.
+    /// </summary>
+    public static ImmutableArray<string> Head(string pipelineFile, IEnumerable<TablePlan> tables) =>
+    [
+        $"-- Made by 'npm run etl' from {pipelineFile}. DbUp runs this script once (ADR 0009).",
+        "-- Never change its SQL after it has run: DbUp would not run it again. Write a new script instead.",
+        .. tables.Select(table => SchemaAndName(table).Schema).Distinct().Select(schema => $"CREATE SCHEMA IF NOT EXISTS \"{schema}\";"),
+    ];
+
+    /// <summary>
+    /// One table's piece of the script: its SQL, then fresh statistics, which let PostgreSQL plan
+    /// the tile query well. DbUp runs the script in one transaction, so all of it takes effect or
+    /// none does; GDAL's own BEGIN and COMMIT lines would end that transaction early, so they go. A
+    /// table with no rows is refused (US-24, criterion 3).
+    /// </summary>
+    public static Result<ImmutableArray<string>, string> Part(TablePlan table, string sql)
+    {
+        if (!sql.Contains("INSERT INTO", StringComparison.Ordinal))
+            return Result.Failure<ImmutableArray<string>, string>($"{table.Table}: GDAL wrote no rows.");
+        var (schema, name) = SchemaAndName(table);
+        return Result.Success<ImmutableArray<string>, string>([WithoutTransaction(sql), $"ANALYZE \"{schema}\".\"{name}\";"]);
     }
 
     // GDAL writes one BEGIN line before the table and one COMMIT line at the end. Only those two go:

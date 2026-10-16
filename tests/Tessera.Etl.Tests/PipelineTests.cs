@@ -205,9 +205,9 @@ public sealed class PipelineTests
     [Fact]
     public void Loads_lines_and_areas_as_multiple_parts_and_points_as_they_are()
     {
-        Assert.DoesNotContain("PROMOTE_TO_MULTI", SeedScript.LoadArguments("/work/c.geojson", Cafes()));
-        Assert.Contains("PROMOTE_TO_MULTI", SeedScript.LoadArguments("/work/p.geojson", Cafes() with { Lines = true }));
-        Assert.Equal(["--config", "PG_USE_COPY", "NO"], SeedScript.LoadArguments("/work/c.geojson", Cafes()).Take(3));
+        Assert.DoesNotContain("PROMOTE_TO_MULTI", SeedScript.LoadArguments("/work/c.geojson", "/work/c.sql", Cafes()));
+        Assert.Contains("PROMOTE_TO_MULTI", SeedScript.LoadArguments("/work/p.geojson", "/work/p.sql", Cafes() with { Lines = true }));
+        Assert.Equal(["--config", "PG_USE_COPY", "NO", "-f", "PGDump", "/work/c.sql", "/work/c.geojson"], SeedScript.LoadArguments("/work/c.geojson", "/work/c.sql", Cafes()).Take(7));
     }
 
     [Fact]
