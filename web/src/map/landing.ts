@@ -64,10 +64,7 @@ export type LandingEvent =
 /** Before the page has its places: every page load starts here, so the drop waits for them. */
 export const START: Landing = { stage: "waiting", fed: false };
 
-/**
- * The one landed stage, shared, so landing again hands back the same object and React, seeing
- * nothing new, skips a redraw.
- */
+/** The one landed stage, shared, for the reason `step` gives. */
 const LANDED: Landing = { stage: "landed" };
 
 /**
