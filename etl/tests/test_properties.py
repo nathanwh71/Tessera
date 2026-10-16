@@ -14,7 +14,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from helpers import clean, kept, place
-from hypothesis import given, settings
+from hypothesis import example, given, settings
 from hypothesis import strategies as st
 
 from tessera_etl.core import judge, pipeline, table_sql
@@ -198,8 +198,15 @@ json_values = st.recursive(
 
 @settings(max_examples=200)
 @given(json_values, st.text(alphabet="/*\n ab", max_size=8))
+@example(value=None, words="**//")  # the case a fresh run on GitHub found
 def test_a_comment_changes_nothing_but_a_string_keeps_its_marks(value: Any, words: str) -> None:
     # Text inside a string, such as "http://x" or "a /* b", stays as it is; a comment goes.
     text = json.dumps({"words": words, "value": value})
-    commented = f"// before\n{text} /* after {words.replace('*/', '')} */"
+    # A block comment ends at its first */, so the words inside it must hold none. Removing */
+    # once is not enough: '**//' loses its middle and becomes '*/' again, so remove until none is
+    # left. Each pass makes the text shorter, so the loop always ends.
+    inside = words
+    while "*/" in inside:
+        inside = inside.replace("*/", "")
+    commented = f"// before\n{text} /* after {inside} */"
     assert json.loads(pipeline.without_comments(commented)) == json.loads(text)
