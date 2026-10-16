@@ -13,7 +13,7 @@
 
 The _back_ _end_ _follows_ the modular-monolith _template_'s layout: a `Common` _part_ that every _module_ may _use_, and a _folder_ for _each_ _module_ _under_ `Modules`, _divided_ into Domain, Infrastructure and _Features_. Tessera is the _one_ _module_, `Modules.Tessera`. The _whole_ _service_ is _one_ _project_, `src/Tessera`, and _each_ namespace _matches_ its _folder_.
 
-_Six_ ArchUnitNET _rules_, in `tests/Tessera.ArchitectureTests`, _guard_ the _borders_ that _eight_ _projects_ and the _compiler_ _guarded_ _before_. `npm test` _runs_ them _before_ every _other_ _suite_.
+_Six_ ArchUnitNET _rules_, in `tests/Tessera.ArchitectureTests`, _guard_ the _borders_ that _eight_ _projects_ and the _compiler_ _guarded_ _before_. `npm test` and the _build_ on GitHub _run_ them _before_ the _service_'s _other_ _suites_.
 
 ADR 0001's _choice_ of _one_ _service_, _built_ and _shipped_ as _one_ _unit_, _stands_. _Only_ its _guards_ _change_.
 
@@ -70,7 +70,7 @@ A `PublicApi` _folder_ _joins_ the _module_ when a _second_ _module_ _needs_ _so
 
 **What gets harder**
 
-- A breach _shows_ at _test_ _time_, not as the _code_ is _typed_. `npm test` _runs_ the _rules_ _first_, so it _shows_ _within_ _seconds_.
+- A breach _shows_ at _test_ _time_, not as the _code_ is _typed_. The _rules_ _run_ _before_ the _service_'s _other_ _suites_, and _take_ _about_ _eight_ _seconds_.
 - The _rules_ _see_ _only_ the _libraries_ they _load_ and _only_ _calls_ the _code_ _makes_ _directly_. They _load_ the _program_ with its _dependencies_, and Tessera _calls_ _nothing_ _through_ reflection.
 
 ## When to revisit

@@ -1,5 +1,5 @@
-// Runs every test (US-00 c3): the scripts', the map's, the service's two suites, the pipeline's, and the
-// browser tests.
+// Runs every test (US-00 c3): the scripts', the map's, the service's borders and its two suites, the
+// pipeline's, and the browser tests.
 //
 //   npm test
 //
@@ -17,7 +17,9 @@ await $({ cwd: 'web' })`npm test`;
 await $`node scripts/build.ts`;
 // build.ts has just built everything in Release, so --no-build runs that build. Each test project
 // is a program of its own (global.json picks Microsoft.Testing.Platform), so dotnet run runs it.
-for (const suite of ['UnitTests', 'IntegrationTests', 'Etl.Tests']) {
+// The architecture tests go first: a broken border between layers is a fault of design, and they
+// find it in seconds (ADR 0010).
+for (const suite of ['ArchitectureTests', 'UnitTests', 'IntegrationTests', 'Etl.Tests']) {
   await $`dotnet run --no-build --configuration Release --project tests/Tessera.${suite}`;
 }
 // Last, the browser tests: the slowest, against the real service and the places.

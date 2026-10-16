@@ -41,6 +41,8 @@ jobs:
       # rather than building again. Each test project is a program of its own (global.json picks
       # Microsoft.Testing.Platform), so dotnet run starts it and it runs its tests.
       - run: dotnet build --configuration Release
+      # The borders between the service's layers first, since they fail in seconds (ADR 0010).
+      - run: dotnet run --project tests/Tessera.ArchitectureTests --configuration Release --no-build
       - run: dotnet run --project tests/Tessera.UnitTests --configuration Release --no-build
       - run: dotnet run --project tests/Tessera.IntegrationTests --configuration Release --no-build
       # The scripts' own tools, then the scripts' checks: tsc refuses a type error before a run

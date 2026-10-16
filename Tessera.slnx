@@ -6,6 +6,7 @@
     <Project Path="tools/Tessera.Etl/Tessera.Etl.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Tessera.ArchitectureTests/Tessera.ArchitectureTests.csproj" />
     <Project Path="tests/Tessera.UnitTests/Tessera.UnitTests.csproj" />
     <Project Path="tests/Tessera.IntegrationTests/Tessera.IntegrationTests.csproj" />
     <Project Path="tests/Tessera.Etl.Tests/Tessera.Etl.Tests.csproj" />

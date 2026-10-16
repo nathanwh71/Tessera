@@ -1,0 +1,9 @@
+# The service's own code-style rules (ADR 0010). The build enforces them (EnforceCodeStyleInBuild),
+# and treats each as an error (TreatWarningsAsErrors).
+
+[*.cs]
+# Each file's namespace must match its folder, such as Modules.Tessera.Domain for
+# Modules/Tessera/Domain/. The architecture tests judge a type by its namespace, so a file that
+# claimed another layer's namespace would slip past them.
+dotnet_style_namespace_match_folder = true
+dotnet_diagnostic.IDE0130.severity = error
