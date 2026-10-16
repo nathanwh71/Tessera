@@ -25,9 +25,7 @@ public delegate Task<Result<byte[]?, DatabaseError>> TileReader(Query query, Can
 /// </param>
 /// <param name="read">Runs the tile query.</param>
 /// <param name="settings">The tile's limits and how long a browser and Nginx may keep it.</param>
-/// <param name="layerChanged">Asks for the list of layers again; null in a test that needs no list.</param>
-public sealed class TileServer(
-    Func<LayerCatalogue?> catalogue, TileReader read, TileSettings settings, Action? layerChanged = null)
+public sealed class TileServer(Func<LayerCatalogue?> catalogue, TileReader read, TileSettings settings)
 {
     /// <summary>
     /// The registered media type of a <b><i>vector tile</i></b>, which US-07 c1 asks of every tile,
@@ -70,18 +68,13 @@ public sealed class TileServer(
         return built.Match(
             bytes => new TileResult(bytes ?? [], CacheControl(settings.CacheSeconds)),
             // A withdrawn grant gives 42501: the layer has left, so 404 (US-03 c6). A column a seed script
-            // dropped gives 42703: the list is read again, and the browser asked to try again shortly.
-            // A database that cannot answer now gives 503 (N-22); anything else is the service's fault.
+            // dropped gives 42703: the browser is asked to try again shortly, and the list of layers
+            // heals at its next refresh, within Catalogue.RefreshSeconds (N-23). A database that cannot
+            // answer now gives 503 (N-22); anything else is the service's fault.
             error => error.IsMissingTable ? Problems.NotFound("No published layer has that name.")
-                : error.IsMissingColumn ? LayerChanged()
+                : error.IsMissingColumn ? Problems.Unavailable("The layer has changed. Try again shortly.")
                 : error.IsUnavailable ? Problems.Unavailable("The database cannot be reached. Try again shortly.")
                 : Problems.Fault());
-    }
-
-    private IResult LayerChanged()
-    {
-        layerChanged?.Invoke();
-        return Problems.Unavailable("The layer has changed. Try again shortly.");
     }
 
     /// <summary>
@@ -112,27 +105,7 @@ public static class TileRoutes
     public static IEndpointRouteBuilder MapTiles(
         this IEndpointRouteBuilder routes, LiveCatalogue catalogue, Database database, TileSettings settings)
     {
-        // Many tiles may meet a dropped column at once; the flag lets one reread run at a time.
-        var rereading = 0;
-        void Reread()
-        {
-            // The reread runs on its own, with no cancel token, so this request answers 503 at once
-            // and the reread finishes even after the browser has gone.
-            if (Interlocked.Exchange(ref rereading, 1) == 0)
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        await catalogue.Refresh(CancellationToken.None).ConfigureAwait(false);
-                    }
-                    finally
-                    {
-                        Volatile.Write(ref rereading, 0);
-                    }
-                });
-        }
-
-        var server = new TileServer(() => catalogue.Current, database.Single<byte[]>, settings, Reread);
+        var server = new TileServer(() => catalogue.Current, database.Single<byte[]>, settings);
         // HEAD asks for the headers alone, as a watcher checking a tag may.
         string[] read = [HttpMethods.Get, HttpMethods.Head];
         routes.MapMethods("/{layer}/{z:int}/{x:int}/{y:int}.pbf", read, server.Answer);

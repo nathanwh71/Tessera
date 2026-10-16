@@ -35,8 +35,8 @@ public sealed class LiveCatalogue(
     public LayerCatalogue? Current => Volatile.Read(ref _current);
 
     /// <summary>
-    /// Reads the list once; on success it becomes the current list. It is public so the tile route can
-    /// ask for a reread when a query meets a column a <b><i>seed script</i></b> has dropped.
+    /// Reads the list once; on success it becomes the current list. The loop below calls it; it is
+    /// public so a test can load a list without starting the loop.
     /// </summary>
     public async Task Refresh(CancellationToken cancel)
     {

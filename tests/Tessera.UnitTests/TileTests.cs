@@ -77,6 +77,21 @@ public sealed class TileTests
         Assert.Equal(new { layer = "food.cafes", resolution = 4096, z = 15, x = 27154, y = 14280, buffer = 64, margin = 0.015625, srid = 4326, limit = 10000 }.ToString(), query.Parameters?.ToString());
     }
 
+    // A column a seed script dropped since the list was read gives 42703. The tile answers 503, so the
+    // browser tries again, and the list heals at its next refresh (N-23).
+    [Fact]
+    public async Task Answers_503_for_a_dropped_column()
+    {
+        var server = new TileServer(
+            () => CatalogueReader.FromRows([new CatalogueRow("food", "cafes", "geom", 4326, "POINT", "[]")]),
+            (_, _) => Task.FromResult(Result.Failure<byte[]?, DatabaseError>(new DatabaseError("42703", "column does not exist"))),
+            Limits);
+
+        var answer = await server.Answer("food.cafes", 15, 27154, 14280, TestContext.Current.CancellationToken);
+
+        Assert.Equal(503, Assert.IsAssignableFrom<Microsoft.AspNetCore.Http.IStatusCodeHttpResult>(answer).StatusCode);
+    }
+
     // N-18 test 1: the header follows the setting.
     [Theory]
     [InlineData(60, "public, max-age=60")]
