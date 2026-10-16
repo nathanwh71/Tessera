@@ -1,9 +1,9 @@
 """Why one table could not become SQL.
 
 Each table ends in a script or in one of these, and any one of them stops the run with no
-script written. A plain string could not say whether the rows were cleaned; these cases can,
-so a stop or a refusal still puts its table's counts in the log, and the two earlier failures
-do not.
+script written; the shell turns each into its message and its exit code. A plain string could
+not say whether the rows were cleaned; these cases can, so a stop or a refusal still puts its
+table's counts in the log, and the two earlier failures do not.
 """
 
 from dataclasses import dataclass
@@ -48,21 +48,6 @@ class Refused:
 type Failure = NotExtracted | Unreadable | Stopped | Refused
 """A ***union***, as F# would write `NotExtracted of TablePlan * string | Unreadable of
 TablePlan * string | Stopped of Outcome * string | Refused of Outcome * string`."""
-
-
-def message(failure: Failure) -> str:
-    """The line the program prints and the log ends with."""
-    match failure:
-        case NotExtracted(table, why):
-            return f"{table.table}: extraction failed. {why}"
-        case Unreadable(table, why):
-            return f"{table.table}: GDAL's GeoJSON could not be read. {why}"
-        case Stopped(_, why):
-            return f"stopped. {why} No script written."
-        case Refused(_, why):
-            return why
-        case _:
-            assert_never(failure)
 
 
 def cleaned(failure: Failure) -> Outcome | None:

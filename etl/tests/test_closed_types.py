@@ -2,7 +2,7 @@
 
 pyright checks that each match over a union handles every case it names, through
 assert_never. It cannot notice a record meant as a case but left out of the union, so this test
-makes the union and the records agree. (C#: ClosedTypeTests.cs)
+makes the union and the records agree.
 """
 
 import dataclasses

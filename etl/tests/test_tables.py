@@ -12,6 +12,7 @@ from tessera_etl.core.pipeline import CleaningPlan
 from tessera_etl.core.plan import OnFail, StopWhen
 from tessera_etl.core.steps import stop_when
 from tessera_etl.kernel.result import Err, Ok
+from tessera_etl.shell import program
 
 # Two cafés, the second with no name.
 TWO_CAFES = """
@@ -51,7 +52,7 @@ def test_fails_a_table_a_filter_stops_and_keeps_its_counts() -> None:
     loaded = tables.load_geojson(require_name(OnFail.STOP), TWO_CAFES)
 
     assert isinstance(loaded, Err)
-    assert failure.message(loaded.error) == "stopped. requireFields stopped the run at row 2: name is missing. No script written."
+    assert program.message(loaded.error) == "stopped. requireFields stopped the run at row 2: name is missing. No script written."
     counted = failure.cleaned(loaded.error)
     assert counted is not None
     assert counted.read == 2

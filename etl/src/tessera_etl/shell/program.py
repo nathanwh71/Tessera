@@ -28,6 +28,7 @@ import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+from typing import assert_never
 
 from ..core import failure, pipeline, report, seed_script, tables
 from ..core.pipeline import CleaningPlan, Plan
@@ -158,7 +159,7 @@ class _Run:
                         counted = failure.cleaned(fault)
                         if counted is not None:
                             self.cleaned.append((plan, counted))
-                        return self._finish(1, failure.message(fault))
+                        return self._finish(1, message(fault))
                     case Ok(done):
                         self.cleaned.append((plan, done.outcome))
                         outcome = done.outcome
@@ -189,6 +190,21 @@ class _Run:
         print(f"{'Done' if code == 0 else 'Stopped'}: {result}", file=sys.stdout if code == 0 else sys.stderr, flush=True)
         print(f"The log is in {log_file}.", flush=True)
         return code
+
+
+def message(fault: failure.Failure) -> str:
+    """The line the program prints, and the log ends with, when a table fails."""
+    match fault:
+        case failure.NotExtracted(table, why):
+            return f"{table.table}: extraction failed. {why}"
+        case failure.Unreadable(table, why):
+            return f"{table.table}: GDAL's GeoJSON could not be read. {why}"
+        case failure.Stopped(_, why):
+            return f"stopped. {why} No script written."
+        case failure.Refused(_, why):
+            return why
+        case _:
+            assert_never(fault)
 
 
 def entry() -> None:
