@@ -103,10 +103,15 @@ export function useLanding(latest: RefObject<CanvasInputs>) {
 		// the screen. One call alone may land before the frame that first paints the drops, and the
 		// browser would then see only the end and skip the fall; the second call waits for the frame
 		// after that one, so the start has been painted.
-		const frame = requestAnimationFrame(() => requestAnimationFrame(() => setFalling(true)));
+		// The clean-up cancels whichever call is waiting, so a drop that ends between the two frames
+		// cannot start the fall of the drop after it.
+		const waiting = { frame: 0 };
+		waiting.frame = requestAnimationFrame(() => {
+			waiting.frame = requestAnimationFrame(() => setFalling(true));
+		});
 		const timer = window.setTimeout(() => advance({ name: "dropsDone" }), landing.ms);
 		return () => {
-			cancelAnimationFrame(frame);
+			cancelAnimationFrame(waiting.frame);
 			window.clearTimeout(timer);
 		};
 	}, [landing, advance, latest]);
