@@ -51,12 +51,24 @@ var cleaned = ImmutableArray.CreateBuilder<(CleaningPlan, Cleaning)>();
 var parts = ImmutableArray.CreateBuilder<(TablePlan, string)>();
 try
 {
+    // GeoJSON has no index, so for a pipeline of several tables GDAL copies it once into a
+    // GeoPackage in the work folder, and each table's extract reads the copy (SeedScript.CopyFirst).
+    var reading = source;
+    if (SeedScript.CopyFirst(source, tables.Length))
+    {
+        Console.WriteLine($"{pipeline.Source}: copying into a GeoPackage, which each table reads...");
+        reading = Path.Combine(work, "source.gpkg");
+        var copy = await Gdal.Run(SeedScript.CopyArguments(source, reading), folders);
+        if (copy.IsFailure)
+            return Finish(1, $"{pipeline.Source}: the copy failed. {copy.Error}");
+    }
+
     foreach (var plan in tables)
     {
         var table = plan.Table;
         Console.WriteLine($"{table.Table}: extracting{(table.Layer is { } layer ? $" {layer}" : "")}...");
         var extracted = Path.Combine(work, $"{table.Table}.extracted.geojson");
-        var extract = await Gdal.Run(SeedScript.ExtractArguments(source, extracted, table), folders);
+        var extract = await Gdal.Run(SeedScript.ExtractArguments(reading, extracted, table), folders);
         if (extract.IsFailure)
             return Finish(1, $"{table.Table}: extraction failed. {extract.Error}");
 

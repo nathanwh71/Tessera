@@ -186,6 +186,22 @@ public sealed class PipelineTests
         Assert.Equal("XY", args[args.IndexOf("-dim") + 1]);
     }
 
+    // GeoJSON has no index, so a pipeline of several tables copies it once into a GeoPackage; a
+    // geodatabase, or a single table, reads the source as it is.
+    [Theory]
+    [InlineData("data/places.geojson", 9, true)]
+    [InlineData("data/places.GeoJSON", 2, true)]
+    [InlineData("data/places.json", 9, true)]
+    [InlineData("data/places.geojson", 1, false)]
+    [InlineData("data/macau.gdb", 9, false)]
+    public void Copies_only_a_GeoJSON_source_of_several_tables(string source, int tables, bool copy) =>
+        Assert.Equal(copy, SeedScript.CopyFirst(source, tables));
+
+    [Fact]
+    public void Copies_the_source_as_it_is_into_a_GeoPackage() =>
+        Assert.Equal(["-f", "GPKG", "/work/source.gpkg", "/data/places.geojson"],
+            SeedScript.CopyArguments("/data/places.geojson", "/work/source.gpkg"));
+
     [Fact]
     public void Loads_lines_and_areas_as_multiple_parts_and_points_as_they_are()
     {
