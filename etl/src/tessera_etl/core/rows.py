@@ -103,7 +103,7 @@ class Judged:
 
 @dataclass(frozen=True, slots=True)
 class LogLine:
-    """One line of the log: a row's number, what happened to it, and why."""
+    """One line of the log: a row's number, the filter that acted on it, what happened, and why."""
 
     row: int
     filter: str
