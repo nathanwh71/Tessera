@@ -5,8 +5,8 @@
 Each folder holds a pipeline file, p.json unless named after a colon, and may hold tessera.json and the source. Each
 tool runs in a fresh copy of the folder, so neither sees the other's script. The comparison
 covers the exit code, what each printed, the script, and the log, less its first line, which
-holds the time of the run. Set TESSERA_CSHARP to the C# tool's built .dll if it is not in the
-usual place.
+holds the time of the run. TESSERA_CSHARP names the C# tool's built .dll, which this repository's
+history holds and which must be built apart.
 """
 
 import json
@@ -18,7 +18,8 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-CSHARP = os.environ.get("TESSERA_CSHARP", "/home/claude/tessera/tools/Tessera.Etl/bin/Release/net10.0/Tessera.Etl.dll")
+# The C# tool's built .dll; nothing in this repository builds it, so it must be named.
+CSHARP = os.environ.get("TESSERA_CSHARP", "")
 DOTNET = os.environ.get("DOTNET", "/opt/dotnet/dotnet")
 PYTHON_TOOL = [sys.executable, "-m", "tessera_etl"]
 
@@ -71,6 +72,8 @@ def compare(folder: Path, pipeline: str = "p.json") -> list[str]:
 
 
 def main() -> int:
+    if not CSHARP:
+        sys.exit("Set TESSERA_CSHARP to the C# tool's built .dll.")
     """Compares every folder named, and returns 1 when any differs."""
     failed = 0
     for name in sys.argv[1:]:

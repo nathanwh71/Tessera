@@ -10,6 +10,12 @@ import { $ } from 'zx';
 // scripts' types, since Node only strips them (ADR 0002), and node --test runs their pure parts.
 await $`npx tsc --noEmit`;
 await $`node --test scripts/**/*.test.ts`;
+// The pipeline's checks, in etl/: its types (pyright, in strict mode), its style (ruff), the rule
+// that its pure code reads no file and runs no program (import-linter), then its tests (pytest).
+// uv installs Python and the pipeline's packages first, when they have changed.
+for (const check of [['pyright'], ['ruff', 'check', '.'], ['lint-imports'], ['pytest', '-q']]) {
+  await $({ cwd: 'etl' })`uv run ${check}`;
+}
 // The map's own tools and tests live under web/; --no-audit and --no-fund drop two reports that
 // change nothing.
 await $({ cwd: 'web' })`npm ci --no-audit --no-fund`;

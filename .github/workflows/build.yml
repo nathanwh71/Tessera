@@ -50,6 +50,20 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run test:scripts
+      # The pipeline in etl/, in Python: uv installs Python and the pipeline's packages. Some tests
+      # read a source through ogr2ogr, GDAL's own tool, as the pipeline does for curves and a few
+      # other cases, so Ubuntu's GDAL comes first. Then its types, its style, the rule that its pure
+      # code reads no file (import-linter), and its tests.
+      - uses: astral-sh/setup-uv@v6
+      - run: sudo apt-get update && sudo apt-get install --yes --no-install-recommends gdal-bin
+      - run: uv run pyright
+        working-directory: etl
+      - run: uv run ruff check .
+        working-directory: etl
+      - run: uv run lint-imports
+        working-directory: etl
+      - run: uv run pytest -q
+        working-directory: etl
       # The browser tests drive Chrome against the built service and a database of their own
       # (scripts/e2e.ts). They use the Google Chrome the runner image ships with, through
       # CHROMIUM_PATH: downloading Playwright's own browser can hang for ten minutes. The screenshot

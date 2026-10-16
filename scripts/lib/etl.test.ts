@@ -13,6 +13,6 @@ test('reads one pipeline file, and refuses anything else', () => {
 });
 
 test('runs the Python pipeline in its own project, with the file last', () => {
-  assert.deepEqual(uvArguments('../tessera-etl-python', 'data/parks.pipeline.json'),
-    ['run', '--project', '../tessera-etl-python', 'tessera-etl', 'data/parks.pipeline.json']);
+  assert.deepEqual(uvArguments('etl', 'data/parks.pipeline.json'),
+    ['run', '--project', 'etl', 'tessera-etl', 'data/parks.pipeline.json']);
 });

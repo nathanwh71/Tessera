@@ -11,11 +11,13 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
 HERE = Path(__file__).parent
-CSHARP = os.environ.get("TESSERA_CSHARP", "/home/claude/tessera/tools/Tessera.Etl/bin/Release/net10.0/Tessera.Etl.dll")
+# The C# tool's built .dll; nothing in this repository builds it, so it must be named.
+CSHARP = os.environ.get("TESSERA_CSHARP", "")
 DOTNET = os.environ.get("DOTNET", "/opt/dotnet/dotnet")
 SETTINGS = HERE.parent / "fixtures" / "cases" / "macau" / "tessera.json"
 
@@ -152,6 +154,8 @@ def run(text: str, settings: bool) -> dict[str, object]:
 
 
 def main() -> None:
+    if not CSHARP:
+        sys.exit("Set TESSERA_CSHARP to the C# tool's built .dll.")
     results: list[dict[str, object]] = []
     for name, text in CASES.items():
         settings = name in SETTINGS_CASES

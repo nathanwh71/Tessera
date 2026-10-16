@@ -1,11 +1,11 @@
-// Cleans a file of places into the next seed script, with the Python pipeline in its own repository,
-// nathanwh71/tessera-etl-python (ADR 0009, US-36):
+// Cleans a file of places into the next seed script, with the Python pipeline in etl/ (ADR 0009,
+// US-36):
 //
 //   npm run etl -- data/parks.pipeline.json
 //
 // The pipeline does the work: it reads the source with GDAL, runs the filters, writes the script to
-// db/seed and its log to db/seed-logs. It looks for the pipeline beside this repository, or in the
-// folder TESSERA_ETL_PYTHON names. This script checks what it can first, so a mistake gets a plain
+// db/seed and its log to db/seed-logs. It runs the pipeline in etl/, or in the folder
+// TESSERA_ETL_PYTHON names. This script checks what it can first, so a mistake gets a plain
 // answer, then runs the pipeline and ends with its exit code: 0 when it wrote the script, 1 when it
 // stopped or failed, 2 when the command or the pipeline file is wrong.
 import { existsSync } from 'node:fs';
@@ -25,7 +25,7 @@ if (!existsSync(file)) {
 }
 const project = resolve(process.env.TESSERA_ETL_PYTHON ?? etlProject);
 if (!existsSync(project)) {
-  console.error(`${project}: no pipeline here. Clone nathanwh71/tessera-etl-python beside this repository, or set TESSERA_ETL_PYTHON.`);
+  console.error(`${project}: no pipeline here. Run npm run etl from the repository's root, or set TESSERA_ETL_PYTHON.`);
   process.exit(2);
 }
 if ((await $({ nothrow: true, quiet: true })`uv --version`).exitCode !== 0) {

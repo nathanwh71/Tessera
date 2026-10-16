@@ -1,13 +1,9 @@
-// Pure parts of npm run etl, which hands a pipeline file to the Python pipeline, a repository of its
-// own beside this one (ADR 0009). Each function reads only its parameters, so node --test checks it
+// Pure parts of npm run etl, which hands a pipeline file to the Python pipeline in etl/ (ADR 0009). Each function reads only its parameters, so node --test checks it
 // with no Python and no GDAL (ADR 0002, rule 1).
 import { err, ok, type Result } from '../../web/src/shared/result.ts';
 
-/**
- * Where the pipeline lives when TESSERA_ETL_PYTHON names no other folder: beside this repository,
- * as nathanwh71/tessera-etl-python clones by default.
- */
-export const etlProject = '../tessera-etl-python';
+/** Where the pipeline lives when TESSERA_ETL_PYTHON names no other folder. */
+export const etlProject = 'etl';
 
 /** Reads the command line: one pipeline file, ending in .json. */
 export function readEtlArguments(args: readonly string[]): Result<string, string> {
