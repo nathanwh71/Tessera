@@ -6,10 +6,10 @@ namespace Modules.Tessera.Domain;
 /// SQL hidden in a name, finds no way in.
 /// </summary>
 /// <remarks>
-/// A <b><i>smart constructor</i></b>, F#'s single-case union <c>SqlName of string</c>: the constructor is
-/// private, so <see cref="Quote"/> and <see cref="Qualified"/> are the only ways to make one, and a name
-/// reaches a query's text only as a <c>SqlName</c>. The compiler keeps the rule, where a plain string
-/// relied on every caller remembering to quote.
+/// In F# a <b><i>single-case union</i></b>, a type that wraps one value, such as
+/// <c>SqlName of string</c>, would guard the quoting. Here a private constructor guards it: only
+/// <see cref="Quote"/> and <see cref="Qualified"/> can make one, so a name reaches a query's text only
+/// quoted, and the compiler keeps the rule.
 /// </remarks>
 public sealed record SqlName
 {
