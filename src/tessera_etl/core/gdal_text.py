@@ -119,7 +119,8 @@ def real_text(value: float) -> str:
     if _noisy(text, "999999", "000000"):
         for digits in (16, 15, 14):
             shorter = f"{value:.{digits}g}"
-            if not _noisy(shorter, "999999", "000000"):
+            # GDAL takes a shorter text only when it still holds a decimal point.
+            if "." in shorter and not _noisy(shorter, "999999", "000000"):
                 text = shorter
                 break
     if "." not in text and "e" not in text:
@@ -144,7 +145,7 @@ def single(value: float) -> float:
     if _noisy(text, "99999", "00000"):
         for digits in (7, 6, 5):
             shorter = f"{narrow:.{digits}g}"
-            if not _noisy(shorter, "99999", "00000") and _to_single(float(shorter)) == narrow:
+            if "." in shorter and not _noisy(shorter, "99999", "00000") and _to_single(float(shorter)) == narrow:
                 text = shorter
                 break
     return float(text)

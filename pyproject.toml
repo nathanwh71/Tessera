@@ -56,7 +56,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["PLR0915", "N802"]
+"tests/**" = ["PLR0915", "N802", "E501"]
 "tests/golden/*.py" = ["E501"]
 
 [tool.pyright]

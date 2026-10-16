@@ -73,16 +73,17 @@ def pattern_text(value: float, decimals: int) -> str:
     """A number as .NET writes it for the pattern '0.#' (one decimal) or '0' (none).
 
     .NET first keeps 15 significant digits, then rounds half away from zero, and drops a
-    fraction that rounds to nothing.
+    fraction that rounds to nothing; a negative number that rounds to nothing comes out -0.
     """
+    # A negative number that rounds to nothing keeps its sign, as .NET writes it: -0.
     if value == 0:
-        return "0"
+        return "-0" if math.copysign(1, value) < 0 else "0"
     kept = _WIDE.create_decimal(format(value, ".14e"))
     rounded = kept.quantize(Decimal(1).scaleb(-decimals), rounding=ROUND_HALF_UP, context=_WIDE)
     text = format(rounded, "f")
     if "." in text:
         text = text.rstrip("0").rstrip(".")
-    return "0" if text == "-0" else text
+    return text
 
 
 def ordinal_key(text: str) -> bytes:

@@ -101,7 +101,8 @@ def read(text: str) -> Result[Extract, str]:
     features = document.get("features", _MISSING)
     if features is _MISSING:
         return Err("The given key was not present in the dictionary.")
-    if not isinstance(features, list):
+    # An object is held as a list of pairs, so it is ruled out first.
+    if isinstance(features, _Pairs) or not isinstance(features, list):
         return Err(_wrong_kind("Array", features))
     read_features: list[Feature] = []
     for item in cast(list[object], features):

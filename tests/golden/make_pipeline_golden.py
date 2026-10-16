@@ -152,7 +152,7 @@ def run(text: str, settings: bool) -> dict[str, object]:
 
 
 def main() -> None:
-    results = []
+    results: list[dict[str, object]] = []
     for name, text in CASES.items():
         settings = name in SETTINGS_CASES
         outcome = run(text, settings)
