@@ -2,7 +2,8 @@ using System.Net;
 using System.Net.Sockets;
 using Common.Api;
 using Microsoft.AspNetCore.Http;
-// CSharpFunctionalExtensions, used in every file here, has its own IResult; this names ASP.NET's.
+// The project file imports CSharpFunctionalExtensions into every file here, and it has an IResult of
+// its own; this names ASP.NET Core's.
 using IResult = Microsoft.AspNetCore.Http.IResult;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
