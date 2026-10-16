@@ -1,0 +1,5 @@
+{
+  "code": 1,
+  "stdout": "extracting 1 tables...\nThe log is in db/seed-logs/0015-none.log.\n",
+  "stderr": "Stopped: p.none: no rows to write.\n"
+}

@@ -1,0 +1,13 @@
+{
+  "source": "sources/props.geojson",
+  "output": "seed/0002-t.sql",
+  "tables": [
+    {
+      "table": "a.b",
+      "where": "nosuch = 1"
+    },
+    {
+      "table": "a.c"
+    }
+  ]
+}

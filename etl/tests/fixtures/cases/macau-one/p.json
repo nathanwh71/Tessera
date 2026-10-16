@@ -1,0 +1,47 @@
+{
+  "source": "sources/macau-pois.geojson",
+  "output": "db/seed/0003-cafes.sql",
+  "stopWhen": {
+    "droppedOverPercent": 5,
+    "rowsUnder": 1
+  },
+  "tables": [
+    {
+      "table": "food.cafes",
+      "where": "layer = 'cafes'",
+      "filters": [
+        {
+          "filter": "dropEmptyShapes",
+          "onFail": "stop"
+        },
+        {
+          "filter": "swapCoordinates"
+        },
+        {
+          "filter": "insideArea",
+          "onFail": "stop"
+        },
+        {
+          "filter": "tidyText"
+        },
+        {
+          "filter": "requireFields",
+          "fields": [
+            "id",
+            "name"
+          ]
+        },
+        {
+          "filter": "dropDuplicateIds",
+          "field": "id",
+          "onFail": "stop"
+        },
+        {
+          "filter": "dropNearDuplicates",
+          "field": "name",
+          "metres": 25
+        }
+      ]
+    }
+  ]
+}

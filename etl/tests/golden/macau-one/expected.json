@@ -1,0 +1,5 @@
+{
+  "code": 0,
+  "stdout": "extracting 1 tables...\nfood.cafes: read 100, kept 100, dropped 0.\nDone: wrote db/seed/0003-cafes.sql: 1 tables, 100 rows. Read it, then commit it; 'Tessera seed' runs it once.\nThe log is in db/seed-logs/0003-cafes.log.\n",
+  "stderr": ""
+}

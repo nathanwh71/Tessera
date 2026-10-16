@@ -1,0 +1,9 @@
+Pipeline: p.json
+Source:   sources/numbered.geojson
+Output:   db/seed/0012-numbered.sql
+
+== p.numbered
+Read 5 rows.
+Kept 5 of 5; dropped 0.
+
+Result: wrote db/seed/0012-numbered.sql: 1 tables, 5 rows. Read it, then commit it; 'Tessera seed' runs it once.

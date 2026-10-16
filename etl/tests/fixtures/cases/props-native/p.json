@@ -1,0 +1,20 @@
+{
+  "source": "sources/props.geojson",
+  "output": "db/seed/0010-props.sql",
+  "stopWhen": {
+    "droppedOverPercent": 100
+  },
+  "tables": [
+    {
+      "table": "p.all",
+      "filters": [
+        {
+          "filter": "tidyText"
+        },
+        {
+          "filter": "repairShapes"
+        }
+      ]
+    }
+  ]
+}

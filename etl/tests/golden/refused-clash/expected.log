@@ -1,0 +1,9 @@
+Pipeline: p.json
+Source:   sources/clash.geojson
+Output:   db/seed/0014-clash.sql
+
+== p.clash
+Read 1 rows.
+Kept 1 of 1; dropped 0.
+
+Result: p.clash: two columns become "name"; rename one in the source.

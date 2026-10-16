@@ -1,0 +1,9 @@
+Pipeline: p.json
+Source:   sources/props.geojson
+Output:   db/seed/0010-props.sql
+
+== p.a, where layer = 'a'
+Read 4 rows.
+Kept 4 of 4; dropped 0.
+
+Result: wrote db/seed/0010-props.sql: 1 tables, 4 rows. Read it, then commit it; 'Tessera seed' runs it once.

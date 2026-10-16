@@ -1,0 +1,19 @@
+{
+  "source": "sources/props.geojson",
+  "output": "db/seed/0011-props.sql",
+  "stopWhen": {
+    "droppedOverPercent": 100
+  },
+  "tables": [
+    {
+      "table": "p.a",
+      "where": "layer = 'a'",
+      "filters": []
+    },
+    {
+      "table": "p.b",
+      "where": "layer = 'b'",
+      "filters": []
+    }
+  ]
+}

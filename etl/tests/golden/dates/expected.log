@@ -1,0 +1,9 @@
+Pipeline: p.json
+Source:   sources/dates.geojson
+Output:   seed/0002-d.sql
+
+== s.d
+Read 2 rows.
+Kept 2 of 2; dropped 0.
+
+Result: wrote seed/0002-d.sql: 1 tables, 2 rows. Read it, then commit it; 'Tessera seed' runs it once.

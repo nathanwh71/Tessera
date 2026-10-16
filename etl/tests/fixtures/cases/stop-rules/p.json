@@ -1,0 +1,26 @@
+{
+  "source": "sources/props.geojson",
+  "output": "db/seed/0013-stop.sql",
+  "tables": [
+    {
+      "table": "p.late",
+      "filters": [
+        {
+          "filter": "tidyText"
+        },
+        {
+          "filter": "requireFields",
+          "fields": [
+            "late"
+          ]
+        },
+        {
+          "filter": "requireFields",
+          "fields": [
+            "late"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "code": 1,
+  "stdout": "extracting 1 tables...\nThe log is in db/seed-logs/0014-clash.log.\n",
+  "stderr": "Stopped: p.clash: two columns become \"name\"; rename one in the source.\n"
+}

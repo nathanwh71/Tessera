@@ -1,0 +1,40 @@
+{
+  "Urls": "http://127.0.0.1:7800",
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft": "Warning",
+      "Microsoft.Hosting.Lifetime": "Information"
+    }
+  },
+  "Database": {
+    "PoolSize": 4,
+    "ConnectionLifetimeSeconds": 3600,
+    "QueryTimeoutSeconds": 10,
+    "ConnectionWaitSeconds": 3
+  },
+  "Tiles": {
+    "Resolution": 4096,
+    "Buffer": 256,
+    "MaxFeatures": 10000,
+    "MinZoom": 0,
+    "MaxZoom": 22,
+    "CacheSeconds": 60
+  },
+  "Map": {
+    "ShowPreview": true
+  },
+  "Catalogue": {
+    "RefreshSeconds": 30
+  },
+  "Area": {
+    "Name": "Macau",
+    "MinLongitude": 113.52,
+    "MinLatitude": 22.10,
+    "MaxLongitude": 113.61,
+    "MaxLatitude": 22.22,
+    "HomeLongitude": 113.55,
+    "HomeLatitude": 22.19,
+    "HomeLevel": 15
+  }
+}

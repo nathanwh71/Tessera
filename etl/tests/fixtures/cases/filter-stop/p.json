@@ -1,0 +1,35 @@
+{
+  "source": "sources/macau-pois.geojson",
+  "output": "db/seed/0016-stop.sql",
+  "area": {
+    "minLongitude": 113.52,
+    "minLatitude": 22.1,
+    "maxLongitude": 113.55,
+    "maxLatitude": 22.22
+  },
+  "tables": [
+    {
+      "table": "food.cafes",
+      "where": "layer = 'cafes'",
+      "filters": [
+        {
+          "filter": "tidyText"
+        },
+        {
+          "filter": "insideArea",
+          "onFail": "stop"
+        },
+        {
+          "filter": "requireFields",
+          "fields": [
+            "name"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "food.bars",
+      "where": "layer = 'cafes'"
+    }
+  ]
+}

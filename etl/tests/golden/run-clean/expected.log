@@ -1,0 +1,29 @@
+Pipeline: p.json
+Source:   sources/places.gdb
+Output:   seed/0002-test-places.sql
+
+== food.cafes, from Cafes
+Read 7 rows.
+  dropEmptyShapes: kept 7, fixed 0, dropped 0
+  swapCoordinates: kept 7, fixed 1, dropped 0
+  insideArea: kept 6, fixed 0, dropped 1
+  tidyText: kept 6, fixed 2, dropped 0
+  requireFields: kept 5, fixed 0, dropped 1
+  dropDuplicateIds: kept 4, fixed 0, dropped 1
+  dropNearDuplicates: kept 3, fixed 0, dropped 1
+Kept 3 of 7; dropped 4.
+  Row 2: fixed by swapCoordinates: swapped longitude and latitude
+  Row 6: dropped by insideArea: its shape lies outside the area
+  Row 1: fixed by tidyText: tidied name
+  Row 3: fixed by tidyText: tidied name
+  Row 3: dropped by requireFields: name is missing
+  Row 4: dropped by dropDuplicateIds: it repeats id 'c1' of row 1
+  Row 5: dropped by dropNearDuplicates: its name matches row 1, 15 m away
+
+== outdoors.parks, from Parks
+Read 2 rows.
+  repairShapes: kept 2, fixed 1, dropped 0
+Kept 2 of 2; dropped 0.
+  Row 1: fixed by repairShapes: repaired a shape that was invalid (Self-intersection)
+
+Result: wrote seed/0002-test-places.sql: 2 tables, 5 rows. Read it, then commit it; 'Tessera seed' runs it once.

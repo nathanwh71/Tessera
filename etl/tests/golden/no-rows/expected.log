@@ -1,0 +1,9 @@
+Pipeline: p.json
+Source:   sources/props.geojson
+Output:   db/seed/0015-none.sql
+
+== p.none, where n > 100
+Read 0 rows.
+Kept 0 of 0; dropped 0.
+
+Result: p.none: no rows to write.

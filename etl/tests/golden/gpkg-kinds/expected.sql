@@ -1,0 +1,36 @@
+-- Made by 'npm run etl' from p.json. DbUp runs this script once (ADR 0009).
+-- Never change its SQL after it has run: DbUp would not run it again. Write a new script instead.
+CREATE SCHEMA IF NOT EXISTS "k";
+SET standard_conforming_strings = ON;
+DROP TABLE IF EXISTS "k"."lines" CASCADE;
+CREATE TABLE "k"."lines"();
+ALTER TABLE "k"."lines" ADD COLUMN "fid" SERIAL CONSTRAINT "lines_pk" PRIMARY KEY;
+SELECT AddGeometryColumn('k','lines','geom',4326,'MULTILINESTRING',2);
+ALTER TABLE "k"."lines" ADD COLUMN "name" VARCHAR;
+ALTER TABLE "k"."lines" ADD COLUMN "open" BOOLEAN;
+ALTER TABLE "k"."lines" ADD COLUMN "day" date;
+ALTER TABLE "k"."lines" ADD COLUMN "moment" timestamp with time zone;
+ALTER TABLE "k"."lines" ADD COLUMN "floors" INTEGER;
+ALTER TABLE "k"."lines" ADD COLUMN "id" VARCHAR;
+ALTER TABLE "k"."lines" ADD COLUMN "doc" VARCHAR;
+INSERT INTO "k"."lines" ("geom", "name", "open", "day", "moment", "floors", "id", "doc") VALUES ('0105000020E6100000010000000102000000020000003333333333635C40713D0AD7A3303640A4703D0AD7635C403333333333333640', 'a', 't', '2024-05-01', '2024-05-01T10:30:00.250+08:00', 3, 'x1', '{ "a": [ 1, 2.50 ], "b": "c/d" }');
+INSERT INTO "k"."lines" ("geom", "name", "open", "day", "moment", "floors", "id", "doc") VALUES ('0105000020E61000000100000001020000000200000014AE47E17A645C40713D0AD7A330364085EB51B81E655C403333333333333640', 'b', 'f', NULL, '2023-01-02T08:00:00', NULL, 'x2', '[ ]');
+CREATE INDEX "lines_geom_geom_idx" ON "k"."lines" USING GIST ("geom");
+ANALYZE "k"."lines";
+SET standard_conforming_strings = ON;
+DROP TABLE IF EXISTS "k"."all" CASCADE;
+CREATE TABLE "k"."all"();
+ALTER TABLE "k"."all" ADD COLUMN "fid" SERIAL CONSTRAINT "all_pk" PRIMARY KEY;
+SELECT AddGeometryColumn('k','all','geom',4326,'LINESTRING',2);
+ALTER TABLE "k"."all" ADD COLUMN "name" VARCHAR;
+ALTER TABLE "k"."all" ADD COLUMN "open" BOOLEAN;
+ALTER TABLE "k"."all" ADD COLUMN "day" date;
+ALTER TABLE "k"."all" ADD COLUMN "moment" timestamp with time zone;
+ALTER TABLE "k"."all" ADD COLUMN "floors" INTEGER;
+ALTER TABLE "k"."all" ADD COLUMN "id" VARCHAR;
+ALTER TABLE "k"."all" ADD COLUMN "doc" VARCHAR;
+INSERT INTO "k"."all" ("geom", "name", "open", "day", "moment", "floors", "id", "doc") VALUES ('0102000020E6100000020000003333333333635C40713D0AD7A3303640A4703D0AD7635C403333333333333640', 'a', 't', '2024-05-01', '2024-05-01T10:30:00.250+08:00', 3, 'x1', '{ "a": [ 1, 2.50 ], "b": "c/d" }');
+INSERT INTO "k"."all" ("geom", "name", "open", "day", "moment", "floors", "id", "doc") VALUES ('0102000020E61000000200000014AE47E17A645C40713D0AD7A330364085EB51B81E655C403333333333333640', 'b', 'f', NULL, '2023-01-02T08:00:00', NULL, 'x2', '[ ]');
+INSERT INTO "k"."all" ("name", "open", "day", "moment", "floors", "id", "doc") VALUES ('c', NULL, '2020-02-29', '2021-06-01T00:00:00', 2000000000, NULL, NULL);
+CREATE INDEX "all_geom_geom_idx" ON "k"."all" USING GIST ("geom");
+ANALYZE "k"."all";

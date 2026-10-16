@@ -1,0 +1,15 @@
+Pipeline: p.json
+Source:   sources/props.geojson
+Output:   db/seed/0013-stop.sql
+
+== p.late
+Read 5 rows.
+  tidyText: kept 5, fixed 0, dropped 0
+  requireFields: kept 1, fixed 0, dropped 4
+Kept 1 of 5; dropped 4.
+  Row 1: dropped by requireFields: late is missing
+  Row 2: dropped by requireFields: late is missing
+  Row 4: dropped by requireFields: late is missing
+  Row 5: dropped by requireFields: late is missing
+
+Result: stopped. p.late: 4 of 5 rows were dropped (80 %), more than the 10 % allowed. No script written.
