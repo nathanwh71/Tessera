@@ -6,6 +6,7 @@ using Microsoft.Net.Http.Headers;
 using Modules.Tessera.Domain;
 using Modules.Tessera.Infrastructure;
 using Modules.Tessera.Infrastructure.Sql;
+// CSharpFunctionalExtensions has an IResult of its own; this names ASP.NET Core's, an answer to a request.
 using IResult = Microsoft.AspNetCore.Http.IResult;
 
 // The request at the heart of Tessera: 'send me this tile of this layer' (US-07). A vector tile is

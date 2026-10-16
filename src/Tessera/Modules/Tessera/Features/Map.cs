@@ -4,8 +4,6 @@ using Common.Api;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.FileProviders;
 using Modules.Tessera.Domain;
-// CSharpFunctionalExtensions has an IResult of its own; this names ASP.NET Core's, an answer to a request.
-using IResult = Microsoft.AspNetCore.Http.IResult;
 
 namespace Modules.Tessera.Features;
 
