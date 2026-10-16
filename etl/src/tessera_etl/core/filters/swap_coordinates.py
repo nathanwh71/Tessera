@@ -5,14 +5,13 @@ left alone.
 """
 
 from dataclasses import replace
-from typing import ClassVar
 
 import numpy as np
 from numpy.typing import NDArray
 
 from ...kernel.pipes import Handler
 from .. import judge as measure
-from ..filter_kind import FilterKind, needs_area, settings_name
+from ..filter_kind import FilterKind, needs_area
 from ..plan import Area, Model, OnFail
 from ..rows import Cleaning, Fix, Keep, Row, Verdict
 from ..shapes import transform
@@ -27,8 +26,6 @@ class Settings(Model):
 
     A shape it cannot mend passes on for insideArea to judge.
     """
-
-    dotnet_name: ClassVar[str] = settings_name(NAME)
 
 
 def _swap(points: NDArray[np.float64]) -> NDArray[np.float64]:

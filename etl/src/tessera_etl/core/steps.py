@@ -10,7 +10,6 @@ from dataclasses import replace
 from typing import assert_never
 
 from ..kernel.pipes import Handler, Next
-from . import dotnet
 from .plan import OnFail, StopWhen
 from .rows import Act, Cleaning, Fail, Fix, Keep, LogLine, Row, Verdict
 
@@ -83,7 +82,7 @@ def stop_when(rules: StopWhen) -> Handler[Cleaning]:
             elif most is not None and percent > most:
                 reason = (
                     f"{cleaning.dropped} of {cleaning.read} rows were dropped "
-                    f"({dotnet.pattern_text(percent, 1)} %), more than the {dotnet.number_text(most)} % allowed"
+                    f"({round(percent, 1):g} %), more than the {most:g} % allowed"
                 )
             else:
                 return next_step(cleaning)

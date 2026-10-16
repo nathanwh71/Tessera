@@ -5,14 +5,19 @@ once, so one failed run shows everything to fix; each table's ***filters*** are 
 chained while the file is read, so a bad setting is found before GDAL runs.
 """
 
+import json
 import re
 from collections import Counter
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, assert_never
 
+from pydantic import ValidationError
+
 from ..kernel.pipes import Handler, chain
 from ..kernel.result import Err, Ok, Result
-from . import dotnet, filters, json_text, stj
+from . import filters
+from .judge import is_blank
 from .plan import Area, Pipeline, StopWhen, TablePlan
 from .rows import Cleaning
 from .steps import stop_when
@@ -60,18 +65,16 @@ def read(text: str, area_from_settings: Area | None) -> Result[Plan, tuple[str, 
 
     `area_from_settings` stands in when the file names no area of its own.
     """
-    parsed = json_text.parse(text)
-    if isinstance(parsed, json_text.SyntaxFault):
-        return Err((f"The pipeline file is not valid: {parsed}",))
-    if parsed.value is None:
+    try:
+        document: Any = json.loads(without_comments(text), parse_constant=_no_constant)
+    except ValueError as error:
+        return Err((f"The pipeline file is not valid JSON: {error}.",))
+    if document is None:
         return Err(("The pipeline file needs source, output and tables.",))
-    match stj.read(Pipeline, parsed):
-        case Err(why):
-            return Err((f"The pipeline file is not valid: {why}",))
-        case Ok(file):
-            pass
-        case _:
-            assert_never(parsed)
+    try:
+        file = Pipeline.model_validate(document)
+    except ValidationError as error:
+        return Err(tuple(fault_line(document, fault["loc"], fault["msg"]) for fault in error.errors()))
     if any(table is None for table in file.tables):
         return Err(("tables: each entry must be an object that names its table.",))
     tables = tuple(table for table in file.tables if table is not None)
@@ -84,6 +87,49 @@ def read(text: str, area_from_settings: Area | None) -> Result[Plan, tuple[str, 
     if problems:
         return Err(tuple(problems))
     return Ok(Plan(pipeline, tuple(result.value for result in built if isinstance(result, Ok))))
+
+
+# A comment as JavaScript writes one, // to the end of the line or /* to */, or a string, which
+# may hold either mark as plain text.
+_COMMENT_OR_STRING = re.compile(r'//[^\n]*|/\*.*?\*/|"(?:[^"\\]|\\.)*"', re.DOTALL)
+
+
+def without_comments(text: str) -> str:
+    """The text with each comment made a space, so a publisher may explain a pipeline file.
+
+    A string keeps its // or /* as text, since the pattern meets the string first.
+    """
+    return _COMMENT_OR_STRING.sub(lambda found: found[0] if found[0].startswith('"') else " ", text)
+
+
+def _no_constant(name: str) -> None:
+    """Refuses NaN and Infinity, which Python's JSON reader takes but JSON has not."""
+    raise ValueError(f"{name} is not a JSON value")
+
+
+def fault_line(document: Any, place: Sequence[int | str], why: str) -> str:
+    """One fault pydantic found, as one plain line that names the table and the key.
+
+    A key inside a table is named after the table, such as 'food.cafes: lines', when the
+    table has a name; else after its place in the list, such as 'tables[0]'.
+    """
+    match place:
+        case ["tables", int(index), *inside]:
+            where = [_table_name(document, index), ".".join(map(str, inside))]
+        case []:
+            where = ["The pipeline file"]
+        case _:
+            where = [".".join(map(str, place))]
+    return f"{': '.join(part for part in where if part)}: {why}."
+
+
+def _table_name(document: Any, index: int) -> str:
+    """The name the file gives the table at `index`, or its place, such as 'tables[0]'."""
+    try:
+        name = document["tables"][index]["table"]
+    except (KeyError, IndexError, TypeError):
+        name = None
+    return name if isinstance(name, str) and name else f"tables[{index}]"
 
 
 def _build(table: TablePlan, pipeline: Pipeline) -> Result[CleaningPlan, tuple[str, ...]]:
@@ -126,9 +172,9 @@ def _problems(pipeline: Pipeline, tables: tuple[TablePlan, ...]) -> list[str]:
     and a tile's address read it unquoted.
     """
     problems: list[str] = []
-    if dotnet.is_null_or_white_space(pipeline.source):
+    if is_blank(pipeline.source):
         problems.append("source: name the file to read, such as data/macau.gdb.")
-    if dotnet.is_null_or_white_space(pipeline.output) or not _SCRIPT_NAME.search(pipeline.output):
+    if is_blank(pipeline.output) or not _SCRIPT_NAME.search(pipeline.output):
         problems.append(
             f"output: '{pipeline.output}' must be named NNNN-words.sql, such as db/seed/0002-parks.sql, so DbUp runs it in order."
         )

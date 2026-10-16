@@ -4,10 +4,8 @@ A place with no shape has no position, so no ***tile*** can draw it, and the oth
 ***filters*** have nothing to test.
 """
 
-from typing import ClassVar
-
 from ...kernel.pipes import Handler
-from ..filter_kind import FilterKind, settings_name
+from ..filter_kind import FilterKind
 from ..plan import Area, Model, OnFail, OnFailSetting
 from ..rows import Cleaning, Fail, Keep, Row, Verdict
 from ..steps import each_row, filter_step
@@ -19,7 +17,6 @@ NAME = "dropEmptyShapes"
 class Settings(Model):
     """Only what to do with a failing row, which is dropped unless the file says stop."""
 
-    dotnet_name: ClassVar[str] = settings_name(NAME)
     on_fail: OnFailSetting = OnFail.DROP
 
 

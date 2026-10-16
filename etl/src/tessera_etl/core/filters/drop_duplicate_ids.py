@@ -4,12 +4,9 @@ An id must name one place alone, or two places would claim one key. A row with n
 passes, since requireFields is the ***filter*** that asks for one.
 """
 
-from typing import ClassVar
-
 from ...kernel.pipes import Handler
-from .. import dotnet
 from .. import judge as measure
-from ..filter_kind import FilterKind, settings_name
+from ..filter_kind import FilterKind
 from ..plan import Area, Model, OnFail, OnFailSetting, Text
 from ..rows import Cleaning, Fail, Keep, Row, Verdict
 from ..steps import filter_step
@@ -21,7 +18,6 @@ NAME = "dropDuplicateIds"
 class Settings(Model):
     """`field` has no default, since only the publisher knows which column holds the id."""
 
-    dotnet_name: ClassVar[str] = settings_name(NAME)
     field: Text
     on_fail: OnFailSetting = OnFail.DROP
 
@@ -50,7 +46,7 @@ def create(field: str, on_fail: OnFail = OnFail.DROP) -> Handler[Cleaning]:
 
 
 def _check(settings: Settings, area: Area | None) -> tuple[str, ...]:
-    return ('needs a field, such as "id".',) if dotnet.is_null_or_white_space(settings.field) else ()
+    return ('needs a field, such as "id".',) if measure.is_blank(settings.field) else ()
 
 
 def _create(settings: Settings, area: Area | None) -> Handler[Cleaning]:

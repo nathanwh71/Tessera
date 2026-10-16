@@ -141,7 +141,7 @@ def checks(table: str, old: list[tuple[str, str]], new: list[tuple[str, str]]) -
             found |= {
                 f"{table}|{name}|unequal": f"SELECT count(*) {joined} "
                 f"WHERE NOT ST_Equals({a}, {b}) OR ({a} IS NULL) <> ({b} IS NULL)",
-                f"{table}|{name}|invalid": f"SELECT count(*) {joined} WHERE NOT ST_IsValid({b})",
+                f"{table}|{name}|invalid": f"SELECT count(*) {joined} WHERE NOT ST_IsValid({b}) AND ST_IsValid({a})",
                 f"{table}|{name}|moved": f"SELECT string_agg(fid::text, ', ' ORDER BY fid) {joined} "
                 f"WHERE NOT ST_OrderingEquals({a}, {b}) AND ST_Equals({a}, {b})",
             }
@@ -176,7 +176,7 @@ def compare_tables(database: str, findings: Findings) -> None:
             case [name, "unequal"] if int(value):
                 findings.faults.append(f"{table}.{name}: {value} shapes differ (ST_Equals)")
             case [name, "invalid"] if int(value):
-                findings.faults.append(f"{table}.{name}: {value} shapes invalid after")
+                findings.faults.append(f"{table}.{name}: {value} shapes valid before, invalid after")
             case [name, "moved"] if value:
                 findings.notes.append(f"{table}.{name}: shapes equal, but with other corners or order: fid {value}")
             case [name, "differ"] if int(value):

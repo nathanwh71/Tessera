@@ -14,7 +14,7 @@ from shapely.geometry import Point
 from shapely.geometry import box as shapely_box
 from shapely.geometry.base import BaseGeometry
 
-from . import dotnet, shapes
+from . import shapes
 from .plan import Area
 from .rows import Value
 
@@ -61,38 +61,43 @@ def inside(shape: BaseGeometry | None, area_box: Box) -> bool:
     return shapes.intersects(area_box.polygon, shape)
 
 
+SPACE = r"[^\S\x1c-\x1f]"
+"""One mark of ***white space***: a space, a tab, a line break, or any other mark that shows as a
+gap in a label. Python's \\s also matches U+001C to U+001F, four old marks that split records in
+a file and show no gap, so the class leaves them out."""
+
+_BLANK = re.compile(f"{SPACE}*")
+_SPACES = re.compile(f"{SPACE}+")
+
+
 def is_blank(value: Value) -> bool:
     """True for no value, or text of spaces alone: such a value shows nothing on the map."""
-    return value is None or (isinstance(value, str) and dotnet.is_null_or_white_space(value))
+    return value is None or (isinstance(value, str) and _BLANK.fullmatch(value) is not None)
+
+
+def number_text(value: float) -> str:
+    """A number as text: its shortest digits that read back as the same number.
+
+    A whole number below 10 to the 16th drops its '.0', so 3.0 reads as 3, as the integer
+    3 does; beyond that, Python writes the number with an exponent, such as 1e+16.
+    """
+    return str(int(value)) if value.is_integer() and abs(value) < 1e16 else repr(value)
 
 
 def text(value: Value) -> str | None:
     """A value as text, for comparing ids and names; numbers keep their exact digits.
 
-    None for no value, or text of spaces alone. True and false read as .NET wrote them,
-    'True' and 'False'.
+    None for no value, or text of spaces alone; true and false read 'True' and 'False'.
     """
     match value:
         case None:
             return None
         case str():
-            return None if dotnet.is_null_or_white_space(value) else value
-        case bool():
-            return "True" if value else "False"
-        case int():
+            return None if is_blank(value) else value
+        case bool() | int():
             return str(value)
         case float():
-            return dotnet.number_text(value)
-
-
-# Any run of white space, tabs and line breaks included: each shows as a gap in a label. The
-# class lists .NET's white space, since Python's \s also matches four old control marks.
-_SPACES = re.compile("[" + re.escape("".join(sorted(dotnet.WHITE_SPACE))) + "]+")
-
-
-# Text that needs tidying: white space other than a plain space, two marks of white space in a
-# row, or white space at either end.
-_UNTIDY = re.compile("[" + re.escape("".join(sorted(dotnet.WHITE_SPACE - {" "}))) + "]| {2}|^ | $")
+            return number_text(value)
 
 
 def tidy_text(value: str) -> str | None:
@@ -100,11 +105,17 @@ def tidy_text(value: str) -> str | None:
 
     NFC, the ***normal form*** most systems write, makes 'é' typed two ways compare equal.
     """
-    # Most text is tidy already; two quick tests find it, and the work below runs only on the rest.
-    if value and unicodedata.is_normalized("NFC", value) and _UNTIDY.search(value) is None:
-        return value
-    clean = dotnet.trim(_SPACES.sub(" ", unicodedata.normalize("NFC", value)))
-    return clean or None
+    return _SPACES.sub(" ", unicodedata.normalize("NFC", value)).strip(" ") or None
+
+
+def folded(name: str) -> str:
+    """A name in lower case, letter by letter, for comparing two names whatever their case.
+
+    Python lowers two capitals by their neighbours or into two letters: a Greek sigma at the
+    end of a word, and the Turkish dotted I. Mapping those first keeps each letter one letter,
+    lowered alone, so two spellings of a name compare letter for letter.
+    """
+    return name.replace("İ", "i").replace("Σ", "σ").lower()
 
 
 _RADIUS = 6_371_008.8

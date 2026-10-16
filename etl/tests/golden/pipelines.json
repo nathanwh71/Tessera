@@ -5,7 +5,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The JSON property 'extra' could not be mapped to any .NET member contained in type 'Tessera.Etl.Pipeline'.\n"
+    "stderr": "extra: Extra inputs are not permitted.\n"
   },
   {
     "name": "missing source",
@@ -13,7 +13,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: JSON deserialization for type 'Tessera.Etl.Pipeline' was missing required properties including: 'source'.\n"
+    "stderr": "source: Field required.\n"
   },
   {
     "name": "missing tables",
@@ -21,7 +21,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: JSON deserialization for type 'Tessera.Etl.Pipeline' was missing required properties including: 'tables'.\n"
+    "stderr": "tables: Field required.\n"
   },
   {
     "name": "missing source and output",
@@ -29,7 +29,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: JSON deserialization for type 'Tessera.Etl.Pipeline' was missing required properties including: 'source', 'output'.\n"
+    "stderr": "source: Field required.\noutput: Field required.\n"
   },
   {
     "name": "missing everything",
@@ -37,7 +37,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: JSON deserialization for type 'Tessera.Etl.Pipeline' was missing required properties including: 'source', 'output', 'tables'.\n"
+    "stderr": "source: Field required.\noutput: Field required.\ntables: Field required.\n"
   },
   {
     "name": "source a number",
@@ -45,7 +45,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The JSON value could not be converted to Tessera.Etl.Pipeline. Path: $.source | LineNumber: 0 | BytePositionInLine: 13.\n"
+    "stderr": "source: Input should be a valid string.\n"
   },
   {
     "name": "lines a string",
@@ -53,7 +53,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The JSON value could not be converted to Tessera.Etl.TablePlan. Path: $.tables[0].lines | LineNumber: 0 | BytePositionInLine: 97.\n"
+    "stderr": "a.b: lines: Input should be a valid boolean.\n"
   },
   {
     "name": "lines null",
@@ -61,7 +61,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The JSON value could not be converted to Tessera.Etl.TablePlan. Path: $.tables[0].lines | LineNumber: 0 | BytePositionInLine: 96.\n"
+    "stderr": "a.b: lines: Input should be a valid boolean.\n"
   },
   {
     "name": "layer a number",
@@ -69,7 +69,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The JSON value could not be converted to Tessera.Etl.TablePlan. Path: $.tables[0].layer | LineNumber: 0 | BytePositionInLine: 93.\n"
+    "stderr": "a.b: layer: Input should be a valid string.\n"
   },
   {
     "name": "where null",
@@ -85,7 +85,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "a.b: insideArea: The JSON value could not be converted to Tessera.Etl.Filters.InsideArea+Settings. Path: $.onFail | LineNumber: 0 | BytePositionInLine: 16.\n"
+    "stderr": "a.b: insideArea: onFail: Input should be 'drop' or 'stop'.\n"
   },
   {
     "name": "on fail Stop",
@@ -125,7 +125,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "a.b: requireFields: The JSON value could not be converted to Tessera.Etl.Filters.RequireFields+Settings. Path: $.onFail | LineNumber: 0 | BytePositionInLine: 29.\n"
+    "stderr": "a.b: requireFields: onFail: Input should be 'drop' or 'stop'.\n"
   },
   {
     "name": "on fail null",
@@ -133,7 +133,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "a.b: requireFields: The JSON value could not be converted to Tessera.Etl.Filters.RequireFields+Settings. Path: $.onFail | LineNumber: 0 | BytePositionInLine: 29.\n"
+    "stderr": "a.b: requireFields: onFail: Input should be 'drop' or 'stop'.\n"
   },
   {
     "name": "fields a string",
@@ -141,7 +141,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "a.b: requireFields: The JSON value could not be converted to System.Collections.Immutable.ImmutableArray`1[System.String]. Path: $.fields | LineNumber: 0 | BytePositionInLine: 16.\n"
+    "stderr": "a.b: requireFields: fields: Input should be a valid tuple.\n"
   },
   {
     "name": "fields null",
@@ -149,7 +149,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "a.b: requireFields: The JSON value could not be converted to System.Collections.Immutable.ImmutableArray`1[System.String]. Path: $.fields | LineNumber: 0 | BytePositionInLine: 14.\n"
+    "stderr": "a.b: requireFields: fields: Input should be a valid tuple.\n"
   },
   {
     "name": "fields empty",
@@ -165,7 +165,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "a.b: requireFields: The JSON value could not be converted to System.String. Path: $.fields[0] | LineNumber: 0 | BytePositionInLine: 12.\n"
+    "stderr": "a.b: requireFields: fields.0: Input should be a valid string.\n"
   },
   {
     "name": "fields null in list",
@@ -181,7 +181,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "a.b: dropNearDuplicates: The JSON value could not be converted to Tessera.Etl.Filters.DropNearDuplicates+Settings. Path: $.metres | LineNumber: 0 | BytePositionInLine: 30.\n"
+    "stderr": "a.b: dropNearDuplicates: metres: Input should be a valid number.\n"
   },
   {
     "name": "metres as text",
@@ -213,7 +213,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "a.b: dropNearDuplicates: The JSON value could not be converted to Tessera.Etl.Filters.DropNearDuplicates+Settings. Path: $.metres | LineNumber: 0 | BytePositionInLine: 26.\n"
+    "stderr": "a.b: dropNearDuplicates: metres: Input should be a valid number.\n"
   },
   {
     "name": "field blank and metres zero",
@@ -229,7 +229,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "a.b: dropDuplicateIds: The constructor parameter 'Field' on type 'Tessera.Etl.Filters.DropDuplicateIds+Settings' doesn't allow null values. Consider updating its nullability annotation. Path: $.field | LineNumber: 0 | BytePositionInLine: 13.\n"
+    "stderr": "a.b: dropDuplicateIds: field: Input should be a valid string.\n"
   },
   {
     "name": "field a number",
@@ -237,7 +237,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "a.b: dropDuplicateIds: The JSON value could not be converted to Tessera.Etl.Filters.DropDuplicateIds+Settings. Path: $.field | LineNumber: 0 | BytePositionInLine: 10.\n"
+    "stderr": "a.b: dropDuplicateIds: field: Input should be a valid string.\n"
   },
   {
     "name": "field empty",
@@ -253,7 +253,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "a.b: dropNearDuplicates: The JSON value could not be converted to Tessera.Etl.Filters.DropNearDuplicates+Settings. Path: $.metres | LineNumber: 0 | BytePositionInLine: 53.\n"
+    "stderr": "a.b: dropNearDuplicates: metres: Input should be a valid number.\n"
   },
   {
     "name": "swap takes none",
@@ -325,7 +325,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The JSON value could not be converted to System.Text.Json.Nodes.JsonObject. Path: $.tables[0].filters[0] | LineNumber: 0 | BytePositionInLine: 97.\n"
+    "stderr": "a.b: filters.0: Input should be a valid dictionary.\n"
   },
   {
     "name": "filter a string",
@@ -333,7 +333,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The JSON value could not be converted to System.Text.Json.Nodes.JsonObject. Path: $.tables[0].filters[0] | LineNumber: 0 | BytePositionInLine: 106.\n"
+    "stderr": "a.b: filters.0: Input should be a valid dictionary.\n"
   },
   {
     "name": "filters null",
@@ -341,7 +341,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The JSON value could not be converted to System.Collections.Immutable.ImmutableArray`1[System.Text.Json.Nodes.JsonObject]. Path: $.tables[0].filters | LineNumber: 0 | BytePositionInLine: 98.\n"
+    "stderr": "a.b: filters: Input should be a valid tuple.\n"
   },
   {
     "name": "filters a number",
@@ -349,7 +349,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The JSON value could not be converted to System.Collections.Immutable.ImmutableArray`1[System.Text.Json.Nodes.JsonObject]. Path: $.tables[0].filters | LineNumber: 0 | BytePositionInLine: 95.\n"
+    "stderr": "a.b: filters: Input should be a valid tuple.\n"
   },
   {
     "name": "tidy fields null",
@@ -365,7 +365,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The JSON value could not be converted to System.Collections.Immutable.ImmutableArray`1[Tessera.Etl.TablePlan]. Path: $.tables | LineNumber: 0 | BytePositionInLine: 67.\n"
+    "stderr": "tables: Input should be a valid tuple.\n"
   },
   {
     "name": "tables a number",
@@ -373,7 +373,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The JSON value could not be converted to System.Collections.Immutable.ImmutableArray`1[Tessera.Etl.TablePlan]. Path: $.tables | LineNumber: 0 | BytePositionInLine: 64.\n"
+    "stderr": "tables: Input should be a valid tuple.\n"
   },
   {
     "name": "tables a number in list",
@@ -381,7 +381,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The JSON value could not be converted to Tessera.Etl.TablePlan. Path: $.tables[0] | LineNumber: 0 | BytePositionInLine: 66.\n"
+    "stderr": "tables[0]: Input should be a valid dictionary or instance of TablePlan.\n"
   },
   {
     "name": "table null in list",
@@ -397,7 +397,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: JSON deserialization for type 'Tessera.Etl.TablePlan' was missing required properties including: 'table'.\n"
+    "stderr": "tables[0]: table: Field required.\n"
   },
   {
     "name": "table name null",
@@ -405,7 +405,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The constructor parameter 'Table' on type 'Tessera.Etl.TablePlan' doesn't allow null values. Consider updating its nullability annotation. Path: $.tables[0].table | LineNumber: 0 | BytePositionInLine: 80.\n"
+    "stderr": "tables[0]: table: Input should be a valid string.\n"
   },
   {
     "name": "tables empty",
@@ -445,7 +445,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The JSON property 'Filters' could not be mapped to any .NET member contained in type 'Tessera.Etl.TablePlan'.\n"
+    "stderr": "a.b: Filters: Extra inputs are not permitted.\n"
   },
   {
     "name": "stop rows a fraction",
@@ -453,7 +453,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The JSON value could not be converted to Tessera.Etl.StopWhen. Path: $.tables[0].stopWhen.rowsUnder | LineNumber: 0 | BytePositionInLine: 113.\n"
+    "stderr": "a.b: stopWhen.rowsUnder: Input should be a valid integer.\n"
   },
   {
     "name": "stop rows as text",
@@ -469,7 +469,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The JSON value could not be converted to Tessera.Etl.StopWhen. Path: $.tables[0].stopWhen.rowsUnder | LineNumber: 0 | BytePositionInLine: 120.\n"
+    "stderr": "a.b: stopWhen.rowsUnder: Input should be less than or equal to 2147483647.\n"
   },
   {
     "name": "stop rows exponent",
@@ -477,7 +477,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The JSON value could not be converted to Tessera.Etl.StopWhen. Path: $.tables[0].stopWhen.rowsUnder | LineNumber: 0 | BytePositionInLine: 113.\n"
+    "stderr": "a.b: stopWhen.rowsUnder: Input should be a valid integer.\n"
   },
   {
     "name": "stop percent as text",
@@ -501,7 +501,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The JSON property 'dropped' could not be mapped to any .NET member contained in type 'Tessera.Etl.StopWhen'.\n"
+    "stderr": "stopWhen.dropped: Extra inputs are not permitted.\n"
   },
   {
     "name": "stop a number",
@@ -509,7 +509,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The JSON value could not be converted to Tessera.Etl.StopWhen. Path: $.stopWhen | LineNumber: 0 | BytePositionInLine: 114.\n"
+    "stderr": "stopWhen: Input should be a valid dictionary or instance of StopWhen.\n"
   },
   {
     "name": "area a number",
@@ -517,7 +517,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The JSON value could not be converted to Tessera.Etl.Area. Path: $.area | LineNumber: 0 | BytePositionInLine: 110.\n"
+    "stderr": "area: Input should be a valid dictionary or instance of Area.\n"
   },
   {
     "name": "area empty",
@@ -525,7 +525,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: JSON deserialization for type 'Tessera.Etl.Area' was missing required properties including: 'minLongitude', 'minLatitude', 'maxLongitude', 'maxLatitude'.\n"
+    "stderr": "area.minLongitude: Field required.\narea.minLatitude: Field required.\narea.maxLongitude: Field required.\narea.maxLatitude: Field required.\n"
   },
   {
     "name": "area as text",
@@ -541,7 +541,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The JSON value could not be converted to Tessera.Etl.Area. Path: $.area.minLongitude | LineNumber: 0 | BytePositionInLine: 131.\n"
+    "stderr": "area.minLongitude: Input should be a valid number.\n"
   },
   {
     "name": "area backwards",
@@ -557,7 +557,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The JSON property 'name' could not be mapped to any .NET member contained in type 'Tessera.Etl.Area'.\n"
+    "stderr": "area.name: Extra inputs are not permitted.\n"
   },
   {
     "name": "every file fault",
@@ -605,7 +605,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The JSON value could not be converted to Tessera.Etl.Pipeline. Path: $ | LineNumber: 0 | BytePositionInLine: 1.\n"
+    "stderr": "The pipeline file: Input should be a valid dictionary or instance of Pipeline.\n"
   },
   {
     "name": "a string",
@@ -613,7 +613,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The JSON value could not be converted to Tessera.Etl.Pipeline. Path: $ | LineNumber: 0 | BytePositionInLine: 3.\n"
+    "stderr": "The pipeline file: Input should be a valid dictionary or instance of Pipeline.\n"
   },
   {
     "name": "empty file",
@@ -621,7 +621,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The input does not contain any JSON tokens. Expected the input to start with a valid JSON token, when isFinalBlock is true. Path: $ | LineNumber: 0 | BytePositionInLine: 0.\n"
+    "stderr": "The pipeline file is not valid JSON: Expecting value: line 1 column 1 (char 0).\n"
   },
   {
     "name": "white space only",
@@ -629,7 +629,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The input does not contain any JSON tokens. Expected the input to start with a valid JSON token, when isFinalBlock is true. Path: $ | LineNumber: 1 | BytePositionInLine: 1.\n"
+    "stderr": "The pipeline file is not valid JSON: Expecting value: line 2 column 2 (char 4).\n"
   },
   {
     "name": "comment only",
@@ -637,7 +637,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The input does not contain any JSON tokens. Expected the input to start with a valid JSON token, when isFinalBlock is true. Path: $ | LineNumber: 0 | BytePositionInLine: 12.\n"
+    "stderr": "The pipeline file is not valid JSON: Expecting value: line 1 column 2 (char 1).\n"
   },
   {
     "name": "comments allowed",
@@ -653,7 +653,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: Expected start of a property name or value, but instead reached end of data. Path: $ | LineNumber: 0 | BytePositionInLine: 99.\n"
+    "stderr": "The pipeline file is not valid JSON: Expecting property name enclosed in double quotes: line 1 column 101 (char 100).\n"
   },
   {
     "name": "open object",
@@ -661,7 +661,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: Expected depth to be zero at the end of the JSON payload. There is an open JSON object or array that should be closed. Path: $ | LineNumber: 0 | BytePositionInLine: 99.\n"
+    "stderr": "The pipeline file is not valid JSON: Expecting ',' delimiter: line 1 column 100 (char 99).\n"
   },
   {
     "name": "text after",
@@ -669,7 +669,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: 'x' is invalid after a single JSON value. Expected end of data. Path: $ | LineNumber: 0 | BytePositionInLine: 102.\n"
+    "stderr": "The pipeline file is not valid JSON: Extra data: line 1 column 103 (char 102).\n"
   },
   {
     "name": "trailing comma in object",
@@ -677,7 +677,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The JSON object contains a trailing comma at the end which is not supported in this mode. Change the reader options. Path: $.tables[0] | LineNumber: 0 | BytePositionInLine: 83.\n"
+    "stderr": "The pipeline file is not valid JSON: Illegal trailing comma before end of object: line 1 column 82 (char 81).\n"
   },
   {
     "name": "trailing comma in list",
@@ -685,7 +685,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The JSON array contains a trailing comma at the end which is not supported in this mode. Change the reader options. Path: $.tables[1] | LineNumber: 0 | BytePositionInLine: 99.\n"
+    "stderr": "The pipeline file is not valid JSON: Illegal trailing comma before end of array: line 1 column 98 (char 97).\n"
   },
   {
     "name": "bad literal",
@@ -693,7 +693,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: 'tru }' is an invalid JSON literal. Expected the literal 'true'. Path: $.stopWhen | LineNumber: 0 | BytePositionInLine: 116.\n"
+    "stderr": "The pipeline file is not valid JSON: Expecting value: line 1 column 114 (char 113).\n"
   },
   {
     "name": "missing colon",
@@ -701,7 +701,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: '\"' is invalid after a property name. Expected a ':'. Path: $ | LineNumber: 0 | BytePositionInLine: 11.\n"
+    "stderr": "The pipeline file is not valid JSON: Expecting ':' delimiter: line 1 column 12 (char 11).\n"
   },
   {
     "name": "unquoted key",
@@ -709,7 +709,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: 's' is an invalid start of a property name. Expected a '\"'. Path: $ | LineNumber: 0 | BytePositionInLine: 2.\n"
+    "stderr": "The pipeline file is not valid JSON: Expecting property name enclosed in double quotes: line 1 column 3 (char 2).\n"
   },
   {
     "name": "unterminated string",
@@ -717,7 +717,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: Expected end of string, but instead reached end of data. Path: $.source | LineNumber: 0 | BytePositionInLine: 18.\n"
+    "stderr": "The pipeline file is not valid JSON: Unterminated string starting at: line 1 column 13 (char 12).\n"
   },
   {
     "name": "line break in string",
@@ -725,7 +725,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: '0x0A' is invalid within a JSON string. The string should be correctly escaped. Path: $.source | LineNumber: 0 | BytePositionInLine: 14.\n"
+    "stderr": "The pipeline file is not valid JSON: Invalid control character at: line 1 column 15 (char 14).\n"
   },
   {
     "name": "second line fault",
@@ -733,7 +733,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: The JSON value could not be converted to Tessera.Etl.Pipeline. Path: $.output | LineNumber: 2 | BytePositionInLine: 13.\n"
+    "stderr": "output: Input should be a valid string.\n"
   },
   {
     "name": "third line syntax",
@@ -741,7 +741,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: ',' is an invalid start of a property name. Expected a '\"'. Path: $ | LineNumber: 2 | BytePositionInLine: 33.\n"
+    "stderr": "The pipeline file is not valid JSON: Expecting property name enclosed in double quotes: line 3 column 34 (char 56).\n"
   },
   {
     "name": "duplicate key",
@@ -757,7 +757,7 @@
     "settings": false,
     "code": 2,
     "stdout": "",
-    "stderr": "The pipeline file is not valid: ' ' is invalid within a number, immediately after a sign character ('+' or '-'). Expected a digit ('0'-'9'). Path: $.source | LineNumber: 0 | BytePositionInLine: 13.\n"
+    "stderr": "The pipeline file is not valid JSON: Expecting value: line 1 column 13 (char 12).\n"
   },
   {
     "name": "settings area",

@@ -4,11 +4,9 @@ The map shows one area alone, so a place outside it is a mistake in the data, su
 sign on a coordinate, and no ***tile*** of the map would ever show it.
 """
 
-from typing import ClassVar
-
 from ...kernel.pipes import Handler
 from .. import judge as measure
-from ..filter_kind import FilterKind, needs_area, settings_name
+from ..filter_kind import FilterKind, needs_area
 from ..plan import Area, Model, OnFail, OnFailSetting
 from ..rows import Cleaning, Fail, Keep, Row, Verdict
 from ..steps import each_row, filter_step
@@ -20,7 +18,6 @@ NAME = "insideArea"
 class Settings(Model):
     """Only what to do with a failing row; the box comes from the area, not from these."""
 
-    dotnet_name: ClassVar[str] = settings_name(NAME)
     on_fail: OnFailSetting = OnFail.DROP
 
 

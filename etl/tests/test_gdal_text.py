@@ -1,8 +1,8 @@
-"""Values after GDAL 3.8's GeoJSON writer, core/gdal_text.py.
+"""Values after GDAL's GeoJSON writer, core/gdal_text.py.
 
-The C# tool cleaned numbers as ogr2ogr wrote them in GeoJSON; the Python build reads the source
-directly and puts each number through the same rounding. When the machine has ogr2ogr, the
-rounding is checked against it on 3,000 numbers.
+The pipeline reads most sources straight from GDAL's memory, and a few through ogr2ogr's GeoJSON;
+each number goes through the rounding GDAL's writer gives it, so both ways give the same values.
+When the machine has ogr2ogr, the rounding is checked against it on 3,000 numbers.
 """
 
 import json
@@ -33,8 +33,8 @@ from tessera_etl.core import gdal_text
     ],
 )
 # Each text below is what ogr2ogr 3.8.4 wrote for the number.
-def test_writes_a_coordinate_as_GDAL_did(value: float, text: str) -> None:
-    assert gdal_text.coordinate_text(value) == text
+def test_rounds_a_coordinate_as_GDAL_did(value: float, text: str) -> None:
+    assert gdal_text.coordinate(value) == float(text)
 
 
 @pytest.mark.parametrize(

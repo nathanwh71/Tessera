@@ -11,7 +11,7 @@ from helpers import clean, place
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from tessera_etl.core import json_text, judge, table_sql
+from tessera_etl.core import judge, pipeline, table_sql
 from tessera_etl.core.filters import drop_duplicate_ids, require_fields, tidy_text
 from tessera_etl.core.rows import Act, Cleaning, Value
 from tessera_etl.kernel.pipes import Handler, chain, identity, run
@@ -110,9 +110,9 @@ json_values = st.recursive(
 
 
 @settings(max_examples=200)
-@given(json_values)
-def test_reads_JSON_as_pythons_own_reader_does(value: Any) -> None:
-    text = json.dumps(value, ensure_ascii=False)
-    parsed = json_text.parse(text)
-    assert isinstance(parsed, json_text.Parsed)
-    assert json_text.as_plain(parsed.value) == json.loads(text)
+@given(json_values, st.text(alphabet="/*\n ab", max_size=8))
+def test_a_comment_changes_nothing_but_a_string_keeps_its_marks(value: Any, words: str) -> None:
+    # Text inside a string, such as "http://x" or "a /* b", stays as it is; a comment goes.
+    text = json.dumps({"words": words, "value": value})
+    commented = f"// before\n{text} /* after {words.replace('*/', '')} */"
+    assert json.loads(pipeline.without_comments(commented)) == json.loads(text)

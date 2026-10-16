@@ -1,14 +1,14 @@
-"""Records the C# tool's words for each faulty pipeline file in pipelines.json.
+"""Records the pipeline's words for each faulty pipeline file in pipelines.json.
 
     uv run python tests/golden/make_pipeline_golden.py
 
-Each case is the text of a pipeline file. The C# tool reads it in an empty folder, so a file
+Each case is the text of a pipeline file. The pipeline reads it in an empty folder, so a file
 that passes every check stops at its missing source; a case marked "settings" runs beside a
-copy of tessera.json, whose area some filters need.
+copy of tessera.json, whose area some filters need. Read each message the run records before
+committing it: the golden test then holds the pipeline to it.
 """
 
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -16,9 +16,6 @@ import tempfile
 from pathlib import Path
 
 HERE = Path(__file__).parent
-# The C# tool's built .dll; nothing in this repository builds it, so it must be named.
-CSHARP = os.environ.get("TESSERA_CSHARP", "")
-DOTNET = os.environ.get("DOTNET", "/opt/dotnet/dotnet")
 SETTINGS = HERE.parent / "fixtures" / "cases" / "macau" / "tessera.json"
 
 GOOD_TABLE = '{ "table": "a.b", "layer": "L" }'
@@ -146,16 +143,13 @@ def run(text: str, settings: bool) -> dict[str, object]:
         (folder / "p.json").write_text(text, encoding="utf-8")
         if settings:
             shutil.copy(SETTINGS, folder / "tessera.json")
-        environment = dict(os.environ, DOTNET_ROOT=str(Path(DOTNET).parent))
-        done = subprocess.run([DOTNET, CSHARP, "p.json"], cwd=folder, capture_output=True, env=environment, check=False)
+        done = subprocess.run([sys.executable, "-m", "tessera_etl", "p.json"], cwd=folder, capture_output=True, check=False)
         return {"code": done.returncode, "stdout": done.stdout.decode(), "stderr": done.stderr.decode()}
     finally:
         shutil.rmtree(folder)
 
 
 def main() -> None:
-    if not CSHARP:
-        sys.exit("Set TESSERA_CSHARP to the C# tool's built .dll.")
     results: list[dict[str, object]] = []
     for name, text in CASES.items():
         settings = name in SETTINGS_CASES

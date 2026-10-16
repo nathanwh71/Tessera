@@ -4,11 +4,10 @@ A place with no name has no label on the map and cannot be told from its neighbo
 """
 
 from collections.abc import Sequence
-from typing import ClassVar
 
 from ...kernel.pipes import Handler
 from .. import judge as measure
-from ..filter_kind import FilterKind, settings_name
+from ..filter_kind import FilterKind
 from ..plan import Area, Model, OnFail, OnFailSetting, Text
 from ..rows import Cleaning, Fail, Keep, Row, Verdict
 from ..steps import each_row, filter_step
@@ -22,7 +21,6 @@ class Settings(Model):
     lack; a failing row is dropped unless the file says stop. .NET's reader let a null stand in
     the list, which this filter then reads as a field that is always missing."""
 
-    dotnet_name: ClassVar[str] = settings_name(NAME)
     fields: tuple[Text | None, ...]
     on_fail: OnFailSetting = OnFail.DROP
 

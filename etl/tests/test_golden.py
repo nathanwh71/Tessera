@@ -1,10 +1,10 @@
-"""The Python tool against the C# tool's own outcomes, kept as golden files.
+"""The pipeline against its recorded outcomes, kept as golden files.
 
-Each case under tests/fixtures/cases ran through the C# tool once (tests/golden/make_golden.py);
-here the Python tool runs on the same files, and must print the same lines, return the same exit
-code, and write the same script, byte for byte, and the same log, less its first line, which
-holds the time of the run. The faulty pipeline files of tests/golden/pipelines.json must give
-the C# tool's words for each fault.
+Each case under tests/fixtures/cases ran once (tests/golden/make_golden.py), and its outcome was
+checked by meaning against the outcome before it (tools/compare_meaning.py). Here the pipeline
+runs on the same files, and must print the same lines, return the same exit code, and write the
+same script and the same log, less its first line, which holds the time of the run. The faulty
+pipeline files of tests/golden/pipelines.json must give the recorded words for each fault.
 """
 
 import contextlib
@@ -26,7 +26,7 @@ PYTHON = [sys.executable, "-m", "tessera_etl"]
 
 
 @pytest.mark.parametrize("case", cases())
-def test_matches_the_CSharp_tool(case: str) -> None:
+def test_matches_its_recorded_outcome(case: str) -> None:
     expected = load(case)
     found = run(PYTHON, case)
 
@@ -54,7 +54,7 @@ def run_here(folder: Path, arguments: list[str]) -> tuple[int, str, str]:
 
 
 @pytest.mark.parametrize("case", PIPELINES, ids=[case["name"] for case in PIPELINES])
-def test_words_each_fault_in_a_pipeline_file_as_the_CSharp_tool_did(case: dict[str, object], tmp_path: Path) -> None:
+def test_words_each_fault_in_a_pipeline_file_as_recorded(case: dict[str, object], tmp_path: Path) -> None:
     (tmp_path / "p.json").write_text(str(case["text"]), encoding="utf-8")
     if case["settings"]:
         shutil.copy(CASES / "macau" / "tessera.json", tmp_path / "tessera.json")
@@ -70,7 +70,7 @@ def test_words_each_fault_in_a_pipeline_file_as_the_CSharp_tool_did(case: dict[s
         (["nothing.json"], "nothing.json: no such file.\n"),
     ],
 )
-def test_refuses_a_wrong_command_as_the_CSharp_tool_did(arguments: list[str], stderr: str, tmp_path: Path) -> None:
+def test_refuses_a_wrong_command(arguments: list[str], stderr: str, tmp_path: Path) -> None:
     assert run_here(tmp_path, arguments) == (2, "", stderr)
 
 
@@ -85,7 +85,7 @@ SCALE = os.environ.get("TESSERA_SCALE_SOURCE")
 
 
 @pytest.mark.skipif(SCALE is None, reason="set TESSERA_SCALE_SOURCE to big.geojson, 90,000 places, to run")
-def test_writes_the_90000_place_script_the_CSharp_tool_wrote(tmp_path: Path) -> None:
+def test_writes_the_recorded_90000_place_script(tmp_path: Path) -> None:
     # The script is 78 MB, too large to keep, so its checksum stands in for it.
     assert SCALE is not None
     folder = tmp_path / "scale"

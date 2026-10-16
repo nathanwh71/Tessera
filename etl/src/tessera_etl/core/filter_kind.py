@@ -9,11 +9,10 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from ..kernel.pipes import Handler
 from ..kernel.result import Err, Ok, Result
-from . import json_text, stj
 from .plan import Area, Model
 from .rows import Cleaning
 
@@ -51,18 +50,14 @@ class FilterKind[S: Model]:
         unknown = self._unknown(given)
         if unknown:
             return Err(tuple(f"{self.name}: {problem}" for problem in unknown))
-        # The C# tool read the settings back from their own compact JSON text, so the places in
-        # its messages count from the start of that text, not of the file.
-        parsed = json_text.parse(json_text.compact(dict(given)))
-        assert isinstance(parsed, json_text.Parsed)
-        match stj.read(self.settings, parsed):
-            case Ok(read):
-                problems = self.check(read, area)
-                if problems:
-                    return Err(tuple(f"{self.name}: {problem}" for problem in problems))
-                return Ok(self.create(read, area))
-            case Err(why):
-                return Err((f"{self.name}: {why}",))
+        try:
+            read = self.settings.model_validate(given)
+        except ValidationError as error:
+            return Err(tuple(f"{self.name}: {'.'.join(map(str, fault['loc']))}: {fault['msg']}." for fault in error.errors()))
+        problems = self.check(read, area)
+        if problems:
+            return Err(tuple(f"{self.name}: {problem}" for problem in problems))
+        return Ok(self.create(read, area))
 
     def _unknown(self, given: Mapping[str, Any]) -> tuple[str, ...]:
         """Names each key the settings lack, then each needed setting the file leaves out."""
@@ -80,8 +75,3 @@ class FilterKind[S: Model]:
             if info.is_required() and key not in given:
                 problems.append(f"needs {key}.")
         return tuple(problems)
-
-
-def settings_name(filter_name: str) -> str:
-    """The name .NET gave a filter's settings record, for messages that name it."""
-    return f"Tessera.Etl.Filters.{filter_name[:1].upper()}{filter_name[1:]}+Settings"

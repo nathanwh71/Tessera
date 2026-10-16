@@ -7,12 +7,10 @@ it tidies those columns alone.
 
 from collections.abc import Sequence
 from dataclasses import replace
-from typing import ClassVar
 
 from ...kernel.pipes import Handler
-from .. import dotnet
 from .. import judge as measure
-from ..filter_kind import FilterKind, settings_name
+from ..filter_kind import FilterKind
 from ..plan import Area, Model, OnFail, Text
 from ..rows import Cleaning, Fix, Keep, Row, Value, Verdict, frozen_values
 from ..steps import each_row, filter_step
@@ -25,7 +23,6 @@ class Settings(Model):
     """`fields` is None by default, meaning every text column, since most data needs tidying
     throughout; no onFail, since it fails no row."""
 
-    dotnet_name: ClassVar[str] = settings_name(NAME)
     fields: tuple[Text | None, ...] | None = None
 
 
@@ -51,7 +48,7 @@ def create(fields: Sequence[str | None] | None = None) -> Handler[Cleaning]:
         # The names are sorted, so the same row gives the same log line on every run.
         if not changed:
             return Keep(row)
-        names = ", ".join(sorted(changed, key=dotnet.ordinal_key))
+        names = ", ".join(sorted(changed))
         return Fix(replace(row, values=frozen_values(values)), f"tidied {names}")
 
     # It never fails a row, so OnFail.DROP never comes into play.

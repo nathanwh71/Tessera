@@ -1,7 +1,7 @@
 """Stages a golden case in a fresh folder, runs a tool there, and keeps what it left behind.
 
-The golden files under tests/golden were made by running the C# tool this way
-(tests/golden/make_golden.py); the golden tests run the Python tool the same way and compare.
+The golden files under tests/golden were made by running the pipeline this way
+(tests/golden/make_golden.py); the golden tests run it the same way and compare.
 """
 
 import json
@@ -75,7 +75,7 @@ def save(case: str, ran: Ran) -> None:
 
 
 def load(case: str) -> Ran:
-    """The golden outcome the C# tool gave for the case."""
+    """The case's recorded outcome."""
     folder = GOLDEN / case
     fields = json.loads((folder / "expected.json").read_text(encoding="utf-8"))
     script, log = folder / "expected.sql", folder / "expected.log"

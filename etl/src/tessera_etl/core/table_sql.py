@@ -14,6 +14,7 @@ with numbers or true and false becomes text, where GDAL made it JSON, which the 
 leaves out of every tile.
 """
 
+import math
 import re
 from collections import Counter
 from collections.abc import Iterable, Sequence
@@ -22,7 +23,8 @@ from shapely.geometry import LineString, MultiLineString, MultiPoint, MultiPolyg
 from shapely.geometry.base import BaseGeometry
 
 from ..kernel.result import Err, Ok, Result
-from . import dotnet, geojson
+from . import geojson
+from .judge import number_text
 from .plan import TablePlan
 from .rows import Row, Value
 from .seed_script import schema_and_name
@@ -92,7 +94,7 @@ def launder(column: str) -> str:
     """
     name = "".join("_" if letter in "'-#" else letter.lower() if ord(letter) <= 127 else letter for letter in column)
     # Cut at a whole character, so no letter is split in two.
-    while dotnet.utf8_length(name) > _NAME_BYTES:
+    while len(name.encode("utf-8", "surrogatepass")) > _NAME_BYTES:
         name = name[:-1]
     return name
 
@@ -202,7 +204,10 @@ def literal(value: Value, kind: str) -> str:
         case int():
             return str(value) if kind != "VARCHAR" else _text(str(value))
         case float():
-            return dotnet.number_text(value) if kind != "VARCHAR" else _text(dotnet.number_text(value))
+            if kind == "VARCHAR":
+                return _text(number_text(value))
+            # PostgreSQL reads a number with no limit, such as inf, only as quoted text.
+            return repr(value) if math.isfinite(value) else f"'{value}'"
         case str():
             return _text(value)
 

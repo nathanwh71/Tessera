@@ -5,12 +5,9 @@ given metres; the first row is kept. Neither test alone is enough: a name repeat
 city, and a position repeats in a busy building.
 """
 
-from typing import ClassVar
-
 from ...kernel.pipes import Handler
-from .. import dotnet
 from .. import judge as measure
-from ..filter_kind import FilterKind, settings_name
+from ..filter_kind import FilterKind
 from ..plan import Area, Fraction, Model, OnFail, OnFailSetting, Text
 from ..rows import Cleaning, Fail, Keep, Row, Verdict
 from ..steps import filter_step
@@ -23,7 +20,6 @@ class Settings(Model):
     """`field` and `metres` have no default, since only the publisher knows which column names
     a place and how close counts as the same place."""
 
-    dotnet_name: ClassVar[str] = settings_name(NAME)
     field: Text
     metres: Fraction
     on_fail: OnFailSetting = OnFail.DROP
@@ -48,12 +44,12 @@ def create(field: str, metres: float, on_fail: OnFail = OnFail.DROP) -> Handler[
                 continue
             centroid = shape.centroid
             centre = (float(centroid.x), float(centroid.y))
-            earlier = seen.setdefault(dotnet.lower_invariant(name), [])
+            earlier = seen.setdefault(measure.folded(name), [])
             verdict: Verdict = Keep(row)
             for number, other in earlier:
                 distance = measure.metres(centre, other)
                 if distance <= metres:
-                    verdict = Fail(row, f"its {field} matches row {number}, {dotnet.pattern_text(distance, 0)} m away")
+                    verdict = Fail(row, f"its {field} matches row {number}, {distance:.0f} m away")
                     break
             if isinstance(verdict, Keep):
                 earlier.append((row.number, centre))
@@ -65,7 +61,7 @@ def create(field: str, metres: float, on_fail: OnFail = OnFail.DROP) -> Handler[
 
 def _check(settings: Settings, area: Area | None) -> tuple[str, ...]:
     problems: list[str] = []
-    if dotnet.is_null_or_white_space(settings.field):
+    if measure.is_blank(settings.field):
         problems.append('needs a field, such as "name".')
     if not settings.metres > 0:
         problems.append("needs metres above 0, such as 25.")

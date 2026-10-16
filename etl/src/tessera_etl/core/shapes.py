@@ -82,21 +82,6 @@ def make_valid_ring(shape: BaseGeometry) -> BaseGeometry:
     return cast(BaseGeometry, _shapely.make_valid(shape, method="structure", keep_collapsed=False))
 
 
-def union(first: BaseGeometry, second: BaseGeometry) -> BaseGeometry:
-    """The union of two shapes by GEOS's robust overlay, with no shortcut for distant shapes.
-
-    A grid size of 0 asks GEOS for its overlay at full precision. Without it, GEOS sets two
-    shapes whose boxes do not meet side by side untouched, where NetTopologySuite rebuilds
-    their corners, so the order of the corners would differ.
-    """
-    return cast(BaseGeometry, _shapely.union(first, second, grid_size=0))
-
-
-def difference(first: BaseGeometry, second: BaseGeometry) -> BaseGeometry:
-    """The part of `first` outside `second`."""
-    return cast(BaseGeometry, _shapely.difference(first, second))
-
-
 def prepare(shape: BaseGeometry) -> None:
     """Builds GEOS's index of the shape's edges, so later tests against it run faster."""
     _shapely.prepare(shape)

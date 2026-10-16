@@ -1,11 +1,11 @@
-"""Values as GDAL 3.8's GeoJSON writer turned them into text, and back.
+"""Values as GDAL's GeoJSON writer turns them into text, and back.
 
-The C# tool never saw a source's own numbers: GDAL first wrote each table as GeoJSON text, and
-the tool read that text. Writing a number as text can round it, so the numbers the C# tool
-cleaned are the source's numbers after that round trip. The Python build reads the source
-directly, so it puts each value through the same round trip here, following GDAL's own code
-(ogr/ogrutils.cpp and ogr/ogrsf_frmts/geojson/ogrgeojsonwriter.cpp, version 3.8.4), and gets
-the same numbers, dates and text the C# tool got.
+Writing a number as text can round it: GDAL writes a coordinate with 15 decimals, and trims a
+tail of noise digits from both coordinates and other numbers. The pipeline reads most sources
+with pyogrio, straight from GDAL's memory, and a few through ogr2ogr's GeoJSON (shell/extract.py).
+Putting every value through the same round trip here, which follows GDAL's own code
+(ogr/ogrutils.cpp and ogr/ogrsf_frmts/geojson/ogrgeojsonwriter.cpp, version 3.8.4), gives the
+same numbers, dates and text whichever way a table is read.
 """
 
 import math
@@ -17,28 +17,9 @@ def coordinate(value: float) -> float:
     """A coordinate after GDAL wrote it with 15 decimals and read it back.
 
     GDAL rounds away a run of noise digits at the end, such as 113.549999999999955, which
-    becomes 113.55; see `_intelliround`.
+    becomes 113.55; see `_intelliround`. A number too large or not finite comes back as it was.
     """
-    return float(coordinate_text(value))
-
-
-def coordinate_text(value: float) -> str:
-    """A coordinate as GDAL's GeoJSON writer wrote it."""
-    if math.isinf(value):
-        return "inf" if value > 0 else "-inf"
-    if math.isnan(value):
-        return "nan"
-    if abs(value) > 1e50:
-        return f"{value:.18g}"
-    return _trailing_zeros(_intelliround(f"{value:.15f}"))
-
-
-def _trailing_zeros(text: str) -> str:
-    """Drops zeros at the end of a fraction, but keeps one digit after the point."""
-    if "." not in text:
-        return text
-    text = text.rstrip("0")
-    return text + "0" if text.endswith(".") else text
+    return float(_intelliround(f"{value:.15f}"))
 
 
 def _round_up(text: str) -> str:

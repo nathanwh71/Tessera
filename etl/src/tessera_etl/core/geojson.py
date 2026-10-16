@@ -13,7 +13,7 @@ from typing import Any, cast
 from shapely.geometry.base import BaseGeometry
 
 from ..kernel.result import Err, Ok, Result
-from . import dotnet, json_text, shapes
+from . import shapes
 from .rows import Row, Value, frozen_values
 
 
@@ -81,7 +81,7 @@ def columns(rows: Sequence[Row], source_columns: Sequence[str]) -> tuple[str, ..
     """
     held = {column for row in rows for column in row.values}
     source = set(source_columns)
-    added = dict.fromkeys(column for row in rows for column in sorted(row.values, key=dotnet.ordinal_key) if column not in source)
+    added = dict.fromkeys(column for row in rows for column in sorted(row.values) if column not in source)
     return (*(column for column in source_columns if column in held), *added)
 
 
@@ -93,21 +93,16 @@ def read(text: str) -> Result[Extract, str]:
     """
     try:
         document: object = json.loads(text, parse_int=_Whole, parse_float=_Fraction, object_pairs_hook=_Pairs)
-    except ValueError:
-        fault = json_text.parse(text)
-        return Err(_reader_message(fault) if isinstance(fault, json_text.SyntaxFault) else "The text is not valid JSON.")
-    if not isinstance(document, _Pairs):
-        return Err(_wrong_kind("Object", document))
-    features = document.get("features", _MISSING)
-    if features is _MISSING:
-        return Err("The given key was not present in the dictionary.")
+    except ValueError as error:
+        return Err(f"It is not JSON: {error}.")
+    features = document.get("features", None) if isinstance(document, _Pairs) else None
     # An object is held as a list of pairs, so it is ruled out first.
     if isinstance(features, _Pairs) or not isinstance(features, list):
-        return Err(_wrong_kind("Array", features))
+        return Err("It is not a FeatureCollection: it needs a list of features.")
     read_features: list[Feature] = []
     for item in cast(list[object], features):
         if not isinstance(item, _Pairs):
-            return Err(_wrong_kind("Object", item))
+            return Err("It is not a FeatureCollection: each feature must be an object.")
         geometry = item.get("geometry", _MISSING)
         shape = _shape(geometry) if isinstance(geometry, _Pairs) else None
         own = item.get("id", _MISSING)
@@ -234,25 +229,3 @@ def _plain(value: object) -> object:
             return [_plain(item) for item in items]
         case _:
             return value
-
-
-def _wrong_kind(wanted: str, found: object) -> str:
-    """.NET's words when a JSON value is not of the kind the reader wanted."""
-    if isinstance(found, _Pairs):
-        kind = "Object"
-    elif isinstance(found, list):
-        kind = "Array"
-    elif isinstance(found, bool):
-        kind = "True" if found else "False"
-    elif isinstance(found, (_Whole, _Fraction)):
-        kind = "Number"
-    elif isinstance(found, str):
-        kind = "String"
-    else:
-        kind = "Null"
-    return f"The requested operation requires an element of type '{wanted}', but the target element has type '{kind}'."
-
-
-def _reader_message(fault: json_text.SyntaxFault) -> str:
-    """.NET's words for text that is not JSON, which name no path when reading a whole document."""
-    return f"{fault.message} LineNumber: {fault.place.line} | BytePositionInLine: {fault.place.byte}."

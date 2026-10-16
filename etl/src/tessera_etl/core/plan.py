@@ -1,58 +1,37 @@
 """The shapes of a ***pipeline file***, as pydantic models.
 
-A publisher describes a run in this file rather than in code, so new data needs no new program.
-An example is data/macau.pipeline.json in the C# repository. pydantic, a library that checks
-data against a declared shape, refuses a key the models lack, so a misspelt setting cannot pass
-unseen; core/pipeline.py turns its complaints into the C# tool's words.
+A publisher describes a run in this file rather than in code, so new data needs no new program;
+data/macau.pipeline.json is an example. pydantic, a library that checks data against a declared
+shape, refuses a key the models lack, so a misspelt setting cannot pass unseen.
 """
 
+import re
 from enum import Enum
-from typing import Annotated, Any, ClassVar
+from typing import Annotated, Any
 
-from pydantic import BeforeValidator, ConfigDict, Strict
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, Strict
 from pydantic.alias_generators import to_camel
 
-from .json_text import Number
-from .stj import Named
-
-_INT32 = (-(2**31), 2**31 - 1)
+# A number as JSON writes one, such as -12, 0.5 or 1e3: a file may give a number as text.
+_NUMBER = re.compile(r"-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][-+]?[0-9]+)?")
 
 
 def _whole(value: object) -> object:
-    """A whole number from the file, read as .NET's JSON reader reads an int.
+    """A whole number given as text, such as "25", read as the number; anything else as it is.
 
-    A number must hold no fraction or exponent; a string that spells a whole number also
-    passes, since .NET's web settings read numbers from strings.
+    The text must hold digits alone, so "1e2" stays text, and the model refuses it.
     """
-    text = value.text if isinstance(value, Number) else value if isinstance(value, str) else None
-    if text is None:
-        return value
-    stripped = text[1:] if text.startswith("-") else text
-    if stripped.isascii() and stripped.isdigit():
-        number = int(text)
-        if _INT32[0] <= number <= _INT32[1]:
-            return number
-    return _Refused()
+    return int(value) if isinstance(value, str) and re.fullmatch(r"-?[0-9]+", value) else value
 
 
 def _fraction(value: object) -> object:
-    """A number from the file, read as .NET reads a double, from a number or from a string."""
-    text = value.text if isinstance(value, Number) else value if isinstance(value, str) else None
-    if text is None:
-        return value
-    try:
-        if text.strip() != text or text.lower() in ("nan", "infinity", "-infinity", "+infinity", "inf", "-inf"):
-            return _Refused()
-        return float(text)
-    except ValueError:
-        return _Refused()
+    """A number given as text, such as "12.5", read as the number; anything else as it is."""
+    return float(value) if isinstance(value, str) and _NUMBER.fullmatch(value) else value
 
 
-class _Refused:
-    """A value the reader could not convert; pydantic then refuses it as the wrong type."""
-
-
-Whole = Annotated[int, BeforeValidator(_whole), Strict()]
+# Each plain value is strict, so true never passes as 1, and 1.5 never as a whole number; the
+# validators above let a number written as text pass, as a publisher may quote one.
+Whole = Annotated[int, BeforeValidator(_whole), Strict(), Field(ge=-(2**31), le=2**31 - 1)]
 Fraction = Annotated[float, BeforeValidator(_fraction), Strict()]
 Text = Annotated[str, Strict()]
 Flag = Annotated[bool, Strict()]
@@ -66,45 +45,35 @@ class OnFail(Enum):
 
 
 def _on_fail(value: object) -> object:
-    """Reads onFail as .NET's enum reader does: any case of its name, or its number."""
+    """onFail in any case, such as "Stop", or as a number: 1, or "1", is stop, and any other drop."""
     if isinstance(value, str):
-        for choice in OnFail:
-            if value.lower() == choice.value:
-                return choice
-        # .NET's enum reader also takes a number written as text.
-        return _on_fail(Number(value)) if value.lstrip("-").isdigit() else value
-    if isinstance(value, Number):
-        whole = _whole(value)
-        # 1 is stop; .NET keeps any other number as a value that is not stop, so it drops.
-        return OnFail.STOP if whole == 1 else OnFail.DROP if isinstance(whole, int) else value
+        if re.fullmatch(r"-?[0-9]+", value):
+            value = int(value)
+        else:
+            return value.lower()
+    if isinstance(value, int) and not isinstance(value, bool):
+        return OnFail.STOP if value == 1 else OnFail.DROP
     return value
 
 
 OnFailSetting = Annotated[OnFail, BeforeValidator(_on_fail)]
 
 
-class Model(Named):
+class Model(BaseModel):
     """The settings every model of the file shares.
 
     Frozen, so no step changes a plan once read; camelCase keys, as JSON usually has them,
-    beside snake_case names in Python. Each plain value is strict (see Text, Flag, Whole and
-    Fraction), so text never passes as a number by accident.
+    beside snake_case names in Python; and no key the model does not name.
     """
 
     model_config = ConfigDict(
-        frozen=True,
-        extra="forbid",
-        alias_generator=to_camel,
-        validate_by_name=False,
-        validate_by_alias=True,
-        arbitrary_types_allowed=True,
+        frozen=True, extra="forbid", alias_generator=to_camel, validate_by_name=False, validate_by_alias=True
     )
 
 
 class Area(Model):
     """The box every place should sit in, in degrees, as tessera.json's Area holds it."""
 
-    dotnet_name: ClassVar[str] = "Tessera.Etl.Area"
     min_longitude: Fraction
     min_latitude: Fraction
     max_longitude: Fraction
@@ -118,7 +87,6 @@ class StopWhen(Model):
     `rows_under` remain.
     """
 
-    dotnet_name: ClassVar[str] = "Tessera.Etl.StopWhen"
     dropped_over_percent: Fraction | None = None
     rows_under: Whole | None = None
 
@@ -134,7 +102,6 @@ class TablePlan(Model):
     `{ "filter": "insideArea", "onFail": "stop" }`.
     """
 
-    dotnet_name: ClassVar[str] = "Tessera.Etl.TablePlan"
     table: Text
     layer: Text | None = None
     where: Text | None = None
@@ -150,7 +117,6 @@ class Pipeline(Model):
     when to stop, and one entry for each table to make.
     """
 
-    dotnet_name: ClassVar[str] = "Tessera.Etl.Pipeline"
     source: Text
     output: Text
     tables: tuple[TablePlan | None, ...]
