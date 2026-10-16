@@ -1,0 +1,9 @@
+{
+  "source": "sources/nothing.gdb",
+  "output": "seed/0002-t.sql",
+  "tables": [
+    {
+      "table": "a.b"
+    }
+  ]
+}

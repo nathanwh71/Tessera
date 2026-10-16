@@ -1,0 +1,5 @@
+{
+  "code": 1,
+  "stdout": "extracting 1 tables...\nThe log is in db/seed-logs/0013-stop.log.\n",
+  "stderr": "Stopped: stopped. p.late: 4 of 5 rows were dropped (80 %), more than the 10 % allowed. No script written.\n"
+}

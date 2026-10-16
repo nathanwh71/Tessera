@@ -1,0 +1,5 @@
+{
+  "code": 1,
+  "stdout": "sources/macau-pois.geojson: copying into a GeoPackage, which each table reads...\nextracting 2 tables...\nThe log is in db/seed-logs/0016-stop.log.\n",
+  "stderr": "Stopped: stopped. insideArea stopped the run at row 1: its shape lies outside the area. No script written.\n"
+}

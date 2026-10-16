@@ -1,0 +1,13 @@
+{
+  "source": "sources/numbered.geojson",
+  "output": "db/seed/0012-numbered.sql",
+  "stopWhen": {
+    "droppedOverPercent": 100
+  },
+  "tables": [
+    {
+      "table": "p.numbered",
+      "filters": []
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+Pipeline: p.json
+Source:   sources/t.gdb
+Output:   seed/0002-t.sql
+
+Result: a.b: extraction failed. ogr2ogr failed: ERROR 1: "nosuch" not recognised as an available field.
+ERROR 1: SetAttributeFilter(nosuch = 1) on layer 'Places' failed.

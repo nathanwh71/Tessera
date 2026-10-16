@@ -1,0 +1,18 @@
+{
+  "source": "sources/dates.geojson",
+  "output": "seed/0002-d.sql",
+  "stopWhen": {
+    "droppedOverPercent": 100
+  },
+  "tables": [
+    {
+      "table": "s.d",
+      "filters": []
+    },
+    {
+      "table": "s.e",
+      "where": "t = '10:30:00'",
+      "filters": []
+    }
+  ]
+}

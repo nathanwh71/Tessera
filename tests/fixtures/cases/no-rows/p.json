@@ -1,0 +1,15 @@
+{
+  "source": "sources/props.geojson",
+  "output": "db/seed/0015-none.sql",
+  "stopWhen": {
+    "rowsUnder": 0,
+    "droppedOverPercent": 100
+  },
+  "tables": [
+    {
+      "table": "p.none",
+      "where": "n > 100",
+      "filters": []
+    }
+  ]
+}

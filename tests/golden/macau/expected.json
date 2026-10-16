@@ -1,0 +1,5 @@
+{
+  "code": 0,
+  "stdout": "sources/macau-pois.geojson: copying into a GeoPackage, which each table reads...\nextracting 9 tables...\nfood.cafes: read 100, kept 100, dropped 0.\nfood.restaurants: read 100, kept 100, dropped 0.\nfood.markets: read 100, kept 100, dropped 0.\noutdoors.parks: read 100, kept 100, dropped 0.\noutdoors.playgrounds: read 100, kept 100, dropped 0.\nculture.museums: read 100, kept 100, dropped 0.\nculture.libraries: read 100, kept 100, dropped 0.\ntransport.trains: read 100, kept 100, dropped 0.\ntransport.buses: read 100, kept 100, dropped 0.\nDone: wrote db/seed/0002-macau-places-cleaned.sql: 9 tables, 900 rows. Read it, then commit it; 'Tessera seed' runs it once.\nThe log is in db/seed-logs/0002-macau-places-cleaned.log.\n",
+  "stderr": ""
+}

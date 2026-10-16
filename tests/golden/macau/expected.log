@@ -1,0 +1,104 @@
+Pipeline: p.json
+Source:   sources/macau-pois.geojson
+Output:   db/seed/0002-macau-places-cleaned.sql
+
+== food.cafes, where layer = 'cafes'
+Read 100 rows.
+  dropEmptyShapes: kept 100, fixed 0, dropped 0
+  swapCoordinates: kept 100, fixed 0, dropped 0
+  insideArea: kept 100, fixed 0, dropped 0
+  tidyText: kept 100, fixed 0, dropped 0
+  requireFields: kept 100, fixed 0, dropped 0
+  dropDuplicateIds: kept 100, fixed 0, dropped 0
+  dropNearDuplicates: kept 100, fixed 0, dropped 0
+Kept 100 of 100; dropped 0.
+
+== food.restaurants, where layer = 'restaurants'
+Read 100 rows.
+  dropEmptyShapes: kept 100, fixed 0, dropped 0
+  swapCoordinates: kept 100, fixed 0, dropped 0
+  insideArea: kept 100, fixed 0, dropped 0
+  tidyText: kept 100, fixed 0, dropped 0
+  requireFields: kept 100, fixed 0, dropped 0
+  dropDuplicateIds: kept 100, fixed 0, dropped 0
+  dropNearDuplicates: kept 100, fixed 0, dropped 0
+Kept 100 of 100; dropped 0.
+
+== food.markets, where layer = 'markets'
+Read 100 rows.
+  dropEmptyShapes: kept 100, fixed 0, dropped 0
+  swapCoordinates: kept 100, fixed 0, dropped 0
+  insideArea: kept 100, fixed 0, dropped 0
+  tidyText: kept 100, fixed 0, dropped 0
+  requireFields: kept 100, fixed 0, dropped 0
+  dropDuplicateIds: kept 100, fixed 0, dropped 0
+  dropNearDuplicates: kept 100, fixed 0, dropped 0
+Kept 100 of 100; dropped 0.
+
+== outdoors.parks, where layer = 'parks'
+Read 100 rows.
+  dropEmptyShapes: kept 100, fixed 0, dropped 0
+  swapCoordinates: kept 100, fixed 0, dropped 0
+  insideArea: kept 100, fixed 0, dropped 0
+  tidyText: kept 100, fixed 0, dropped 0
+  requireFields: kept 100, fixed 0, dropped 0
+  dropDuplicateIds: kept 100, fixed 0, dropped 0
+  dropNearDuplicates: kept 100, fixed 0, dropped 0
+Kept 100 of 100; dropped 0.
+
+== outdoors.playgrounds, where layer = 'playgrounds'
+Read 100 rows.
+  dropEmptyShapes: kept 100, fixed 0, dropped 0
+  swapCoordinates: kept 100, fixed 0, dropped 0
+  insideArea: kept 100, fixed 0, dropped 0
+  tidyText: kept 100, fixed 0, dropped 0
+  requireFields: kept 100, fixed 0, dropped 0
+  dropDuplicateIds: kept 100, fixed 0, dropped 0
+  dropNearDuplicates: kept 100, fixed 0, dropped 0
+Kept 100 of 100; dropped 0.
+
+== culture.museums, where layer = 'museums'
+Read 100 rows.
+  dropEmptyShapes: kept 100, fixed 0, dropped 0
+  swapCoordinates: kept 100, fixed 0, dropped 0
+  insideArea: kept 100, fixed 0, dropped 0
+  tidyText: kept 100, fixed 0, dropped 0
+  requireFields: kept 100, fixed 0, dropped 0
+  dropDuplicateIds: kept 100, fixed 0, dropped 0
+  dropNearDuplicates: kept 100, fixed 0, dropped 0
+Kept 100 of 100; dropped 0.
+
+== culture.libraries, where layer = 'libraries'
+Read 100 rows.
+  dropEmptyShapes: kept 100, fixed 0, dropped 0
+  swapCoordinates: kept 100, fixed 0, dropped 0
+  insideArea: kept 100, fixed 0, dropped 0
+  tidyText: kept 100, fixed 0, dropped 0
+  requireFields: kept 100, fixed 0, dropped 0
+  dropDuplicateIds: kept 100, fixed 0, dropped 0
+  dropNearDuplicates: kept 100, fixed 0, dropped 0
+Kept 100 of 100; dropped 0.
+
+== transport.trains, where layer = 'trains'
+Read 100 rows.
+  dropEmptyShapes: kept 100, fixed 0, dropped 0
+  swapCoordinates: kept 100, fixed 0, dropped 0
+  insideArea: kept 100, fixed 0, dropped 0
+  tidyText: kept 100, fixed 0, dropped 0
+  requireFields: kept 100, fixed 0, dropped 0
+  dropDuplicateIds: kept 100, fixed 0, dropped 0
+  dropNearDuplicates: kept 100, fixed 0, dropped 0
+Kept 100 of 100; dropped 0.
+
+== transport.buses, where layer = 'buses'
+Read 100 rows.
+  dropEmptyShapes: kept 100, fixed 0, dropped 0
+  swapCoordinates: kept 100, fixed 0, dropped 0
+  insideArea: kept 100, fixed 0, dropped 0
+  tidyText: kept 100, fixed 0, dropped 0
+  requireFields: kept 100, fixed 0, dropped 0
+  dropDuplicateIds: kept 100, fixed 0, dropped 0
+  dropNearDuplicates: kept 100, fixed 0, dropped 0
+Kept 100 of 100; dropped 0.
+
+Result: wrote db/seed/0002-macau-places-cleaned.sql: 9 tables, 900 rows. Read it, then commit it; 'Tessera seed' runs it once.

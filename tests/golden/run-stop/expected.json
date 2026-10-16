@@ -1,0 +1,5 @@
+{
+  "code": 1,
+  "stdout": "extracting 2 tables...\nThe log is in seed-logs/0002-test-places.log.\n",
+  "stderr": "Stopped: stopped. insideArea stopped the run at row 2: its shape lies outside the area. No script written.\n"
+}

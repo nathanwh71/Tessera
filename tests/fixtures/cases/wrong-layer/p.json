@@ -1,0 +1,10 @@
+{
+  "source": "sources/t.gdb",
+  "output": "seed/0002-t.sql",
+  "tables": [
+    {
+      "table": "a.b",
+      "layer": "Nope"
+    }
+  ]
+}

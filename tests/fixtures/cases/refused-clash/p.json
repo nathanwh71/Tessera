@@ -1,0 +1,10 @@
+{
+  "source": "sources/clash.geojson",
+  "output": "db/seed/0014-clash.sql",
+  "tables": [
+    {
+      "table": "p.clash",
+      "filters": []
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "source": "sources/t.gdb",
+  "output": "seed/0002-t.sql",
+  "stopWhen": {
+    "droppedOverPercent": 100
+  },
+  "tables": [
+    {
+      "table": "culture.places",
+      "layer": "Places",
+      "filters": []
+    },
+    {
+      "table": "culture.codes",
+      "layer": "Codes",
+      "filters": []
+    }
+  ]
+}

@@ -1,0 +1,343 @@
+{
+  "source": "sources/macau-pois.geojson",
+  "output": "db/seed/0002-macau-places-cleaned.sql",
+  "stopWhen": {
+    "droppedOverPercent": 5,
+    "rowsUnder": 1
+  },
+  "tables": [
+    {
+      "table": "food.cafes",
+      "where": "layer = 'cafes'",
+      "filters": [
+        {
+          "filter": "dropEmptyShapes",
+          "onFail": "stop"
+        },
+        {
+          "filter": "swapCoordinates"
+        },
+        {
+          "filter": "insideArea",
+          "onFail": "stop"
+        },
+        {
+          "filter": "tidyText"
+        },
+        {
+          "filter": "requireFields",
+          "fields": [
+            "id",
+            "name"
+          ]
+        },
+        {
+          "filter": "dropDuplicateIds",
+          "field": "id",
+          "onFail": "stop"
+        },
+        {
+          "filter": "dropNearDuplicates",
+          "field": "name",
+          "metres": 25
+        }
+      ]
+    },
+    {
+      "table": "food.restaurants",
+      "where": "layer = 'restaurants'",
+      "filters": [
+        {
+          "filter": "dropEmptyShapes",
+          "onFail": "stop"
+        },
+        {
+          "filter": "swapCoordinates"
+        },
+        {
+          "filter": "insideArea",
+          "onFail": "stop"
+        },
+        {
+          "filter": "tidyText"
+        },
+        {
+          "filter": "requireFields",
+          "fields": [
+            "id",
+            "name"
+          ]
+        },
+        {
+          "filter": "dropDuplicateIds",
+          "field": "id",
+          "onFail": "stop"
+        },
+        {
+          "filter": "dropNearDuplicates",
+          "field": "name",
+          "metres": 25
+        }
+      ]
+    },
+    {
+      "table": "food.markets",
+      "where": "layer = 'markets'",
+      "filters": [
+        {
+          "filter": "dropEmptyShapes",
+          "onFail": "stop"
+        },
+        {
+          "filter": "swapCoordinates"
+        },
+        {
+          "filter": "insideArea",
+          "onFail": "stop"
+        },
+        {
+          "filter": "tidyText"
+        },
+        {
+          "filter": "requireFields",
+          "fields": [
+            "id",
+            "name"
+          ]
+        },
+        {
+          "filter": "dropDuplicateIds",
+          "field": "id",
+          "onFail": "stop"
+        },
+        {
+          "filter": "dropNearDuplicates",
+          "field": "name",
+          "metres": 25
+        }
+      ]
+    },
+    {
+      "table": "outdoors.parks",
+      "where": "layer = 'parks'",
+      "filters": [
+        {
+          "filter": "dropEmptyShapes",
+          "onFail": "stop"
+        },
+        {
+          "filter": "swapCoordinates"
+        },
+        {
+          "filter": "insideArea",
+          "onFail": "stop"
+        },
+        {
+          "filter": "tidyText"
+        },
+        {
+          "filter": "requireFields",
+          "fields": [
+            "id",
+            "name"
+          ]
+        },
+        {
+          "filter": "dropDuplicateIds",
+          "field": "id",
+          "onFail": "stop"
+        },
+        {
+          "filter": "dropNearDuplicates",
+          "field": "name",
+          "metres": 25
+        }
+      ]
+    },
+    {
+      "table": "outdoors.playgrounds",
+      "where": "layer = 'playgrounds'",
+      "filters": [
+        {
+          "filter": "dropEmptyShapes",
+          "onFail": "stop"
+        },
+        {
+          "filter": "swapCoordinates"
+        },
+        {
+          "filter": "insideArea",
+          "onFail": "stop"
+        },
+        {
+          "filter": "tidyText"
+        },
+        {
+          "filter": "requireFields",
+          "fields": [
+            "id",
+            "name"
+          ]
+        },
+        {
+          "filter": "dropDuplicateIds",
+          "field": "id",
+          "onFail": "stop"
+        },
+        {
+          "filter": "dropNearDuplicates",
+          "field": "name",
+          "metres": 25
+        }
+      ]
+    },
+    {
+      "table": "culture.museums",
+      "where": "layer = 'museums'",
+      "filters": [
+        {
+          "filter": "dropEmptyShapes",
+          "onFail": "stop"
+        },
+        {
+          "filter": "swapCoordinates"
+        },
+        {
+          "filter": "insideArea",
+          "onFail": "stop"
+        },
+        {
+          "filter": "tidyText"
+        },
+        {
+          "filter": "requireFields",
+          "fields": [
+            "id",
+            "name"
+          ]
+        },
+        {
+          "filter": "dropDuplicateIds",
+          "field": "id",
+          "onFail": "stop"
+        },
+        {
+          "filter": "dropNearDuplicates",
+          "field": "name",
+          "metres": 25
+        }
+      ]
+    },
+    {
+      "table": "culture.libraries",
+      "where": "layer = 'libraries'",
+      "filters": [
+        {
+          "filter": "dropEmptyShapes",
+          "onFail": "stop"
+        },
+        {
+          "filter": "swapCoordinates"
+        },
+        {
+          "filter": "insideArea",
+          "onFail": "stop"
+        },
+        {
+          "filter": "tidyText"
+        },
+        {
+          "filter": "requireFields",
+          "fields": [
+            "id",
+            "name"
+          ]
+        },
+        {
+          "filter": "dropDuplicateIds",
+          "field": "id",
+          "onFail": "stop"
+        },
+        {
+          "filter": "dropNearDuplicates",
+          "field": "name",
+          "metres": 25
+        }
+      ]
+    },
+    {
+      "table": "transport.trains",
+      "where": "layer = 'trains'",
+      "filters": [
+        {
+          "filter": "dropEmptyShapes",
+          "onFail": "stop"
+        },
+        {
+          "filter": "swapCoordinates"
+        },
+        {
+          "filter": "insideArea",
+          "onFail": "stop"
+        },
+        {
+          "filter": "tidyText"
+        },
+        {
+          "filter": "requireFields",
+          "fields": [
+            "id",
+            "name"
+          ]
+        },
+        {
+          "filter": "dropDuplicateIds",
+          "field": "id",
+          "onFail": "stop"
+        },
+        {
+          "filter": "dropNearDuplicates",
+          "field": "name",
+          "metres": 25
+        }
+      ]
+    },
+    {
+      "table": "transport.buses",
+      "where": "layer = 'buses'",
+      "filters": [
+        {
+          "filter": "dropEmptyShapes",
+          "onFail": "stop"
+        },
+        {
+          "filter": "swapCoordinates"
+        },
+        {
+          "filter": "insideArea",
+          "onFail": "stop"
+        },
+        {
+          "filter": "tidyText"
+        },
+        {
+          "filter": "requireFields",
+          "fields": [
+            "id",
+            "name"
+          ]
+        },
+        {
+          "filter": "dropDuplicateIds",
+          "field": "id",
+          "onFail": "stop"
+        },
+        {
+          "filter": "dropNearDuplicates",
+          "field": "name",
+          "metres": 25
+        }
+      ]
+    }
+  ]
+}

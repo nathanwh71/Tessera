@@ -1,0 +1,69 @@
+{
+  "source": "sources/sink.gdb",
+  "output": "db/seed/0007-sink.sql",
+  "stopWhen": {
+    "droppedOverPercent": 100,
+    "rowsUnder": 0
+  },
+  "tables": [
+    {
+      "table": "sink.kinds",
+      "layer": "Kinds",
+      "filters": [
+        {
+          "filter": "swapCoordinates"
+        },
+        {
+          "filter": "tidyText"
+        },
+        {
+          "filter": "dropDuplicateIds",
+          "field": "kind"
+        },
+        {
+          "filter": "dropNearDuplicates",
+          "field": "name",
+          "metres": 50
+        }
+      ]
+    },
+    {
+      "table": "sink.everything",
+      "layer": "Kinds",
+      "filters": []
+    },
+    {
+      "table": "sink.lines",
+      "layer": "Lines",
+      "lines": true,
+      "filters": [
+        {
+          "filter": "insideArea"
+        }
+      ]
+    },
+    {
+      "table": "sink.metres",
+      "layer": "Metres",
+      "filters": []
+    },
+    {
+      "table": "sink.notes",
+      "layer": "Notes",
+      "filters": [
+        {
+          "filter": "requireFields",
+          "fields": [
+            "label"
+          ]
+        }
+      ]
+    },
+    {
+      "table": "sink.picked",
+      "layer": "Kinds",
+      "where": "count > 2",
+      "filters": []
+    }
+  ]
+}

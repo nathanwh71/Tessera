@@ -1,0 +1,5 @@
+{
+  "code": 2,
+  "stdout": "",
+  "stderr": "seed/0002-t.sql already exists. Give new data a new script, with the next number.\n"
+}

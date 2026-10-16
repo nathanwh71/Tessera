@@ -1,0 +1,35 @@
+{
+  "source": "sources/places.gdb",
+  "output": "seed/0002-test-places.sql",
+  "area": {
+    "minLongitude": 113.52,
+    "minLatitude": 22.1,
+    "maxLongitude": 113.61,
+    "maxLatitude": 22.22
+  },
+  "stopWhen": {
+    "droppedOverPercent": 60
+  },
+  "tables": [
+    {
+      "table": "food.cafes",
+      "layer": "Cafes",
+      "filters": [
+        {
+          "filter": "insideArea",
+          "onFail": "stop"
+        }
+      ]
+    },
+    {
+      "table": "outdoors.parks",
+      "layer": "Parks",
+      "lines": true,
+      "filters": [
+        {
+          "filter": "repairShapes"
+        }
+      ]
+    }
+  ]
+}

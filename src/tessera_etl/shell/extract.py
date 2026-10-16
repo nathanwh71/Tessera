@@ -126,7 +126,7 @@ def _copy(source: str, copy: str) -> frozenset[str]:
         kind, subtype = info["ogr_types"][index], info["ogr_subtypes"][index]
         column = table.column(name)
         if kind in ("OFTDateTime", "OFTTime") or kind.endswith("List") or subtype == "OFSTJSON":
-            values = [_value(kind, subtype, item) for item in column.to_pylist()]
+            values = [_copied(kind, subtype, item) for item in column.to_pylist()]
             columns[name] = pa.array([None if item is _ABSENT else item for item in values], type=pa.string())
             if kind.endswith("List") or subtype == "OFSTJSON":
                 json_columns.add(name)
@@ -146,6 +146,22 @@ def _copy(source: str, copy: str) -> frozenset[str]:
         crs=meta.get("crs"),
     )
     return frozenset(json_columns)
+
+
+def _copied(kind: str, subtype: str, item: Any) -> Any:
+    """A value as ogr2ogr's GeoPackage copy held it.
+
+    A GeoPackage has no lists, so GDAL keeps a list as JSON text; its numbers with a fraction
+    keep 17 significant digits, as GDAL's JSON library writes them.
+    """
+    if item is None or kind != "OFTRealList":
+        return _value(kind, subtype, item)
+    return "[ " + ", ".join(_jsonc_real(float(one)) for one in item) + " ]"
+
+
+def _jsonc_real(number: float) -> str:
+    text = f"{number:.17g}"
+    return text if any(mark in text for mark in ".en") else text + ".0"
 
 
 def read_table(reader: Reader, table: TablePlan) -> Result[Result[Extract, str], str]:
@@ -185,7 +201,7 @@ def _shapes(meta: dict[str, Any], arrow: pa.Table) -> list[BaseGeometry | None] 
     blobs = np.array(arrow.column(name).to_pylist(), dtype=object)
     try:
         shapes = cast(NDArray[np.object_], shapely.from_wkb(blobs))
-    except shapely.errors.GEOSException:
+    except (shapely.errors.GEOSException, NotImplementedError):
         return None
     found: list[BaseGeometry | None] = list(shapes)
     if any(shape is not None and not _plain(shape) for shape in found):
@@ -203,10 +219,13 @@ def _plain(shape: BaseGeometry) -> bool:
 
 
 def _flat_lonlat(shapes: list[BaseGeometry | None], crs_text: str | None) -> list[BaseGeometry | None] | None:
-    """The shapes in longitude and latitude, flat, with each number as GDAL's writer left it.
+    """The shapes flat, with each number as GDAL's writer left it, when they are in longitude
+    and latitude already.
 
-    None when the source names no coordinate system for its shapes: ogr2ogr then refuses the
-    table, in words of its own.
+    None when the source uses another coordinate system, or names none: ogr2ogr then reads the
+    table, since its PROJ, the library that moves points between systems, may differ from
+    pyproj's in the last digit of a number, and since it refuses a table with no system in its
+    own words.
     """
     present = [shape for shape in shapes if shape is not None]
     if not present:
@@ -214,11 +233,10 @@ def _flat_lonlat(shapes: list[BaseGeometry | None], crs_text: str | None) -> lis
     if crs_text is None:
         return None
     crs = CRS.from_user_input(crs_text)
-    wgs84 = CRS.from_epsg(4326)
     flat_crs = crs.to_2d() if crs.is_geographic else crs
+    if not flat_crs.equals(CRS.from_epsg(4326), ignore_axis_order=True):
+        return None
     series = geopandas.GeoSeries(shapes, crs=crs)
-    if not flat_crs.equals(wgs84, ignore_axis_order=True):
-        series = series.to_crs(wgs84)
     flat = shapely.force_2d(np.asarray(series.values, dtype=object))
     rounded = shapely.transform(flat, _round_points)
     return [None if shape is None else cast(BaseGeometry, shape) for shape in rounded]
@@ -277,15 +295,11 @@ def _json_value(text: str) -> Value:
     """A JSON field's value: GDAL writes text that looks like a list or an object as JSON."""
     if len(text) >= 2 and ((text[0] == "{" and text[-1] == "}") or (text[0] == "[" and text[-1] == "]")):
         try:
-            parsed = json.loads(text, parse_int=_NumberText, parse_float=_NumberText, object_pairs_hook=_pairs)
+            parsed = json.loads(text, parse_int=geojson.NumberText, parse_float=geojson.NumberText, object_pairs_hook=_pairs)
         except ValueError:
             return text
         return geojson.jsonc_text(parsed)
     return text
-
-
-class _NumberText(str):
-    """A number inside a JSON value, kept as its text, as GDAL's JSON library keeps it."""
 
 
 def _pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -367,8 +381,11 @@ def _native_features(
         own, keys, raw = sources[position[fid]]
         properties: list[tuple[str, Value]] = []
         for column in columns:
-            is_set = column.name in keys or (column.name == "id" and isinstance(own, str))
+            # GDAL fills a field named id from the feature's own id when the properties lack one.
+            is_set = column.name in keys or (column.name == "id" and own is not _ABSENT)
             value = column.values[row]
+            if column.name == "id" and "id" not in keys and own is not _ABSENT:
+                value = _id_as_field(own, kinds.get("id"))
             if not is_set or value is _ABSENT:
                 continue
             if column.name in raw and info["ogr_subtypes"][list(kinds).index(column.name)] == "OFSTJSON":
@@ -382,18 +399,31 @@ def _native_features(
     return features
 
 
+def _id_as_field(own: Any, kind: str | None) -> Value:
+    """The id field's value GDAL 3.8 made from the feature's own id, for a feature whose
+    properties hold no id: the id's text in a text field, its number in a number field."""
+    if own is None or isinstance(own, bool):
+        return None
+    if kind in ("OFTInteger", "OFTInteger64"):
+        try:
+            return int(str(own))
+        except ValueError:
+            return None
+    return str(own)
+
+
 def _same_id(own: Any, value: Value, kind: str | None) -> bool:
     """True when the id field holds the feature's own id, so GDAL wrote it once, outside."""
-    if isinstance(own, str) and not isinstance(own, _NumberText):
+    if isinstance(own, str) and not isinstance(own, geojson.NumberText):
         return kind == "OFTString" and value == own
-    if isinstance(own, _NumberText) and own.lstrip("-").isdigit():
+    if isinstance(own, geojson.NumberText) and own.lstrip("-").isdigit():
         return kind in ("OFTInteger", "OFTInteger64") and value == int(own)
     return False
 
 
 def _own_id(own: Any) -> Value:
     """A feature's own id as the C# tool read it from ogr2ogr's GeoJSON."""
-    if isinstance(own, _NumberText):
+    if isinstance(own, geojson.NumberText):
         text = str(own)
         if text.lstrip("-").isdigit() and -(2**63) <= int(text) <= 2**63 - 1:
             return int(text)
@@ -414,7 +444,7 @@ def _source_features(reader: Reader) -> list[tuple[Any, frozenset[str], dict[str
     """Each source feature's own id, the keys of its properties, and its raw JSON values."""
     if reader.native_features is None:
         with open(reader.source, "rb") as file:
-            document = json.loads(file.read(), parse_int=_NumberText, parse_float=_NumberText)
+            document = json.loads(file.read(), parse_int=geojson.NumberText, parse_float=geojson.NumberText)
         found: list[tuple[Any, frozenset[str], dict[str, Any]]] = []
         shared: dict[frozenset[str], frozenset[str]] = {}
         for item in cast(list[dict[str, Any]], document.get("features", [])):

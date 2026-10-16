@@ -1,0 +1,23 @@
+{
+  "source": "sources/kinds.gpkg",
+  "output": "db/seed/0009-kinds.sql",
+  "stopWhen": {
+    "droppedOverPercent": 100
+  },
+  "tables": [
+    {
+      "table": "k.lines",
+      "lines": true,
+      "filters": [
+        {
+          "filter": "dropEmptyShapes"
+        }
+      ]
+    },
+    {
+      "table": "k.all",
+      "layer": "kinds",
+      "filters": []
+    }
+  ]
+}

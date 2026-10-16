@@ -1,0 +1,5 @@
+{
+  "code": 0,
+  "stdout": "extracting 6 tables...\nsink.kinds: read 6, kept 5, dropped 1.\nsink.everything: read 6, kept 6, dropped 0.\nsink.lines: read 2, kept 2, dropped 0.\nsink.metres: read 2, kept 2, dropped 0.\nsink.notes: read 2, kept 1, dropped 1.\nsink.picked: read 3, kept 3, dropped 0.\nDone: wrote db/seed/0007-sink.sql: 6 tables, 19 rows. Read it, then commit it; 'Tessera seed' runs it once.\nThe log is in db/seed-logs/0007-sink.log.\n",
+  "stderr": ""
+}

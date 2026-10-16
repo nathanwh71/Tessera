@@ -1,0 +1,25 @@
+{
+  "source": "sources/sink.gdb",
+  "output": "db/seed/0008-curves.sql",
+  "stopWhen": {
+    "droppedOverPercent": 100
+  },
+  "tables": [
+    {
+      "table": "sink.arcs",
+      "layer": "Arcs",
+      "lines": true,
+      "filters": [
+        {
+          "filter": "repairShapes"
+        }
+      ]
+    },
+    {
+      "table": "sink.bends",
+      "layer": "Bends",
+      "lines": true,
+      "filters": []
+    }
+  ]
+}

@@ -124,11 +124,15 @@ def read(text: str) -> Result[Extract, str]:
     return Ok(rows_of(read_features))
 
 
-class _Whole(str):
+class NumberText(str):
+    """A JSON number kept as its text, as GDAL's JSON library keeps a number it read."""
+
+
+class _Whole(NumberText):
     """A JSON number with no fraction, kept as its text."""
 
 
-class _Fraction(str):
+class _Fraction(NumberText):
     """A JSON number with a fraction or an exponent, kept as its text."""
 
 
@@ -175,7 +179,7 @@ def jsonc_text(value: object) -> str:
             return "null"
         case bool():
             return "true" if value else "false"
-        case _Whole() | _Fraction():
+        case NumberText():
             return str(value)
         case int() | float():
             return repr(value)
@@ -232,9 +236,6 @@ def _plain(value: object) -> object:
             return [_plain(item) for item in items]
         case _:
             return value
-
-
-_KINDS = {dict: "Object", list: "Array", str: "String", bool: "True", type(None): "Null"}
 
 
 def _wrong_kind(wanted: str, found: object) -> str:

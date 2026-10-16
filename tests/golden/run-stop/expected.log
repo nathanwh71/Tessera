@@ -1,0 +1,11 @@
+Pipeline: p.json
+Source:   sources/places.gdb
+Output:   seed/0002-test-places.sql
+
+== food.cafes, from Cafes
+Read 7 rows.
+  insideArea: stopped, fixed 0, dropped 0
+Stopped; nothing kept.
+  Row 2: stopped by insideArea: its shape lies outside the area
+
+Result: stopped. insideArea stopped the run at row 2: its shape lies outside the area. No script written.

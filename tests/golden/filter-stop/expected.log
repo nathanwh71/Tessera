@@ -1,0 +1,12 @@
+Pipeline: p.json
+Source:   sources/macau-pois.geojson
+Output:   db/seed/0016-stop.sql
+
+== food.cafes, where layer = 'cafes'
+Read 100 rows.
+  tidyText: kept 100, fixed 0, dropped 0
+  insideArea: stopped, fixed 0, dropped 0
+Stopped; nothing kept.
+  Row 1: stopped by insideArea: its shape lies outside the area
+
+Result: stopped. insideArea stopped the run at row 1: its shape lies outside the area. No script written.
