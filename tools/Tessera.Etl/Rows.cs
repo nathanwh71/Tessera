@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using CSharpFunctionalExtensions;
+using ExhaustiveMatching;
 using NetTopologySuite.Geometries;
 
 namespace Tessera.Etl;
@@ -36,16 +37,23 @@ public enum Act
 /// verdict for each row, in order, and Steps.Filter acts on them, so every filter drops, logs and
 /// stops in the same way.
 /// </summary>
-public sealed record Verdict(Act Act, Row Row, string Detail)
+/// <remarks>
+/// The three cases form a <b><i>union</i></b>, as F#'s <c>Keep of Row | Fix of Row * string | Fail of
+/// Row * string</c> would: a verdict is always exactly one of them, and each carries only what it
+/// needs, so a kept row has no detail to leave empty. C# 14 has no unions, so [Closed] names the
+/// cases and the ExhaustiveMatching analyser stops the build when a switch misses one.
+/// </remarks>
+[Closed(typeof(Keep), typeof(Fix), typeof(Fail))]
+public abstract record Verdict(Row Row)
 {
     /// <summary>The row passes as it is.</summary>
-    public static Verdict Keep(Row row) => new(Act.Kept, row, "");
+    public sealed record Keep(Row Row) : Verdict(Row);
 
-    /// <summary>The row passes as <paramref name="mended"/>, and the log says what changed.</summary>
-    public static Verdict Fix(Row mended, string did) => new(Act.Fixed, mended, did);
+    /// <summary>The row passes as the mended <paramref name="Row"/>, and the log says what changed.</summary>
+    public sealed record Fix(Row Row, string Did) : Verdict(Row);
 
     /// <summary>The row cannot pass, for the reason given: it is dropped, or the run stops.</summary>
-    public static Verdict Fail(Row row, string reason) => new(Act.Dropped, row, reason);
+    public sealed record Fail(Row Row, string Reason) : Verdict(Row);
 }
 
 /// <summary>One line of the log: a row's number, what happened to it, and why.</summary>

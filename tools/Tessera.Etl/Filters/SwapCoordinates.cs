@@ -37,12 +37,12 @@ public static class SwapCoordinates
         // It never fails a row, so OnFail.Drop never comes into play.
         return Steps.Filter(Name, OnFail.Drop, Steps.EachRow(row =>
         {
-            if (!row.Shape.TryGetValue(out var shape) || shape.IsEmpty || Judge.Inside(shape, box)) return Verdict.Keep(row);
+            if (!row.Shape.TryGetValue(out var shape) || shape.IsEmpty || Judge.Inside(shape, box)) return new Verdict.Keep(row);
             // Apply changes a shape in place, so it works on a copy: the row read must stay as it
             // was, since rows are never changed, only replaced (ADR 0004).
             var turned = shape.Copy();
             turned.Apply(new SwapAxes());
-            return Judge.Inside(turned, box) ? Verdict.Fix(row with { Shape = turned }, "swapped longitude and latitude") : Verdict.Keep(row);
+            return Judge.Inside(turned, box) ? new Verdict.Fix(row with { Shape = turned }, "swapped longitude and latitude") : new Verdict.Keep(row);
         }));
     }
 

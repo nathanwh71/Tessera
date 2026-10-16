@@ -50,7 +50,7 @@ public static class TidyText
             // A row keeps its values in no order, so the names are sorted: the same row then
             // gives the same log line on every run.
             return changed.Count == 0
-                ? Verdict.Keep(row)
-                : Verdict.Fix(row with { Values = values }, $"tidied {string.Join(", ", changed.Order(StringComparer.Ordinal))}");
+                ? new Verdict.Keep(row)
+                : new Verdict.Fix(row with { Values = values }, $"tidied {string.Join(", ", changed.Order(StringComparer.Ordinal))}");
         }));
 }

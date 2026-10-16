@@ -18,6 +18,9 @@
     <!-- Result, a value that holds either an answer or the faults, so a function returns its
          faults rather than throwing them (ADR 0004). -->
     <PackageReference Include="CSharpFunctionalExtensions" />
+    <!-- Checks that each switch over Verdict handles Keep, Fix and Drop, as F#'s match does; C# 14
+         cannot. C# 15's closed records will do the same, and then this package can go. -->
+    <PackageReference Include="ExhaustiveMatching.Analyzer" />
   </ItemGroup>
   <ItemGroup>
     <!-- Lets the tests read internal members, such as PipelineFile.Options, without making them

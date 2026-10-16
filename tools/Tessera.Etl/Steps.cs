@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Globalization;
 using CSharpFunctionalExtensions;
+using ExhaustiveMatching;
 
 namespace Tessera.Etl;
 
@@ -26,27 +27,33 @@ public static class Steps
             foreach (var verdict in judge(cleaning.Rows))
             {
                 var number = verdict.Row.Number;
-                switch (verdict.Act)
+                switch (verdict)
                 {
-                    case Act.Dropped when onFail == OnFail.Stop:
-                        // A stop hands back the rows it was given, unjudged: the run ends and writes
-                        // no script, so nothing uses them as kept rows, and the log says 'nothing kept'.
-                        log.Add(new LogLine(number, name, Act.Stopped, verdict.Detail));
-                        return cleaning with
+                    case Verdict.Fail fail:
+                        if (onFail == OnFail.Stop)
                         {
-                            Log = cleaning.Log.AddRange(log),
-                            Stop = $"{name} stopped the run at row {number}: {verdict.Detail}.",
-                        };
-                    case Act.Dropped:
-                        log.Add(new LogLine(number, name, Act.Dropped, verdict.Detail));
+                            // A stop hands back the rows it was given, unjudged: the run ends and
+                            // writes no script, so nothing uses them as kept rows, and the log says
+                            // 'nothing kept'.
+                            log.Add(new LogLine(number, name, Act.Stopped, fail.Reason));
+                            return cleaning with
+                            {
+                                Log = cleaning.Log.AddRange(log),
+                                Stop = $"{name} stopped the run at row {number}: {fail.Reason}.",
+                            };
+                        }
+                        log.Add(new LogLine(number, name, Act.Dropped, fail.Reason));
                         break;
-                    case Act.Fixed:
-                        log.Add(new LogLine(number, name, Act.Fixed, verdict.Detail));
-                        kept.Add(verdict.Row);
+                    case Verdict.Fix fix:
+                        log.Add(new LogLine(number, name, Act.Fixed, fix.Did));
+                        kept.Add(fix.Row);
                         break;
+                    case Verdict.Keep keep:
+                        kept.Add(keep.Row);
+                        break;
+                    // Never reached: the analyser checks that the cases above cover every verdict.
                     default:
-                        kept.Add(verdict.Row);
-                        break;
+                        throw ExhaustiveMatch.Failed(verdict);
                 }
             }
             return next(cleaning with { Rows = kept.ToImmutable(), Log = cleaning.Log.AddRange(log) });

@@ -42,22 +42,22 @@ public static class DropNearDuplicates
             // Each name keeps a list of earlier places, not one: two cafés of one chain may share a
             // name far apart, and both are real, so a third must be measured against each.
             var seen = new Dictionary<string, List<(int Number, Point Centre)>>(StringComparer.Ordinal);
-            return [.. rows.Select(row =>
+            return [.. rows.Select(Verdict (row) =>
             {
                 // A row with no name or no shape passes: requireFields and dropEmptyShapes judge those.
                 // A name that tidies to nothing counts as no name.
                 if (!Judge.Text(row.Value(field)).Bind(Judge.TidyText).TryGetValue(out var name) || !row.Shape.TryGetValue(out var shape) || shape.IsEmpty)
-                    return Verdict.Keep(row);
+                    return new Verdict.Keep(row);
                 var key = name.ToLowerInvariant();
                 var centre = shape.Centroid;
                 if (!seen.TryGetValue(key, out var earlier)) seen[key] = earlier = [];
                 foreach (var (number, other) in earlier)
                 {
                     var distance = Judge.Metres(centre, other);
-                    if (distance <= metres) return Verdict.Fail(row, $"its {field} matches row {number}, {distance:0} m away");
+                    if (distance <= metres) return new Verdict.Fail(row, $"its {field} matches row {number}, {distance:0} m away");
                 }
                 earlier.Add((row.Number, centre));
-                return Verdict.Keep(row);
+                return new Verdict.Keep(row);
             })];
         });
 }

@@ -34,6 +34,6 @@ public static class InsideArea
     {
         var box = Judge.Box(area);
         return Steps.Filter(Name, onFail, Steps.EachRow(row =>
-            Judge.Inside(row.Shape, box) ? Verdict.Keep(row) : Verdict.Fail(row, "its shape lies outside the area")));
+            Judge.Inside(row.Shape, box) ? new Verdict.Keep(row) : new Verdict.Fail(row, "its shape lies outside the area")));
     }
 }

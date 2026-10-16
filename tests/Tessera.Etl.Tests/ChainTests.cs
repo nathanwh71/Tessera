@@ -93,8 +93,8 @@ public sealed class ChainTests
     public void Writes_a_column_a_filter_adds_and_drops_one_a_filter_removes()
     {
         var rows = ImmutableArray.Create(Place(1, 113.55, 22.19, ("name", "A"), ("owner_phone", "123"), ("note", null)));
-        var addArea = Steps.Filter("addArea", OnFail.Drop, Steps.EachRow(row => Verdict.Fix(row with { Values = row.Values.SetItem("area_m2", 12.5) }, "added area_m2")));
-        var dropPhone = Steps.Filter("dropPhone", OnFail.Drop, Steps.EachRow(row => Verdict.Fix(row with { Values = row.Values.Remove("owner_phone") }, "removed owner_phone")));
+        var addArea = Steps.Filter("addArea", OnFail.Drop, Steps.EachRow(row => new Verdict.Fix(row with { Values = row.Values.SetItem("area_m2", 12.5) }, "added area_m2")));
+        var dropPhone = Steps.Filter("dropPhone", OnFail.Drop, Steps.EachRow(row => new Verdict.Fix(row with { Values = row.Values.Remove("owner_phone") }, "removed owner_phone")));
         var kept = Clean(addArea >> dropPhone, rows).Rows;
 
         var columns = GeoJson.Columns(kept, ["name", "owner_phone", "note"]);

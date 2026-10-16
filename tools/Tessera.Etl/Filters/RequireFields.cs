@@ -32,7 +32,7 @@ public static class RequireFields
     /// </summary>
     public static Handler<Cleaning> Create(ImmutableArray<string> fields, OnFail onFail = OnFail.Drop) =>
         Steps.Filter(Name, onFail, Steps.EachRow(row =>
-            fields.TryFirst(field => Judge.IsBlank(row.Value(field))).Match(
-                missing => Verdict.Fail(row, $"{missing} is missing"),
-                () => Verdict.Keep(row))));
+            fields.TryFirst(field => Judge.IsBlank(row.Value(field))).Match<Verdict, string>(
+                missing => new Verdict.Fail(row, $"{missing} is missing"),
+                () => new Verdict.Keep(row))));
 }
