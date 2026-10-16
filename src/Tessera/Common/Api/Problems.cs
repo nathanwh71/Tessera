@@ -3,7 +3,8 @@ namespace Common.Api;
 /// <summary>
 /// Every error the service answers is a <b><i>problem document</i></b>, a short report in JSON in the
 /// shape RFC 9457 sets (US-07 c5), so every client reads every error the same way. ASP.NET Core
-/// writes them; this class picks the status and adds two headers to each.
+/// writes them; this class picks the status, forbids browsers and Nginx to keep a copy of any
+/// (Cache-Control), and after a 503 tells the client when to ask again (Retry-After).
 /// </summary>
 public static class Problems
 {
