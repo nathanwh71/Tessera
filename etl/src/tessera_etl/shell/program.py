@@ -3,7 +3,7 @@
     tessera-etl data/macau.pipeline.json
 
 Extract:   pyogrio reads each table from the source, such as a geodatabase's feature class, in
-           longitude and latitude (shell/extract.py), two tables side by side.
+           longitude and latitude (shell/extract.py), the next table while this one is cleaned.
 Transform: a chain of steps cleans each table's rows: the pipeline file's filters, in the order
            it lists them, then the stop rules (kernel/pipes.py, core/steps.py).
 Load:      the program writes each table's cleaned rows as SQL (core/table_sql.py), one table
@@ -28,7 +28,7 @@ import shutil
 import sys
 import tempfile
 from collections.abc import Iterator, Sequence
-from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -41,10 +41,6 @@ from ..core.plan import Area
 from ..core.rows import Outcome
 from ..kernel.result import Err, Ok, Result
 from . import extract
-
-SIDE_BY_SIDE = 2
-"""How many tables are read at once. Each read waits on GDAL, which lets other work run in the
-meantime; more than two at once gains little, and holds more tables in memory."""
 
 
 def main(arguments: Sequence[str] | None = None) -> int:
@@ -140,20 +136,17 @@ def message(fault: failure.Failure) -> str:
 
 
 def read_ahead(source: extract.Source, plans: Sequence[CleaningPlan]) -> Iterator[Result[Extract, str]]:
-    """Each table's rows, in the order of the plans, read up to SIDE_BY_SIDE at once.
+    """Each table's rows, in the order of the plans, the next table read while this one is cleaned.
 
-    The next read starts as each table is handed out, so no more than SIDE_BY_SIDE tables wait
-    in memory at a time.
+    A read waits on GDAL much of the time, and lets the cleaning run meanwhile; reading one
+    table ahead, and no more, keeps at most two tables in memory at a time.
     """
-    with ThreadPoolExecutor(max_workers=SIDE_BY_SIDE) as pool:
-        waiting: list[Future[Result[Extract, str]]] = [
-            pool.submit(extract.read_table, source, plan.table) for plan in plans[:SIDE_BY_SIDE]
-        ]
-        for upcoming in plans[SIDE_BY_SIDE:]:
-            yield waiting.pop(0).result()
-            waiting.append(pool.submit(extract.read_table, source, upcoming.table))
-        for read in waiting:
-            yield read.result()
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        reads = (pool.submit(extract.read_table, source, plan.table) for plan in plans)
+        upcoming = next(reads, None)
+        while upcoming is not None:
+            current, upcoming = upcoming, next(reads, None)
+            yield current.result()
 
 
 @dataclass(slots=True)
