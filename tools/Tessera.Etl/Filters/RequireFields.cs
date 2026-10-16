@@ -29,7 +29,9 @@ public static class RequireFields
     /// <summary>
     /// Builds the filter from plain values, so a test can make one without a pipeline file.
     /// </summary>
-    public static Filter Create(ImmutableArray<string> fields, OnFail onFail = OnFail.Drop) => rows =>
-        Judge.Rows(rows, Name, onFail, row =>
-            fields.FirstOrDefault(field => Judge.IsBlank(row.Value(field))) is { } missing ? $"{missing} is missing" : null);
+    public static Handler<Cleaning> Create(ImmutableArray<string> fields, OnFail onFail = OnFail.Drop) =>
+        Steps.Filter(Name, onFail, Steps.EachRow(row =>
+            fields.FirstOrDefault(field => Judge.IsBlank(row.Value(field))) is { } missing
+                ? Verdict.Fail(row, $"{missing} is missing")
+                : Verdict.Keep(row)));
 }

@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -7,56 +6,12 @@ using NetTopologySuite.Geometries;
 namespace Tessera.Etl;
 
 /// <summary>
-/// The parts every <b><i>filter</i></b> shares: passing or failing rows, and the small measures
-/// they use. Sharing them keeps each filter to a few lines, and makes every filter log, drop and
-/// stop in the same way.
+/// The small measures the <b><i>filters</i></b>' judges share: whether a shape touches the area,
+/// whether a value is blank, a value as text, tidy text, and the distance between two points.
+/// Sharing them keeps each judge to a few lines, and makes two filters measure alike.
 /// </summary>
 public static class Judge
 {
-    /// <summary>
-    /// The shape of every filter that passes or fails a row. A row <paramref name="fault"/> names no
-    /// fault for passes. A row it names a fault for is dropped and logged, or, with
-    /// <see cref="OnFail.Stop"/>, ends the filter at once with the reason the run stops.
-    /// </summary>
-    public static Outcome Rows(ImmutableArray<Row> rows, string filter, OnFail onFail, Func<Row, string?> fault)
-    {
-        var kept = ImmutableArray.CreateBuilder<Row>();
-        var log = ImmutableArray.CreateBuilder<LogLine>();
-        foreach (var row in rows)
-        {
-            if (fault(row) is not { } reason)
-            {
-                kept.Add(row);
-                continue;
-            }
-            // A stop hands back the rows it was given, unjudged: the run ends and writes no script,
-            // so nothing uses them as kept rows, and the log says 'nothing kept'.
-            if (onFail == OnFail.Stop)
-            {
-                log.Add(new LogLine(row.Number, filter, Act.Stopped, reason));
-                return new Outcome(rows, log.ToImmutable(), $"{filter} stopped the run at row {row.Number}: {reason}.");
-            }
-            log.Add(new LogLine(row.Number, filter, Act.Dropped, reason));
-        }
-        return new Outcome(kept.ToImmutable(), log.ToImmutable(), null);
-    }
-
-    /// <summary>
-    /// The shape of every filter that changes rows and drops none. <paramref name="change"/> returns
-    /// the changed row and what it did, or nothing for a row it leaves alone.
-    /// </summary>
-    public static Outcome Changes(ImmutableArray<Row> rows, string filter, Func<Row, (Row Row, string Did)?> change)
-    {
-        var log = ImmutableArray.CreateBuilder<LogLine>();
-        var changed = rows.Select(row =>
-        {
-            if (change(row) is not { } done) return row;
-            log.Add(new LogLine(row.Number, filter, Act.Fixed, done.Did));
-            return done.Row;
-        }).ToImmutableArray();
-        return new Outcome(changed, log.ToImmutable(), null);
-    }
-
     /// <summary>
     /// The area's box, as NetTopologySuite's Envelope, a box it can test against a shape's own box
     /// in four comparisons, before the slower test of the shape itself.

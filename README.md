@@ -109,9 +109,9 @@ A _table_ of a geodatabase _names_ its ***feature class*** as `layer`; a _table_
 
 Filters _run_ in the _order_ _listed_, _each_ on the _rows_ the _one_ _before_ _kept_. A _row_ that _fails_ is _dropped_, or, with `"onFail": "stop"`, _ends_ the _whole_ _run_. A _table_ _also_ _stops_ the _run_ when more than `droppedOverPercent` of its _rows_ were _dropped_, 10 by _default_, or _fewer_ than `rowsUnder` _remain_, 1 by _default_; `stopWhen` _sets_ them for the _whole_ _file_ or for _one_ _table_. A _stopped_ _run_ _writes_ no _script_, but _always_ _writes_ its _log_. The _area_ _comes_ from `tessera.json`, or from the _pipeline_'s _own_ `area`. `lines: true` _stores_ _lines_ and _areas_ as many-part _shapes_, so _one_ _table_ _holds_ both _kinds_.
 
-**Adding a filter.** _Each_ filter is _one_ _file_ in `tools/Tessera.Etl/Filters/`. It _holds_ the filter's _name_, what it does, a _record_ of its _own_ _settings_, its _checks_, and a `Create` _function_ that _returns_ the filter: a _function_ from a _table_'s _rows_ to the _rows_ it _keeps_ and a _log_ of what it did. A _new_ filter is _one_ _new_ _file_, _modelled_ on `InsideArea.cs`, and _one_ _line_ in `Filters/All.cs`. _Each_ filter _reads_ _only_ its _own_ _settings_, so the _pipeline_ _file_ _refuses_ a _setting_ that _belongs_ to another filter, or _one_ that is _missing_.
+**Adding a filter.** _Each_ filter is _one_ _file_ in `tools/Tessera.Etl/Filters/`. It _holds_ the filter's _name_, what it does, a _record_ of its _own_ _settings_, its _checks_, and a `Create` _function_ that _returns_ the filter as a _step_ of the _chain_. The filter _itself_ is a _judge_: a _function_ that _gives_ _each_ _row_ a verdict, _keep_, _fix_ or _fail_, and `Steps.Filter` does the _dropping_, _logging_ and _stopping_ for every filter alike. A _new_ filter is _one_ _new_ _file_, _modelled_ on `InsideArea.cs`, and _one_ _line_ in `Filters/All.cs`. _Each_ filter _reads_ _only_ its _own_ _settings_, so the _pipeline_ _file_ _refuses_ a _setting_ that _belongs_ to another filter, or _one_ that is _missing_.
 
-**Filters in code.** Filters _join_ with `>>`, which _runs_ the _left_ _one_, then the _right_ _one_ on the _rows_ it _kept_, and _stops_ at the _first_ _stop_:
+**Filters in code.** Filters _join_ with `>>`, which _runs_ the _left_ _one_, then the _right_ _one_ on the _rows_ it _kept_, and _stops_ at the _first_ _stop_. _Each_ _step_ is a _handler_ in Giraffe's _shape_, which _receives_ the _rest_ of the _chain_ (`Pipes.cs`):
 
 ```csharp
 var cleanCafes =
@@ -122,7 +122,7 @@ var cleanCafes =
     >> RequireFields.Create(["id", "name"]);
 ```
 
-The _pipeline_ _file_ _builds_ the _same_ _chain_ from its _list_. A filter may _also_ _add_ or _remove_ a _column_: the _script_ _takes_ its _columns_ from the _cleaned_ _rows_.
+The _pipeline_ _file_ _builds_ the _same_ _chain_ from its _list_, and _adds_ the _stop_ _rules_ as its _last_ _step_. A filter may _also_ _add_ or _remove_ a _column_: the _script_ _takes_ its _columns_ from the _cleaned_ _rows_.
 
 ## How the database keeps the service safe
 
@@ -165,7 +165,7 @@ The _service_ is _one_ _program_, with _each_ ***module*** a _project_ of its _o
 - `docs/adr/0007-limits-in-nginx.md`: why Nginx _answers_ the _office_ _alone_ and _caps_ _each_ _machine_, and why the _service_ _keeps_ no _resilience_ _library_
 - `docs/adr/0008-nginx-in-front.md`: why Nginx _stands_ in _front_, and what it does in _place_ of the _service_
 - `docs/adr/0009-seed-with-dbup.md`: why the _places_ _arrive_ as SQL _scripts_ that DbUp _runs_ _once_
-- `docs/design/etl-pipeline.md`: a _design_ for the _pipeline_ from scratch, with Giraffe-style _handlers_, _against_ _today_'s
+- `docs/design/etl-pipeline.md`: how the ETL _pipeline_ _cleans_ _places_ into _seed_ _scripts_, as a _chain_ of Giraffe-style _handlers_
 - `docs/guides/delivery-plan.md`: _Parts_ A and B rebuilt in _four_ iterations, from 19 _October_ to the _release_ of 7 December 2026, and what _follows_
 - `docs/guides/reading-the-code.md`: _fifteen_ _steps_ _through_ the backend and the _map_, in the _order_ a _tile_ _travels_
 - `docs/guides/reading-the-frontend.md`: _fifteen_ _steps_ _through_ the _map_ _alone_, from the _page_ that _starts_ to the _tests_ that _state_ its _rules_

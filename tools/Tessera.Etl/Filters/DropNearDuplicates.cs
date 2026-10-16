@@ -35,25 +35,26 @@ public static class DropNearDuplicates
     /// <summary>
     /// Builds the filter from plain values, so a test can make one without a pipeline file.
     /// </summary>
-    public static Filter Create(string field, double metres, OnFail onFail = OnFail.Drop) => rows =>
-    {
-        // Each name keeps a list of earlier places, not one: two cafés of one chain may share a
-        // name far apart, and both are real, so a third must be measured against each.
-        var seen = new Dictionary<string, List<(int Number, Point Centre)>>(StringComparer.Ordinal);
-        return Judge.Rows(rows, Name, onFail, row =>
+    public static Handler<Cleaning> Create(string field, double metres, OnFail onFail = OnFail.Drop) =>
+        Steps.Filter(Name, onFail, rows =>
         {
-            // A row with no name or no shape passes: requireFields and dropEmptyShapes judge those.
-            if (Judge.Text(row.Value(field)) is not { } value || row.Shape is null || row.Shape.IsEmpty) return null;
-            var key = (Judge.TidyText(value) ?? "").ToLowerInvariant();
-            var centre = row.Shape.Centroid;
-            if (!seen.TryGetValue(key, out var earlier)) seen[key] = earlier = [];
-            foreach (var (number, other) in earlier)
+            // Each name keeps a list of earlier places, not one: two cafés of one chain may share a
+            // name far apart, and both are real, so a third must be measured against each.
+            var seen = new Dictionary<string, List<(int Number, Point Centre)>>(StringComparer.Ordinal);
+            return [.. rows.Select(row =>
             {
-                var distance = Judge.Metres(centre, other);
-                if (distance <= metres) return $"its {field} matches row {number}, {distance:0} m away";
-            }
-            earlier.Add((row.Number, centre));
-            return null;
+                // A row with no name or no shape passes: requireFields and dropEmptyShapes judge those.
+                if (Judge.Text(row.Value(field)) is not { } value || row.Shape is null || row.Shape.IsEmpty) return Verdict.Keep(row);
+                var key = (Judge.TidyText(value) ?? "").ToLowerInvariant();
+                var centre = row.Shape.Centroid;
+                if (!seen.TryGetValue(key, out var earlier)) seen[key] = earlier = [];
+                foreach (var (number, other) in earlier)
+                {
+                    var distance = Judge.Metres(centre, other);
+                    if (distance <= metres) return Verdict.Fail(row, $"its {field} matches row {number}, {distance:0} m away");
+                }
+                earlier.Add((row.Number, centre));
+                return Verdict.Keep(row);
+            })];
         });
-    };
 }

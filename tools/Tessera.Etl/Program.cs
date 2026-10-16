@@ -9,7 +9,8 @@ using Tessera.Etl;
 //
 // Extract: GDAL's ogr2ogr reads each table from the source, such as a geodatabase's feature class,
 //          into GeoJSON, in longitude and latitude.
-// Transform: the pipeline file's filters clean each table's rows, in the order it lists them.
+// Transform: a chain of steps cleans each table's rows: the pipeline file's filters, in the order
+//          it lists them, then the stop rules (Pipes.cs, Steps.cs).
 // Load:    ogr2ogr writes the cleaned rows as SQL, and the tables join into one numbered script.
 //
 // Every run that passes its checks writes a log beside the scripts' folder, in db/seed-logs/, of
@@ -45,7 +46,7 @@ var work = Directory.CreateTempSubdirectory("tessera-etl-").FullName;
 // The folders GDAL's Docker image must see: the source's, to read it, and the work folder, for the
 // GeoJSON. The SQL comes back on standard output, so the scripts' folder needs no mount.
 var folders = new[] { Path.GetDirectoryName(source)!, work };
-var reports = ImmutableArray.CreateBuilder<TableReport>();
+var cleaned = ImmutableArray.CreateBuilder<(CleaningPlan, Cleaning)>();
 var parts = ImmutableArray.CreateBuilder<(TablePlan, string)>();
 try
 {
@@ -59,15 +60,16 @@ try
             return Finish(1, $"{table.Table}: extraction failed. {extract.Error}");
 
         var (rows, columns) = GeoJson.Read(File.ReadAllText(extracted));
-        var report = Cleaning.Clean(plan, rows, pipeline.StopWhen);
-        reports.Add(report);
-        if (report.Stop is { } stop)
+        // The whole transform step: the table's chain of filters and stop rules, run on its rows.
+        var done = plan.Chain.Run(Cleaning.Start(table, rows));
+        cleaned.Add((plan, done));
+        if (done.Stop is { } stop)
             return Finish(1, $"stopped. {stop} No script written.");
 
-        Console.WriteLine($"{table.Table}: read {report.Read}, kept {report.Kept.Length}, dropped {report.Dropped}.");
-        var cleaned = Path.Combine(work, $"{table.Table}.cleaned.geojson");
-        File.WriteAllText(cleaned, GeoJson.Write(report.Kept, columns));
-        var load = await Gdal.Run(SeedScript.LoadArguments(cleaned, table), folders);
+        Console.WriteLine($"{table.Table}: read {done.Read}, kept {done.Rows.Length}, dropped {done.Dropped}.");
+        var cleanFile = Path.Combine(work, $"{table.Table}.cleaned.geojson");
+        File.WriteAllText(cleanFile, GeoJson.Write(done.Rows, columns));
+        var load = await Gdal.Run(SeedScript.LoadArguments(cleanFile, table), folders);
         if (load.IsFailure)
             return Finish(1, $"{table.Table}: loading failed. {load.Error}");
         parts.Add((table, load.Value));
@@ -78,7 +80,7 @@ try
         return Finish(1, script.Error);
     Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(pipeline.Output))!);
     File.WriteAllText(pipeline.Output, script.Value);
-    var kept = reports.Sum(report => report.Kept.Length);
+    var kept = cleaned.Sum(table => table.Item2.Rows.Length);
     return Finish(0, $"wrote {pipeline.Output}: {parts.Count} tables, {kept} rows. Read it, then commit it; 'Tessera seed' runs it once.");
 }
 finally
@@ -92,7 +94,7 @@ finally
 int Finish(int code, string result)
 {
     Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(logFile))!);
-    File.WriteAllText(logFile, Cleaning.Log(pipelineFile, pipeline, reports.ToImmutable(), result, DateTimeOffset.Now));
+    File.WriteAllText(logFile, Report.Log(pipelineFile, pipeline, cleaned.ToImmutable(), result, DateTimeOffset.Now));
     (code == 0 ? Console.Out : Console.Error).WriteLine($"{(code == 0 ? "Done" : "Stopped")}: {result}");
     Console.WriteLine($"The log is in {logFile}.");
     return code;

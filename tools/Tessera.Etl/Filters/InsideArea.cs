@@ -30,9 +30,10 @@ public static class InsideArea
     /// <summary>
     /// Builds the filter from plain values, so a test can make one without a pipeline file.
     /// </summary>
-    public static Filter Create(Area area, OnFail onFail = OnFail.Drop) => rows =>
+    public static Handler<Cleaning> Create(Area area, OnFail onFail = OnFail.Drop)
     {
         var box = Judge.Box(area);
-        return Judge.Rows(rows, Name, onFail, row => Judge.Inside(row.Shape, box) ? null : "its shape lies outside the area");
-    };
+        return Steps.Filter(Name, onFail, Steps.EachRow(row =>
+            Judge.Inside(row.Shape, box) ? Verdict.Keep(row) : Verdict.Fail(row, "its shape lies outside the area")));
+    }
 }

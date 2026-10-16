@@ -17,12 +17,30 @@ public sealed record Row(int Number, Geometry? Shape, ImmutableDictionary<string
     public object? Value(string column) => Values.TryGetValue(column, out var value) ? value : null;
 }
 
-/// <summary>What a filter did to one row.</summary>
+/// <summary>What a filter did to one row. Kept rows leave no line in the log; the rest do.</summary>
 public enum Act
 {
+    Kept,
     Fixed,
     Dropped,
     Stopped,
+}
+
+/// <summary>
+/// A filter's word on one row: keep it, keep a mended copy, or fail it. A filter returns one
+/// verdict for each row, in order, and Steps.Filter acts on them, so every filter drops, logs and
+/// stops in the same way.
+/// </summary>
+public sealed record Verdict(Act Act, Row Row, string Detail)
+{
+    /// <summary>The row passes as it is.</summary>
+    public static Verdict Keep(Row row) => new(Act.Kept, row, "");
+
+    /// <summary>The row passes as <paramref name="mended"/>, and the log says what changed.</summary>
+    public static Verdict Fix(Row mended, string did) => new(Act.Fixed, mended, did);
+
+    /// <summary>The row cannot pass, for the reason given: it is dropped, or the run stops.</summary>
+    public static Verdict Fail(Row row, string reason) => new(Act.Dropped, row, reason);
 }
 
 /// <summary>One line of the log: a row's number, what happened to it, and why.</summary>
@@ -36,19 +54,16 @@ public sealed record LogLine(int Row, string Filter, Act Act, string Detail)
 }
 
 /// <summary>
-/// What one filter hands on: the rows it kept, a log line for each row it fixed or dropped, and,
-/// when it found a row it must not pass, the reason the whole run stops.
+/// The <b><i>context</i></b> every step of a table's chain reads and hands on (see Pipes.cs): the
+/// table, the rows read from the source, the rows still kept, a log line for each row a filter
+/// fixed, dropped or stopped at, and, once a step stops the run, the reason. Read stays fixed, so
+/// the stop rules can count what the filters dropped.
 /// </summary>
-public sealed record Outcome(ImmutableArray<Row> Rows, ImmutableArray<LogLine> Log, string? Stop)
+public sealed record Cleaning(TablePlan Table, int Read, ImmutableArray<Row> Rows, ImmutableArray<LogLine> Log, string? Stop)
 {
-    public int Fixed => Log.Count(line => line.Act == Act.Fixed);
+    /// <summary>A table's rows as GDAL read them, before any step has run.</summary>
+    public static Cleaning Start(TablePlan table, ImmutableArray<Row> rows) => new(table, rows.Length, rows, [], null);
 
-    public int Dropped => Log.Count(line => line.Act == Act.Dropped);
+    /// <summary>The rows lost, counted from the rows read, whichever filter dropped them.</summary>
+    public int Dropped => Read - Rows.Length;
 }
-
-/// <summary>
-/// A filter takes every row of one table and returns an <see cref="Outcome"/>. Each is a
-/// <b><i>pure function</i></b>: it reads only its rows and its settings, so a test can check it
-/// with no files (ADR 0004).
-/// </summary>
-public delegate Outcome Filter(ImmutableArray<Row> rows);

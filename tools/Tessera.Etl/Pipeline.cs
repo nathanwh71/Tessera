@@ -37,11 +37,12 @@ public sealed record TablePlan(
     StopWhen? StopWhen = null);
 
 /// <summary>
-/// A table ready to clean: its plan, its filters' names in order, and the one filter they chain
-/// into. The filters are built while the file is read, so a bad setting is found before GDAL runs.
-/// The names stay beside the chain, since the log counts each filter by name.
+/// A table ready to clean: its plan, its filters' names in order, and the one chain of steps they
+/// make, with the stop rules last (see Pipes.cs and Steps.cs). The steps are built while the file
+/// is read, so a bad setting is found before GDAL runs. The names stay beside the chain, since the
+/// log counts each filter by name.
 /// </summary>
-public sealed record CleaningPlan(TablePlan Table, ImmutableArray<string> Filters, Filter Chain);
+public sealed record CleaningPlan(TablePlan Table, ImmutableArray<string> Filters, Handler<Cleaning> Chain);
 
 /// <summary>
 /// A pipeline file read and checked, with each table's filters built and chained. A run starts
@@ -118,7 +119,7 @@ public static class PipelineFile
             return Result.Failure<Plan, ImmutableArray<string>>(["The pipeline file needs source, output and tables."]);
 
         var pipeline = read with { Area = read.Area ?? areaFromSettings };
-        var tables = pipeline.Tables.Select(table => Build(table, pipeline.Area)).ToImmutableArray();
+        var tables = pipeline.Tables.Select(table => Build(table, pipeline)).ToImmutableArray();
         var problems = Problems(pipeline)
             .Concat(tables.Where(table => table.IsFailure).SelectMany(table => table.Error))
             .ToImmutableArray();
@@ -128,14 +129,17 @@ public static class PipelineFile
     }
 
     /// <summary>
-    /// Builds a table's filters from the file, in order, and chains them with <c>&gt;&gt;</c>
-    /// (<see cref="Chain"/>). Each object names its filter in "filter"; the rest are its settings.
+    /// Builds a table's filters from the file, in order, and joins them with <c>&gt;&gt;</c>
+    /// (Pipes.cs), with the stop rules last. Each object names its filter in "filter"; the rest are
+    /// its settings. The table's own stop rules win over the file's, and the file's over the
+    /// defaults, so one table may allow more loss than the rest.
     /// </summary>
-    private static Result<CleaningPlan, ImmutableArray<string>> Build(TablePlan table, Area? area)
+    private static Result<CleaningPlan, ImmutableArray<string>> Build(TablePlan table, Pipeline pipeline)
     {
+        var area = pipeline.Area;
         var problems = ImmutableArray.CreateBuilder<string>();
         var names = ImmutableArray.CreateBuilder<string>();
-        var chain = Chain.Keep;
+        var steps = ImmutableArray.CreateBuilder<Handler<Cleaning>>();
         foreach (var step in table.Filters.IsDefault ? [] : table.Filters)
         {
             var name = step["filter"]?.GetValueKind() == JsonValueKind.String ? step["filter"]!.GetValue<string>() : "";
@@ -155,8 +159,9 @@ public static class PipelineFile
                 continue;
             }
             names.Add(name);
-            chain >>= built.Value;
+            steps.Add(built.Value);
         }
+        var chain = Pipes.All(steps) >> Steps.StopWhen(table.StopWhen ?? pipeline.StopWhen ?? Defaults);
         return problems.Count == 0
             ? Result.Success<CleaningPlan, ImmutableArray<string>>(new CleaningPlan(table, names.ToImmutable(), chain))
             : Result.Failure<CleaningPlan, ImmutableArray<string>>(problems.ToImmutable());

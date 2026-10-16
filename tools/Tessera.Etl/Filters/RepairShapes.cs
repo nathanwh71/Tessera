@@ -32,21 +32,15 @@ public static class RepairShapes
     /// <summary>
     /// Builds the filter from plain values, so a test can make one without a pipeline file.
     /// </summary>
-    public static Filter Create(OnFail onFail = OnFail.Drop) => rows =>
-    {
-        // Two passes, each with its own helper: the first repairs, so each repair logs as fixed;
-        // the second fails the rows beyond repair, so they obey onFail, drop or stop.
-        var beyondRepair = new HashSet<int>();
-        var repaired = Judge.Changes(rows, Name, row =>
+    public static Handler<Cleaning> Create(OnFail onFail = OnFail.Drop) =>
+        Steps.Filter(Name, onFail, Steps.EachRow(row =>
         {
-            if (row.Shape is null || row.Shape.IsEmpty || row.Shape.IsValid) return null;
+            if (row.Shape is null || row.Shape.IsEmpty || row.Shape.IsValid) return Verdict.Keep(row);
             var why = new IsValidOp(row.Shape).ValidationError?.Message ?? "invalid";
             var fixedShape = GeometryFixer.Fix(row.Shape);
-            if (!fixedShape.IsEmpty) return (row with { Shape = fixedShape }, $"repaired a shape that was invalid ({why})");
-            beyondRepair.Add(row.Number);
-            return null;
-        });
-        var judged = Judge.Rows(repaired.Rows, Name, onFail, row => beyondRepair.Contains(row.Number) ? "its shape is invalid and cannot be repaired" : null);
-        return judged with { Log = repaired.Log.AddRange(judged.Log) };
-    };
+            // A repair is a fix; a shape that comes out empty fails, so it obeys onFail, drop or stop.
+            return fixedShape.IsEmpty
+                ? Verdict.Fail(row, "its shape is invalid and cannot be repaired")
+                : Verdict.Fix(row with { Shape = fixedShape }, $"repaired a shape that was invalid ({why})");
+        }));
 }

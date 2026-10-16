@@ -31,19 +31,20 @@ public static class SwapCoordinates
     /// <summary>
     /// Builds the filter from plain values, so a test can make one without a pipeline file.
     /// </summary>
-    public static Filter Create(Area area) => rows =>
+    public static Handler<Cleaning> Create(Area area)
     {
         var box = Judge.Box(area);
-        return Judge.Changes(rows, Name, row =>
+        // It never fails a row, so OnFail.Drop never comes into play.
+        return Steps.Filter(Name, OnFail.Drop, Steps.EachRow(row =>
         {
-            if (row.Shape is null || row.Shape.IsEmpty || Judge.Inside(row.Shape, box)) return null;
+            if (row.Shape is null || row.Shape.IsEmpty || Judge.Inside(row.Shape, box)) return Verdict.Keep(row);
             // Apply changes a shape in place, so it works on a copy: the row read must stay as it
             // was, since rows are never changed, only replaced (ADR 0004).
             var turned = row.Shape.Copy();
             turned.Apply(new SwapAxes());
-            return Judge.Inside(turned, box) ? (row with { Shape = turned }, "swapped longitude and latitude") : null;
-        });
-    };
+            return Judge.Inside(turned, box) ? Verdict.Fix(row with { Shape = turned }, "swapped longitude and latitude") : Verdict.Keep(row);
+        }));
+    }
 
     /// <summary>Swaps each point's two numbers, so (latitude, longitude) becomes (longitude, latitude).</summary>
     private sealed class SwapAxes : IEntireCoordinateSequenceFilter

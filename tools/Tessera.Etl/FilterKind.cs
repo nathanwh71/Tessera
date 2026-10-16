@@ -7,13 +7,13 @@ namespace Tessera.Etl;
 
 /// <summary>
 /// One kind of <b><i>filter</i></b>, as a <b><i>pipeline file</i></b> names it: its name, what it
-/// does, and how it builds a <see cref="Filter"/> from the settings the file gives it. Each
+/// does, and how it builds a step of the chain from the settings the file gives it. Each
 /// filter's own file declares one, so a new filter touches no other file but Filters/All.cs.
 /// </summary>
 public sealed record FilterKind(
     string Name,
     string Description,
-    Func<JsonObject, Area?, Result<Filter, ImmutableArray<string>>> Build)
+    Func<JsonObject, Area?, Result<Handler<Cleaning>, ImmutableArray<string>>> Build)
 {
     /// <summary>
     /// A kind whose settings read into <typeparamref name="TSettings"/>, a record of the filter's
@@ -25,12 +25,12 @@ public sealed record FilterKind(
         string name,
         string description,
         Func<TSettings, Area?, IEnumerable<string>> check,
-        Func<TSettings, Area?, Filter> create) =>
+        Func<TSettings, Area?, Handler<Cleaning>> create) =>
         new(name, description, (settings, area) =>
         {
             var unknown = Unknown<TSettings>(settings).ToImmutableArray();
             if (!unknown.IsEmpty)
-                return Result.Failure<Filter, ImmutableArray<string>>([.. unknown.Select(problem => $"{name}: {problem}")]);
+                return Result.Failure<Handler<Cleaning>, ImmutableArray<string>>([.. unknown.Select(problem => $"{name}: {problem}")]);
             TSettings? read;
             try
             {
@@ -38,14 +38,14 @@ public sealed record FilterKind(
             }
             catch (JsonException error)
             {
-                return Result.Failure<Filter, ImmutableArray<string>>([$"{name}: {error.Message}"]);
+                return Result.Failure<Handler<Cleaning>, ImmutableArray<string>>([$"{name}: {error.Message}"]);
             }
             if (read is null)
-                return Result.Failure<Filter, ImmutableArray<string>>([$"{name}: its settings are missing."]);
+                return Result.Failure<Handler<Cleaning>, ImmutableArray<string>>([$"{name}: its settings are missing."]);
             var problems = check(read, area).Select(problem => $"{name}: {problem}").ToImmutableArray();
             return problems.IsEmpty
-                ? Result.Success<Filter, ImmutableArray<string>>(create(read, area))
-                : Result.Failure<Filter, ImmutableArray<string>>(problems);
+                ? Result.Success<Handler<Cleaning>, ImmutableArray<string>>(create(read, area))
+                : Result.Failure<Handler<Cleaning>, ImmutableArray<string>>(problems);
         });
 
     /// <summary>

@@ -30,8 +30,9 @@ public static class TidyText
     /// <summary>
     /// Builds the filter from plain values, so a test can make one without a pipeline file.
     /// </summary>
-    public static Filter Create(ImmutableArray<string>? fields = null) => rows =>
-        Judge.Changes(rows, Name, row =>
+    public static Handler<Cleaning> Create(ImmutableArray<string>? fields = null) =>
+        // It never fails a row, so OnFail.Drop never comes into play.
+        Steps.Filter(Name, OnFail.Drop, Steps.EachRow(row =>
         {
             var changed = new List<string>();
             var values = row.Values;
@@ -45,6 +46,8 @@ public static class TidyText
             }
             // A row keeps its values in no order, so the names are sorted: the same row then
             // gives the same log line on every run.
-            return changed.Count == 0 ? null : (row with { Values = values }, $"tidied {string.Join(", ", changed.Order(StringComparer.Ordinal))}");
-        });
+            return changed.Count == 0
+                ? Verdict.Keep(row)
+                : Verdict.Fix(row with { Values = values }, $"tidied {string.Join(", ", changed.Order(StringComparer.Ordinal))}");
+        }));
 }

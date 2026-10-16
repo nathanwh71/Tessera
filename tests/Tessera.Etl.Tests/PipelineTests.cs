@@ -35,7 +35,7 @@ public sealed class PipelineTests
         Assert.Equal(("food.cafes", "Cafes"), (table.Table.Table, table.Table.Layer));
         Assert.Equal(["insideArea", "requireFields"], table.Filters);
         // The chain stops at a place outside the area, since the file says "onFail": "stop".
-        Assert.NotNull(table.Chain([FilterTests.Place(1, 0.5, 51.5, ("name", "Far"))]).Stop);
+        Assert.NotNull(FilterTests.Clean(table.Chain, [FilterTests.Place(1, 0.5, 51.5, ("name", "Far"))]).Stop);
     }
 
     // Each filter reads its own settings, so one that belongs to another filter is refused.
@@ -89,12 +89,16 @@ public sealed class PipelineTests
 
     // A cleaning plan built by hand, as PipelineFile.Read would build it, so the stop rules are
     // checked without a pipeline file.
-    private static CleaningPlan Plan(StopWhen? rules, params (string Name, Filter Filter)[] filters) =>
-        new(Cafes(rules), [.. filters.Select(filter => filter.Name)], filters.Select(filter => filter.Filter).Aggregate(Chain.Keep, (a, b) => a >> b));
+    private static CleaningPlan Plan(StopWhen? rules, params (string Name, Handler<Cleaning> Step)[] filters) =>
+        new(Cafes(rules), [.. filters.Select(filter => filter.Name)],
+            Pipes.All(filters.Select(filter => filter.Step)) >> Steps.StopWhen(rules ?? PipelineFile.Defaults));
+
+    // Runs a plan's chain on the rows, as the program does for each table.
+    private static Cleaning Clean(CleaningPlan plan, ImmutableArray<Row> rows) => plan.Chain.Run(Cleaning.Start(plan.Table, rows));
 
     // The filter the stop-rule tests drop rows with, since dropping by a missing name is easy to
     // count.
-    private static readonly (string, Filter) RequireName = (RequireFields.Name, RequireFields.Create(["name"]));
+    private static readonly (string, Handler<Cleaning>) RequireName = (RequireFields.Name, RequireFields.Create(["name"]));
 
     // Ten places, the first `named` of them with a name. With ten rows, each unnamed row is ten
     // per cent of the table: one row meets the default limit of 10 %, and a second crosses it
@@ -105,7 +109,7 @@ public sealed class PipelineTests
     [Fact]
     public void Stops_a_table_that_drops_more_than_ten_per_cent_by_default()
     {
-        var report = Cleaning.Clean(Plan(null, RequireName), Ten(named: 8), pipelineRules: null);
+        var report = Clean(Plan(null, RequireName), Ten(named: 8));
 
         Assert.Equal("food.cafes: 2 of 10 rows were dropped (20 %), more than the 10 % allowed.", report.Stop);
     }
@@ -113,9 +117,24 @@ public sealed class PipelineTests
     [Fact]
     public void Lets_a_table_set_its_own_rules()
     {
-        Assert.Null(Cleaning.Clean(Plan(new StopWhen(DroppedOverPercent: 25), RequireName), Ten(named: 8), null).Stop);
+        Assert.Null(Clean(Plan(new StopWhen(DroppedOverPercent: 25), RequireName), Ten(named: 8)).Stop);
         Assert.Equal("food.cafes: only 8 rows remain, fewer than the 9 required.",
-            Cleaning.Clean(Plan(new StopWhen(DroppedOverPercent: 50, RowsUnder: 9), RequireName), Ten(named: 8), null).Stop);
+            Clean(Plan(new StopWhen(DroppedOverPercent: 50, RowsUnder: 9), RequireName), Ten(named: 8)).Stop);
+    }
+
+    // The chain PipelineFile.Read builds ends with the stop rules: the table's own when it has
+    // them, else the file's, else the defaults.
+    [Fact]
+    public void Ends_each_chain_from_the_file_with_the_closest_stop_rules()
+    {
+        var file = Good
+            .Replace("\"tables\":", "\"stopWhen\": { \"droppedOverPercent\": 5 },\n  \"tables\":", StringComparison.Ordinal)
+            .Replace("{ \"filter\": \"insideArea\", \"onFail\": \"stop\" },", "", StringComparison.Ordinal);
+        var fileRules = Assert.Single(PipelineFile.Read(file, Macau).Value.Tables);
+        Assert.Equal("food.cafes: 1 of 10 rows were dropped (10 %), more than the 5 % allowed.", Clean(fileRules, Ten(named: 9)).Stop);
+
+        var own = file.Replace("\"layer\": \"Cafes\",", "\"layer\": \"Cafes\", \"stopWhen\": { \"droppedOverPercent\": 20 },", StringComparison.Ordinal);
+        Assert.Null(Clean(Assert.Single(PipelineFile.Read(own, Macau).Value.Tables), Ten(named: 9)).Stop);
     }
 
     [Fact]
@@ -125,19 +144,20 @@ public sealed class PipelineTests
             (RequireFields.Name, RequireFields.Create(["name"], OnFail.Stop)),
             (TidyText.Name, TidyText.Create()));
 
-        var report = Cleaning.Clean(plan, Ten(named: 9), null);
+        var report = Clean(plan, Ten(named: 9));
 
         Assert.Equal("requireFields stopped the run at row 10: name is missing.", report.Stop);
-        Assert.All(report.Outcome.Log, line => Assert.Equal(RequireFields.Name, line.Filter));
+        Assert.All(report.Log, line => Assert.Equal(RequireFields.Name, line.Filter));
     }
 
     [Fact]
     public void Logs_each_filter_and_each_row_it_touched()
     {
         var pipeline = PipelineFile.Read(Good, Macau).Value.Pipeline;
-        var report = Cleaning.Clean(Plan(new StopWhen(DroppedOverPercent: 50), (TidyText.Name, TidyText.Create()), RequireName), Ten(named: 9), null);
+        var plan = Plan(new StopWhen(DroppedOverPercent: 50), (TidyText.Name, TidyText.Create()), RequireName);
+        var done = Clean(plan, Ten(named: 9));
 
-        var log = Cleaning.Log("data/macau.pipeline.json", pipeline, [report], "wrote it.", new DateTimeOffset(2026, 10, 15, 13, 0, 0, TimeSpan.FromHours(8)));
+        var log = Report.Log("data/macau.pipeline.json", pipeline, [(plan, done)], "wrote it.", new DateTimeOffset(2026, 10, 15, 13, 0, 0, TimeSpan.FromHours(8)));
 
         Assert.Contains("Tessera ETL log, 2026-10-15 13:00:00 +08:00", log, StringComparison.Ordinal);
         Assert.Contains("  tidyText: kept 10, fixed 0, dropped 0", log, StringComparison.Ordinal);

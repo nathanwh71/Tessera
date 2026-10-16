@@ -29,15 +29,16 @@ public static class DropDuplicateIds
     /// Builds the filter from plain values, so a test can make one without a pipeline file. Each
     /// run starts a fresh list of ids, since one table's ids say nothing about another's.
     /// </summary>
-    public static Filter Create(string field, OnFail onFail = OnFail.Drop) => rows =>
-    {
-        var first = new Dictionary<string, int>(StringComparer.Ordinal);
-        return Judge.Rows(rows, Name, onFail, row =>
+    public static Handler<Cleaning> Create(string field, OnFail onFail = OnFail.Drop) =>
+        Steps.Filter(Name, onFail, rows =>
         {
-            if (Judge.Text(row.Value(field)) is not { } id) return null;
-            if (first.TryGetValue(id, out var earlier)) return $"it repeats {field} '{id}' of row {earlier}";
-            first[id] = row.Number;
-            return null;
+            var first = new Dictionary<string, int>(StringComparer.Ordinal);
+            return [.. rows.Select(row =>
+            {
+                if (Judge.Text(row.Value(field)) is not { } id) return Verdict.Keep(row);
+                if (first.TryGetValue(id, out var earlier)) return Verdict.Fail(row, $"it repeats {field} '{id}' of row {earlier}");
+                first[id] = row.Number;
+                return Verdict.Keep(row);
+            })];
         });
-    };
 }

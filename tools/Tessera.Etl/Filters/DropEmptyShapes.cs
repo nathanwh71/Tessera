@@ -27,6 +27,7 @@ public static class DropEmptyShapes
     /// <summary>
     /// Builds the filter from plain values, so a test can make one without a pipeline file.
     /// </summary>
-    public static Filter Create(OnFail onFail = OnFail.Drop) => rows =>
-        Judge.Rows(rows, Name, onFail, row => row.Shape is null or { IsEmpty: true } ? "it has no shape" : null);
+    public static Handler<Cleaning> Create(OnFail onFail = OnFail.Drop) =>
+        Steps.Filter(Name, onFail, Steps.EachRow(row =>
+            row.Shape is null or { IsEmpty: true } ? Verdict.Fail(row, "it has no shape") : Verdict.Keep(row)));
 }
