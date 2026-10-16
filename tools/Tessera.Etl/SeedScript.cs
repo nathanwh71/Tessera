@@ -22,12 +22,12 @@ public static class SeedScript
     public static ImmutableArray<string> ExtractArguments(string source, string geoJson, TablePlan table) =>
     [
         "-f", "GeoJSON", geoJson, source,
-        .. table.Layer.Match(layer => new[] { layer }, () => []),
+        .. table.Layer is { } layer ? [layer] : Array.Empty<string>(),
         "-t_srs", "EPSG:4326",
         "-dim", "XY",
         "-nlt", "CONVERT_TO_LINEAR",
         "-resolveDomains",
-        .. table.Where.Match(where => new[] { "-where", where }, () => []),
+        .. table.Where is { } where ? ["-where", where] : Array.Empty<string>(),
     ];
 
     /// <summary>

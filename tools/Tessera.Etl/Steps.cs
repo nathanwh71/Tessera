@@ -68,9 +68,9 @@ public static class Steps
     {
         var percent = cleaning.Read == 0 ? 0 : 100.0 * cleaning.Dropped / cleaning.Read;
         var broken =
-            rules.RowsUnder.TryGetValue(out var least) && cleaning.Rows.Length < least
+            rules.RowsUnder is { } least && cleaning.Rows.Length < least
                 ? Maybe.From($"only {cleaning.Rows.Length} rows remain, fewer than the {least} required")
-            : rules.DroppedOverPercent.TryGetValue(out var most) && percent > most
+            : rules.DroppedOverPercent is { } most && percent > most
                 ? Maybe.From($"{cleaning.Dropped} of {cleaning.Read} rows were dropped ({percent.ToString("0.#", CultureInfo.InvariantCulture)} %), more than the {most.ToString(CultureInfo.InvariantCulture)} % allowed")
             : Maybe<string>.None;
         return broken.Match(

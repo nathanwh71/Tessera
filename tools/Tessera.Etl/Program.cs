@@ -54,7 +54,7 @@ try
     foreach (var plan in tables)
     {
         var table = plan.Table;
-        Console.WriteLine($"{table.Table}: extracting{table.Layer.Match(layer => $" {layer}", () => "")}...");
+        Console.WriteLine($"{table.Table}: extracting{(table.Layer is { } layer ? $" {layer}" : "")}...");
         var extracted = Path.Combine(work, $"{table.Table}.extracted.geojson");
         var extract = await Gdal.Run(SeedScript.ExtractArguments(source, extracted, table), folders);
         if (extract.IsFailure)

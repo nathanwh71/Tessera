@@ -18,15 +18,16 @@ public static class TidyText
     public const string Name = "tidyText";
 
     /// <summary>
-    /// The settings a pipeline file may give it. Fields is none by default, meaning every text
-    /// column, since most data needs tidying throughout; no onFail, since it fails no row.
+    /// The settings a pipeline file may give it. Fields is null by default, meaning every text
+    /// column, since most data needs tidying throughout; no onFail, since it fails no row. The JSON
+    /// reader fills this record, so it keeps null for a setting the file leaves out (ADR 0004).
     /// </summary>
-    public sealed record Settings(Maybe<ImmutableArray<string>> Fields = default);
+    public sealed record Settings(ImmutableArray<string>? Fields = null);
 
     /// <summary>The kind Filters/All.cs lists, so a pipeline file may name this filter.</summary>
     public static readonly FilterKind Kind = FilterKind.Of<Settings>(Name,
         "text is put into one Unicode form, runs of spaces become one, ends are trimmed, and empty text becomes null; `fields` limits it to some columns",
-        FilterKind.NothingToCheck, (settings, _) => Create(settings.Fields));
+        FilterKind.NothingToCheck, (settings, _) => Create(settings.Fields is { } fields ? fields : Maybe<ImmutableArray<string>>.None));
 
     /// <summary>
     /// Builds the filter from plain values, so a test can make one without a pipeline file.

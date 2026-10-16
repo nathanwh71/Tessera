@@ -85,13 +85,13 @@ public sealed class PipelineTests
     }
 
     // One table for the tests below, with the stop rules a test gives it.
-    private static TablePlan Cafes(Maybe<StopWhen> rules = default) => new("food.cafes", "Cafes", StopWhen: rules);
+    private static TablePlan Cafes(StopWhen? rules = null) => new("food.cafes", "Cafes", StopWhen: rules);
 
     // A cleaning plan built by hand, as PipelineFile.Read would build it, so the stop rules are
     // checked without a pipeline file.
-    private static CleaningPlan Plan(Maybe<StopWhen> rules, params (string Name, Handler<Cleaning> Step)[] filters) =>
+    private static CleaningPlan Plan(StopWhen? rules, params (string Name, Handler<Cleaning> Step)[] filters) =>
         new(Cafes(rules), [.. filters.Select(filter => filter.Name)],
-            Pipes.All(filters.Select(filter => filter.Step)) >> Steps.StopWhen(rules.GetValueOrDefault(PipelineFile.Defaults)));
+            Pipes.All(filters.Select(filter => filter.Step)) >> Steps.StopWhen(rules ?? PipelineFile.Defaults));
 
     // Runs a plan's chain on the rows, as the program does for each table.
     private static Cleaning Clean(CleaningPlan plan, ImmutableArray<Row> rows) => plan.Chain.Run(Cleaning.Start(plan.Table, rows));
@@ -109,7 +109,7 @@ public sealed class PipelineTests
     [Fact]
     public void Stops_a_table_that_drops_more_than_ten_per_cent_by_default()
     {
-        var report = Clean(Plan(Maybe<StopWhen>.None, RequireName), Ten(named: 8));
+        var report = Clean(Plan(null, RequireName), Ten(named: 8));
 
         Assert.Equal("food.cafes: 2 of 10 rows were dropped (20 %), more than the 10 % allowed.", report.Stop);
     }

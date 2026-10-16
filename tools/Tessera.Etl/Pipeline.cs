@@ -17,8 +17,8 @@ public sealed record Pipeline(
     string Source,
     string Output,
     ImmutableArray<TablePlan> Tables,
-    Maybe<Area> Area = default,
-    Maybe<StopWhen> StopWhen = default);
+    Area? Area = null,
+    StopWhen? StopWhen = null);
 
 /// <summary>
 /// One table: its name as <b><i>schema</i></b>.table, a schema being a named folder of tables; the
@@ -26,16 +26,15 @@ public sealed record Pipeline(
 /// <b><i>geodatabase</i></b>; an optional filter on the source's rows; whether its shapes are lines
 /// or areas, which may mix single and multiple parts; and its cleaning <b><i>filters</i></b>, run
 /// in the order given. Each filter is an object that names it, with its own settings beside the
-/// name, such as <c>{ "filter": "insideArea", "onFail": "stop" }</c>. A setting the file leaves
-/// out is none.
+/// name, such as <c>{ "filter": "insideArea", "onFail": "stop" }</c>.
 /// </summary>
 public sealed record TablePlan(
     string Table,
-    Maybe<string> Layer = default,
-    Maybe<string> Where = default,
+    string? Layer = null,
+    string? Where = null,
     bool Lines = false,
     ImmutableArray<JsonObject> Filters = default,
-    Maybe<StopWhen> StopWhen = default);
+    StopWhen? StopWhen = null);
 
 /// <summary>
 /// A table ready to clean: its plan, its filters' names in order, and the one chain of steps they
@@ -62,7 +61,7 @@ public enum OnFail
 /// When a table stops the run, even though every filter passed: when more than
 /// <c>DroppedOverPercent</c> of its rows were dropped, or fewer than <c>RowsUnder</c> remain.
 /// </summary>
-public sealed record StopWhen(Maybe<double> DroppedOverPercent = default, Maybe<int> RowsUnder = default);
+public sealed record StopWhen(double? DroppedOverPercent = null, int? RowsUnder = null);
 
 /// <summary>The box every place should sit in, in degrees, as tessera.json's Area holds it.</summary>
 public sealed record Area(double MinLongitude, double MinLatitude, double MaxLongitude, double MaxLatitude);
@@ -82,8 +81,9 @@ public static class PipelineFile
 
     // camelCase in the file, as JSON usually is. A key the records lack stops the read, so a
     // misspelt setting cannot pass unseen and leave a filter at its default; so does a setting a
-    // record needs, such as requireFields' fields, when the file leaves it out. MaybeJson reads a
-    // setting that may be missing, which the library cannot read alone.
+    // record needs, such as requireFields' fields, when the file leaves it out. The JSON reader
+    // knows no Maybe, so these records, which it fills, keep null for a setting the file leaves out
+    // (ADR 0004).
     internal static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web)
     {
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
@@ -92,7 +92,7 @@ public static class PipelineFile
         PropertyNameCaseInsensitive = false,
         // Comments may stand in the file, so a publisher can note why a table has its filters.
         ReadCommentHandling = JsonCommentHandling.Skip,
-        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase), new MaybeJson() },
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
     };
 
     // A plain lower-case name needs no quotes in SQL and reads the same in a tile's address.
@@ -121,7 +121,7 @@ public static class PipelineFile
         if (!read.TryGetValue(out var file) || file.Tables.IsDefault)
             return Result.Failure<Plan, ImmutableArray<string>>(["The pipeline file needs source, output and tables."]);
 
-        var pipeline = file with { Area = file.Area.Or(areaFromSettings) };
+        var pipeline = file with { Area = file.Area ?? areaFromSettings.GetValueOrDefault() };
         var tables = pipeline.Tables.Select(table => Build(table, pipeline)).ToImmutableArray();
         var problems = Problems(pipeline)
             .Concat(tables.Where(table => table.IsFailure).SelectMany(table => table.Error))
@@ -139,7 +139,7 @@ public static class PipelineFile
     /// </summary>
     private static Result<CleaningPlan, ImmutableArray<string>> Build(TablePlan table, Pipeline pipeline)
     {
-        var area = pipeline.Area;
+        var area = pipeline.Area.AsMaybe();
         var problems = ImmutableArray.CreateBuilder<string>();
         var names = ImmutableArray.CreateBuilder<string>();
         var steps = ImmutableArray.CreateBuilder<Handler<Cleaning>>();
@@ -167,7 +167,7 @@ public static class PipelineFile
             names.Add(kind.Name);
             steps.Add(built.Value);
         }
-        var chain = Pipes.All(steps) >> Steps.StopWhen(table.StopWhen.Or(pipeline.StopWhen).GetValueOrDefault(Defaults));
+        var chain = Pipes.All(steps) >> Steps.StopWhen(table.StopWhen ?? pipeline.StopWhen ?? Defaults);
         return problems.Count == 0
             ? Result.Success<CleaningPlan, ImmutableArray<string>>(new CleaningPlan(table, names.ToImmutable(), chain))
             : Result.Failure<CleaningPlan, ImmutableArray<string>>(problems.ToImmutable());
@@ -187,7 +187,7 @@ public static class PipelineFile
             yield return $"output: '{pipeline.Output}' must be named NNNN-words.sql, such as db/seed/0002-parks.sql, so DbUp runs it in order.";
         if (pipeline.Tables.IsEmpty)
             yield return "tables: name at least one table.";
-        if (pipeline.Area.TryGetValue(out var area) && (area.MinLongitude >= area.MaxLongitude || area.MinLatitude >= area.MaxLatitude))
+        if (pipeline.Area is { } area && (area.MinLongitude >= area.MaxLongitude || area.MinLatitude >= area.MaxLatitude))
             yield return "area: the box must run west to east and south to north.";
 
         foreach (var duplicate in pipeline.Tables.GroupBy(table => table.Table).Where(group => group.Count() > 1))
