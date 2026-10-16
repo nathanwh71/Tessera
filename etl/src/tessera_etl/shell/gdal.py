@@ -24,7 +24,7 @@ IMAGE = "ghcr.io/osgeo/gdal:alpine-small-3.11.4"
 @functools.cache
 def _local() -> bool:
     """Whether this machine has its own ogr2ogr; asked once, at the first run."""
-    return isinstance(_start("ogr2ogr", ("--version",)), Ok)
+    return isinstance(_run_to_end("ogr2ogr", ("--version",)), Ok)
 
 
 def run(arguments: Sequence[str], folders: Sequence[str]) -> Result[str, str]:
@@ -33,13 +33,14 @@ def run(arguments: Sequence[str], folders: Sequence[str]) -> Result[str, str]:
     `folders` are the folders Docker must see, when it runs the image.
     """
     if _local():
-        return _start("ogr2ogr", tuple(arguments))
+        return _run_to_end("ogr2ogr", tuple(arguments))
     mounts = [part for folder in dict.fromkeys(folders) for part in ("--volume", f"{folder}:{folder}")]
-    return _start("docker", ("run", "--rm", *mounts, IMAGE, "ogr2ogr", *arguments))
+    return _run_to_end("docker", ("run", "--rm", *mounts, IMAGE, "ogr2ogr", *arguments))
 
 
-def _start(program: str, arguments: Sequence[str]) -> Result[str, str]:
-    """Runs one program to its end, reading its output as it comes so the pipe never fills."""
+def _run_to_end(program: str, arguments: Sequence[str]) -> Result[str, str]:
+    """Reads the program's output while it runs, so the pipe, the buffer of fixed size that carries
+    the output here, never fills and stalls the program."""
     try:
         done = subprocess.run([program, *arguments], capture_output=True, check=False)
     except FileNotFoundError:
