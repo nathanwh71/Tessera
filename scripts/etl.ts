@@ -3,9 +3,11 @@
 //
 //   npm run etl -- data/parks.pipeline.json
 //
-// The pipeline does the work: it reads the source with GDAL, runs the filters, writes the script to
-// db/seed and its log to db/seed-logs. It runs the pipeline in etl/, or in the folder
-// TESSERA_ETL_PYTHON names. This script checks what it can first, so a mistake gets a plain
+// The pipeline does the work. pyogrio, a Python library built on GDAL, the library that reads map
+// files, reads the source; GDAL's own program, ogr2ogr, reads it instead in three cases
+// (etl/src/tessera_etl/shell/extract.py). The pipeline then runs the filters and writes the script
+// to db/seed and its log to db/seed-logs. This script runs the pipeline in etl/, or in the folder
+// TESSERA_ETL_PYTHON names. It checks what it can first, so a mistake gets a plain
 // answer, then runs the pipeline and ends with its exit code: 0 when it wrote the script, 1 when it
 // stopped or failed, 2 when the command or the pipeline file is wrong.
 import { existsSync } from 'node:fs';
