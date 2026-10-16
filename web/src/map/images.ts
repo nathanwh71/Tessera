@@ -28,14 +28,6 @@ export const TOOLTIP_IMAGE = "tooltip";
 export const PIN_PREFIX = "pin:";
 
 /**
- * The image name of a group's pin, such as `pin:food`. index.ts exports it, so code outside the map
- * ***module*** can name a pin's image without knowing the prefix.
- */
-export function pinImage(group: GroupKey): string {
-	return `${PIN_PREFIX}${group}`;
-}
-
-/**
  * The prefix of every cluster image; the counts of the four groups follow, in the map's order, joined
  * by '-', such as `cluster:3-0-1-0`. The counts sit in the name so each mix of groups gets an image
  * of its own, ringed in their colours in proportion (UI-10, criterion 1).

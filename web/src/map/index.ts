@@ -3,7 +3,7 @@
 // the map shows, and its update, the function that makes the new model from the old and a message;
 // the module's own tests import through it too (ADR 0001).
 export { formatPosition } from "./coordinates";
-export { CLUSTER_PREFIX, PIN_PREFIX, TOOLTIP_IMAGE, pinImage, readImageName } from "./images";
+export { CLUSTER_PREFIX, PIN_PREFIX, TOOLTIP_IMAGE, readImageName } from "./images";
 export type { ImageRequest } from "./images";
 export { CANNOT_DRAW, clusterLabel, levelText, mergeDistanceMetres, pinLabel, zoomLabel } from "./labels";
 export type { MapZoom } from "./levels";
