@@ -1,10 +1,13 @@
-"""A JSON reader that remembers where each value sat, and fails as .NET's reader fails.
+"""A ***JSON*** reader that remembers where each value sat, and fails as .NET's reader fails.
+
+JSON is the plain-text format of the pipeline file: objects in braces, lists in square
+brackets, text in double quotes, and numbers, true, false and null.
 
 The C# tool read the ***pipeline file*** with System.Text.Json, .NET's JSON library. When the
 file is wrong, its message names the place, such as 'Path: $.tables[0].lines | LineNumber: 0 |
 BytePositionInLine: 97.'. Python's own json module keeps no places, so this module reads the
 text itself: it notes, for each value, its ***path*** (the keys and list positions that lead to
-it) and the line and byte just after its first token. A ***token*** is one unit of JSON text:
+it) and the line and byte straight after its first token. A ***token*** is one unit of JSON text:
 a string, a number, true, false, null, or one of the marks { } [ ] : ,.
 
 Numbers stay as their text, in `Number`, since .NET decides whether 1.0 may fill a whole-number
@@ -36,7 +39,7 @@ class Place:
 
 @dataclass(frozen=True, slots=True)
 class Parsed:
-    """The file's value, with the place just after the first token of every value in it."""
+    """The file's value, with the place straight after the first token of every value in it."""
 
     value: JsonValue
     places: Mapping[Path, Place]

@@ -1,5 +1,8 @@
 """Writes the SQL that makes and fills one table from its cleaned rows.
 
+***SQL*** is the language a database such as PostgreSQL takes its orders in; ***PostGIS*** is
+the PostgreSQL extension that stores and measures shapes.
+
 The SQL takes the form GDAL's PGDump driver wrote before: drop the table, make it with a `fid`
 ***key*** and a `geom` column in ***SRID*** 4326 (the code of longitude and latitude), one
 INSERT for each row in order, a ***spatial index***, and fresh statistics.

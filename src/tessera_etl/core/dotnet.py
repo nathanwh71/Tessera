@@ -44,7 +44,7 @@ def _digits(value: float) -> tuple[str, int]:
 
 
 def number_text(value: float) -> str:
-    """A number with a fraction as .NET's ToString("R") writes it.
+    """A number with a fraction as .NET's `ToString("R")` writes it.
 
     That is the shortest text that reads back as the same number, written out in full
     between 0.0001 and 10 to the 17th, and in ***scientific notation***, such as 1E+21 or

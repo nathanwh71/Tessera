@@ -51,7 +51,7 @@ def test_reads_a_pipeline_and_takes_the_area_from_the_settings() -> None:
     [cafes] = plan.tables
     assert (cafes.table.table, cafes.table.layer) == ("food.cafes", "Cafes")
     assert cafes.filters == ("insideArea", "requireFields")
-    # The chain stops at a place outside the area, since the file says "onFail": "stop".
+    # The chain stops at a place outside the area, since the file sets onFail to stop.
     assert clean(cafes.chain, [place(1, 0.5, 51.5, name="Far")]).stop is not None
 
 

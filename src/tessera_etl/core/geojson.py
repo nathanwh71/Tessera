@@ -171,7 +171,7 @@ def _value(value: object) -> Value:
 
 
 def jsonc_text(value: object) -> str:
-    """A list or an object as GDAL's JSON library, json-c, writes it: '{ "a": 1 }'."""
+    """A list or an object as GDAL's JSON library, json-c, writes it, such as `{ "a": 1 }`."""
     match value:
         case None:
             return "null"

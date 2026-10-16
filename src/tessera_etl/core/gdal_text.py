@@ -5,7 +5,7 @@ the tool read that text. Writing a number as text can round it, so the numbers t
 cleaned are the source's numbers after that round trip. The Python build reads the source
 directly, so it puts each value through the same round trip here, following GDAL's own code
 (ogr/ogrutils.cpp and ogr/ogrsf_frmts/geojson/ogrgeojsonwriter.cpp, version 3.8.4), and gets
-the very numbers, dates and text the C# tool got.
+the same numbers, dates and text the C# tool got.
 """
 
 import math

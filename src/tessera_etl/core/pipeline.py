@@ -89,7 +89,7 @@ def read(text: str, area_from_settings: Area | None) -> Result[Plan, tuple[str, 
 def _build(table: TablePlan, pipeline: Pipeline) -> Result[CleaningPlan, tuple[str, ...]]:
     """Builds a table's filters from the file, in order, and joins them with `>>`.
 
-    The stop rules come last. Each object names its filter in "filter"; the rest are its
+    The stop rules come last. Each object names its filter in `filter`; the rest are its
     settings. The table's own stop rules win over the file's, and the file's over the
     defaults, so one table may allow more loss than the rest.
     """

@@ -1,5 +1,10 @@
 """Runs GDAL's ogr2ogr: the machine's own when it has one, and GDAL's Docker image when not.
 
+***GDAL*** is the open library most map software uses to read and write map files; ogr2ogr is
+its program that copies places from one file format to another. ***Docker*** runs a program
+inside a sealed, ready-made copy of a system, called an image, so a machine without GDAL can
+still run GDAL's own build.
+
 The Python build reads layers with pyogrio, so it runs ogr2ogr only for the few cases pyogrio
 cannot match: a table that holds curves, and a read that fails, where ogr2ogr's own message is
 the one the C# tool printed. Every path passed in is absolute, and Docker sees each folder at
