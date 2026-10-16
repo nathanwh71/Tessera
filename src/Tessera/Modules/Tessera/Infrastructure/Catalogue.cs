@@ -32,7 +32,7 @@ public static class CatalogueReader
         Names(row.KeyColumns));
 
     // The query writes each list of names as JSON, so this reads its own output. The reader gives
-    // null for the JSON text 'null', which the query never writes; none then means no names.
+    // null for the JSON text 'null', which the query never writes; null then gives an empty list.
     private static ImmutableArray<SqlName> Names(string json) =>
         JsonSerializer.Deserialize<string[]>(json) is { } names ? [.. names.Select(SqlName.Quote)] : [];
 

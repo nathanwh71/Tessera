@@ -23,7 +23,7 @@ public delegate Task<Result<byte[]?, DatabaseError>> TileReader(Query query, Can
 
 /// <summary>Answers a tile request from the database (US-07).</summary>
 /// <param name="catalogue">
-/// Gives the <b><i>catalogue</i></b>, the list of <b><i>layers</i></b>, as it stands, or none before
+/// Gives the <b><i>catalogue</i></b>, the list of <b><i>layers</i></b>, as it stands, or null before
 /// the first load (N-23).
 /// </param>
 /// <param name="read">Runs the tile query.</param>
