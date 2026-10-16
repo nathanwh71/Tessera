@@ -73,7 +73,6 @@ a file and show no gap, so the class leaves them out."""
 
 _BLANK = re.compile(f"{SPACE}*")
 _SPACES = re.compile(f"{SPACE}+")
-# White space other than a plain space, two spaces in a row, or a space at either end.
 
 GAPS = "\t\n\v\f\r\x85\xa0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000"
 """Each mark SPACE matches but the plain space, listed one by one, so that Arrow's patterns, which
