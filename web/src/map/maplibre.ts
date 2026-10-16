@@ -23,9 +23,9 @@ import { type FontFiles, LAYER, SOURCE } from "./style";
 import { tileProblem } from "./tiles";
 
 // MapLibre runs its heavy work in a worker, a script on a second thread, a line of work the browser
-// runs beside the page's own. It looks for the worker beside its own module, which the build moves
-// when it bundles the code into one file; so the build ships the worker as a file of its own under
-// /assets/, and this tells MapLibre where.
+// runs beside the page's own. It looks for the worker beside its own module, but the build joins the
+// modules into a few renamed files (vite.config.ts) and leaves no worker there. The build ships
+// the worker as a file of its own under /assets/, and this tells MapLibre where.
 setWorkerUrl(workerUrl);
 
 /**
