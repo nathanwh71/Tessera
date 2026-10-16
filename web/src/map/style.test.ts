@@ -15,7 +15,7 @@ const THEME = themeFrom((variable) => `var(${variable})`);
 
 /**
  * A style for the nine ***layers***, landed, with only the inputs a test names changed, so each test
- * states just what it is about.
+ * states what it is about and no more.
  */
 function style(changes: Partial<StyleInput> = {}) {
 	return buildStyle({

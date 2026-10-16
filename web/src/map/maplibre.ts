@@ -128,8 +128,9 @@ export function feedPlaces(map: MapLibreMap, state: () => FeedState, onFed: () =
 		const source = map.getSource<GeoJSONSource>(SOURCE.places);
 		if (source === undefined) return;
 		const { visible } = state();
-		// A layer just switched on may have no tile source yet, until MapLibre applies the new style;
-		// asking for its features then would find none, so the feed reads only the sources present.
+		// A layer switched on a moment ago may have no tile source until MapLibre applies the new
+		// style; asking for its features then would find none, so the feed reads only the sources
+		// present.
 		const loaded: LoadedLayer[] = visible
 			.filter((id) => map.getSource(SOURCE.tiles(id)) !== undefined)
 			.map((id) => ({ layerId: id, features: map.querySourceFeatures(SOURCE.tiles(id), { sourceLayer: id }) }));

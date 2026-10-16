@@ -83,7 +83,7 @@ describe("UI-15 and UI-12 contrast", () => {
 
 	it("measures contrast as WCAG does", () => {
 		expect(contrastRatio("#000000", "#FFFFFF")).toBeCloseTo(21, 5);
-		// A grey just under 4.5:1 checks the sum near the line that decides pass or fail.
+		// A grey at 4.48:1, under the 4.5:1 that decides pass or fail, checks the sum near that line.
 		expect(contrastRatio("#777777", "#FFFFFF")).toBeCloseTo(4.48, 2);
 	});
 });

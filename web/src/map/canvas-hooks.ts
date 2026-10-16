@@ -99,7 +99,7 @@ export function useLanding(latest: RefObject<CanvasInputs>) {
 			return;
 		}
 		if (landing.stage !== "dropping") return;
-		// `requestAnimationFrame` runs its function just before the browser's next frame, one redraw of
+		// `requestAnimationFrame` runs its function before the browser's next frame, one redraw of
 		// the screen. One call alone may land before the frame that first paints the drops, and the
 		// browser would then see only the end and skip the fall; the second call waits for the frame
 		// after that one, so the start has been painted.
@@ -183,7 +183,7 @@ export function useMapLibre(
 
 		const names = clusterNames.current;
 		// Reads the targets in view afresh and returns them too, so the idle handler can drop the
-		// same pins it just drew targets for.
+		// same pins it has drawn targets for.
 		const refreshTargets = (): readonly Target[] => {
 			const inView = targetsInView(map, names);
 			setTargets(inView);

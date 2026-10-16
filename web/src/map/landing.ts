@@ -69,7 +69,7 @@ const LANDED: Landing = { stage: "landed" };
 
 /**
  * The stage after an event. An event that means nothing at the current stage returns that stage
- * unchanged, the very same object, so React sees no change and skips a redraw.
+ * unchanged, the same object, so React sees no change and skips a redraw.
  */
 export function step(landing: Landing, event: LandingEvent): Landing {
 	switch (event.name) {

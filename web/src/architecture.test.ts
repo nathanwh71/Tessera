@@ -36,7 +36,7 @@ function sources(module: string): { file: string; imports: string[] }[] {
 		.map((f) => {
 			const text = readFileSync(join(dir, f), "utf8");
 			// Only imports that start with '.' reach another folder of src/; an import by bare name,
-			// such as "react", is a package and crosses no wall between modules.
+			// such as `react`, is a package and crosses no wall between modules.
 			const imports = [...text.matchAll(/\bfrom\s+"(\.[^"]*)"/g)].map((m) => m[1] ?? "");
 			return { file: join(dir, f), imports };
 		});

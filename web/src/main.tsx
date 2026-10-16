@@ -29,12 +29,12 @@ async function start(root: HTMLElement): Promise<void> {
 	// waits for the fonts first.
 	await Promise.allSettled([document.fonts.load('500 14px "Roboto"'), document.fonts.load('24px "Material Symbols Rounded"')]);
 	// The service writes the area into the page as a block of JSON, the text form of a value that
-	// programs exchange, outside the part of the page React draws; and the map needs the area before
-	// React starts, so this one line reads the page itself. The block never runs, so the page's
-	// security policy, the rule that blocks scripts written into the page, lets it through, and the
-	// map learns its area with no request of its own. A page with no block, as under `vite` alone,
-	// the development server that serves the page without the service, or with one the map cannot
-	// read, opens on Macau.
+	// programs exchange, outside the part of the page React draws. The map needs the area before
+	// React starts, so this line reads it from the page, with no request of its own. The block
+	// never runs, so the page's security policy, the rule that blocks scripts written into the
+	// page, lets it through. A page with no block, or with one the map cannot read, opens on Macau;
+	// `vite` alone, the development server that serves the page without the service, gives such a
+	// page.
 	const area = areaOf(document.getElementById("tessera-area")?.textContent ?? "");
 	// index.html can only say 'Map'; the tab and a screen reader's first words name the area too.
 	document.title = `Map of ${area.name}`;

@@ -215,7 +215,8 @@ const sortKey: ExpressionSpecification = ["get", "sort"];
 function clusterImage(): ExpressionSpecification {
 	const count = (g: GroupKey): ExpressionSpecification => ["to-string", ["get", g]];
 	const [food, outdoors, culture, transport] = GROUP_KEYS.map(count);
-	// There are always four groups, but the compiler cannot know it, so each takes "" as a default.
+	// There are always four groups, but the compiler cannot know it, so each takes `""` as a
+	// default.
 	return ["concat", CLUSTER_PREFIX, food ?? "", "-", outdoors ?? "", "-", culture ?? "", "-", transport ?? ""];
 }
 
@@ -251,7 +252,7 @@ function nameLayout(): NonNullable<SymbolLayerSpecification["layout"]> {
 
 /**
  * A paint setting: a layer, one of its paint properties, and the value. Kept as plain data, so the
- * style and useStyle apply the very same list and cannot disagree.
+ * style and useStyle apply the same list and cannot disagree.
  */
 export type PaintSetting = readonly [layer: string, property: "icon-opacity" | "text-opacity", value: number];
 

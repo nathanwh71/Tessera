@@ -83,7 +83,7 @@ const isValue = (v: unknown): v is PropertyValue =>
 	v === null || typeof v === "string" || typeof v === "number" || typeof v === "boolean";
 
 /**
- * A point's shape: the type "Point" and two numbers, longitude then latitude; a third, a height, is
+ * A point's shape: the type `Point` and two numbers, longitude then latitude; a third, a height, is
  * left out, since a pin marks only where a place stands on the ground.
  */
 const PointGeometry = v.object({ type: v.literal("Point"), coordinates: v.tuple([v.number(), v.number()]) });

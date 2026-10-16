@@ -1,6 +1,6 @@
 // testing/fake-maplibre.ts: a stand-in for MapLibre, the library that draws the map, in jsdom, the
 // pretend browser the tests run in, which has no WebGL, the browser's 3D drawing. The page tests mock
-// the "maplibre-gl" module with it, that is, swap it in for the real one. It records what the page
+// the `maplibre-gl` module with it, that is, swap it in for the real one. It records what the page
 // asks of the map, lets a test fire the map's events, and draws nothing. The testing module holds
 // such fakes for tests alone.
 
@@ -127,7 +127,7 @@ export class FakeMap {
 }
 
 /**
- * The module the page imports as "maplibre-gl", faked. `setWorkerUrl` does nothing, since the fake
+ * The module the page imports as `maplibre-gl`, faked. `setWorkerUrl` does nothing, since the fake
  * starts no worker, the script on a second thread that prepares ***tiles*** for drawing.
  */
 export const fakeMapLibre = { Map: FakeMap, setWorkerUrl: (): void => undefined };

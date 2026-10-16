@@ -15,8 +15,8 @@ import { type Area, type Bounds, type Level, type LngLat, MAX_ZOOM, MIN_ZOOM, ty
 import { OPEN_CLUSTER_LEVEL } from "./levels";
 
 /**
- * A ***layer*** opened alone, at /{layer}.html, is framed no closer than level 18, so a few places
- * never fill the screen.
+ * The map frames a ***layer*** opened alone, at /{layer}.html, no closer than level 18, so a few
+ * places never fill the screen.
  */
 export const FRAME_MAX_LEVEL = level(18);
 
