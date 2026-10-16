@@ -92,6 +92,26 @@ public sealed class TableSqlTests
     public void Types_a_column_by_the_values_it_holds(string type, params object?[] values) =>
         Assert.Equal(type, TableSql.TypeOf(values.Select(value => value.AsMaybe())));
 
+    // Text that is all dates, times or date-times takes that type, as GDAL typed it; a date that
+    // cannot be, or any other text beside the dates, keeps the column as text.
+    [Theory]
+    [InlineData("date", "2024-05-01", "2023/01/02")]
+    [InlineData("time", "10:30:00", "11:00:00.5")]
+    [InlineData("timestamp with time zone", "2024-05-01T10:30:00Z", "2024-05-01 11:00:00")]
+    [InlineData("timestamp with time zone", "2024-05-01T10:30:00.123+08:00", "2024-05-01T10:30:00-05")]
+    [InlineData("timestamp with time zone", "2024-05-01", "2024-05-01T10:30:00")]
+    [InlineData("VARCHAR", "2024-05-01", "soon")]
+    [InlineData("VARCHAR", "2024-13-45")]
+    [InlineData("VARCHAR", "2024-5-1")]
+    [InlineData("VARCHAR", "2024-05-01", "10:30:00")]
+    public void Types_dates_and_times_as_GDAL_did(string type, params string[] values) =>
+        Assert.Equal(type, TableSql.TypeOf(values.Select(value => Maybe.From<object>(value))));
+
+    // A date goes into the script as written, in quotes, and PostgreSQL reads it as the column's type.
+    [Fact]
+    public void Writes_a_date_as_its_text() =>
+        Assert.Equal("'2024-05-01T10:30:00Z'", TableSql.Literal(Maybe.From<object>("2024-05-01T10:30:00Z"), "timestamp with time zone"));
+
     // Every digit a number holds survives, where GDAL kept fifteen and wrote 0.3.
     [Theory]
     [InlineData(0.30000000000000004, "FLOAT8", "0.30000000000000004")]

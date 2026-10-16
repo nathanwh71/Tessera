@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using CSharpFunctionalExtensions;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO;
@@ -15,8 +16,8 @@ namespace Tessera.Etl;
 /// saves that pass, a GDAL run for each table, and the checks on GDAL's text.
 /// </summary>
 /// <remarks>
-/// It keeps GDAL's choices where the service depends on them, and departs from them in two places
-/// on purpose. A number with a fraction keeps all its digits, where GDAL kept fifteen. A column
+/// It keeps GDAL's choices where the service depends on them, its typing of dates, times and
+/// date-times included, and departs from them in two places on purpose. A number with a fraction keeps all its digits, where GDAL kept fifteen. A column
 /// that mixes text with numbers or true and false becomes text, where GDAL made it JSON, which the
 /// tile query leaves out of every tile.
 /// </remarks>
@@ -104,11 +105,14 @@ public static class TableSql
     /// <summary>
     /// The column's type, from the values its rows hold, as GDAL chose it: whole numbers become
     /// INTEGER, or INT8 past 32 bits; any fraction makes FLOAT8; true and false become BOOLEAN, or
-    /// a number beside other numbers; anything mixed with text, and a column of nulls, becomes text.
+    /// a number beside other numbers; text that is all dates, times or date-times takes that type
+    /// (<see cref="TimeTypeOf"/>); anything mixed with text, and a column of nulls, becomes text.
     /// </summary>
     public static string TypeOf(IEnumerable<Maybe<object>> values)
     {
         var held = values.Where(value => value.HasValue).Select(value => value.Value).ToList();
+        if (held.Count > 0 && held.All(value => value is string) && TimeTypeOf(held.Cast<string>()).TryGetValue(out var time))
+            return time;
         var text = held.Any(value => value is not (long or double or bool));
         var fraction = held.Any(value => value is double);
         var whole = held.Any(value => value is long);
@@ -118,6 +122,54 @@ public static class TableSql
             : whole ? held.OfType<long>().All(number => number is >= int.MinValue and <= int.MaxValue) ? "INTEGER" : "INT8"
             : flag ? "BOOLEAN"
             : "VARCHAR";
+    }
+
+    // A date as GDAL reads one: four digits, two and two, joined by - or /, such as 2024-05-01.
+    private const string Day = @"(?<year>\d{4})[-/](?<month>\d{2})[-/](?<day>\d{2})";
+
+    // A time of day: hours, minutes and seconds, with a fraction of a second if given.
+    private const string Clock = @"(?<hour>\d{2}):(?<minute>\d{2}):(?<second>\d{2})(\.\d+)?";
+
+    private static readonly Regex DateOnly = new($"^{Day}$");
+    private static readonly Regex TimeOnly = new($"^{Clock}$");
+
+    // A date and a time joined by T or a space, with an optional zone: Z, or an offset such as +08:00.
+    private static readonly Regex DateAndTime = new($"^{Day}[T ]{Clock}(Z|[+-]\\d{{2}}(:?\\d{{2}})?)?$");
+
+    /// <summary>
+    /// The type for a column of text when every value is a date, a time or a date-time, as GDAL
+    /// typed it when it read the GeoJSON: <c>date</c>, <c>time</c>, or <c>timestamp with time zone</c>,
+    /// which also takes dates mixed with date-times; none when any value is other text, or a date
+    /// that cannot be, such as 2024-13-45. The values go into the script as written, and PostgreSQL
+    /// reads them as the type says.
+    /// </summary>
+    public static Maybe<string> TimeTypeOf(IEnumerable<string> values)
+    {
+        var kinds = values.Select(KindOf).Distinct().ToList();
+        return kinds switch
+        {
+            ["date"] => "date",
+            ["time"] => "time",
+            _ when kinds.Count > 0 && kinds.All(kind => kind is "date" or "timestamp") => "timestamp with time zone",
+            _ => Maybe<string>.None,
+        };
+    }
+
+    // One value's kind: "date", "time", "timestamp", or "text" for anything else.
+    private static string KindOf(string value) =>
+        DateOnly.Match(value) is { Success: true } date && Fits(date) ? "date"
+        : TimeOnly.Match(value) is { Success: true } time && Fits(time) ? "time"
+        : DateAndTime.Match(value) is { Success: true } moment && Fits(moment) ? "timestamp"
+        : "text";
+
+    // True when each part found lies within its range, as GDAL checks: month 1 to 12, day 1 to 31,
+    // hour 0 to 23, minute 0 to 59, second 0 to 60, which allows a leap second.
+    private static bool Fits(Match found)
+    {
+        static bool Within(Group part, int least, int most) =>
+            !part.Success || int.Parse(part.Value, CultureInfo.InvariantCulture) is var number && number >= least && number <= most;
+        return Within(found.Groups["month"], 1, 12) && Within(found.Groups["day"], 1, 31)
+            && Within(found.Groups["hour"], 0, 23) && Within(found.Groups["minute"], 0, 59) && Within(found.Groups["second"], 0, 60);
     }
 
     /// <summary>
