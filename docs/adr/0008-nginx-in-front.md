@@ -48,7 +48,7 @@ Nginx's _free_ _edition_ _watches_ a _server_ _only_ _through_ the _requests_ it
 
 ## Consequences
 
-- A withdrawn ***layer***'s _tiles_ _stay_ in Nginx for _up_ to `Tiles.CacheSeconds`, 60 by _default_, as they _already_ _stay_ in _browsers_; the _free_ _edition_ _cannot_ _clear_ _one_ _layer_ on _demand_ (N-23 c3).
+- A withdrawn ***layer***'s _tiles_ _stay_ in Nginx for _up_ to `Tiles.CacheSeconds`, 60 by _default_, as they _already_ _stay_ in _browsers_; the _free_ _edition_ _cannot_ _clear_ _one_ _layer_ on _demand_ (N-23 c2).
 - A _tile_ Nginx has _never_ _held_, _asked_ for _while_ both _copies_ are _down_, _answers_ 503 with `Retry-After: 5`.
 - _Two_ _copies_ _hold_ _two_ _pools_ of _database_ _connections_, 8 in all by _default_.
 - _One_ more _program_ _runs_ in production, and its _file_ must be _read_ _beside_ the _service_'s.
