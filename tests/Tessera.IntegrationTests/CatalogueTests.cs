@@ -54,7 +54,7 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
     /// Loads the list as the service does. A failure throws, so the test stops with the database's
     /// own message rather than failing later on an empty list.
     /// </summary>
-    private async Task<LayerCatalogue> Load(Database reader) =>
+    private static async Task<LayerCatalogue> Load(Database reader) =>
         (await CatalogueReader.Load(reader, TestContext.Current.CancellationToken))
             .Match(found => found, error => throw new Xunit.Sdk.XunitException(error.Message));
 

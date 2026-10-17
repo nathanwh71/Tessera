@@ -60,7 +60,10 @@ public sealed class SettingsTests
             Common.Infrastructure.Settings.Check(host.Services);
             return "";
         }
+        // The three ways a settings check fails, as Program.cs catches them; any other exception is a
+        // fault in the test, and escapes.
         catch (Exception error)
+            when (error is OptionsValidationException or AggregateException or InvalidOperationException)
         {
             return string.Join("; ", Common.Infrastructure.Settings.Problems(error));
         }

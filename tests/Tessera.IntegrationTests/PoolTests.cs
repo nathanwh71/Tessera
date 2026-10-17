@@ -121,7 +121,7 @@ public sealed class PoolTests(DatabaseFixture database) : IClassFixture<Database
     /// One <b><i>layer</i></b> from the list, as the service would find it. A failure or a missing
     /// layer throws, so the test stops with the reason rather than timing a query that never ran.
     /// </summary>
-    private async Task<Layer> Layer(Database reader, string id) =>
+    private static async Task<Layer> Layer(Database reader, string id) =>
         (await CatalogueReader.Load(reader, TestContext.Current.CancellationToken))
             .Match(found => found, error => throw new Xunit.Sdk.XunitException(error.Message))
             .Find(id) ?? throw new Xunit.Sdk.XunitException($"{id} is not in the list");

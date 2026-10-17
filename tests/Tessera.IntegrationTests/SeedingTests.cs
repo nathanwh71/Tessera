@@ -102,7 +102,7 @@ public sealed class SeedingTests(DatabaseFixture database) : IClassFixture<Datab
         await database.Owner("GRANT USAGE ON SCHEMA trial_b TO tessera_reader; GRANT SELECT ON trial_b.places TO tessera_reader;");
         Assert.Contains("trial_b.places", await Published());
 
-        File.WriteAllText(Path.Combine(folder, "0002-trial-b-again.sql"), "DROP TABLE IF EXISTS trial_b.places CASCADE; " + table);
+        await File.WriteAllTextAsync(Path.Combine(folder, "0002-trial-b-again.sql"), "DROP TABLE IF EXISTS trial_b.places CASCADE; " + table, TestContext.Current.CancellationToken);
 
         Assert.Equal(["0002-trial-b-again.sql"], Run(database.Publisher, folder));
         Assert.DoesNotContain("trial_b.places", await Published());

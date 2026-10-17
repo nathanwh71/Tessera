@@ -237,7 +237,7 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         Assert.Equal("nosniff", answer.Headers.GetValues("X-Content-Type-Options").Single());
         Assert.Equal("no-referrer", answer.Headers.GetValues("Referrer-Policy").Single());
 
-        var script = System.Text.RegularExpressions.Regex.Match(html, @"src=""(/assets/[^""]+\.js)""").Groups[1].Value;
+        var script = System.Text.RegularExpressions.Regex.Match(html, @"src=""(?<script>/assets/[^""]+\.js)""", System.Text.RegularExpressions.RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1)).Groups["script"].Value;
         using var asset = await Get(script);
         Assert.Equal(HttpStatusCode.OK, asset.StatusCode);
         Assert.Equal("text/javascript", asset.Content.Headers.ContentType?.MediaType);
@@ -287,7 +287,7 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
     public async Task Starts_from_the_run_command_and_answers()
     {
         var port = Http.FreePort();
-        var start = new System.Diagnostics.ProcessStartInfo("dotnet") { RedirectStandardOutput = true, RedirectStandardError = true };
+        var start = new System.Diagnostics.ProcessStartInfo("dotnet") { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
         start.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "Tessera.dll"));
         start.Environment["Urls"] = $"http://127.0.0.1:{port}";
         start.Environment["DATABASE_URL"] = service.Database.ReaderUrl;

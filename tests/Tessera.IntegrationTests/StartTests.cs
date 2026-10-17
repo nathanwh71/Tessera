@@ -30,7 +30,7 @@ public sealed class StartTests
     /// </summary>
     private static ProcessStartInfo Start(IReadOnlyDictionary<string, string> variables, params string[] arguments)
     {
-        var start = new ProcessStartInfo("dotnet") { RedirectStandardError = true, RedirectStandardOutput = true };
+        var start = new ProcessStartInfo("dotnet") { UseShellExecute = false, RedirectStandardError = true, RedirectStandardOutput = true };
         start.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "Tessera.dll"));
         foreach (var argument in arguments)
             start.ArgumentList.Add(argument);
