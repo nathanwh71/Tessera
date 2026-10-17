@@ -8,6 +8,7 @@
 // browser test rarely reaches: a visitor who moves the map before the first places arrive, and a
 // map whose places never come. useLanding keeps the timers, and MapCanvas.tsx the drawing.
 
+import { P, match } from "ts-pattern";
 import { type GroupKey, dropDelays, dropMs } from "../design";
 
 /**
@@ -68,22 +69,17 @@ export const START: Landing = { stage: "waiting", fed: false };
 const LANDED: Landing = { stage: "landed" };
 
 /**
- * The stage after an event. An event that means nothing at the current stage returns that stage
- * unchanged, the same object, so React sees no change and skips a redraw.
+ * The stage after an event: one row for each change, matched on the stage and the event together,
+ * as F#'s `match landing, event with` matches a pair. Any other pair means nothing at that stage
+ * and returns it unchanged, the same object, so React sees no change and skips a redraw.
  */
-export function step(landing: Landing, event: LandingEvent): Landing {
-	switch (event.name) {
-		case "visitorMoved":
-		case "timedOut":
-			return landing.stage === "landed" ? landing : LANDED;
-		case "placesFed":
-			return landing.stage === "waiting" && !landing.fed ? { stage: "waiting", fed: true } : landing;
-		case "mapIdle":
-			return landing.stage === "waiting" && landing.fed ? drop(event.pins, event.reduced) : landing;
-		case "dropsDone":
-			return landing.stage === "dropping" ? LANDED : landing;
-	}
-}
+export const step = (landing: Landing, event: LandingEvent): Landing =>
+	match<[Landing, LandingEvent], Landing>([landing, event])
+		.with([{ stage: P.not("landed") }, { name: P.union("visitorMoved", "timedOut") }], () => LANDED)
+		.with([{ stage: "waiting", fed: false }, { name: "placesFed" }], () => ({ stage: "waiting", fed: true }))
+		.with([{ stage: "waiting", fed: true }, { name: "mapIdle" }], ([, idle]) => drop(idle.pins, idle.reduced))
+		.with([{ stage: "dropping" }, { name: "dropsDone" }], () => LANDED)
+		.otherwise(() => landing);
 
 /**
  * The drop for the pins in view: none, and so landed at once, when there is nothing to drop or the

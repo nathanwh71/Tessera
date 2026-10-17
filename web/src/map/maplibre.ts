@@ -12,6 +12,7 @@ import latinFont from "@fontsource/roboto/files/roboto-latin-400-normal.woff2?ur
 import latinExtFont from "@fontsource/roboto/files/roboto-latin-ext-400-normal.woff2?url";
 import { type GeoJSONSource, type MapOptions, type Map as MapLibreMap, setWorkerUrl } from "maplibre-gl";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
+import { match } from "ts-pattern";
 import * as v from "valibot";
 import { GROUP_LOOKS, IMAGE_PIXEL_RATIO, type Theme, drawCluster, drawPin, drawTooltip, movementMs } from "../design";
 import type { LayerId } from "../layers";
@@ -86,23 +87,14 @@ export function provideImages(map: MapLibreMap, theme: Theme): void {
 		// A name this module never makes draws nothing; and addImage reports an error for a name the
 		// map already holds, so a repeated request is skipped.
 		if (request === null || map.hasImage(name)) return;
-		switch (request.kind) {
-			case "pin":
-				map.addImage(name, drawPin(theme, request.group, GROUP_LOOKS[request.group].shape).image, { pixelRatio: IMAGE_PIXEL_RATIO });
-				return;
-			case "cluster":
-				map.addImage(name, drawCluster(theme, request.counts), { pixelRatio: IMAGE_PIXEL_RATIO });
-				return;
-			case "tooltip": {
-				const { image, stretch } = drawTooltip(theme);
-				map.addImage(name, image, { pixelRatio: IMAGE_PIXEL_RATIO, ...stretch });
-				return;
-			}
-			default:
-				// Compiles only while every kind above is handled, so a new kind of image cannot be
-				// forgotten here (ADR 0004).
-				request satisfies never;
-		}
+		// exhaustive() compiles only while every kind is handled, so a new kind of image cannot be
+		// forgotten here (ADR 0004).
+		const drawn = match(request)
+			.with({ kind: "pin" }, ({ group }) => ({ image: drawPin(theme, group, GROUP_LOOKS[group].shape).image, stretch: {} }))
+			.with({ kind: "cluster" }, ({ counts }) => ({ image: drawCluster(theme, counts), stretch: {} }))
+			.with({ kind: "tooltip" }, () => drawTooltip(theme))
+			.exhaustive();
+		map.addImage(name, drawn.image, { pixelRatio: IMAGE_PIXEL_RATIO, ...drawn.stretch });
 	});
 }
 

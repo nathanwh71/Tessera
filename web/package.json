@@ -20,6 +20,7 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-elmish": "10.7.1",
+    "ts-pattern": "5.9.2",
     "valibot": "1.5.0"
   },
   "devDependencies": {
