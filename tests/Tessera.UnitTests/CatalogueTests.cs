@@ -60,6 +60,20 @@ public sealed class CatalogueTests
         Assert.Equal(4326, layer.Srid);
     }
 
+    // Schema 'a.b' with table 'c', and schema 'a' with table 'b.c', both have the id 'a.b.c'. An
+    // address cannot say which it means, so neither is published; the rest still are.
+    [Fact]
+    public void Publishes_neither_of_two_tables_whose_ids_clash()
+    {
+        var catalogue = CatalogueReader.FromRows([
+            new CatalogueRow("a.b", "c", "geom", 4326, "POINT", "[]"),
+            new CatalogueRow("a", "b.c", "geom", 4326, "POINT", "[]"),
+            new CatalogueRow("food", "cafes", "geom", 4326, "POINT", "[]"),
+        ]);
+
+        Assert.Equal(["food.cafes"], catalogue.Layers.Keys);
+    }
+
     // US-03 test 2: PostgreSQL holds 'food.cafes' and a quoted '"Food"."Cafes"' as two tables, so the
     // lookup matches letter for letter, and a schema alone names no layer.
     [Fact]

@@ -38,10 +38,16 @@ public static class CatalogueReader
 
     /// <summary>
     /// Builds the catalogue from the query's rows, keyed by id. The ordinal comparer matches ids
-    /// letter for letter, case included, as <see cref="LayerCatalogue.Find"/> promises.
+    /// letter for letter, case included, as <see cref="LayerCatalogue.Find"/> promises. Two tables
+    /// whose ids clash, such as schema <c>a.b</c> with table <c>c</c> and schema <c>a</c> with table
+    /// <c>b.c</c>, both read <c>a.b.c</c>. An address cannot say which it means, and serving the wrong
+    /// one is worse than none, so neither is published.
     /// </summary>
     public static LayerCatalogue FromRows(IEnumerable<CatalogueRow> rows) =>
-        new(rows.Select(ToLayer).ToImmutableDictionary(layer => layer.Id, StringComparer.Ordinal));
+        new(rows.Select(ToLayer)
+            .GroupBy(layer => layer.Id, StringComparer.Ordinal)
+            .Where(sharing => sharing.Count() == 1)
+            .ToImmutableDictionary(sharing => sharing.Key, sharing => sharing.Single(), StringComparer.Ordinal));
 
     /// <summary>
     /// Reads the list as the service's <b><i>role</i></b>, the user name it signs in as, since the
