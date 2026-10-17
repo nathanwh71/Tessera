@@ -18,7 +18,7 @@ jobs:
       # Fetches the repository onto the runner; every later step reads it.
       - uses: actions/checkout@v4
       # global.json names the .NET SDK, so the runner builds with the same SDK as the laptop.
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
       # Node.js 26 runs the .ts scripts directly by stripping their types (ADR 0002, package.json's
