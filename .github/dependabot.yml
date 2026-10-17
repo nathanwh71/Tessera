@@ -1,0 +1,80 @@
+# Dependabot, GitHub's own robot, reads the versions this repository pins and, each Monday, opens a
+# pull request for each that has a newer release. The build in workflows/build.yml then runs every
+# test on it, so an update merges only once it has passed them all. GitHub's security alerts use the
+# same lists: a version with a known flaw gets its pull request at once, not on Monday.
+#
+# Each update waits a week after its release before Dependabot proposes it, so a release withdrawn in
+# its first days never reaches the office. Minor and patch releases arrive grouped, one pull request
+# for each list, so a week's updates are one review; a major release, which may break things,
+# arrives alone.
+
+version: 2
+
+updates:
+  # The service's packages and the analysers, Meziantou's among them, which Directory.Packages.props
+  # pins in one place for every project.
+  - package-ecosystem: nuget
+    directory: /
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: Asia/Taipei }
+    cooldown: { default-days: 7 }
+    groups:
+      service:
+        update-types: [minor, patch]
+
+  # The .NET SDK that global.json names, which builds the service and runs its tests.
+  - package-ecosystem: dotnet-sdk
+    directory: /
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: Asia/Taipei }
+    cooldown: { default-days: 7 }
+
+  # The scripts' tools: zx and TypeScript (package.json).
+  - package-ecosystem: npm
+    directory: /
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: Asia/Taipei }
+    cooldown: { default-days: 7 }
+    groups:
+      scripts:
+        update-types: [minor, patch]
+
+  # The map's libraries (web/package.json): React, MapLibre, Valibot, ts-pattern, the test tools.
+  - package-ecosystem: npm
+    directory: /web
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: Asia/Taipei }
+    cooldown: { default-days: 7 }
+    groups:
+      map:
+        update-types: [minor, patch]
+
+  # The pipeline's packages, which uv pins in etl/uv.lock: pyogrio, shapely, GeoPandas, pydantic.
+  - package-ecosystem: uv
+    directory: /etl
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: Asia/Taipei }
+    cooldown: { default-days: 7 }
+    groups:
+      pipeline:
+        update-types: [minor, patch]
+
+  # The packaged database's image (db/Dockerfile). A new PostgreSQL major version keeps its data in
+  # a form the old one cannot read, so moving to it is a planned upgrade, never a weekly update.
+  - package-ecosystem: docker
+    directory: /db
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: Asia/Taipei }
+    cooldown: { default-days: 7 }
+    ignore:
+      - dependency-name: postgis/postgis
+        update-types: [version-update:semver-major]
+
+  # The Nginx image in front of the service (nginx/Dockerfile).
+  - package-ecosystem: docker
+    directory: /nginx
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: Asia/Taipei }
+    cooldown: { default-days: 7 }
+
+  # The actions the build on GitHub runs (workflows/build.yml), such as setup-dotnet.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: Asia/Taipei }
+    cooldown: { default-days: 7 }
+    groups:
+      build:
+        update-types: [minor, patch]
