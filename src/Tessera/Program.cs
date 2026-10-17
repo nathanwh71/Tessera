@@ -11,7 +11,7 @@ using Modules.Tessera.Infrastructure.Sql;
 
 return args switch
 {
-    [] => await Serve(),
+    [] => await Serve().ConfigureAwait(false),
     ["seed"] => Seed(),
     _ => Usage(),
 };
@@ -33,7 +33,7 @@ static async Task<int> Serve()
         return Fail(Settings.Problems(error));
     }
 
-    await app.RunAsync();
+    await app.RunAsync().ConfigureAwait(false);
     return 0;
 }
 

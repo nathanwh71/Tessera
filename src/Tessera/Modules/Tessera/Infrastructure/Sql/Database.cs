@@ -163,8 +163,9 @@ public sealed class Database : IAsyncDisposable
     /// </summary>
     private async Task PingOnce(CancellationToken limit)
     {
-        await using var connection = await _source.OpenConnectionAsync(limit).ConfigureAwait(false);
-        await connection.ExecuteScalarAsync<int>(Command(Queries.Ping, limit)).ConfigureAwait(false);
+        var connection = await _source.OpenConnectionAsync(limit).ConfigureAwait(false);
+        await using (connection.ConfigureAwait(false))
+            await connection.ExecuteScalarAsync<int>(Command(Queries.Ping, limit)).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -178,8 +179,10 @@ public sealed class Database : IAsyncDisposable
     {
         try
         {
-            await using var connection = await _source.OpenConnectionAsync(cancel).ConfigureAwait(false);
-            return Result.Success<T, DatabaseError>(await work(connection).ConfigureAwait(false));
+            // Closing the connection is awaited too, so ConfigureAwait must wrap the connection itself.
+            var connection = await _source.OpenConnectionAsync(cancel).ConfigureAwait(false);
+            await using (connection.ConfigureAwait(false))
+                return Result.Success<T, DatabaseError>(await work(connection).ConfigureAwait(false));
         }
         catch (NpgsqlException error)
         {
