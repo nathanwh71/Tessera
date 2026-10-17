@@ -1,4 +1,5 @@
 using Common.Infrastructure;
+using CSharpFunctionalExtensions;
 using Microsoft.Extensions.Options;
 using Modules.Tessera.Infrastructure.Seeding;
 using Modules.Tessera.Infrastructure.Sql;
@@ -44,17 +45,22 @@ static int Seed()
     var configuration = new ConfigurationBuilder();
     Settings.AddFile(configuration);
     var variable = DatabaseConnections.PublisherDatabase;
-    var connection = ConnectionString.FromUrl(configuration.Build()[variable]);
-    if (connection.IsFailure)
-        return Fail([$"{variable}: {connection.Error}"]);
+    // Each step runs only when the one before it succeeded; the first failure skips the rest and
+    // goes straight to Fail.
+    // MapError names its three types because, given a string, the library would otherwise pick the
+    // overload that returns its plain Result<T>, and Bind would then find no step to run.
+    return ConnectionString.FromUrl(configuration.Build()[variable])
+        .MapError<ConnectionString, string, string>(why => $"{variable}: {why}")
+        .Bind(connection => SeedScripts.Run(connection.Text, SeedScripts.Folder))
+        .Match(Report, why => Fail([why]));
+}
 
-    var ran = SeedScripts.Run(connection.Value.Text, SeedScripts.Folder);
-    if (ran.IsFailure)
-        return Fail([ran.Error]);
-
-    Console.WriteLine(ran.Value.Count == 0
+// Names each script the seed ran, or says there was none to run.
+static int Report(IReadOnlyList<string> ran)
+{
+    Console.WriteLine(ran.Count == 0
         ? "The seed is up to date."
-        : string.Join(Environment.NewLine, [.. ran.Value.Select(name => $"Ran {name}"),
+        : string.Join(Environment.NewLine, [.. ran.Select(name => $"Ran {name}"),
             "A new table waits for its grant: npm run publish."]));
     return 0;
 }
