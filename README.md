@@ -176,6 +176,7 @@ The _service_ is _one_ _program_, _one_ _project_ laid out as the modular-monoli
 - `docs/guides/reading-the-frontend.md`: _fifteen_ _steps_ _through_ the _map_ _alone_, from the _page_ that _starts_ to the _tests_ that _state_ its _rules_
 - `docs/guides/reading-the-scripts.md`: _eleven_ _steps_ _through_ the TypeScript _scripts_, from the _rules_ they _keep_ to the _tests_ that _check_ Nginx
 - `docs/guides/reading-the-harder-files.md`: the _one_ _idea_ _behind_ _each_ of `Settings.cs`, `Database.cs` and `LiveCatalogue.cs`, for _readers_ _new_ to ASP.NET Core
+- `docs/study/`: _seven_ study _plans_ in pomodoros, _one_ for _each_ _area_ of software _work_, from _requirements_ to documentation, _each_ climbing from _reading_ Tessera to _closing_ its _gaps_, with _books_, _talks_, exercises and repositories; _start_ with `docs/study/00-using-the-pomodoro-technique.md`
 
 
 ## Comments in the code
