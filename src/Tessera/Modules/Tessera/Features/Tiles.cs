@@ -48,7 +48,7 @@ public sealed class TileServer(Func<LayerCatalogue?> catalogue, TileReader read,
     /// <c>W/"…"</c>, because one tag covers the plain and the gzip form (N-20 c4). Sixteen of the
     /// hash's 32 bytes keep the tag short, yet two different tiles still never share one in practice.
     /// </summary>
-    public static EntityTagHeaderValue Tag(byte[] bytes) =>
+    public static EntityTagHeaderValue Tag(ReadOnlySpan<byte> bytes) =>
         new($"\"{Convert.ToHexStringLower(SHA256.HashData(bytes).AsSpan(0, 16))}\"", isWeak: true);
 
     /// <summary>
@@ -90,12 +90,12 @@ public sealed class TileServer(Func<LayerCatalogue?> catalogue, TileReader read,
     /// the tag, and answers 304 with no body when the browser's <c>If-None-Match</c> holds the same
     /// one (N-19 c2), so only Cache-Control is written here.
     /// </summary>
-    public sealed record TileResult(byte[] Bytes, string CacheControl) : IResult
+    public sealed record TileResult(ReadOnlyMemory<byte> Bytes, string CacheControl) : IResult
     {
         public Task ExecuteAsync(HttpContext httpContext)
         {
             httpContext.Response.Headers.CacheControl = CacheControl;
-            return TypedResults.Bytes(Bytes, ContentType, entityTag: Tag(Bytes)).ExecuteAsync(httpContext);
+            return TypedResults.Bytes(Bytes, ContentType, entityTag: Tag(Bytes.Span)).ExecuteAsync(httpContext);
         }
     }
 }

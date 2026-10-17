@@ -19,7 +19,7 @@ public static class TesseraHost
     /// Settings a test lays over the file and the environment; none when the program runs. Each value
     /// may be null, since ASP.NET Core's configuration reads null as 'no value'.
     /// </param>
-    public static WebApplication Build(Dictionary<string, string?>? overrides = null)
+    public static WebApplication Build(IReadOnlyDictionary<string, string?>? overrides = null)
     {
         var builder = WebApplication.CreateBuilder();
         Settings.AddFile(builder.Configuration);
