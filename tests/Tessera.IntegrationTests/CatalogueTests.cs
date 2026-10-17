@@ -159,7 +159,7 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
         await using var reader = Database.Open(database.Reader, new DatabaseSettings());
         // A refresh every 200 ms and a retry every 100 ms, in place of the service's 30 and 5
         // seconds, so each change shows within the test's five-second wait.
-        var live = new LiveCatalogue(cancel => CatalogueReader.Load(reader, cancel), TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(100), Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance);
+        using var live = new LiveCatalogue(cancel => CatalogueReader.Load(reader, cancel), TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(100), Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance);
         await live.StartAsync(TestContext.Current.CancellationToken);
 
         await Until(() => live.Current?.Layers.ContainsKey("stage.granted") == true);

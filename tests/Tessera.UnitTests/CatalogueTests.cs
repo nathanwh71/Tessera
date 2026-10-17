@@ -89,7 +89,7 @@ public sealed class CatalogueTests
     public async Task Holds_no_list_until_the_first_load_succeeds()
     {
         var answers = new Queue<Func<Task<Result<LayerCatalogue, DatabaseError>>>>([Down, () => Ok(With("cafes"))]);
-        var live = Live(_ => answers.Dequeue()());
+        using var live = Live(_ => answers.Dequeue()());
 
         await live.Refresh(CancellationToken.None);
         Assert.Equal(["none"], Ids(live));
@@ -103,7 +103,7 @@ public sealed class CatalogueTests
     public async Task Keeps_the_last_good_list_through_a_failure()
     {
         var answers = new Queue<Func<Task<Result<LayerCatalogue, DatabaseError>>>>([() => Ok(With("cafes")), Down]);
-        var live = Live(_ => answers.Dequeue()());
+        using var live = Live(_ => answers.Dequeue()());
 
         await live.Refresh(CancellationToken.None);
         await live.Refresh(CancellationToken.None);
@@ -116,7 +116,7 @@ public sealed class CatalogueTests
     public async Task Tries_until_the_database_answers()
     {
         var calls = 0;
-        var live = Live(_ => ++calls < 3 ? Down() : Ok(With("cafes")), TimeSpan.FromSeconds(30));
+        using var live = Live(_ => ++calls < 3 ? Down() : Ok(With("cafes")), TimeSpan.FromSeconds(30));
 
         await live.StartAsync(TestContext.Current.CancellationToken);
         for (var wait = 0; wait < 100 && live.Current is null; wait++)
@@ -132,7 +132,7 @@ public sealed class CatalogueTests
     public async Task Loads_once_when_refresh_is_zero()
     {
         var calls = 0;
-        var live = Live(_ => { calls++; return Ok(With("cafes")); });
+        using var live = Live(_ => { calls++; return Ok(With("cafes")); });
 
         await live.StartAsync(TestContext.Current.CancellationToken);
         await (live.ExecuteTask ?? Task.CompletedTask);
@@ -145,7 +145,7 @@ public sealed class CatalogueTests
     [Fact]
     public async Task Reports_degraded_until_the_first_list_loads()
     {
-        var live = Live(_ => Ok(With("cafes")));
+        using var live = Live(_ => Ok(With("cafes")));
         var check = new CatalogueReady(live);
         var before = await check.CheckHealthAsync(new(), TestContext.Current.CancellationToken);
         await live.Refresh(TestContext.Current.CancellationToken);
