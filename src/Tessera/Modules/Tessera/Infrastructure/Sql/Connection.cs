@@ -66,7 +66,7 @@ public sealed class DatabaseConnection : IValidatableObject
     /// Refuses a missing or malformed URL and names its variable, so the service will not start
     /// without a well-formed address for its database (US-00 c4).
     /// </summary>
-    public IEnumerable<ValidationResult> Validate(ValidationContext context) =>
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext) =>
         Parsed.IsFailure ? [new ValidationResult($"{Variable}: {Parsed.Error}")] : [];
 }
 

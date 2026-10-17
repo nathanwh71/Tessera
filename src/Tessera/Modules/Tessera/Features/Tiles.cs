@@ -92,10 +92,10 @@ public sealed class TileServer(Func<LayerCatalogue?> catalogue, TileReader read,
     /// </summary>
     public sealed record TileResult(byte[] Bytes, string CacheControl) : IResult
     {
-        public Task ExecuteAsync(HttpContext context)
+        public Task ExecuteAsync(HttpContext httpContext)
         {
-            context.Response.Headers.CacheControl = CacheControl;
-            return TypedResults.Bytes(Bytes, ContentType, entityTag: Tag(Bytes)).ExecuteAsync(context);
+            httpContext.Response.Headers.CacheControl = CacheControl;
+            return TypedResults.Bytes(Bytes, ContentType, entityTag: Tag(Bytes)).ExecuteAsync(httpContext);
         }
     }
 }

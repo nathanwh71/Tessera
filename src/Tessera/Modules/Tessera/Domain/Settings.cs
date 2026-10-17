@@ -42,7 +42,7 @@ public sealed record TileSettings : IValidatableObject
     /// <summary>
     /// Refuses a range that serves no level at all, so the slip shows at start (US-00 c4).
     /// </summary>
-    public IEnumerable<ValidationResult> Validate(ValidationContext context) =>
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext) =>
         MaxZoom >= MinZoom ? [] : [new ValidationResult("MaxZoom must not be below MinZoom.")];
 }
 
@@ -86,7 +86,7 @@ public sealed record AreaSettings : IValidatableObject
     /// <summary>
     /// Refuses a box turned inside out, so a swapped pair of values shows at start, not as an empty map.
     /// </summary>
-    public IEnumerable<ValidationResult> Validate(ValidationContext context) =>
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext) =>
         MinLongitude < MaxLongitude && MinLatitude < MaxLatitude
             ? []
             : [new ValidationResult("The box must run west to east and south to north.")];
