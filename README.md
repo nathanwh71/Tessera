@@ -169,6 +169,7 @@ The _service_ is _one_ _program_, _one_ _project_ laid out as the modular-monoli
 - `docs/adr/0008-nginx-in-front.md`: why Nginx _stands_ in _front_, and what it does in _place_ of the _service_
 - `docs/adr/0009-seed-with-dbup.md`: why the _places_ _arrive_ as SQL _scripts_ that DbUp _runs_ _once_
 - `docs/adr/0010-template-layout-guarded-by-tests.md`: why the _service_ _follows_ the modular-monolith _template_, with _architecture_ _tests_ at its _borders_
+- `docs/books/`: _three_ study _books_ as PDFs, _written_ for a _school_ _student_ of _computer_ _science_: *Sixteen Tiles* (the technology, _one_ _short_ chapter _each_), *The World in Squares* (the _whole_ _project_, _story_ by _story_, with the .NET attributes and how ASP.NET Core wires the _service_ in appendix D) and *Ten Days in Ink* (every _story_ rebuilt test-first, _one_ _working_ _day_ at a _time_)
 - `docs/design/etl-pipeline.md`: how the ETL _pipeline_ _cleans_ _places_ into _seed_ _scripts_, as a _chain_ of _steps_ _joined_ with `>>`
 - `docs/design/template-mapping.md`: how Tessera _maps_ onto the modular-monolith _template_, and which _jobs_ ASP.NET Core does
 - `docs/guides/delivery-plan.md`: how to _build_ _Parts_ A and B in _four_ iterations, from 19 _October_ to the _release_ of 7 December 2026, and what _follows_
@@ -176,6 +177,7 @@ The _service_ is _one_ _program_, _one_ _project_ laid out as the modular-monoli
 - `docs/guides/reading-the-frontend.md`: _fifteen_ _steps_ _through_ the _map_ _alone_, from the _page_ that _starts_ to the _tests_ that _state_ its _rules_
 - `docs/guides/reading-the-scripts.md`: _eleven_ _steps_ _through_ the TypeScript _scripts_, from the _rules_ they _keep_ to the _tests_ that _check_ Nginx
 - `docs/guides/reading-the-harder-files.md`: the _one_ _idea_ _behind_ _each_ of `Settings.cs`, `Database.cs` and `LiveCatalogue.cs`, for _readers_ _new_ to ASP.NET Core
+- `docs/requirements/`: the _functional_, non-functional and _security_ _requirements_, _each_ _traced_ to its _story_ and to the _test_ that _checks_ it, or _marked_ 'No _test_ yet'
 - `docs/study/`: _seven_ study _plans_ in pomodoros, _one_ for _each_ _area_ of software _work_, from _requirements_ to documentation, _each_ climbing from _reading_ Tessera to _closing_ its _gaps_, with _books_, _talks_, exercises and repositories; _start_ with `docs/study/00-using-the-pomodoro-technique.md`
 
 
