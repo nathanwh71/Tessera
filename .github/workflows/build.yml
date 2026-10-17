@@ -54,7 +54,7 @@ jobs:
       # read a source through ogr2ogr, GDAL's own tool, as the pipeline does for curves and a few
       # other cases, so Ubuntu's GDAL comes first. Then its types, its style, the rule that its pure
       # code reads no file (import-linter), and its tests.
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
       - run: sudo apt-get update && sudo apt-get install --yes --no-install-recommends gdal-bin
       - run: uv run pyright
         working-directory: etl
