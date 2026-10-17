@@ -64,6 +64,8 @@ The _map_, in TypeScript 6, _keeps_ a `Result` _type_ of its _own_, in `web/src/
 
 JavaScript's pipe operator is a _proposal_ at _stage_ 2 of 4, and TypeScript _cannot_ _read_ it, so _two_ _functions_ in `web/src/shared/pipe.ts` _stand_ in for F#'s operators: `pipe` for `|>`, and `flow` for `>>`. _Three_ _rules_ _keep_ a _chain_ readable: _steps_ _run_ in the _order_ _written_, _each_ _joined_ _function_ has a _name_, and a direct _call_ _serves_ where it _reads_ _better_, which for `pipe` _means_ a _chain_ of _fewer_ than _three_ _steps_.
 
+ts-pattern _gives_ the _map_ F#'s `match`, where a _decision_ _turns_ on more than _one_ _value_ or _needs_ a _value_ _back_. The _landing_'s `step` _matches_ its _stage_ and the _event_ as a _pair_, _one_ _row_ a _change_, as F#'s `match landing, event with` does; `switch` can _test_ _one_ _value_ _alone_. `.exhaustive()` _refuses_ to _compile_ _while_ a _case_ is _missing_, as `satisfies never` does in a `switch`; `.otherwise` _stands_ for F#'s `| _ ->`, and _gives_ _up_ that _check_, so it _serves_ _only_ where every _other_ _pair_ _means_ 'no change'. A `switch` on _one_ _value_ _stays_ a `switch`.
+
 ## Options considered
 
 | Option | Why not |

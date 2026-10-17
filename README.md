@@ -144,7 +144,7 @@ The _service_ is _one_ _program_, _one_ _project_ laid out as the modular-monoli
 | `src/Tessera/Modules/Tessera/TesseraModule.cs` | The _module_'s _door_: `AddTessera` and `MapTessera` |
 | `src/Tessera` | `Program.cs`, the _two_ _commands_; `TesseraHost.cs`, the _service_ _put_ _together_, the _template_'s _Host_; `.editorconfig`, which _makes_ _each_ namespace _match_ its _folder_ |
 | `nginx/` | Nginx's _file_, which `npm start` and the _browser_ _tests_ _run_ (ADR 0008) |
-| `web/` | The _map_: TypeScript, React, MapLibre GL JS, react-elmish, Valibot and Tailwind CSS (ADR 0006) |
+| `web/` | The _map_: TypeScript, React, MapLibre GL JS, react-elmish, Valibot, ts-pattern and Tailwind CSS (ADR 0006) |
 | `etl/` | The _pipeline_ that _cleans_ a _file_ of _places_ into a _seed_ _script_, in Python; the _service_ _never_ _runs_ it (ADR 0009, `etl/README.md`) |
 | `tests/` | The _architecture_ _tests_, and the _unit_, _property_ and ***integration tests*** of the _service_ |
 | `db/` | The _packaged_ _database_: PostgreSQL 18 with PostGIS 3.6, the _role_ _script_, the _seed_ _scripts_ in `db/seed`, and, _beside_ _each_ _script_ `npm run etl` _writes_, its _log_ in `db/seed-logs` |
