@@ -49,6 +49,9 @@ The thirty _stories_ in `docs/user-stories/user-stories.md` _fix_ what Tessera m
 | `npm run publish` | _Grants_ the _nine_ _layers_ to the _service_, which _serves_ them _within_ `Catalogue.RefreshSeconds`, 30 by _default_ (US-24 c5, N-23) |
 | `npm run office-port` | _Checks_ that WSL2 _uses_ _mirrored_ _networking_, and _prints_ the _steps_ that _open_ _port_ 80 to the _office_ (US-35) |
 | `npm run boot-task` | _Prints_ the PowerShell that _makes_ _Windows_ _run_ `npm start` when the _office_ _machine_ _switches_ on, with its _output_ in `start.log` _beside_ `package.json` (N-29) |
+| `npm run backup` | _Backs_ _up_ the _database_ to _one_ _file_ in `backups/`, or the _folder_ `TESSERA_BACKUP_FOLDER` _names_, _reads_ it _back_ to _prove_ it _whole_, and _keeps_ the _newest_ 14 |
+| `npm run restore -- FILE` | _Puts_ a backup _back_, in _one_ _transaction_: every _table_, every _grant_ and DbUp's _record_ of the _seed_ _scripts_ |
+| `npm run backup-task` | _Prints_ the PowerShell that _makes_ _Windows_ _run_ `npm run backup` _each_ _night_ at 02:00 |
 | `npm run e2e` | _Runs_ the _map_'s _browser_ _tests_, then the Nginx _checks_, _against_ a _database_ and an Nginx of their _own_ |
 
 _Copy_ `.env.example` to `.env` and _give_ _each_ _password_ a _value_ _before_ `npm start`. Git _ignores_ `.env`, so no _password_ _reaches_ the repository.

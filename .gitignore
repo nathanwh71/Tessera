@@ -22,3 +22,6 @@ start.log.1
 
 # npm's downloaded packages: npm ci fetches them again from package-lock.json
 node_modules/
+
+# The database's backups (npm run backup): they hold every place, and belong to one machine.
+backups/

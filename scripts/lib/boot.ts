@@ -45,11 +45,11 @@ export type BootPlace = {
 
 /**
  * What the task passes to wsl.exe: open this Ubuntu in the repository, set the folders to search,
- * and run scripts/boot.ts with this Node.js. --exec runs the program with no shell between, so no
- * shell's rules about quotes apply.
+ * and run a script, scripts/boot.ts unless told another, with this Node.js. --exec runs the program
+ * with no shell between, so no shell's rules about quotes apply.
  */
-export function taskArgument(place: BootPlace): string {
-  return ['-d', place.distro, '--cd', place.repo, '--exec', '/usr/bin/env', `PATH=${place.path}`, place.node, 'scripts/boot.ts']
+export function taskArgument(place: BootPlace, script = 'scripts/boot.ts'): string {
+  return ['-d', place.distro, '--cd', place.repo, '--exec', '/usr/bin/env', `PATH=${place.path}`, place.node, script]
     .map(windowsPart)
     .join(' ');
 }

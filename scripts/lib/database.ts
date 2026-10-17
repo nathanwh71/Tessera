@@ -1,4 +1,9 @@
-// The waits the scripts share: for the database in its container, and for the service to say UP.
+// The waits the scripts share, for the database in its container and for the service to say UP,
+// and the two ways a backup's file passes in or out of the database's container.
+import { spawn } from 'node:child_process';
+import { createWriteStream } from 'node:fs';
+import { open } from 'node:fs/promises';
+import { pipeline } from 'node:stream/promises';
 import { $, sleep } from 'zx';
 
 /**
@@ -26,4 +31,32 @@ export async function waitForHealth(url: string, seconds: number): Promise<'up' 
     await sleep(1000);
   }
   return 'not yet';
+}
+
+/**
+ * Runs a program in the container with a file as its input, and returns its exit code and what it
+ * printed. The file streams in, so a backup of any size passes without filling memory.
+ */
+export async function runWithFile(container: string, file: string, command: readonly string[]): Promise<{ readonly code: number | null; readonly output: string }> {
+  const input = await open(file);
+  try {
+    const run = spawn('docker', ['exec', '--interactive', container, ...command], { stdio: [input.fd, 'pipe', 'inherit'] });
+    let output = '';
+    run.stdout?.setEncoding('utf8').on('data', (part: string) => { output += part; });
+    const code = await new Promise<number | null>(done => run.on('close', done));
+    return { code, output };
+  } finally {
+    await input.close();
+  }
+}
+
+/**
+ * Runs a program in the container and writes what it prints to a file, a stream at a time, so a
+ * backup of any size passes without filling memory. The result is the program's exit code.
+ */
+export async function runToFile(container: string, file: string, command: readonly string[]): Promise<number | null> {
+  const run = spawn('docker', ['exec', container, ...command], { stdio: ['ignore', 'pipe', 'inherit'] });
+  const ended = new Promise<number | null>(done => run.on('close', done));
+  await pipeline(run.stdout, createWriteStream(file));
+  return ended;
 }
