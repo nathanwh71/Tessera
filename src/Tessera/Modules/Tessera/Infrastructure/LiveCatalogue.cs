@@ -56,7 +56,9 @@ public sealed class LiveCatalogue(
 
         var old = Interlocked.Exchange(ref _current, loaded.Value);
         // The log speaks only when the set of layers changes, not at every refresh, so it stays short.
-        if (old is null || !old.Layers.Keys.ToHashSet().SetEquals(loaded.Value.Layers.Keys))
+        // Ids compare by their exact characters, since PostgreSQL holds "Food"."Cafes" and food.cafes
+        // as two tables (US-03 test 2).
+        if (old is null || !old.Layers.Keys.ToHashSet(StringComparer.Ordinal).SetEquals(loaded.Value.Layers.Keys))
             log.LogInformation("The service publishes {Count} layers.", loaded.Value.Layers.Count);
     }
 
