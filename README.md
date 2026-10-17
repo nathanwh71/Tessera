@@ -146,7 +146,7 @@ The _service_ is _one_ _program_, _one_ _project_ laid out as the modular-monoli
 | `src/Tessera/Modules/Tessera/Features` | The _routes_: the _tiles_, the _map_'s _page_ with the _area_ _written_ in, and `/health` |
 | `src/Tessera/Modules/Tessera/TesseraModule.cs` | The _module_'s _door_: `AddTessera` and `MapTessera` |
 | `src/Tessera` | `Program.cs`, the _two_ _commands_; `TesseraHost.cs`, the _service_ _put_ _together_, the _template_'s _Host_; `.editorconfig`, which _makes_ _each_ namespace _match_ its _folder_ |
-| `nginx/` | Nginx's _file_, which `npm start` and the _browser_ _tests_ _run_ (ADR 0008) |
+| `nginx/` | Nginx's _image_, in `Dockerfile`, which _names_ its _release_, and its _settings_, in `default.conf.template`; `npm start` and the _browser_ _tests_ _build_ and _run_ both (ADR 0008) |
 | `web/` | The _map_: TypeScript, React, MapLibre GL JS, react-elmish, Valibot, ts-pattern and Tailwind CSS (ADR 0006) |
 | `etl/` | The _pipeline_ that _cleans_ a _file_ of _places_ into a _seed_ _script_, in Python; the _service_ _never_ _runs_ it (ADR 0009, `etl/README.md`) |
 | `tests/` | The _architecture_ _tests_, and the _unit_, _property_ and ***integration tests*** of the _service_ |

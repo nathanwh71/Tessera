@@ -17,7 +17,7 @@ import { resolve } from 'node:path';
 import { $, type ProcessPromise } from 'zx';
 import { waitForDatabase, waitForHealth } from './lib/database.ts';
 import { checkEdge } from './lib/edge.ts';
-import { databaseUrl, nginxArguments } from './lib/plan.ts';
+import { databaseUrl, nginxArguments, nginxImage } from './lib/plan.ts';
 
 /**
  * The containers' names differ from npm start's tessera-db and tessera-nginx, so a test run never
@@ -55,6 +55,7 @@ const url = (user: string, password: string) => databaseUrl(user, password, { ho
 const service = resolve('src/Tessera/bin/Release/net10.0/Tessera.dll');
 
 await $`docker build --quiet --tag ${container} db`;
+await $`docker build --quiet --tag ${nginxImage} nginx`;
 // A database left behind by a run that was killed would hold the name; remove it first.
 await $({ nothrow: true, quiet: true })`docker rm --force ${container} ${nginx}`;
 await $`docker run --detach --name ${container} --publish 127.0.0.1:${databasePort}:5432 --env POSTGRES_DB=${name} --env POSTGRES_PASSWORD=${owner} --env TESSERA_READER_PASSWORD=${reader} --env TESSERA_PUBLISHER_PASSWORD=${publisher} ${container}`;

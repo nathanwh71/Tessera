@@ -21,7 +21,7 @@ import { resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { $, type ProcessPromise } from 'zx';
 import { waitForDatabase, waitForHealth } from './lib/database.ts';
-import { databaseUrl, nginxArguments, readStartSettings, runArguments } from './lib/plan.ts';
+import { databaseUrl, nginxArguments, nginxImage, readStartSettings, runArguments } from './lib/plan.ts';
 import { keepRunning } from './lib/supervise.ts';
 
 // Fixed names, so each start finds the containers and the data an earlier start left, and
@@ -116,6 +116,7 @@ const copies = settings.servicePorts.map(runCopy);
 
 // A container left from an earlier start may hold old ports, so Nginx starts afresh each time.
 await $({ nothrow: true, quiet: true })`docker rm --force ${nginx}`;
+await $`docker build --quiet --tag ${nginxImage} nginx`;
 await $`docker run ${nginxArguments(nginx, settings.httpPort, settings.servicePorts, settings.officeNetwork, resolve('nginx/default.conf.template'))}`;
 
 // The service answers at once, but serves tiles only once its list of layers loads, so the script

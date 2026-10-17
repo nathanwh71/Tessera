@@ -141,7 +141,7 @@ export function nginxArguments(container: string, httpPort: string, servicePorts
 
 /**
  * The Nginx image both the start-up script and the browser tests run, so the tests check the Nginx
- * the office runs. The tag holds Nginx to 1.29, so only its patch releases arrive without a change
- * to this line; Alpine keeps the image small.
+ * the office runs. Each builds it from nginx/Dockerfile, which names the Nginx release, before it
+ * runs a container from it.
  */
-export const nginxImage = 'nginx:1.29-alpine';
+export const nginxImage = 'tessera-nginx';
