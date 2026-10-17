@@ -31,5 +31,18 @@
       such as 22.19 never turns into 22,19, and the service needs no ICU library on the machine.
     -->
     <InvariantGlobalization>true</InvariantGlobalization>
+    <!--
+      Every rule .NET's own analysers know, at the latest level, as the modular-monolith template
+      sets them. .editorconfig switches off the few that clash with this codebase, each with its reason.
+    -->
+    <AnalysisLevel>latest</AnalysisLevel>
+    <AnalysisMode>All</AnalysisMode>
   </PropertyGroup>
+  <ItemGroup>
+    <!--
+      Meziantou adds rules .NET lacks, such as naming the comparer a set of strings uses, and closing a
+      started process's streams. It runs only while building, so it never ships (PrivateAssets).
+    -->
+    <PackageReference Include="Meziantou.Analyzer" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
+  </ItemGroup>
 </Project>

@@ -1,0 +1,24 @@
+# The analysis rules the tests switch off, on top of those in the root .editorconfig.
+
+[*.cs]
+# No underscores in names. Each test's name is a sentence, such as
+# Answers_404_for_a_table_revoked_after_start_up, so a failing test reads as the rule it guards.
+dotnet_diagnostic.CA1707.severity = none
+
+# Call ConfigureAwait. xUnit runs each test in a context of its own and advises against
+# ConfigureAwait(false) in tests (xUnit1030).
+dotnet_diagnostic.CA2007.severity = none
+
+# Pass a Uri, not a string. A test's address is a short fixed path, such as /health, which a Uri
+# would only wrap.
+dotnet_diagnostic.CA2234.severity = none
+
+# Name the comparer for each set, dictionary or comparison of strings. The tests' strings are fixed
+# keys and ids, such as Tiles__MinZoom or cafes-001, where C#'s default, an exact character-by-character
+# comparison, is the one they need.
+dotnet_diagnostic.MA0002.severity = none
+dotnet_diagnostic.MA0006.severity = none
+
+# Avoid a type name that matches a namespace. Http names the integration tests' own helpers for HTTP
+# calls; nothing outside the test project sees it, so it cannot be mistaken for ASP.NET Core's.
+dotnet_diagnostic.CA1724.severity = none

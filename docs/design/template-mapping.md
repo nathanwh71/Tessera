@@ -102,6 +102,8 @@ Tessera _hands_ the _framework_ every _job_ it can do, and _writes_ by _hand_ _o
 | `ServiceDefaults`: the resilience handler | _Leave_ out | Tessera _calls_ no _other_ HTTP _service_, and ADR 0007 _puts_ the _limits_ in Nginx |
 | EF Core, if the template uses it | _Leave_ out | ADR 0004 and S-01: Dapper and _plain_ SQL, all in `Queries.cs` |
 | A mediator, if the template's Features use one | _Leave_ out | A _route_ _calls_ its _function_ _directly_; a mediator _adds_ a hop and _hides_ the _call_ |
+| The build's analysers: .NET's own rules with `AnalysisMode` `All`, and Meziantou | _Take_ | They caught missed `ConfigureAwait` _calls_, undisposed catalogues in _tests_ and mutable _tile_ _bytes_. The _root_ `.editorconfig` _switches_ _off_ the _rules_ that clash with this codebase, _each_ with its _reason_ |
+| The build's analysers: Sonar and Roslynator | _Leave_ out | On Tessera, Sonar mostly _repeated_ .NET's _rules_ or raised _false_ alarms, and Roslynator raised _nothing_ until _each_ _rule_ is _set_ by _hand_ |
 
 `AddServerHeader = false` is _optional_ _too_, and not in the _code_.
 

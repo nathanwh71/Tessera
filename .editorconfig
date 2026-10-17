@@ -1,0 +1,51 @@
+# The C# analysis rules this codebase switches off, each with its reason. Directory.Build.props
+# turns every rule on (AnalysisMode All) and adds Meziantou's (MA); the build treats each warning as
+# an error. tests/.editorconfig switches off a few more for the tests alone.
+root = true
+
+[*.cs]
+# Make each type internal. The service is one program, which nothing else references, so 'public'
+# hides nothing from anyone; and the tests would need to be granted the internals.
+dotnet_diagnostic.CA1515.severity = none
+
+# One type to a file, named after it. Small records live together by purpose, such as the layers
+# and their catalogue in Domain/Layers.cs, so a reader finds a whole idea in one file.
+dotnet_diagnostic.MA0048.severity = none
+
+# Check each parameter for null. Nullable reference types are on (Directory.Build.props), so the
+# compiler already refuses a null where a method does not accept one.
+dotnet_diagnostic.CA1062.severity = none
+
+# Use LoggerMessage delegates, and skip building a log line no one reads. The service writes a few
+# lines an hour, so neither saves anything worth the extra code.
+dotnet_diagnostic.CA1848.severity = none
+dotnet_diagnostic.CA1873.severity = none
+
+# Call ConfigureAwait. CA2007 says the same, so one rule is enough.
+dotnet_diagnostic.MA0004.severity = none
+
+# Review each SQL text for user input. Every name enters a query as a SqlName, which only Quote and
+# Qualified can make, and every value travels as a parameter (S-01); a test pins the tile query's
+# text (approved/tile-query.sql). The rule cannot see either guard.
+dotnet_diagnostic.CA2100.severity = none
+
+# Do not nest public types. A closed union keeps its cases inside it, as F#'s cases sit under their
+# union's name: DatabaseError.MissingTable reads as one idea (ADR 0004). TileResult nests in the
+# TileServer that alone makes it.
+dotnet_diagnostic.CA1034.severity = none
+
+# Take a Uri, not a string, for a URL. A database URL arrives as an environment variable's text, and
+# ConnectionString.FromUrl exists to parse that text and name what is wrong with it; a Uri parameter
+# would parse it before the one method that explains a fault.
+dotnet_diagnostic.CA1054.severity = none
+dotnet_diagnostic.CA1056.severity = none
+
+# Keep type names out of identifiers. Database.Single means one row, as LINQ's and Dapper's Single
+# do, not the floating-point type System.Single.
+dotnet_diagnostic.CA1720.severity = none
+
+[src/Tessera/TesseraHost.cs]
+# Declare each type in a namespace. TesseraHost is the template's Host, which lives in the global
+# namespace beside Program.cs, as the template places it (docs/design/template-mapping.md).
+dotnet_diagnostic.CA1050.severity = none
+dotnet_diagnostic.MA0047.severity = none
