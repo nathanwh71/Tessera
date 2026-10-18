@@ -1,6 +1,6 @@
 # Reading the scripts, step by step
 
-**The short answer.** The _scripts_ _follow_ _one_ _pattern_: a _thin_ _file_ in `scripts/` _runs_ the _commands_, and a _file_ in `scripts/lib/` _makes_ every _decision_ as a ***pure function***, which a _test_ _checks_ with _values_ _alone_ (ADR 0002). _Learn_ the _pattern_ _once_, on the _smallest_ _script_, then _read_ the _scripts_ in the _order_ a _maintainer_ _uses_ them: _start_ Tessera, _bring_ in _places_, _set_ _up_ the _office_ _machine_, then _build_ and _test_. _Eleven_ _steps_ _take_ _two_ _hours_. The _scripts_ are _about_ 1,500 _lines_ of TypeScript: _ten_ _entry_ _scripts_, _eight_ helper _files_ in `scripts/lib/`, _six_ of them _pure_, and _six_ _test_ _files_ _beside_ those _six_.
+**The short answer.** The _scripts_ _follow_ _one_ _pattern_: a _thin_ _file_ in `scripts/` _runs_ the _commands_, and a _file_ in `scripts/lib/` _makes_ every _decision_ as a ***pure function***, which a _test_ _checks_ with _values_ _alone_ (ADR 0002). _Learn_ the _pattern_ _once_, on the _smallest_ _script_, then _read_ the _scripts_ in the _order_ a _maintainer_ _uses_ them: _start_ Tessera, _bring_ in _places_, _set_ _up_ the _office_ _machine_, _keep_ its _data_ _safe_, then _build_ and _test_. Twelve _steps_ _take_ _two_ _hours_ and a _half_. The _scripts_ are _about_ 1,850 _lines_ of TypeScript: _thirteen_ _entry_ _scripts_, _ten_ helper _files_ in `scripts/lib/`, _seven_ of them _pure_, and _eight_ _test_ _files_, _one_ _beside_ _each_ _pure_ helper and _one_ _beside_ `lib/build.ts`.
 
 **Before you start.** At the repository's _root_, _run_ `npm ci`, then `npm run typecheck` and `npm run test:scripts`. The _tests_ _take_ a _second_ and _need_ no Docker, no _database_ and no .NET, which is the _pattern_ at _work_. Node.js 26 _runs_ _each_ `.ts` _file_ as it _stands_, by stripping its _types_; `tsc` _only_ _checks_ them.
 
@@ -14,11 +14,14 @@
 | `npm run etl` | `etl.ts` | `lib/etl.ts` | US-36, ADR 0009 |
 | `npm run office-port` | `office-port.ts` | `lib/office.ts` | US-35 |
 | `npm run boot-task` | `boot-task.ts`, then `boot.ts` | `lib/boot.ts` | N-29 |
+| `npm run backup` | `backup.ts` | `lib/backup.ts` | no _story_; JTessera's backups |
+| `npm run restore` | `restore.ts` | _none_ | no _story_; JTessera's backups |
+| `npm run backup-task` | `backup-task.ts` | `lib/backup.ts`, `lib/boot.ts` | no _story_; JTessera's backups |
 | `npm run build` | `build.ts` | _none_ | US-00 c1 |
 | `npm test` | `test.ts` | _none_ | US-00 c3 |
 | `npm run e2e` | `e2e.ts` | `lib/plan.ts` | US-23, ADR 0008 |
 
-_Two_ helpers are not _pure_, _since_ their _work_ is to _talk_ to the _world_: `lib/database.ts` _holds_ the _two_ _waits_ that `start.ts`, `publish.ts` and `e2e.ts` _share_, and `lib/edge.ts` _holds_ the Nginx _checks_.
+_Three_ helpers are not _pure_, _since_ their _work_ is to _talk_ to the _world_: `lib/database.ts` _holds_ the _two_ _waits_ that `start.ts`, `publish.ts`, `e2e.ts`, `backup.ts` and `restore.ts` _share_, and the _two_ _ways_ a backup _passes_ in or out of the _database_'s _container_; `lib/edge.ts` _holds_ the Nginx _checks_; and `lib/build.ts` _empties_ the _map_ an older _build_ _left_.
 
 ## Part A · The rules and the pattern
 
@@ -45,7 +48,7 @@ _Two_ helpers are not _pure_, _since_ their _work_ is to _talk_ to the _world_: 
 ### Step 4 · `npm start`, top to bottom
 
 - **Open:** `scripts/start.ts`, then `scripts/lib/database.ts`.
-- **Look for:** _nine_ _steps_, in _order_: _read_ the _settings_; _build_ the _map_ and the _service_ _once_; _build_ the _database_ _image_; _reuse_ the _database_ _container_ if it _exists_; _wait_ until it _answers_; _run_ the ***seed scripts***; _start_ _two_ _copies_ of the _service_; _start_ Nginx afresh; _wait_ until `/health`, _asked_ _through_ Nginx, _says_ _UP_ (N-25). The _script_ then _stays_ alive _while_ the _copies_ _run_, so Ctrl+C _stops_ both.
+- **Look for:** _nine_ _steps_, in _order_: _read_ the _settings_; _build_ the _map_ and the _service_ _once_; _build_ the _database_ _image_; _reuse_ the _database_ _container_ if it _exists_; _wait_ until it _answers_; _run_ the ***seed scripts*** and _print_ the _seed_'s _own_ _report_, which `seedReport` in `plan.ts` _picks_ out; _start_ _two_ _copies_ of the _service_; _start_ Nginx afresh; _wait_ until `/health`, _asked_ _through_ Nginx, _says_ _UP_ (N-25). The _script_ then _stays_ alive _while_ the _copies_ _run_, so Ctrl+C _stops_ both.
 - **Check yourself:** you _run_ `npm start` a _second_ _time_. Which _steps_ _change_ _nothing_, and which _start_ afresh?
 
 ### Step 5 · Keeping both copies running
@@ -84,13 +87,19 @@ _Two_ helpers are not _pure_, _since_ their _work_ is to _talk_ to the _world_: 
 
 ## Part E · Building and testing
 
-### Step 10 · One command to build, one to test
+### Step 10 · Backing up and restoring
+
+- **Open:** `scripts/backup.ts`, `scripts/restore.ts` and `scripts/backup-task.ts`, then `scripts/lib/backup.ts` and its _test_.
+- **Look for:** a backup that _proves_ _itself_. `backup.ts` _runs_ `pg_dump` _inside_ the _database_'s _container_, _writes_ the _file_ _under_ a _second_ _name_, _reads_ it _back_ with `pg_restore --list`, and _only_ then _gives_ it its _own_ _name_, so a backup _cut_ _short_ _never_ _passes_ for a _good_ _one_. `backupsToRemove` _keeps_ the _newest_ 14 and _never_ _touches_ a _file_ of another _name_. `restore.ts` _puts_ a backup _back_ in _one_ _transaction_, all or _nothing_. `backup-task.ts` _prints_ the PowerShell for a backup _each_ _night_ at 02:00, as `boot-task.ts` does for the start-up _task_.
+- **Check yourself:** the backup _folder_ _holds_ 15 backups and a _file_ _named_ `notes.txt`. Which _files_ does the _next_ backup delete?
+
+### Step 11 · One command to build, one to test
 
 - **Open:** `scripts/build.ts`, then `scripts/test.ts`.
-- **Look for:** _order_. `build.ts` _builds_ the _map_ _before_ the _service_, _since_ the _service_'s _release_ _carries_ the _map_ (US-23 c4). `test.ts` _runs_ the _quick_ _checks_ _first_, the _scripts_' _types_ and their _tests_, so a _typing_ slip _fails_ in _seconds_ _rather_ than _after_ the ***browser tests***.
+- **Look for:** _order_. `build.ts` _builds_ the _map_ _before_ the _service_, _since_ the _service_'s _release_ _carries_ the _map_ (US-23 c4). _Before_ the _service_ _builds_, `emptyReleaseMap` in `lib/build.ts` deletes the _old_ _map_ from the _release_, _since_ the _copy_ _never_ deletes a _file_. `test.ts` _runs_ the _quick_ _checks_ _first_, the _scripts_' _types_ and their _tests_, so a _typing_ slip _fails_ in _seconds_ _rather_ than _after_ the ***browser tests***.
 - **Check yourself:** why do the .NET _test_ _suites_ _run_ with `--no-build`?
 
-### Step 11 · The browser tests and the Nginx checks
+### Step 12 · The browser tests and the Nginx checks
 
 - **Open:** `scripts/e2e.ts`, then `scripts/lib/edge.ts`.
 - **Look for:** a _run_ that _needs_ _nothing_ _set_ beforehand. It _makes_ _passwords_ for this _run_ _alone_, _takes_ _free_ _ports_, and _starts_ a _database_, _two_ _copies_ of the _service_ and Nginx _under_ _names_ of its _own_, so it _never_ _touches_ `npm start`'s _containers_. It _runs_ Playwright, then `checkEdge`, then _removes_ _everything_ in `finally`, _pass_ or _fail_. In `edge.ts`, the _office_ is `127.0.0.4/30`: Linux _answers_ every 127.x.x.x _address_, so a _check_ _sends_ _one_ _request_ from _inside_ the _office_ and another from _outside_ it.

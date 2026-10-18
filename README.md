@@ -175,7 +175,7 @@ The _service_ is _one_ _program_, _one_ _project_ laid out as the modular-monoli
 - `docs/guides/delivery-plan.md`: how to _build_ _Parts_ A and B in _four_ iterations, from 19 _October_ to the _release_ of 7 December 2026, and what _follows_
 - `docs/guides/reading-the-code.md`: _fifteen_ _steps_ _through_ the backend and the _map_, in the _order_ a _tile_ _travels_
 - `docs/guides/reading-the-frontend.md`: _fifteen_ _steps_ _through_ the _map_ _alone_, from the _page_ that _starts_ to the _tests_ that _state_ its _rules_
-- `docs/guides/reading-the-scripts.md`: _eleven_ _steps_ _through_ the TypeScript _scripts_, from the _rules_ they _keep_ to the _tests_ that _check_ Nginx
+- `docs/guides/reading-the-scripts.md`: twelve _steps_ _through_ the TypeScript _scripts_, from the _rules_ they _keep_ to the _tests_ that _check_ Nginx
 - `docs/guides/reading-the-harder-files.md`: the _one_ _idea_ _behind_ _each_ of `Settings.cs`, `Database.cs` and `LiveCatalogue.cs`, for _readers_ _new_ to ASP.NET Core
 - `docs/requirements/`: the _functional_, non-functional and _security_ _requirements_, _each_ _traced_ to its _story_ and to the _test_ that _checks_ it, or _marked_ 'No _test_ yet'
 - `docs/study/`: _seven_ study _plans_ in pomodoros, _one_ for _each_ _area_ of software _work_, from _requirements_ to documentation, _each_ climbing from _reading_ Tessera to _closing_ its _gaps_, with _books_, _talks_, exercises and repositories; _start_ with `docs/study/00-using-the-pomodoro-technique.md`
