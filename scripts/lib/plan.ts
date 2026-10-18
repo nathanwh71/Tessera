@@ -155,3 +155,27 @@ export function seedReport(printed: string): readonly string[] {
   const lines = printed.split(/\r?\n/).filter(line => line.trim() !== '');
   return lines.length > 0 ? lines : ['The seed ran, and printed no report.'];
 }
+
+/**
+ * Playwright's own Docker image for a version of @playwright/test: Ubuntu with the Chromium,
+ * the fonts and the libraries that version was tested with. The approved images of UI-17 (test 3)
+ * were drawn in it, and it draws the same pixels on any machine, so the screenshots match there.
+ */
+export const playwrightImage = (version: string): string => `mcr.microsoft.com/playwright:v${version}-noble`;
+
+/**
+ * The command that runs the browser tests: Playwright on this machine, or, when `image` names one,
+ * Playwright inside that image. The container shares the machine's network, so it reaches the
+ * service on 127.0.0.1, and its memory for passing data between processes, which Chromium needs
+ * more of than Docker gives by default. It runs as `user`, so the files it writes in the
+ * repository stay the user's. HOME points at /tmp, since that user has no home in the image. `--env NAME` with no
+ * value copies the variable from this script's environment, and leaves it out if it is not set.
+ */
+export function playwrightCommand(image: string | undefined, repo: string, user: string, args: readonly string[]): readonly string[] {
+  const tests = ['npx', 'playwright', 'test', ...args];
+  return image === undefined ? tests : [
+    'docker', 'run', '--rm', '--network', 'host', '--ipc', 'host', '--user', user,
+    '--env', 'HOME=/tmp', '--env', 'TESSERA_BASE_URL', '--env', 'TESSERA_MEASURE', '--env', 'CI',
+    '--volume', `${repo}:/work`, '--workdir', '/work/web', image, ...tests,
+  ];
+}

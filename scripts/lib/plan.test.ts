@@ -1,7 +1,7 @@
 // Tests of the scripts' pure decisions; node --test runs them, with no Docker and no database.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { databaseUrl, isOfficeNetwork, nginxArguments, readDatabasePlace, readStartSettings, restartDelay, seedReport } from './plan.ts';
+import { databaseUrl, isOfficeNetwork, nginxArguments, readDatabasePlace, readStartSettings, playwrightCommand, playwrightImage, restartDelay, seedReport } from './plan.ts';
 
 test('names every missing variable at once', () => {
   const result = readStartSettings({});
@@ -63,4 +63,19 @@ test('passes on the seed\'s own report, line by line', () => {
 
 test('says so when the seed printed nothing, rather than print a blank line', () => {
   assert.deepEqual(seedReport(''), ['The seed ran, and printed no report.']);
+});
+
+// UI-17 test 3: the approved images match only when Chromium draws them as it drew them, so the
+// browser tests can run inside Playwright's own Docker image, the one named after its version.
+test('names Playwright\'s image after the version the map pins', () => {
+  assert.equal(playwrightImage('1.56.0'), 'mcr.microsoft.com/playwright:v1.56.0-noble');
+});
+
+test('runs Playwright on the machine, or inside its image when one is named', () => {
+  assert.deepEqual(playwrightCommand(undefined, '/repo', '1001:1001', ['--grep', 'UI-17']),
+    ['npx', 'playwright', 'test', '--grep', 'UI-17']);
+  const docker = playwrightCommand('mcr.microsoft.com/playwright:v1.56.0-noble', '/repo', '1001:1001', ['--grep', 'UI-17']);
+  assert.deepEqual(docker.slice(0, 2), ['docker', 'run']);
+  assert.deepEqual(docker.slice(-6), ['mcr.microsoft.com/playwright:v1.56.0-noble', 'npx', 'playwright', 'test', '--grep', 'UI-17']);
+  for (const part of ['--rm', 'host', '1001:1001', '/repo:/work', '/work/web', 'TESSERA_BASE_URL']) assert.ok(docker.includes(part), part);
 });

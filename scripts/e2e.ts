@@ -4,6 +4,7 @@
 //
 //   npm run e2e
 //   npm run e2e -- --grep-invert "approved image"   (every test but the screenshot comparisons)
+//   TESSERA_PLAYWRIGHT_IN_DOCKER=1 npm run e2e      (Playwright inside its own Docker image)
 //
 // It needs nothing set beforehand. It starts a database of its own in Docker, on a free port and
 // with passwords made for this run alone; loads and publishes the places; starts two copies of the
@@ -11,13 +12,19 @@
 // removes both containers, whether the tests pass or fail.
 // So it runs the same on a laptop and in the automatic build, and never touches `npm start`'s
 // database. Build first, with `npm run build`.
+//
+// The approved images of UI-17 match only when Chromium draws them as it drew them: another
+// browser, or other fonts, moves a few per cent of the pixels. With TESSERA_PLAYWRIGHT_IN_DOCKER
+// set, Playwright runs inside its own image for the version web/package.json pins, which carries
+// the same Chromium and fonts on any machine; the automatic build runs it so.
 import { randomBytes } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { resolve } from 'node:path';
 import { $, type ProcessPromise } from 'zx';
 import { waitForDatabase, waitForHealth } from './lib/database.ts';
 import { checkEdge } from './lib/edge.ts';
-import { databaseUrl, nginxArguments, nginxImage } from './lib/plan.ts';
+import { databaseUrl, nginxArguments, nginxImage, playwrightCommand, playwrightImage } from './lib/plan.ts';
 
 /**
  * The containers' names differ from npm start's tessera-db and tessera-nginx, so a test run never
@@ -51,6 +58,13 @@ const nginxPort = await freePort();
 // this machine, so the checks can ask from inside the office and from outside it.
 const officeNetwork = '127.0.0.4/30';
 const url = (user: string, password: string) => databaseUrl(user, password, { host: '127.0.0.1', port: String(databasePort), name });
+/** Playwright's image, named after the version the map pins, when the run asks for it. */
+const pinned = (JSON.parse(readFileSync('web/package.json', 'utf8')) as { devDependencies: Record<string, string> }).devDependencies['@playwright/test'];
+if (process.env['TESSERA_PLAYWRIGHT_IN_DOCKER'] && pinned === undefined) {
+  console.error('web/package.json pins no version of @playwright/test, so no image can be named.');
+  process.exit(1);
+}
+const image = process.env['TESSERA_PLAYWRIGHT_IN_DOCKER'] && pinned ? playwrightImage(pinned) : undefined;
 /** The program npm run build writes, in Release, so the tests meet the build the office runs. */
 const service = resolve('src/Tessera/bin/Release/net10.0/Tessera.dll');
 
@@ -87,7 +101,8 @@ try {
 
   // `inherit` shows Playwright's own report, test by test, here and in the automatic build's log.
   // Arguments after `--` pass on to Playwright, such as `--grep-invert` to leave some tests out.
-  await $({ cwd: 'web', stdio: 'inherit', env: { ...process.env, TESSERA_BASE_URL: base } })`npx playwright test ${process.argv.slice(2)}`;
+  const user = `${process.getuid?.() ?? 0}:${process.getgid?.() ?? 0}`;
+  await $({ cwd: 'web', stdio: 'inherit', env: { ...process.env, TESSERA_BASE_URL: base } })`${playwrightCommand(image, resolve('.'), user, process.argv.slice(2))}`;
   // The checks stop each copy part-way; they wait for it to exit, so no answer comes from a copy
   // half-way through stopping.
   const stop = (copy: ProcessPromise | undefined) => async () => {
