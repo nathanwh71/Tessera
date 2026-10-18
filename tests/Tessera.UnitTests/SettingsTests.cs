@@ -60,8 +60,8 @@ public sealed class SettingsTests
             Common.Infrastructure.Settings.Check(host.Services);
             return "";
         }
-        // The two ways a settings check fails, as Program.cs catches them; any other exception is a
-        // fault in the test, and escapes.
+        // The two ways a settings check fails, as Program.cs catches them; any other exception is
+        // a fault in the test, and escapes.
         catch (Exception error) when (error is OptionsValidationException or AggregateException)
         {
             return string.Join("; ", Common.Infrastructure.Settings.Problems(error));
@@ -110,8 +110,9 @@ public sealed class SettingsTests
     public void Refuses_a_key_it_does_not_know() =>
         Assert.Contains("'CacheSecond'", Problems("""{"Tiles":{"CacheSecond":60}}"""), StringComparison.Ordinal);
 
-    // US-00 c4 and N-21 c4: a misspelt key is one more problem in the list, named with its section,
-    // so it hides neither a value out of range, in its own section or another, nor a missing URL.
+    // US-00 c4 and N-21 c4: a misspelt key is one more problem in the list, named with its
+    // section, so it hides neither a value out of range, in its own section or another, nor a
+    // missing URL.
     [Fact]
     public void Names_a_misspelt_key_with_every_other_problem()
     {

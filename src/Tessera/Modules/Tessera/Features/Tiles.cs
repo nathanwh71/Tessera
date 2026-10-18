@@ -28,7 +28,9 @@ public delegate Task<Result<byte[]?, DatabaseError>> TileReader(Query query, Can
 /// </param>
 /// <param name="read">Runs the tile query.</param>
 /// <param name="settings">The tile's limits and how long a browser and Nginx may keep it.</param>
-/// <param name="log">Where the server writes the cause of each 500, which the answer leaves out.</param>
+/// <param name="log">
+/// Where the server writes the cause of each 500, which the answer leaves out.
+/// </param>
 public sealed class TileServer(Func<LayerCatalogue?> catalogue, TileReader read, TileSettings settings, ILogger log)
 {
     /// <summary>
@@ -87,10 +89,11 @@ public sealed class TileServer(Func<LayerCatalogue?> catalogue, TileReader read,
     }
 
     /// <summary>
-    /// Answers 500 for a refusal waiting cannot cure, and writes its cause to the log (N-22 c4). The
-    /// answer names no cause, so a stranger learns nothing of the service's insides; the log line
-    /// names the layer, the tile, the SQLSTATE code and the database's message, so the maintainer can
-    /// find the fault. Error is the level for a fault that needs a person to look at it.
+    /// Answers 500 for a refusal waiting cannot cure, and writes its cause to the log (N-22 c4).
+    /// The answer names no cause, so a stranger learns nothing of the service's insides; the log
+    /// line names the layer, the tile, the SQLSTATE code and the database's message, so the
+    /// maintainer can find the fault. Error is the level for a fault that needs a person to look
+    /// at it.
     /// </summary>
     private IResult Fault(Layer layer, TileAddress tile, DatabaseError error)
     {
