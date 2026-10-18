@@ -22,6 +22,12 @@ public sealed class ServiceFixture : IAsyncLifetime
 
     public int Port { get; } = Http.FreePort();
 
+    /// <summary>
+    /// The name of a table built to look like an attack, as SQL writes it: quoted, with its own
+    /// quote doubled. The layer's id, as the address spells it, is <c>food.x"; DROP TABLE food.cafes; --</c>.
+    /// </summary>
+    public const string OddTable = "\"x\"\"; DROP TABLE food.cafes; --\"";
+
     public HttpClient Client { get; private set; } = new();
 
     /// <summary>The running service; null until InitializeAsync builds it.</summary>
@@ -43,6 +49,15 @@ public sealed class ServiceFixture : IAsyncLifetime
             CREATE TABLE stage.cafes_3857 AS SELECT id, name, ST_Transform(geom, 3857)::geometry(Point, 3857) AS geom FROM food.cafes;
             GRANT USAGE ON SCHEMA stage TO tessera_reader;
             GRANT SELECT ON stage.cafes_3857 TO tessera_reader;
+            """);
+
+        // S-01 c3: a real, granted table whose name is itself an attack. A doubled quote, "", stands
+        // for one quote inside a quoted name, so the table is named  x"; DROP TABLE food.cafes; --
+        // Its one place sits on cafes-001, so the test can find it in the tile at level 0.
+        await Database.Owner($"""
+            CREATE TABLE food.{OddTable} (fid serial PRIMARY KEY, name text, geom geometry(Point, 4326));
+            INSERT INTO food.{OddTable} (name, geom) VALUES ('Odd', ST_SetSRID(ST_MakePoint(113.577677, 22.158784), 4326));
+            GRANT SELECT ON food.{OddTable} TO tessera_reader;
             """);
 
 
@@ -270,16 +285,52 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         Assert.Equal("application/problem+json", answer.Content.Headers.ContentType?.MediaType);
     }
 
-    // S-01 c4 and test 3: an attack changes nothing.
+    /// <summary>
+    /// Every table in the database with its count of rows, such as 'food.cafes=100, food.parks=100',
+    /// read as the owner. query_to_xml runs a query whose text is built for each table, so one
+    /// statement counts them all; a table an attack dropped or emptied changes the line.
+    /// </summary>
+    private Task<string> EveryTablesRows() => service.Database.OwnerValue<string>("""
+        SELECT string_agg(format('%s.%s=%s', schemaname, tablename,
+                 (xpath('/row/c/text()', query_to_xml(
+                    format('SELECT count(*) AS c FROM %I.%I', schemaname, tablename), false, true, '')))[1]::text),
+               ', ' ORDER BY schemaname, tablename)
+        FROM pg_tables
+        WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
+        """);
+
+    // S-01 c4 and test 3, SR-08: an attack answers 404 as a problem document and changes nothing.
+    // Every table keeps its rows, not food.cafes alone, since an attack may aim at any of them.
     [Theory]
     [InlineData("x;%20DROP%20TABLE%20cafes")]
     [InlineData("food.cafes'%3B%20--")]
     public async Task Answers_an_attack_with_404_and_keeps_every_row(string layer)
     {
+        var before = await EveryTablesRows();
+
         using var answer = await Get($"/{layer}/0/0/0.pbf");
 
         Assert.Equal(HttpStatusCode.NotFound, answer.StatusCode);
-        Assert.Equal(100L, await service.Database.OwnerValue<long>("SELECT count(*) FROM food.cafes"));
+        Assert.Equal("application/problem+json", answer.Content.Headers.ContentType?.MediaType);
+        Assert.Contains("food.cafes=100", before, StringComparison.Ordinal);
+        Assert.Equal(before, await EveryTablesRows());
+    }
+
+    // S-01 c3 and c4: a table the publisher granted, whose name is an attack, is one odd name and
+    // nothing more. The quoting function (SqlName.Quote) wraps it whole, so the database reads
+    // 'DROP TABLE' as letters of a name, serves the table's one place, and every table keeps its rows.
+    [Fact]
+    public async Task Serves_a_granted_table_named_as_an_attack_and_keeps_every_row()
+    {
+        var before = await EveryTablesRows();
+        var layer = Uri.EscapeDataString("food.x\"; DROP TABLE food.cafes; --");
+
+        var bytes = await service.Client.GetByteArrayAsync($"/{layer}/0/0/0.pbf", TestContext.Current.CancellationToken);
+        var tile = new MapboxTileReader().Read(new MemoryStream(bytes), new NetTopologySuite.IO.VectorTiles.Tiles.Tile(0, 0, 0));
+
+        Assert.Equal("Odd", tile.Layers.Single().Features.Single().Attributes["name"]);
+        Assert.Contains("food.cafes=100", before, StringComparison.Ordinal);
+        Assert.Equal(before, await EveryTablesRows());
     }
 
     // S-06 c3, SR-11: '%2e' is a dot in disguise. Kestrel decodes it and drops the folder before
@@ -355,6 +406,20 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         Assert.StartsWith("HTTP/1.1 400 ", answer, StringComparison.Ordinal);
         Assert.Contains("Content-Type: application/problem+json", answer, StringComparison.Ordinal);
         Assert.DoesNotContain("food", answer[(answer.IndexOf("\r\n\r\n", StringComparison.Ordinal) + 4)..], StringComparison.Ordinal);
+    }
+
+    // US-07 c4: a tile's three numbers are whole numbers. A word in their place matches no route,
+    // so the answer is the 404 problem document of any unknown address.
+    [Theory]
+    [InlineData("/food.cafes/zero/0/0.pbf")]
+    [InlineData("/food.cafes/0/0/0x1.pbf")]
+    [InlineData("/food.cafes/0/1.5/0.pbf")]
+    public async Task Answers_a_tile_address_with_a_word_for_a_number_with_404(string path)
+    {
+        using var answer = await Get(path);
+
+        Assert.Equal(HttpStatusCode.NotFound, answer.StatusCode);
+        Assert.Equal("application/problem+json", answer.Content.Headers.ContentType?.MediaType);
     }
 
     // A tile, the map page and /health are read, never written: each allows GET and HEAD alone. Any
