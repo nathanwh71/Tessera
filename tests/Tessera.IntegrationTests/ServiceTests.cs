@@ -357,6 +357,35 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         Assert.DoesNotContain("food", answer[(answer.IndexOf("\r\n\r\n", StringComparison.Ordinal) + 4)..], StringComparison.Ordinal);
     }
 
+    // A tile, the map page and /health are read, never written: each allows GET and HEAD alone. Any
+    // other method answers 405, 'Method Not Allowed', as a problem document whose Allow header
+    // names the two methods the address takes (RFC 9110, section 15.5.6).
+    [Theory]
+    [InlineData("POST", "/food.cafes/0/0/0.pbf")]
+    [InlineData("DELETE", "/food.cafes/0/0/0.pbf")]
+    [InlineData("POST", "/health")]
+    [InlineData("DELETE", "/health")]
+    [InlineData("PUT", "/health")]
+    public async Task Answers_any_method_but_get_and_head_with_405(string method, string path)
+    {
+        using var request = new HttpRequestMessage(new HttpMethod(method), path);
+        using var answer = await service.Client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.MethodNotAllowed, answer.StatusCode);
+        Assert.Equal("application/problem+json", answer.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(["GET", "HEAD"], answer.Content.Headers.Allow.Order(StringComparer.Ordinal));
+    }
+
+    // N-25: HEAD asks /health for its status alone, as a watcher may.
+    [Fact]
+    public async Task Answers_head_on_health()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Head, "/health");
+        using var answer = await service.Client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, answer.StatusCode);
+    }
+
     // US-00 c2 and test 1: the run command itself starts the service, which answers on its port.
     [Fact]
     public async Task Starts_from_the_run_command_and_answers()

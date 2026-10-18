@@ -6,7 +6,7 @@ namespace Modules.Tessera.Features;
 /// <summary>
 /// <c>/health</c>, the address a watcher, such as the start-up script, asks whether the service is
 /// well (N-25). It answers <c>{"status":"UP"}</c> with 200, or <c>OUT_OF_SERVICE</c> or <c>DOWN</c>
-/// with 503.
+/// with 503. It answers GET and HEAD alone; any other method gets 405.
 /// </summary>
 public static class HealthRoutes
 {
@@ -39,7 +39,10 @@ public static class HealthRoutes
                 context.Response.ContentType = "application/json";
                 return context.Response.WriteAsync($$"""{"status":"{{status}}"}""");
             },
-        });
+        })
+        // /health is read, never written, as a tile is: GET and HEAD alone. Any other method finds
+        // no route for itself, and routing answers 405 with 'Allow: GET, HEAD', as for a tile.
+        .WithMetadata(new HttpMethodMetadata([HttpMethods.Get, HttpMethods.Head]));
         return app;
     }
 }
