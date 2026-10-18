@@ -25,7 +25,7 @@ _Caching_, packing and _watching_ a _server_ are Nginx's daily _work_, _tested_ 
 | Pack answers with gzip, and say `Vary: Accept-Encoding` | `gzip`, `gzip_vary` |
 | Answer 304 to a browser that sends the tag back | Its _own_ _check_ of `If-None-Match` _against_ the _stored_ `ETag` |
 | Serve kept tiles while the service or the database is down, and an expired tile while a fresh copy is fetched behind it | `proxy_cache_use_stale`, `proxy_cache_background_update` |
-| Refuse a malformed address, with a problem document that hides it | Its _own_ parser, and `error_page 400` |
+| Refuse a malformed address, with a problem document that hides it | Its _own_ parser, a _check_ of `$request_uri` for `%2e`, and `error_page 400` |
 | Send a request to the other copy when one crashes or hangs, and rest the failed copy | `proxy_next_upstream error timeout`, `max_fails=3 fail_timeout=10s` |
 
 The _service_ _sends_ `Cache-Control` and a _weak_ `ETag` with _each_ _tile_, _answers_ `/health`, and _writes_ its _own_ ***problem documents***. ASP.NET Core _answers_ 304 to a _matching_ `If-None-Match` that _reaches_ the _service_, as Nginx does from its _kept_ _copy_.
