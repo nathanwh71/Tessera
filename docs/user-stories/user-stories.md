@@ -579,7 +579,7 @@ The _places_ _arrive_ as _files_ the _data_ _publisher_ _owns_, _each_ with _col
 
 **Tests to write first**
 
-1. 'gives every place layer four anchors and optional text', _against_ the _style_.
+1. 'gives the names four anchors, and lets a name give way while its pin stays', _against_ the _style_.
 2. The _tile_ _query_ _orders_ _each_ _table_'s _places_ by its _primary_ _key_, as its _approved_ _text_ _shows_.
 3. A ***browser test*** with the _map_'s collision _boxes_ _shown_, whose _screenshots_ at _levels_ 16, 18 and 20 over the busiest _street_ _match_ _approved_ _images_.
 
