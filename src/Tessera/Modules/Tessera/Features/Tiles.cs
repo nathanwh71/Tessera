@@ -28,7 +28,8 @@ public delegate Task<Result<byte[]?, DatabaseError>> TileReader(Query query, Can
 /// </param>
 /// <param name="read">Runs the tile query.</param>
 /// <param name="settings">The tile's limits and how long a browser and Nginx may keep it.</param>
-public sealed class TileServer(Func<LayerCatalogue?> catalogue, TileReader read, TileSettings settings)
+/// <param name="log">Where the server writes the cause of each 500, which the answer leaves out.</param>
+public sealed class TileServer(Func<LayerCatalogue?> catalogue, TileReader read, TileSettings settings, ILogger log)
 {
     /// <summary>
     /// The registered media type of a <b><i>vector tile</i></b>, which US-07 c1 asks of every tile,
@@ -80,9 +81,28 @@ public sealed class TileServer(Func<LayerCatalogue?> catalogue, TileReader read,
                 DatabaseError.MissingTable _ => Problems.NotFound("No published layer has that name."),
                 DatabaseError.MissingColumn _ => Problems.Unavailable("The layer has changed. Try again shortly."),
                 DatabaseError.Unavailable _ => Problems.Unavailable("The database cannot be reached. Try again shortly."),
-                DatabaseError.Other _ => Problems.Fault(),
+                DatabaseError.Other _ => Fault(found, tile, error),
                 _ => throw ExhaustiveMatch.Failed(error),
             });
+    }
+
+    /// <summary>
+    /// Answers 500 for a refusal waiting cannot cure, and writes its cause to the log (N-22 c4). The
+    /// answer names no cause, so a stranger learns nothing of the service's insides; the log line
+    /// names the layer, the tile, the SQLSTATE code and the database's message, so the maintainer can
+    /// find the fault. Error is the level for a fault that needs a person to look at it.
+    /// </summary>
+    private IResult Fault(Layer layer, TileAddress tile, DatabaseError error)
+    {
+        log.LogError(
+            "The tile {Layer}/{Z}/{X}/{Y} failed ({SqlState}): {Message}",
+            layer.Id,
+            tile.Z,
+            tile.X,
+            tile.Y,
+            error.SqlState,
+            error.Message);
+        return Problems.Fault();
     }
 
     /// <summary>
@@ -113,7 +133,11 @@ public static class TileRoutes
     public static IEndpointRouteBuilder MapTiles(
         this IEndpointRouteBuilder routes, LiveCatalogue catalogue, Database database, TileSettings settings)
     {
-        var server = new TileServer(() => catalogue.Current, database.Single<byte[]>, settings);
+        var server = new TileServer(
+            () => catalogue.Current,
+            database.Single<byte[]>,
+            settings,
+            routes.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Tessera.Tiles"));
         // HEAD asks for the headers alone, as a watcher checking a tag may.
         string[] read = [HttpMethods.Get, HttpMethods.Head];
         routes.MapMethods("/{layer}/{z:int}/{x:int}/{y:int}.pbf", read, server.Answer);
