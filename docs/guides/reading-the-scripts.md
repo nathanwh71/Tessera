@@ -1,6 +1,6 @@
 # Reading the scripts, step by step
 
-**The short answer.** The _scripts_ _follow_ _one_ _pattern_: a _thin_ _file_ in `scripts/` _runs_ the _commands_, and a _file_ in `scripts/lib/` _makes_ every _decision_ as a ***pure function***, which a _test_ _checks_ with _values_ _alone_ (ADR 0002). _Learn_ the _pattern_ _once_, on the _smallest_ _script_, then _read_ the _scripts_ in the _order_ a _maintainer_ _uses_ them: _start_ Tessera, _bring_ in _places_, _set_ _up_ the _office_ _machine_, _keep_ its _data_ _safe_, then _build_ and _test_. Twelve _steps_ _take_ _two_ _hours_ and a _half_. The _scripts_ are _about_ 1,900 _lines_ of TypeScript: _thirteen_ _entry_ _scripts_, _ten_ helper _files_ in `scripts/lib/`, _seven_ of them _pure_, and _eight_ _test_ _files_, _one_ _beside_ _each_ _pure_ helper and _one_ _beside_ `lib/build.ts`.
+**The short answer.** The _scripts_ _follow_ _one_ _pattern_: a _thin_ _file_ in `scripts/` _runs_ the _commands_, and a _file_ in `scripts/lib/` _makes_ every _decision_ as a ***pure function***, which a _test_ _checks_ with _values_ _alone_ (ADR 0002). _Learn_ the _pattern_ _once_, on the _smallest_ _script_, then _read_ the _scripts_ in the _order_ a _maintainer_ _uses_ them: _start_ Tessera, _bring_ in _places_, _set_ _up_ the _office_ _machine_, _keep_ its _data_ _safe_, then _build_ and _test_. Twelve _steps_ _take_ _two_ _hours_ and a _half_. The _scripts_ are _about_ 2,100 _lines_ of TypeScript: _fourteen_ _entry_ _scripts_, _eleven_ helper _files_ in `scripts/lib/`, _eight_ of them _pure_, and _nine_ _test_ _files_, _one_ _beside_ _each_ _pure_ helper and _one_ _beside_ `lib/build.ts`.
 
 **Before you start.** At the repository's _root_, _run_ `npm ci`, then `npm run typecheck` and `npm run test:scripts`. The _tests_ _take_ a _second_ and _need_ no Docker, no _database_ and no .NET, which is the _pattern_ at _work_. Node.js 26 _runs_ _each_ `.ts` _file_ as it _stands_, by stripping its _types_; `tsc` _only_ _checks_ them.
 
@@ -19,6 +19,7 @@
 | `npm run backup-task` | `backup-task.ts` | `lib/backup.ts`, `lib/boot.ts` | no _story_; JTessera's backups |
 | `npm run build` | `build.ts` | _none_ | US-00 c1 |
 | `npm test` | `test.ts` | _none_ | US-00 c3 |
+| `npm test`, its coverage step | `coverage.ts` | `lib/coverage.ts` | the coverage floors |
 | `npm run e2e` | `e2e.ts` | `lib/plan.ts` | US-23, ADR 0008 |
 
 _Three_ helpers are not _pure_, _since_ their _work_ is to _talk_ to the _world_: `lib/database.ts` _holds_ the _two_ _waits_ that `start.ts`, `publish.ts`, `e2e.ts`, `backup.ts` and `restore.ts` _share_, and the _two_ _ways_ a backup _passes_ in or out of the _database_'s _container_; `lib/edge.ts` _holds_ the Nginx _checks_; and `lib/build.ts` _empties_ the _map_ an older _build_ _left_.
@@ -96,7 +97,7 @@ _Three_ helpers are not _pure_, _since_ their _work_ is to _talk_ to the _world_
 ### Step 11 · One command to build, one to test
 
 - **Open:** `scripts/build.ts`, then `scripts/test.ts`.
-- **Look for:** _order_. `build.ts` _builds_ the _map_ _before_ the _service_, _since_ the _service_'s _release_ _carries_ the _map_ (US-23 c4). _Before_ the _service_ _builds_, `emptyReleaseMap` in `lib/build.ts` deletes the _old_ _map_ from the _release_, _since_ the _copy_ _never_ deletes a _file_. `test.ts` _runs_ the _quick_ _checks_ _first_, the _scripts_' _types_ and their _tests_, so a _typing_ slip _fails_ in _seconds_ _rather_ than _after_ the ***browser tests***.
+- **Look for:** _order_. `build.ts` _builds_ the _map_ _before_ the _service_, _since_ the _service_'s _release_ _carries_ the _map_ (US-23 c4). _Before_ the _service_ _builds_, `emptyReleaseMap` in `lib/build.ts` deletes the _old_ _map_ from the _release_, _since_ the _copy_ _never_ deletes a _file_. `test.ts` _runs_ the _quick_ _checks_ _first_, the _scripts_' _types_ and their _tests_, so a _typing_ slip _fails_ in _seconds_ _rather_ than _after_ the ***browser tests***. _After_ the _three_ .NET _test_ _suites_, `coverage.ts` merges their coverage _records_ into _one_ _report_ and _fails_ _below_ the floors in `lib/coverage.ts`, 94 _per_ _cent_ of _lines_ and 84 _per_ _cent_ of _branches_.
 - **Check yourself:** why do the .NET _test_ _suites_ _run_ with `--no-build`?
 
 ### Step 12 · The browser tests and the Nginx checks

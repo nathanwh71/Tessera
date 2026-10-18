@@ -13,10 +13,10 @@ export const coverageFolder = 'coverage';
 export const suites = ['ArchitectureTests', 'UnitTests', 'IntegrationTests'] as const;
 
 /**
- * The lowest share, in per cent, that the three suites together may cover. On 18 October 2026
- * they covered 95.8 per cent of the lines (502 of 524) and 86.2 per cent of the branches (207 of
- * 240). Each floor sits about two points below, so a timing that varies from run to run cannot
- * fail the build, while a new part with no tests does. JTessera, the Java build, asks 85 and 70.
+ * The lowest share, in per cent, that the three suites together may cover. On 18 October 2026,
+ * after the day's fixes, they covered 96.1 per cent of the lines (648 of 674) and 85.5 per cent
+ * of the branches (267 of 312). Each floor sits below, so a timing that varies from run to run
+ * cannot fail the build, while a new part with no tests does. JTessera, the Java build, asks 85 and 70.
  * Raise a floor when the figures rise; never lower one to pass a change.
  */
 export const floors = { lines: 94, branches: 84 } as const;
