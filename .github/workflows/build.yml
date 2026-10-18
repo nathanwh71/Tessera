@@ -67,7 +67,7 @@ jobs:
       # The browser tests drive Chromium against the built service and a database of their own
       # (scripts/e2e.ts). Playwright runs inside its own Docker image, the one named after the
       # version web/package.json pins. Its Chromium and fonts draw the approved images of UI-17
-      # within their tolerance on any machine, so the screenshot comparisons run here too. The
+      # within their tolerance wherever it runs, so the screenshot comparisons run here too. The
       # runner's own Google Chrome draws text a few per cent differently, and downloading
       # Playwright's browser alone can hang for ten minutes; the image comes from Microsoft's
       # registry. The time limit fails a stuck run.
