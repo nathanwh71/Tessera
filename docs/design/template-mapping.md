@@ -18,7 +18,7 @@ _Four_ _fixed_ _points_ _stand_ _outside_ it:
 |---|---|
 | The URLs: `/{layer}/{z}/{x}/{y}.pbf`, `/`, `/{layer}.html`, `/health` | Nginx, the _map_ and every _saved_ _link_ _use_ them |
 | `tessera.json` and its sections, and `DATABASE_URL` | ADR 0003; the _machines_' _settings_ _depend_ on them |
-| `Tessera seed` and the npm scripts | The runbook and the ***start-up task*** _call_ them |
+| `Tessera seed` and the npm scripts | The ***start-up task*** _calls_ them, the _scripts_' _messages_ _name_ them, and the runbook that study _plan_ 05's capstone _writes_ will _call_ them |
 | Nginx in front, with the limits and the kept tiles | ADR 0007 and ADR 0008 |
 
 ## The tree

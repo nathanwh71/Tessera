@@ -7,7 +7,10 @@
     The architecture tests in tests/Tessera.ArchitectureTests guard the borders between the layers.
   -->
   <PropertyGroup>
-    <!-- The program keeps its name, so 'Tessera seed', the runbook and the start-up task still work. -->
+    <!--
+      The program keeps its name, so 'Tessera seed' in the scripts, their messages and the start-up
+      task still work, as will the runbook that study plan 05's capstone writes.
+    -->
     <AssemblyName>Tessera</AssemblyName>
     <!--
       No root namespace, so each folder's path is its namespace, such as Modules.Tessera.Domain, and
