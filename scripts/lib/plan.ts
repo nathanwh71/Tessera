@@ -145,3 +145,13 @@ export function nginxArguments(container: string, httpPort: string, servicePorts
  * runs a container from it.
  */
 export const nginxImage = 'tessera-nginx';
+
+/**
+ * The lines to show from what `Tessera seed` printed: the scripts it ran, or that it had none to
+ * run (US-01, ADR 0009). zx keeps a command's output to itself unless asked, so start.ts prints
+ * these lines, as it prints its other steps' messages. Blank lines drop out.
+ */
+export function seedReport(printed: string): readonly string[] {
+  const lines = printed.split(/\r?\n/).filter(line => line.trim() !== '');
+  return lines.length > 0 ? lines : ['The seed ran, and printed no report.'];
+}

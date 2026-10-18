@@ -1,7 +1,7 @@
 // Tests of the scripts' pure decisions; node --test runs them, with no Docker and no database.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { databaseUrl, isOfficeNetwork, nginxArguments, readDatabasePlace, readStartSettings, restartDelay } from './plan.ts';
+import { databaseUrl, isOfficeNetwork, nginxArguments, readDatabasePlace, readStartSettings, restartDelay, seedReport } from './plan.ts';
 
 test('names every missing variable at once', () => {
   const result = readStartSettings({});
@@ -51,4 +51,16 @@ test('percent-encodes a password that holds an @', () => {
 test('places the database on this machine unless told otherwise', () => {
   assert.deepEqual(readDatabasePlace({}), { host: '127.0.0.1', port: '5432', name: 'tessera' });
   assert.deepEqual(readDatabasePlace({ TESSERA_DB_HOST: 'db.office', TESSERA_DB_PORT: '5433', TESSERA_DB_NAME: 'places' }), { host: 'db.office', port: '5433', name: 'places' });
+});
+
+// The seed's report, 'Ran 0002-parks.sql' or 'The seed is up to date.', reaches the screen
+// (US-01, ADR 0009): the operator sees which scripts ran, and that a new table waits for its grant.
+test('passes on the seed\'s own report, line by line', () => {
+  assert.deepEqual(seedReport('Ran 0002-parks.sql\nA new table waits for its grant: npm run publish.\n'),
+    ['Ran 0002-parks.sql', 'A new table waits for its grant: npm run publish.']);
+  assert.deepEqual(seedReport('The seed is up to date.\r\n'), ['The seed is up to date.']);
+});
+
+test('says so when the seed printed nothing, rather than print a blank line', () => {
+  assert.deepEqual(seedReport(''), ['The seed ran, and printed no report.']);
 });

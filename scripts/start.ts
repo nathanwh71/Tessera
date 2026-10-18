@@ -21,7 +21,7 @@ import { resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { $, type ProcessPromise } from 'zx';
 import { waitForDatabase, waitForHealth } from './lib/database.ts';
-import { databaseUrl, nginxArguments, nginxImage, readStartSettings, runArguments } from './lib/plan.ts';
+import { databaseUrl, nginxArguments, nginxImage, readStartSettings, runArguments, seedReport } from './lib/plan.ts';
 import { keepRunning } from './lib/supervise.ts';
 
 // Fixed names, so each start finds the containers and the data an earlier start left, and
@@ -65,7 +65,9 @@ if (notReady !== undefined) {
 }
 
 // DbUp runs each seed script it has not run before, and none twice, so this runs at every start.
-await $({ env: { ...process.env, TESSERA_PUBLISHER_DATABASE_URL: databaseUrl('tessera_publisher', settings.publisherPassword, settings.database) } })`dotnet ${program} seed`;
+// zx keeps what the seed prints to itself, so its report, the scripts it ran, is printed here.
+const seeded = await $({ env: { ...process.env, TESSERA_PUBLISHER_DATABASE_URL: databaseUrl('tessera_publisher', settings.publisherPassword, settings.database) } })`dotnet ${program} seed`;
+seedReport(seeded.stdout).forEach(line => console.log(line));
 
 // N-29: each copy runs until told to stop; lib/supervise.ts starts one again when it stops.
 let stopping = false;
