@@ -12,10 +12,11 @@ namespace Tessera.UnitTests;
 public sealed class TileTests
 {
     /// <summary>
-    /// A <b><i>layer</i></b> shaped like the shipped <c>food.cafes</c>: its first four properties, in
-    /// the seed's order, and its primary key, <c>fid</c>, the key the seed gives every table. So the
-    /// query under test carries a column list and the ORDER BY a shipped table gets, which fixes the
-    /// order of features (US-24). The text <c>id</c> is a property there, as in the seed, not the key.
+    /// A <b><i>layer</i></b> shaped like the shipped <c>food.cafes</c>: its first four properties,
+    /// in the seed's order, and its primary key, <c>fid</c>, the key the seed gives every table.
+    /// So the query under test carries a column list and the ORDER BY a shipped table gets, which
+    /// fixes the order of features (US-24). There, as in the seed, <c>id</c> is a property, not
+    /// the key.
     /// </summary>
     private static readonly Layer Cafes = CatalogueReader.ToLayer(new CatalogueRow("food", "cafes", "geom", 4326, "POINT", """["id","layer","group","name"]""", """["fid"]"""));
 
@@ -26,8 +27,8 @@ public sealed class TileTests
     private static readonly Layer CafesView = CatalogueReader.ToLayer(new CatalogueRow("food", "cafes_view", "geom", 4326, "POINT", """["id","name"]""", "[]"));
 
     /// <summary>
-    /// A tile of Macau at level 15: the one that holds the area's home point, 113.55 E, 22.19 N, as
-    /// tessera.json sets it. Normal data comes from the area Tessera serves, so a reader who
+    /// A tile of Macau at level 15: the one that holds the area's home point, 113.55 E, 22.19 N,
+    /// as tessera.json sets it. Normal data comes from the area Tessera serves, so a reader who
     /// works the numbers back finds Macau, not a point near 118.3 E.
     /// </summary>
     private static readonly TileAddress Home = TileAddress.Of(15, 26719, 14311)!;

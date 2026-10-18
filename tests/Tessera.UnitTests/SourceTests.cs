@@ -5,14 +5,16 @@ namespace Tessera.UnitTests;
 
 /// <summary>
 /// Rules about the source code itself, checked by reading the files as text: what the service's
-/// code may name (SR-25), where its SQL may live (SR-06), and that the service and the map list the
-/// same nine <b><i>layers</i></b> (US-23 c7). The compiler sees none of these, so a test reads them.
+/// code may name (SR-25), where its SQL may live (SR-06), and that the service and the map list
+/// the same nine <b><i>layers</i></b> (US-23 c7). The compiler sees none of these, so a test reads
+/// them.
 /// </summary>
 public sealed partial class SourceTests
 {
     /// <summary>
     /// The repository's top folder: the first folder above the running tests that holds
-    /// Tessera.slnx. The tests run from tests/*/bin/..., inside a checkout, so the search always ends.
+    /// Tessera.slnx. The tests run from tests/*/bin/..., inside a checkout, so the search always
+    /// ends.
     /// </summary>
     private static readonly string Root = FindRoot(new DirectoryInfo(AppContext.BaseDirectory));
 
@@ -22,8 +24,9 @@ public sealed partial class SourceTests
         : FindRoot(folder.Parent);
 
     /// <summary>
-    /// The service's own text files, each with its path from the repository's top, written with '/'
-    /// on every system. bin and obj hold the build's output, not code anyone wrote, so they stay out.
+    /// The service's own text files, each with its path from the repository's top, written with
+    /// '/' on every system. bin and obj hold the build's output, not code anyone wrote, so they
+    /// stay out.
     /// </summary>
     private static IEnumerable<SourceFile> ServiceFiles(params string[] extensions) =>
         Directory.EnumerateFiles(Path.Combine(Root, "src"), "*", SearchOption.AllDirectories)
@@ -46,7 +49,8 @@ public sealed partial class SourceTests
     [GeneratedRegex(@"\b\d{1,3}(?:\.\d{1,3}){3}\b", Options, Second)]
     private static partial Regex Ip();
 
-    // The machine in a URL: the part after '//' and any 'user:password@', up to a ':' '/' or quote.
+    // The machine in a URL: the part after '//' and any 'user:password@', up to a colon, a slash
+    // or a quote.
     [GeneratedRegex(@"[A-Za-z][A-Za-z0-9+.-]*://(?:[^/@\s""'<>]*@)?(?<machine>\[[^\]]*\]|[^/:\s""'<>]+)", Options, Second)]
     private static partial Regex UrlHost();
 
@@ -56,8 +60,8 @@ public sealed partial class SourceTests
 
     /// <summary>
     /// The machines code may name: the <b><i>loopback</i></b> address, by which a computer reaches
-    /// itself, and the word 'host' that stands for a machine in the URL pattern Connection.cs prints.
-    /// Every other machine comes from <c>DATABASE_URL</c> (SR-25, US-00 c4).
+    /// itself, and the word 'host' that stands for a machine in the URL pattern Connection.cs
+    /// prints. Every other machine comes from <c>DATABASE_URL</c> (SR-25, US-00 c4).
     /// </summary>
     private static bool Allowed(string machine) =>
         machine is "localhost" or "host" or "[::1]" || machine.StartsWith("127.", StringComparison.Ordinal);
@@ -144,8 +148,8 @@ public sealed partial class SourceTests
     [GeneratedRegex(@"\bid:\s*""(?<id>[^""]+)""", Options, Second)]
     private static partial Regex LayerId();
 
-    // US-23 c2 and c7: the service opens a page for each layer the map names, and for no other. The
-    // two lists live in two languages, MapRoutes.LayerIds in C# and LAYERS in
+    // US-23 c2 and c7: the service opens a page for each layer the map names, and for no other.
+    // The two lists live in two languages, MapRoutes.LayerIds in C# and LAYERS in
     // web/src/layers/layers.ts, so this test reads the map's file and compares the two, sorted.
     [Fact]
     public void Lists_the_same_nine_layers_as_the_map()
