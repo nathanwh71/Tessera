@@ -83,6 +83,16 @@ public sealed class DatabaseFixture : IAsyncLifetime
             await _container.DisposeAsync().ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Freezes the database, as <c>docker pause</c> does: every process in the container stops,
+    /// yet the machine still accepts each connection, so a client waits on a server that never
+    /// answers. A database that hangs this way is harder on the service than one that has stopped.
+    /// </summary>
+    public Task Pause() => _container!.PauseAsync();
+
+    /// <summary>Lets a frozen database run again.</summary>
+    public Task Unpause() => _container!.UnpauseAsync();
+
     /// <summary>Runs SQL as the database's owner, to set the stage: make test tables, grant, revoke.</summary>
     public async Task Owner(string sql)
     {
