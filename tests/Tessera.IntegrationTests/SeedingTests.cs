@@ -75,6 +75,22 @@ public sealed class SeedingTests(DatabaseFixture database) : IClassFixture<Datab
         Assert.Equal(["\"fid\""], catalogue.Find("food.cafes")!.Order.Select(name => name.Sql));
     }
 
+    // FR-19 and US-24 c4: DbUp runs the scripts in the order of their names, whatever order the
+    // folder lists them in, so a later script may build on an earlier one. The files are written
+    // last first, and each script records its own name, so the table shows the order they ran in.
+    [Fact]
+    public async Task Runs_the_scripts_in_the_order_of_their_names()
+    {
+        static string Record(string name) => $"INSERT INTO trial_c.ran (script) VALUES ('{name}');";
+        var folder = Folder(
+            ("0010-trial-c.sql", Record("0010")),
+            ("0002-trial-c.sql", Record("0002")),
+            ("0001-trial-c.sql", "CREATE SCHEMA trial_c; CREATE TABLE trial_c.ran (step serial PRIMARY KEY, script text); " + Record("0001")));
+
+        Assert.Equal(["0001-trial-c.sql", "0002-trial-c.sql", "0010-trial-c.sql"], Run(database.Publisher, folder));
+        Assert.Equal("0001 0002 0010", await database.OwnerValue<string>("SELECT string_agg(script, ' ' ORDER BY step) FROM trial_c.ran"));
+    }
+
     // US-24 c6: a script that fails changes nothing, and stays out of the journal, so it runs again
     // once fixed. The failure names the script.
     [Fact]
