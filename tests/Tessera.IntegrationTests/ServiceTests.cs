@@ -282,6 +282,81 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         Assert.Equal(100L, await service.Database.OwnerValue<long>("SELECT count(*) FROM food.cafes"));
     }
 
+    // S-06 c3, SR-11: '%2e' is a dot in disguise. Kestrel decodes it and drops the folder before
+    // '..', so '/x/%2e%2e/food.cafes/0/0/0.pbf' once reached the tile route and answered 200. The
+    // service now reads the address as it was sent and refuses one with a dot folder in disguise,
+    // in any mix of cases, before it picks a route. Nginx refuses it first (edge.ts); this covers a
+    // copy reached directly.
+    [Theory]
+    [InlineData("/x/%2e%2e/food.cafes/0/0/0.pbf")]
+    [InlineData("/x/%2E%2e/food.cafes/0/0/0.pbf")]
+    [InlineData("/x/.%2E/food.cafes/0/0/0.pbf")]
+    [InlineData("/food.cafes/%2e/0/0/0.pbf")]
+    [InlineData("/x/%2e%2e/health")]
+    public async Task Refuses_a_dot_folder_in_disguise_with_400(string target)
+    {
+        var answer = await Http.Raw(service.Port, target, TestContext.Current.CancellationToken);
+        var body = answer[(answer.IndexOf("\r\n\r\n", StringComparison.Ordinal) + 4)..];
+
+        Assert.StartsWith("HTTP/1.1 400 ", answer, StringComparison.Ordinal);
+        Assert.Contains("Content-Type: application/problem+json", answer, StringComparison.Ordinal);
+        Assert.Contains("\"title\":\"Bad Request\"", body, StringComparison.Ordinal);
+        // S-06 c2: the answer never repeats the address.
+        Assert.DoesNotContain("food.cafes", body, StringComparison.Ordinal);
+    }
+
+    // S-06 c4: a clean address, and a name that merely holds an encoded letter, still reach their routes.
+    [Theory]
+    [InlineData("/food.cafes/0/0/0.pbf")]
+    [InlineData("/food%2Ecafes/0/0/0.pbf")]
+    public async Task Lets_a_clean_address_reach_the_tile_route(string target)
+    {
+        var answer = await Http.Raw(service.Port, target, TestContext.Current.CancellationToken);
+
+        Assert.StartsWith("HTTP/1.1 200 ", answer, StringComparison.Ordinal);
+    }
+
+    // S-06 c3, SR-11: a backslash is a letter to the service, not a folder's edge, so an address
+    // that hides its folders behind backslashes matches no route and answers a 404 problem document.
+    [Theory]
+    [InlineData("/food.cafes\\0\\0\\0.pbf")]
+    [InlineData("/food.cafes/0/0\\0.pbf")]
+    [InlineData("/x/..\\food.cafes/0/0/0.pbf")]
+    public async Task Answers_a_backslash_with_404(string target)
+    {
+        var answer = await Http.Raw(service.Port, target, TestContext.Current.CancellationToken);
+
+        Assert.StartsWith("HTTP/1.1 404 ", answer, StringComparison.Ordinal);
+        Assert.Contains("Content-Type: application/problem+json", answer, StringComparison.Ordinal);
+    }
+
+    // S-06 c1: Nginx refuses an encoded null first (edge.ts). A copy reached directly refuses it
+    // too: Kestrel, ASP.NET Core's web server, answers 400 with an empty body before any route or
+    // problem document runs, so the answer repeats nothing.
+    [Fact]
+    public async Task Answers_an_encoded_null_with_an_empty_400()
+    {
+        var answer = await Http.Raw(service.Port, "/food.cafes/0/0/0.pbf%00", TestContext.Current.CancellationToken);
+
+        Assert.StartsWith("HTTP/1.1 400 ", answer, StringComparison.Ordinal);
+        Assert.Contains("Content-Length: 0", answer, StringComparison.Ordinal);
+    }
+
+    // S-06 c1: Kestrel lets a raw control character, such as byte 1 or DEL, into the path, so the
+    // service refuses it itself, with the 400 problem document of a dot folder in disguise.
+    [Theory]
+    [InlineData("/food.cafes/0/0/0.pbf\u0001")]
+    [InlineData("/food\u001fcafes/0/0/0.pbf")]
+    [InlineData("/food.cafes/0/0/\u007f0.pbf")]
+    public async Task Answers_a_raw_control_character_with_400(string target)
+    {
+        var answer = await Http.Raw(service.Port, target, TestContext.Current.CancellationToken);
+
+        Assert.StartsWith("HTTP/1.1 400 ", answer, StringComparison.Ordinal);
+        Assert.Contains("Content-Type: application/problem+json", answer, StringComparison.Ordinal);
+        Assert.DoesNotContain("food", answer[(answer.IndexOf("\r\n\r\n", StringComparison.Ordinal) + 4)..], StringComparison.Ordinal);
+    }
+
     // US-00 c2 and test 1: the run command itself starts the service, which answers on its port.
     [Fact]
     public async Task Starts_from_the_run_command_and_answers()
