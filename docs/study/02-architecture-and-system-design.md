@@ -1,6 +1,6 @@
 # Study plan 2: architecture and system design
 
-**Tessera is a modular monolith (ADR 0001): one program with two commands, serve and `seed`, laid out as the modular-monolith template, with `Common` and one module, `Modules/Tessera`, in three layers: `Domain`, `Infrastructure` and `Features`.** _Six_ ArchUnitNET _rules_ _guard_ the layout in _about_ _eight_ _seconds_ (ADR 0010). Nginx _stands_ in _front_: it _keeps_ and _packs_ ***tiles***, _answers_ 304, _limits_ _each_ _machine_ and _shares_ _requests_ _between_ _two_ _copies_ (ADR 0007, ADR 0008), so the _service_ _carries_ no _resilience_ _library_. This _plan_ _moves_ you from _reading_ the _ten_ ADRs to _breaking_ and _writing_ _rules_, then to _judging_ the trade-offs as Richards and Ford _teach_. It _ends_ with an ADR for a _second_ ***module***.
+**Tessera is a modular monolith (ADR 0001): one program with two commands, serve and `seed`, laid out as the modular-monolith template, with `Common` and one module, `Modules/Tessera`, in three layers: `Domain`, `Infrastructure` and `Features`.** _Six_ ArchUnitNET _rules_ _guard_ the layout in 8 to 13 _seconds_ on a _quiet_ _machine_ (ADR 0010). Nginx _stands_ in _front_: it _keeps_ and _packs_ ***tiles***, _answers_ 304, _limits_ _each_ _machine_ and _shares_ _requests_ _between_ _two_ _copies_ (ADR 0007, ADR 0008), so the _service_ _carries_ no _resilience_ _library_. This _plan_ _moves_ you from _reading_ the _ten_ ADRs to _breaking_ and _writing_ _rules_, then to _judging_ the trade-offs as Richards and Ford _teach_. It _ends_ with an ADR for a _second_ ***module***.
 
 ## Level 1: orient (pomodoros 1–4)
 
@@ -25,7 +25,7 @@
 | # | Activity on Tessera | Goal | Check yourself |
 |---|---|---|---|
 | 9 | On a _branch_, _make_ a `Domain` _type_ _reference_ an `Infrastructure` _type_. _Run_ the ***architecture tests***, _read_ the _failure_, and undo it. | _Feel_ a _rule_ fire. | Did the _message_ _name_ the _type_ at _fault_ and the _rule_? |
-| 10 | `Only_Infrastructure_talks_to_the_database` _already_ _exists_. _Write_ a _stricter_ _rule_: _only_ `Database` may _use_ Dapper. _Prove_ it _fails_ when _broken_. | _Turn_ an ADR's intent into a _test_. | Does the _run_ _still_ _take_ _about_ _eight_ _seconds_? |
+| 10 | `Only_Infrastructure_talks_to_the_database` _already_ _exists_. _Write_ a _stricter_ _rule_: _only_ `Database` may _use_ Dapper. _Prove_ it _fails_ when _broken_. | _Turn_ an ADR's intent into a _test_. | Does the _run_ _still_ _take_ 8 to 13 _seconds_ on a _quiet_ _machine_? |
 | 11 | _Write_ the _same_ _rule_ with NetArchTest in a scratch _project_, and _compare_ the _two_ _libraries_. | _Judge_ your _tools_. | Which _library_'s _message_ would a _school_ _student_ _follow_ more easily? |
 | 12 | _Read_ Nygard's article on ADRs, then _rewrite_ ADR 0007's 'Consequences' as if Tessera _ran_ _five_ _copies_. | Practise _writing_ an ADR. | Does ADR 0007 _still_ _hold_, or would you _replace_ it? |
 

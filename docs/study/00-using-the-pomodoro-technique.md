@@ -1,6 +1,6 @@
 # Studying Tessera with the Pomodoro Technique
 
-**Study Tessera in seven plans, one for each area of software work, each in pomodoros of 25 minutes on Tessera's own files.** _Each_ _plan_ has 16 pomodoros in _four_ _levels_, from 'orient' to 'master', and _ends_ with a capstone of _four_ to _six_ more that _closes_ _one_ of Tessera's _gaps_: no coverage _report_, no _load_ _test_, no metrics or alerts, no runbook and no TLS. The _set_ _comes_ to _about_ 150 pomodoros, _some_ 75 _hours_: _eight_ or _nine_ _weeks_ at _four_ a _day_.
+**Study Tessera in seven plans, one for each area of software work, each in pomodoros of 25 minutes on Tessera's own files.** _Each_ _plan_ has 16 pomodoros in _four_ _levels_, from 'orient' to 'master', and _ends_ with a capstone of _four_ to _six_ more that _closes_ _one_ of Tessera's _gaps_: a _load_ _test_, metrics and alerts, a runbook and TLS. Coverage _left_ the _list_ on 18 _October_, when `npm test` and the GitHub _build_ began to _measure_ it and to _fail_ _below_ their floors. The _set_ _comes_ to _about_ 150 pomodoros, _some_ 75 _hours_: _eight_ or _nine_ _weeks_ at _four_ a _day_.
 
 | File | Area | Pomodoros |
 |---|---|---|

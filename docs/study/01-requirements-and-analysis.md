@@ -40,7 +40,7 @@
 
 ## Capstone (5 pomodoros)
 
-_Write_ the _stories_ Tessera _lacks_: an N- _story_ for metrics and alerts, an S- _story_ for TLS, and a _story_ that _makes_ coverage and _load_ measurable. _Give_ _each_ _criteria_ _numbered_ in the house _style_ (c1, c2…), _points_ and an INVEST _row_, and _place_ _each_ in `delivery-plan.md`. _Open_ a _pull_ _request_, and _log_ your estimate _against_ the pomodoros _spent_.
+_Write_ the _stories_ Tessera _lacks_: an N- _story_ for metrics and alerts, an S- _story_ for TLS, a _story_ that _makes_ _load_ measurable, and a _story_ for the coverage floors that `npm test` _already_ _checks_, 94 _per_ _cent_ of _lines_ and 84 _per_ _cent_ of _branches_, whose _reasons_ _live_ _only_ in a _comment_ in `scripts/lib/coverage.ts`. _Give_ _each_ _criteria_ _numbered_ in the house _style_ (c1, c2…), _points_ and an INVEST _row_, and _place_ _each_ in `delivery-plan.md`. _Open_ a _pull_ _request_, and _log_ your estimate _against_ the pomodoros _spent_.
 
 ## Resources
 

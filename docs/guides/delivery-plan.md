@@ -27,7 +27,7 @@ _Four_ _rules_ _shape_ every _day_ of the _plan_:
 - **Committed every evening.** _Each_ _day_ _ends_ with its _work_ _committed_.
 - **Cut from the bottom.** When _time_ _runs_ _short_, _cut_ the _last_ _stories_ of the _map_, _never_ a _test_ and _never_ a _defence_.
 
-The repository is a _worked_ _answer_. It _holds_ the _whole_ of _Phase_ Oct, with _about_ 500 _tests_, 253 of them in the _pipeline_. You _build_ _each_ _story_ in a _folder_ of your _own_ and _compare_ your _work_ with the _answer_ at the _end_ of _each_ _day_. Your _own_ _build_ _teaches_ you; the _answer_ _saves_ you when a _story_ overruns. The _three_ _reading_ _guides_, `reading-the-code.md`, `reading-the-frontend.md` and `reading-the-scripts.md`, _take_ you _through_ the _answer_ in _order_.
+The repository is a _worked_ _answer_. It _holds_ the _whole_ of _Phase_ Oct, with _about_ 620 _tests_, 254 of them in the _pipeline_. You _build_ _each_ _story_ in a _folder_ of your _own_ and _compare_ your _work_ with the _answer_ at the _end_ of _each_ _day_. Your _own_ _build_ _teaches_ you; the _answer_ _saves_ you when a _story_ overruns. The _three_ _reading_ _guides_, `reading-the-code.md`, `reading-the-frontend.md` and `reading-the-scripts.md`, _take_ you _through_ the _answer_ in _order_.
 
 ## The capacity sum
 
