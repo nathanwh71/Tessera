@@ -23,7 +23,7 @@ jobs:
           global-json-file: global.json
       # Node.js 26 runs the .ts scripts directly by stripping their types (ADR 0002, package.json's
       # engines).
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 26
       # The map builds first, so the service's build copies web/dist inside it (US-23 c4). npm ci
