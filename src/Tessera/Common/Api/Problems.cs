@@ -12,6 +12,12 @@ public static class Problems
     public const int RetryAfterSeconds = 5;
 
     /// <summary>
+    /// 400: the request hides what it asks for, such as a folder of dots written as <c>%2e%2e</c>
+    /// (S-06). It carries no detail, so the answer repeats no part of the address (S-06 c2).
+    /// </summary>
+    public static IResult BadRequest() => TypedResults.Problem(statusCode: StatusCodes.Status400BadRequest);
+
+    /// <summary>
     /// 404: no such <b><i>layer</i></b>, <b><i>tile</i></b> or page (US-07 c4), with no detail, since
     /// the status alone often says enough.
     /// </summary>

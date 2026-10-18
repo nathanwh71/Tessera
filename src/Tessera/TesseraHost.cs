@@ -35,6 +35,10 @@ public static class TesseraHost
         // route knows; both answer with a problem document.
         app.UseExceptionHandler();
         app.UseStatusCodePages();
+        // S-06: a target that hides a '..' as '%2e%2e', or holds a raw control character, answers
+        // 400 here, before routing, since Kestrel has already tidied the disguise out of the path
+        // that routing reads.
+        app.UseDisguisedTargetRefusal();
         // Routing picks each request's route here, so the steps above run for every request first.
         app.UseRouting();
         app.MapTessera();

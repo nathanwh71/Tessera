@@ -16,7 +16,7 @@ The thirty _stories_ in `docs/user-stories/user-stories.md` _fix_ what Tessera m
 | US-24 Places in nine layers | _Built_ and _tested_ |
 | US-07 Serve a tile | _Built_ and _tested_ |
 | S-01 SQL injection | _Built_ and _tested_ |
-| S-06 Malformed URLs | _Built_ and _tested_: Nginx _refuses_ an _address_ it _cannot_ _read_, and a disguised _one_ _matches_ no _route_; _each_ _answer_ is a ***problem document*** |
+| S-06 Malformed URLs | _Built_ and _tested_: Nginx _refuses_ with 400 an _address_ it _cannot_ _read_, or _one_ that _hides_ a dot as `%2e`; the _service_ _refuses_ a _hidden_ dot _folder_ _too_, and a backslash _matches_ no _route_; _each_ _answer_ is a ***problem document*** |
 | US-35 Office on port 80 | _Script_ _written_ and _tested_: it _checks_ for WSL2's ***mirrored networking*** and _prints_ the firewall _steps_. It _needs_ a _first_ _run_ on the _office_ _machine_ |
 | US-23 and UI-09 to UI-19, the map | _Built_ and _tested_: the _map_ in `web/` (ADR 0006), and its ***browser tests*** _pass_ _through_ Nginx |
 | N-18 to N-20, tiles that cost less | _Built_ and _tested_: a _tile_ _carries_ `max-age` and a _weak_ `ETag`, and Nginx _keeps_ it, _answers_ 304, and _packs_ it with gzip (ADR 0008) |
@@ -132,7 +132,7 @@ The _pipeline_ _file_ _builds_ the _same_ _chain_ from its _list_, and _adds_ th
 
 Tessera _follows_ pg_tileserv's _rule_: the _database_ _decides_ what the _map_ _shows_. The _service_ _signs_ in as `tessera_reader`, a _role_ that may _only_ _read_, and a _table_ _becomes_ a _layer_ _only_ when that _role_ is _granted_ it. The _seed_ _signs_ in as `tessera_publisher`, which _owns_ the _tables_ but _never_ _grants_ them on its _own_; _publishing_ is the _publisher_'s _own_ _act_.
 
-_Two_ _attacks_ are _closed_ by _design_. Every _value_ from a _request_ _travels_ _beside_ the _query_ as a ***parameter***, _never_ _inside_ its _text_, and every _name_ _enters_ the _text_ as a `SqlName`, which _only_ `SqlName.Quote` and `SqlName.Qualified` can _make_, so it _always_ _arrives_ _quoted_; no _request_ can smuggle in a _command_ (***SQL injection***, S-01). Nginx _refuses_ an _address_ it _cannot_ _read_, and the _service_ _matches_ _routes_ on the _address_ as _sent_, so a disguised _address_ _reaches_ no _route_ (a _malformed_ URL, S-06).
+_Two_ _attacks_ are _closed_ by _design_. Every _value_ from a _request_ _travels_ _beside_ the _query_ as a ***parameter***, _never_ _inside_ its _text_, and every _name_ _enters_ the _text_ as a `SqlName`, which _only_ `SqlName.Quote` and `SqlName.Qualified` can _make_, so it _always_ _arrives_ _quoted_; no _request_ can smuggle in a _command_ (***SQL injection***, S-01). Nginx _refuses_ an _address_ it _cannot_ _read_, and _one_ that _hides_ a dot as `%2e`. The _service_ _reads_ _each_ _address_ as _sent_, _before_ its _web_ _server_ decodes `%2e%2e` into `..` and _drops_ the _folder_ _before_ it, and _refuses_ a dot _folder_ in disguise, so a disguised _address_ _reaches_ no _route_ (a _malformed_ URL, S-06).
 
 ## What is where
 

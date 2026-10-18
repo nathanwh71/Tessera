@@ -40,6 +40,20 @@ limit_conn_zone $visitor zone=connections:10m;
 # keepalive 16 keeps up to 16 idle connections to the copies open in each Nginx worker, so a tile
 # skips the work of opening a new connection. The number caps idle connections, not traffic: past
 # 16, Nginx opens new ones as before, so a small number serves one office.
+# S-06 c3: '%2e' is a dot written as its number, and it has no honest use in an address here: no
+# layer, page or file of the map holds one. Nginx decodes it and drops the folder before a
+# '%2e%2e', so '/x/%2e%2e/food.cafes/0/0/0.pbf' would reach the tile location in disguise.
+# $request_uri is the address exactly as sent, and ~* matches it in any case. $disguised is 1 for
+# such an address, and the two locations that pass requests on refuse it with 400. The check
+# sits in those locations, not at the server's level, since Nginx's error_page sends the 400 on
+# to /malformed with the same $request_uri, where a server-level check would refuse it again.
+# The service refuses a dot folder in disguise too (Common/Api/Targets.cs), for a request that
+# reaches a copy directly.
+map $request_uri $disguised {
+    default 0;
+    ~*%2e 1;
+}
+
 upstream tessera {
     server 127.0.0.1:${TESSERA_SERVICE_PORT} max_fails=3 fail_timeout=10s;
     server 127.0.0.1:${TESSERA_SECOND_SERVICE_PORT} max_fails=3 fail_timeout=10s;
@@ -54,6 +68,7 @@ server {
         return 403;
     }
     error_page 403 = @forbidden;
+
 
     # S-30: at most 32 requests at once from one visitor. Past either limit, the answer is 429.
     limit_conn connections 32;
@@ -94,6 +109,9 @@ server {
     location ~ \.(pbf|mvt)$ {
         # S-30: past the burst, a visitor's tiles answer 429 until the rate catches up.
         limit_req zone=visitor burst=300 nodelay;
+        if ($disguised) {
+            return 400;
+        }
         proxy_pass http://tessera;
         proxy_cache tiles;
         # Many people asking for one new tile at once cost one query (N-24). The others wait as long
@@ -115,18 +133,32 @@ server {
     # tile store and the rate for tiles are for tiles alone, while the cap on requests at once and
     # gzip still apply.
     location / {
+        if ($disguised) {
+            return 400;
+        }
         proxy_pass http://tessera;
     }
 
     # Nginx refuses a malformed address itself, such as one that climbs above the root or holds a
     # stray '%' (S-06); the answer is a problem document that never repeats the address.
+    # error_page needs an address here, not a named location such as @forbidden: Nginx meets most
+    # of these faults while it still reads the request, and then a named location answers 500.
     error_page 400 /malformed;
-    # internal: only Nginx's own error_page reaches /malformed; a browser that asks for it gets 404.
     location = /malformed {
+        # internal: only Nginx's own error_page reaches /malformed. A browser that asks for it by
+        # name meets Nginx's own 404, which error_page turns into the problem document the service
+        # sends for any unknown address, so /malformed looks like any other unknown address.
         internal;
+        error_page 404 = @unknown;
         default_type application/problem+json;
         add_header Cache-Control no-store always;
         return 400 '{"type":"about:blank","title":"Bad Request","status":400}';
+    }
+
+    location @unknown {
+        default_type application/problem+json;
+        add_header Cache-Control no-store always;
+        return 404 '{"type":"about:blank","title":"Not Found","status":404}';
     }
 
     # Each refusal is a problem document that names no address, as every error is (US-07).

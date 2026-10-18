@@ -55,6 +55,29 @@ public static class Http
         return (context.Response.StatusCode, context.Response.Headers);
     }
 
+    /// <summary>
+    /// Sends one request written byte for byte and returns the whole answer, headers and body, as
+    /// text. HttpClient tidies an address before it sends it: it turns <c>%2e%2e</c> into <c>..</c>
+    /// and drops the folder before it, and refuses a control character. An attacker's own program
+    /// does neither, so the tests of disguised and malformed addresses (S-06) send them this way.
+    /// </summary>
+    /// <param name="port">The port the service listens on, on this machine.</param>
+    /// <param name="target">The request target exactly as it travels, such as <c>/x/%2e%2e/a</c>.</param>
+    /// <param name="cancel">The test's own cancel signal, so a test stopped early stops waiting.</param>
+    public static async Task<string> Raw(int port, string target, CancellationToken cancel)
+    {
+        using var client = new TcpClient();
+        await client.ConnectAsync(IPAddress.Loopback, port, cancel);
+        await using var stream = client.GetStream();
+        // Latin-1 maps each character to the one byte of the same number, so a control character
+        // such as \u0001 travels as the single byte 0x01, untouched.
+        var request = $"GET {target} HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n";
+        await stream.WriteAsync(System.Text.Encoding.Latin1.GetBytes(request), cancel);
+        using var answer = new MemoryStream();
+        await stream.CopyToAsync(answer, cancel);
+        return System.Text.Encoding.Latin1.GetString(answer.ToArray());
+    }
+
     /// <summary>A port no other program is using, so each test's service has its own.</summary>
     public static int FreePort()
     {

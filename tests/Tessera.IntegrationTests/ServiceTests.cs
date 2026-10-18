@@ -22,6 +22,12 @@ public sealed class ServiceFixture : IAsyncLifetime
 
     public int Port { get; } = Http.FreePort();
 
+    /// <summary>
+    /// The name of a table built to look like an attack, as SQL writes it: quoted, with its own
+    /// quote doubled. The layer's id, as the address spells it, is <c>food.x"; DROP TABLE food.cafes; --</c>.
+    /// </summary>
+    public const string OddTable = "\"x\"\"; DROP TABLE food.cafes; --\"";
+
     public HttpClient Client { get; private set; } = new();
 
     /// <summary>The running service; null until InitializeAsync builds it.</summary>
@@ -43,6 +49,15 @@ public sealed class ServiceFixture : IAsyncLifetime
             CREATE TABLE stage.cafes_3857 AS SELECT id, name, ST_Transform(geom, 3857)::geometry(Point, 3857) AS geom FROM food.cafes;
             GRANT USAGE ON SCHEMA stage TO tessera_reader;
             GRANT SELECT ON stage.cafes_3857 TO tessera_reader;
+            """);
+
+        // S-01 c3: a real, granted table whose name is itself an attack. A doubled quote, "", stands
+        // for one quote inside a quoted name, so the table is named  x"; DROP TABLE food.cafes; --
+        // Its one place sits on cafes-001, so the test can find it in the tile at level 0.
+        await Database.Owner($"""
+            CREATE TABLE food.{OddTable} (fid serial PRIMARY KEY, name text, geom geometry(Point, 4326));
+            INSERT INTO food.{OddTable} (name, geom) VALUES ('Odd', ST_SetSRID(ST_MakePoint(113.577677, 22.158784), 4326));
+            GRANT SELECT ON food.{OddTable} TO tessera_reader;
             """);
 
 
@@ -270,16 +285,170 @@ public sealed class ServiceTests(ServiceFixture service) : IClassFixture<Service
         Assert.Equal("application/problem+json", answer.Content.Headers.ContentType?.MediaType);
     }
 
-    // S-01 c4 and test 3: an attack changes nothing.
+    /// <summary>
+    /// Every table in the database with its count of rows, such as 'food.cafes=100, food.parks=100',
+    /// read as the owner. query_to_xml runs a query whose text is built for each table, so one
+    /// statement counts them all; a table an attack dropped or emptied changes the line.
+    /// </summary>
+    private Task<string> EveryTablesRows() => service.Database.OwnerValue<string>("""
+        SELECT string_agg(format('%s.%s=%s', schemaname, tablename,
+                 (xpath('/row/c/text()', query_to_xml(
+                    format('SELECT count(*) AS c FROM %I.%I', schemaname, tablename), false, true, '')))[1]::text),
+               ', ' ORDER BY schemaname, tablename)
+        FROM pg_tables
+        WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
+        """);
+
+    // S-01 c4 and test 3, SR-08: an attack answers 404 as a problem document and changes nothing.
+    // Every table keeps its rows, not food.cafes alone, since an attack may aim at any of them.
     [Theory]
     [InlineData("x;%20DROP%20TABLE%20cafes")]
     [InlineData("food.cafes'%3B%20--")]
     public async Task Answers_an_attack_with_404_and_keeps_every_row(string layer)
     {
+        var before = await EveryTablesRows();
+
         using var answer = await Get($"/{layer}/0/0/0.pbf");
 
         Assert.Equal(HttpStatusCode.NotFound, answer.StatusCode);
-        Assert.Equal(100L, await service.Database.OwnerValue<long>("SELECT count(*) FROM food.cafes"));
+        Assert.Equal("application/problem+json", answer.Content.Headers.ContentType?.MediaType);
+        Assert.Contains("food.cafes=100", before, StringComparison.Ordinal);
+        Assert.Equal(before, await EveryTablesRows());
+    }
+
+    // S-01 c3 and c4: a table the publisher granted, whose name is an attack, is one odd name and
+    // nothing more. The quoting function (SqlName.Quote) wraps it whole, so the database reads
+    // 'DROP TABLE' as letters of a name, serves the table's one place, and every table keeps its rows.
+    [Fact]
+    public async Task Serves_a_granted_table_named_as_an_attack_and_keeps_every_row()
+    {
+        var before = await EveryTablesRows();
+        var layer = Uri.EscapeDataString("food.x\"; DROP TABLE food.cafes; --");
+
+        var bytes = await service.Client.GetByteArrayAsync($"/{layer}/0/0/0.pbf", TestContext.Current.CancellationToken);
+        var tile = new MapboxTileReader().Read(new MemoryStream(bytes), new NetTopologySuite.IO.VectorTiles.Tiles.Tile(0, 0, 0));
+
+        Assert.Equal("Odd", tile.Layers.Single().Features.Single().Attributes["name"]);
+        Assert.Contains("food.cafes=100", before, StringComparison.Ordinal);
+        Assert.Equal(before, await EveryTablesRows());
+    }
+
+    // S-06 c3, SR-11: '%2e' is a dot in disguise. Kestrel decodes it and drops the folder before
+    // '..', so '/x/%2e%2e/food.cafes/0/0/0.pbf' once reached the tile route and answered 200. The
+    // service now reads the address as it was sent and refuses one with a dot folder in disguise,
+    // in any mix of cases, before it picks a route. Nginx refuses it first (edge.ts); this covers a
+    // copy reached directly.
+    [Theory]
+    [InlineData("/x/%2e%2e/food.cafes/0/0/0.pbf")]
+    [InlineData("/x/%2E%2e/food.cafes/0/0/0.pbf")]
+    [InlineData("/x/.%2E/food.cafes/0/0/0.pbf")]
+    [InlineData("/food.cafes/%2e/0/0/0.pbf")]
+    [InlineData("/x/%2e%2e/health")]
+    public async Task Refuses_a_dot_folder_in_disguise_with_400(string target)
+    {
+        var answer = await Http.Raw(service.Port, target, TestContext.Current.CancellationToken);
+        var body = answer[(answer.IndexOf("\r\n\r\n", StringComparison.Ordinal) + 4)..];
+
+        Assert.StartsWith("HTTP/1.1 400 ", answer, StringComparison.Ordinal);
+        Assert.Contains("Content-Type: application/problem+json", answer, StringComparison.Ordinal);
+        Assert.Contains("\"title\":\"Bad Request\"", body, StringComparison.Ordinal);
+        // S-06 c2: the answer never repeats the address.
+        Assert.DoesNotContain("food.cafes", body, StringComparison.Ordinal);
+    }
+
+    // S-06 c4: a clean address, and a name that merely holds an encoded letter, still reach their routes.
+    [Theory]
+    [InlineData("/food.cafes/0/0/0.pbf")]
+    [InlineData("/food%2Ecafes/0/0/0.pbf")]
+    public async Task Lets_a_clean_address_reach_the_tile_route(string target)
+    {
+        var answer = await Http.Raw(service.Port, target, TestContext.Current.CancellationToken);
+
+        Assert.StartsWith("HTTP/1.1 200 ", answer, StringComparison.Ordinal);
+    }
+
+    // S-06 c3, SR-11: a backslash is a letter to the service, not a folder's edge, so an address
+    // that hides its folders behind backslashes matches no route and answers a 404 problem document.
+    [Theory]
+    [InlineData("/food.cafes\\0\\0\\0.pbf")]
+    [InlineData("/food.cafes/0/0\\0.pbf")]
+    [InlineData("/x/..\\food.cafes/0/0/0.pbf")]
+    public async Task Answers_a_backslash_with_404(string target)
+    {
+        var answer = await Http.Raw(service.Port, target, TestContext.Current.CancellationToken);
+
+        Assert.StartsWith("HTTP/1.1 404 ", answer, StringComparison.Ordinal);
+        Assert.Contains("Content-Type: application/problem+json", answer, StringComparison.Ordinal);
+    }
+
+    // S-06 c1: Nginx refuses an encoded null first (edge.ts). A copy reached directly refuses it
+    // too: Kestrel, ASP.NET Core's web server, answers 400 with an empty body before any route or
+    // problem document runs, so the answer repeats nothing.
+    [Fact]
+    public async Task Answers_an_encoded_null_with_an_empty_400()
+    {
+        var answer = await Http.Raw(service.Port, "/food.cafes/0/0/0.pbf%00", TestContext.Current.CancellationToken);
+
+        Assert.StartsWith("HTTP/1.1 400 ", answer, StringComparison.Ordinal);
+        Assert.Contains("Content-Length: 0", answer, StringComparison.Ordinal);
+    }
+
+    // S-06 c1: Kestrel lets a raw control character, such as byte 1 or DEL, into the path, so the
+    // service refuses it itself, with the 400 problem document of a dot folder in disguise.
+    [Theory]
+    [InlineData("/food.cafes/0/0/0.pbf\u0001")]
+    [InlineData("/food\u001fcafes/0/0/0.pbf")]
+    [InlineData("/food.cafes/0/0/\u007f0.pbf")]
+    public async Task Answers_a_raw_control_character_with_400(string target)
+    {
+        var answer = await Http.Raw(service.Port, target, TestContext.Current.CancellationToken);
+
+        Assert.StartsWith("HTTP/1.1 400 ", answer, StringComparison.Ordinal);
+        Assert.Contains("Content-Type: application/problem+json", answer, StringComparison.Ordinal);
+        Assert.DoesNotContain("food", answer[(answer.IndexOf("\r\n\r\n", StringComparison.Ordinal) + 4)..], StringComparison.Ordinal);
+    }
+
+    // US-07 c4: a tile's three numbers are whole numbers. A word in their place matches no route,
+    // so the answer is the 404 problem document of any unknown address.
+    [Theory]
+    [InlineData("/food.cafes/zero/0/0.pbf")]
+    [InlineData("/food.cafes/0/0/0x1.pbf")]
+    [InlineData("/food.cafes/0/1.5/0.pbf")]
+    public async Task Answers_a_tile_address_with_a_word_for_a_number_with_404(string path)
+    {
+        using var answer = await Get(path);
+
+        Assert.Equal(HttpStatusCode.NotFound, answer.StatusCode);
+        Assert.Equal("application/problem+json", answer.Content.Headers.ContentType?.MediaType);
+    }
+
+    // A tile, the map page and /health are read, never written: each allows GET and HEAD alone. Any
+    // other method answers 405, 'Method Not Allowed', as a problem document whose Allow header
+    // names the two methods the address takes (RFC 9110, section 15.5.6).
+    [Theory]
+    [InlineData("POST", "/food.cafes/0/0/0.pbf")]
+    [InlineData("DELETE", "/food.cafes/0/0/0.pbf")]
+    [InlineData("POST", "/health")]
+    [InlineData("DELETE", "/health")]
+    [InlineData("PUT", "/health")]
+    public async Task Answers_any_method_but_get_and_head_with_405(string method, string path)
+    {
+        using var request = new HttpRequestMessage(new HttpMethod(method), path);
+        using var answer = await service.Client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.MethodNotAllowed, answer.StatusCode);
+        Assert.Equal("application/problem+json", answer.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(["GET", "HEAD"], answer.Content.Headers.Allow.Order(StringComparer.Ordinal));
+    }
+
+    // N-25: HEAD asks /health for its status alone, as a watcher may.
+    [Fact]
+    public async Task Answers_head_on_health()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Head, "/health");
+        using var answer = await service.Client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, answer.StatusCode);
     }
 
     // US-00 c2 and test 1: the run command itself starts the service, which answers on its port.

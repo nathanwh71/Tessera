@@ -79,14 +79,41 @@ export async function checkEdge(base: string, stopFirst: () => Promise<void>, st
   assert.ok(packedScript.body.length < plainScript.body.length / 2, `${packedScript.body.length} packed against ${plainScript.body.length} plain`);
   assert.deepEqual(gunzipSync(packedScript.body), plainScript.body);
 
-  // S-06: a malformed address reaches no route. Nginx refuses one it cannot read, and the service
-  // finds no route for the rest; either way the answer is a problem document that hides the address.
-  for (const target of ['/food.cafes/%2e%2e/1/2/3.pbf', '/food.cafes/../../1/2/3.pbf', '/food.cafes%2F15/1/2.pbf', '/food.cafes/15/1/2.pbf%zz', '/food.cafes/15/1/2.pbf%00']) {
+  // S-06: a malformed address reaches no route. Nginx refuses with 400 one it cannot read, or one
+  // that hides a dot folder as '%2e'; the service finds no route for the rest and answers 404.
+  // Either way the answer is a problem document that hides the address (S-06 c2).
+  // '/x/%2e%2e/food.cafes/0/0/0.pbf' is the disguise that matters: once decoded and tidied it is
+  // '/food.cafes/0/0/0.pbf', a real tile, and it once answered 200 (S-06 c3). A backslash is a
+  // letter to Nginx and the service alike, not a folder's edge, so it finds no route.
+  const malformed: readonly (readonly [string, number])[] = [
+    ['/x/%2e%2e/food.cafes/0/0/0.pbf', 400],
+    ['/x/%2E%2e/food.cafes/0/0/0.pbf', 400],
+    ['/food.cafes/%2e/0/0/0.pbf', 400],
+    ['/x/%2e%2e/health', 400],
+    ['/food.cafes/%2e%2e/1/2/3.pbf', 400],
+    ['/food.cafes/../../1/2/3.pbf', 400],
+    ['/food.cafes/15/1/2.pbf%zz', 400],
+    ['/food.cafes/15/1/2.pbf%00', 400],
+    ['/food.cafes/0/0/0.pbf\u0001', 400],
+    ['/food.cafes/0/0/\u007f0.pbf', 400],
+    ['/food.cafes%2F15/1/2.pbf', 404],
+    ['/food.cafes\\0\\0\\0.pbf', 404],
+  ];
+  for (const [target, status] of malformed) {
     const answer = await raw(base, target);
-    assert.match(answer, /^HTTP\/1\.1 40[04] /, target);
+    assert.match(answer, new RegExp(`^HTTP/1\\.1 ${status} `), target);
     assert.match(answer, /application\/problem\+json/, target);
-    assert.doesNotMatch(answer.split('\r\n\r\n')[1] ?? '', /food\.cafes/, target);
+    const body = answer.split('\r\n\r\n')[1] ?? '';
+    assert.match(body, new RegExp(`"title":"${status === 400 ? 'Bad Request' : 'Not Found'}"`), target);
+    assert.doesNotMatch(body, /food\.cafes/, target);
   }
+
+  // /malformed is where Nginx writes its 400. A browser that asks for it by name gets the 404
+  // problem document of any unknown address, not Nginx's own HTML page.
+  const named = await ask(`${base}/malformed`);
+  assert.equal(named.status, 404);
+  assert.equal(named.headers['content-type'], 'application/problem+json');
+  assert.match(named.body.toString(), /"title":"Not Found"/);
 
   // S-07: a machine outside the office gets 403 as a problem document; one inside gets the tile.
   const stranger = await ask(tile, {}, 'GET', '127.0.0.2');
@@ -158,5 +185,5 @@ export async function checkEdge(base: string, stopFirst: () => Promise<void>, st
   assert.equal(never.status, 503);
   assert.equal(never.headers['content-type'], 'application/problem+json');
   assert.equal(never.headers['retry-after'], '5');
-  console.log('Nginx checks passed: the office-only rule, the limit for each visitor, the cap on requests at once, one query for a crowd, kept tiles, 304, gzip, HEAD, malformed addresses, a second copy taking over, and tiles served with both copies down.');
+  console.log('Nginx checks passed: the office-only rule, the limit for each visitor, the cap on requests at once, one query for a crowd, kept tiles, 304, gzip, HEAD, malformed and disguised addresses, /malformed asked for by name, a second copy taking over, and tiles served with both copies down.');
 }
