@@ -6,6 +6,11 @@
   <PropertyGroup>
     <!-- xunit.v3 builds each test project as a program that runs its own tests. -->
     <OutputType>Exe</OutputType>
+    <!--
+      The program runs its tests on Microsoft.Testing.Platform even under dotnet run, so it takes
+      the platform's options, such as the one that turns on coverage, and not only xUnit's own.
+    -->
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
     <!-- Tests ship to no one, so no NuGet package is made of them. -->
     <IsPackable>false</IsPackable>
   </PropertyGroup>
@@ -18,6 +23,8 @@
     <PackageReference Include="NetTopologySuite.IO.VectorTiles.Mapbox" />
     <!-- The tests sign in as the database's owner to set the stage: grants, test tables. The service never does. -->
     <PackageReference Include="Npgsql" />
+    <!-- Lets the test program record which of the service's lines and branches this suite runs. -->
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
   </ItemGroup>
   <ItemGroup>
     <!-- The service under test. The build also copies Tessera.dll and the built map beside the

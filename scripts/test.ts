@@ -4,7 +4,10 @@
 //   npm test
 //
 // The integration tests start the packaged database in Docker, so Docker must be running.
+import { rmSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { $ } from 'zx';
+import { coverageArguments, coverageFolder, suites } from './lib/coverage.ts';
 
 // The quick checks first, so a type error or a broken script fails in seconds: tsc checks the
 // scripts' types, since Node only strips them (ADR 0002), and node --test runs their pure parts.
@@ -26,8 +29,13 @@ await $`node scripts/build.ts`;
 // runs it.
 // The architecture tests go first: a broken border between layers is a fault of design, and they
 // find it in seconds (ADR 0010).
-for (const suite of ['ArchitectureTests', 'UnitTests', 'IntegrationTests']) {
-  await $`dotnet run --no-build --configuration Release --project tests/Tessera.${suite}`;
+// Each suite records which of the service's lines it runs, in coverage/; the old records go first,
+// so a suite that no longer runs cannot leave one behind. Then coverage.ts merges them and fails
+// below the floors in scripts/lib/coverage.ts.
+rmSync(coverageFolder, { recursive: true, force: true });
+for (const suite of suites) {
+  await $`dotnet run --no-build --configuration Release --project tests/Tessera.${suite} -- ${coverageArguments(suite, resolve(coverageFolder))}`;
 }
+await $`node scripts/coverage.ts`;
 // Last, the browser tests: the slowest, against the real service and the places.
 await $`node scripts/e2e.ts`;

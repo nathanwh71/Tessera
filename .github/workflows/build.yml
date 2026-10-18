@@ -42,14 +42,35 @@ jobs:
       # Microsoft.Testing.Platform), so dotnet run starts it and it runs its tests.
       - run: dotnet build --configuration Release
       # The borders between the service's layers first, since they fail in seconds (ADR 0010).
-      - run: dotnet run --project tests/Tessera.ArchitectureTests --configuration Release --no-build
-      - run: dotnet run --project tests/Tessera.UnitTests --configuration Release --no-build
-      - run: dotnet run --project tests/Tessera.IntegrationTests --configuration Release --no-build
+      # Each suite records which of the service's lines it runs, as coverage/<suite>.cobertura.xml,
+      # with the options scripts/lib/coverage.ts gives npm test.
+      - run: >-
+          dotnet run --project tests/Tessera.ArchitectureTests --configuration Release --no-build --
+          --coverage --coverage-output-format cobertura --results-directory ${{ github.workspace }}/coverage
+          --coverage-output ArchitectureTests.cobertura.xml
+      - run: >-
+          dotnet run --project tests/Tessera.UnitTests --configuration Release --no-build --
+          --coverage --coverage-output-format cobertura --results-directory ${{ github.workspace }}/coverage
+          --coverage-output UnitTests.cobertura.xml
+      - run: >-
+          dotnet run --project tests/Tessera.IntegrationTests --configuration Release --no-build --
+          --coverage --coverage-output-format cobertura --results-directory ${{ github.workspace }}/coverage
+          --coverage-output IntegrationTests.cobertura.xml
       # The scripts' own tools, then the scripts' checks: tsc refuses a type error before a run
       # meets it, and node --test runs the pure functions' tests (ADR 0002, rule 1).
       - run: npm ci
       - run: npm run typecheck
       - run: npm run test:scripts
+      # Merges the three records into one report and fails the build when the tests cover less
+      # than the floors in scripts/lib/coverage.ts: 94 per cent of lines, 84 of branches.
+      - run: node scripts/coverage.ts
+      # Keeps the report, with each line the tests miss, for a week, even when the floors fail.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage/report
+          retention-days: 7
       # The pipeline in etl/, in Python: uv installs Python and the pipeline's packages. Some tests
       # read a source through ogr2ogr, GDAL's own tool, as the pipeline does for curves and a few
       # other cases, so Ubuntu's GDAL comes first. Then its types, its style, the rule that its pure

@@ -6,11 +6,18 @@
   -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <!--
+      The program runs its tests on Microsoft.Testing.Platform even under dotnet run, so it takes
+      the platform's options, such as the one that turns on coverage, and not only xUnit's own.
+    -->
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="TngTech.ArchUnitNET.xUnitV3" />
+    <!-- Lets the test program record which of the service's lines and branches this suite runs. -->
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Tessera/Tessera.csproj" />

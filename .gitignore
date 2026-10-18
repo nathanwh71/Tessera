@@ -6,6 +6,8 @@ bin/
 obj/
 out/
 TestResults/
+# Each test suite's coverage record and the merged report (scripts/coverage.ts)
+coverage/
 
 # This machine's settings and secrets: a password in Git reaches everyone who clones it
 .env

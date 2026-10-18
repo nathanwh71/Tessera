@@ -3,6 +3,11 @@
   <PropertyGroup>
     <!-- xunit.v3 builds each test project as a program that runs its own tests. -->
     <OutputType>Exe</OutputType>
+    <!--
+      The program runs its tests on Microsoft.Testing.Platform even under dotnet run, so it takes
+      the platform's options, such as the one that turns on coverage, and not only xUnit's own.
+    -->
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
     <!-- Tests ship to no one, so no NuGet package is made of them. -->
     <IsPackable>false</IsPackable>
   </PropertyGroup>
@@ -11,6 +16,8 @@
     <PackageReference Include="xunit.v3" />
     <!-- Property tests: FsCheck tries a hundred made-up inputs against one rule (S-01 c1, US-03). -->
     <PackageReference Include="FsCheck.Xunit.v3" />
+    <!-- Lets the test program record which of the service's lines and branches this suite runs. -->
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
   </ItemGroup>
   <ItemGroup>
     <!-- The service under test; its functions are called directly, with no web server between. -->
