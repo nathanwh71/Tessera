@@ -1,7 +1,9 @@
 # Dependabot, GitHub's own robot, reads the versions this repository pins and, each Monday, opens a
 # pull request for each that has a newer release. The build in workflows/build.yml then runs every
 # test on it, so an update merges only once it has passed them all. GitHub's security alerts use the
-# same lists: a version with a known flaw gets its pull request at once, not on Monday.
+# same lists, but only once 'Dependabot alerts' and 'Dependabot security updates' are switched on in
+# the repository's settings (study plan 06, pomodoro 11). From then on, a version with a known flaw
+# gets its pull request at once, not on Monday.
 #
 # Each update waits a week after its release before Dependabot proposes it, so a release withdrawn in
 # its first days never reaches the office. Minor and patch releases arrive grouped, one pull request
