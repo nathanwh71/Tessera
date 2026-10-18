@@ -831,7 +831,7 @@ _Seven_ _stories_ _keep_ the _service_ steady when the _database_ is _slow_, _bu
 **Acceptance criteria**
 
 1. **Given** every _connection_ _busy_, **then** the _pool_ _lends_ the _next_ _free_ _one_ to the _request_ that has _waited_ _longest_.
-2. **Given** a _query_ _sent_ with its _request_'s _own_ _cancel_ _signal_, and that _request_ _cancelled_ _while_ the _query_ _waits_, **then** the _query_ _leaves_ the _queue_ at _once_. A _tile_ _query_ is not such a _query_: _see_ _Known_ _limit_.
+2. **Given** a _query_ _sent_ with its _request_'s _own_ _cancel_ _signal_, and that _request_ _cancelled_ _while_ the _query_ _waits_, **then** the _query_ _leaves_ the _queue_ at _once_. A _tile_ _query_ is such a _query_, but _behind_ Nginx its _request_ is _never_ _cancelled_: _see_ _Known_ _limit_.
 3. **Given** every _connection_ _busy_ for more than a _second_, **then** the _ping_ _gives_ _up_ _within_ _about_ a _second_, `/health` _says_ `DOWN`, and the _ping_ _leaves_ the _queue_, so it _never_ _takes_ a _connection_ a _tile_ is _waiting_ for.
 
 **Tests to write first**
@@ -840,7 +840,7 @@ _Seven_ _stories_ _keep_ the _service_ steady when the _database_ is _slow_, _bu
 2. **The ping behind a busy pool.** With the _only_ _connection_ _held_ for _three_ _seconds_, the _ping_ _gives_ _up_ _within_ a _second_ and a _half_; _once_ the _hold_ _ends_, the _next_ _ping_ _answers_.
 3. **A cancelled wait.** A _query_ _cancelled_ _after_ 200 ms _leaves_ _within_ a _second_, not _after_ the _pool_'s 30.
 
-**Known limit.** A _tile_ _query_ _runs_ on the _service_'s _stop_ _signal_, not the _browser_'s. When a _person_ _pans_ _away_ _before_ a _tile_ _arrives_, the _map_ _cancels_ the _request_, but the _query_ _still_ _waits_ its _turn_, _runs_, and _lands_ in Nginx's ***cache***. _Nothing_ is _lost_: a _person_ who _pans_ _back_ _gets_ the _tile_ at no _cost_. On a _busy_ _day_, _though_, _abandoned_ _queries_ _hold_ _connections_ that _tiles_ _still_ on _screen_ _need_. At 700 _tiles_ a _second_, _about_ a _third_ of _capacity_, no _request_ is _given_ _up_; _only_ _under_ _overload_ do _requests_ _wait_ _long_ _enough_ to be _given_ _up_, and there the _cure_ is a _limit_ on _load_ (ADR 0007), not a _cancel_.
+**Known limit.** A _tile_ _query_ _carries_ its _request_'s _own_ _cancel_ _signal_, which ASP.NET Core _raises_ when the _connection_ that _asked_ for the _tile_ _closes_. _Behind_ Nginx that _connection_ _stays_ _open_: when a _person_ _pans_ _away_ _before_ a _tile_ _arrives_, the _map_ _cancels_ its _request_ to Nginx, but `proxy_ignore_client_abort on` _keeps_ Nginx's _own_ _request_ to the _service_ alive, so the _query_ _still_ _waits_ its _turn_, _runs_, and _lands_ in Nginx's ***cache***. This is _safe_, and on _purpose_: _other_ _people_ may be _waiting_ on the _same_ _tile_ (`proxy_cache_lock`, N-24), and a _person_ who _pans_ _back_ _gets_ the _tile_ at no _cost_. A _client_ that _asks_ the _service_ _directly_, with no Nginx _between_, does _cancel_ its _query_ when it _leaves_ (c2). On a _busy_ _day_, _though_, _abandoned_ _queries_ _hold_ _connections_ that _tiles_ _still_ on _screen_ _need_. At 700 _tiles_ a _second_, _about_ a _third_ of _capacity_, no _request_ is _given_ _up_; _only_ _under_ _overload_ do _requests_ _wait_ _long_ _enough_ to be _given_ _up_, and there the _cure_ is a _limit_ on _load_ (ADR 0007), not a _cancel_.
 
 **Open to talk**
 
