@@ -37,7 +37,7 @@ The thirty _stories_ in `docs/user-stories/user-stories.md` _fix_ what Tessera m
 | Command | What it does |
 |---|---|
 | `npm run build` | _Builds_ the _map_, then the _service_ with the _map_ _inside_ it (US-00 c1) |
-| `npm test` | _Runs_ every _test_: the _scripts_', the _map_'s, the _service_'s _borders_ and its _two_ _suites_, the _pipeline_'s, and the _browser_ _tests_ _through_ Nginx (US-00 c3) |
+| `npm test` | _Runs_ every _test_: the _scripts_', the _map_'s, the _service_'s _borders_ and its _two_ _suites_, the _pipeline_'s, and the _browser_ _tests_ _through_ Nginx (US-00 c3). It _fails_ when the _service_'s _tests_ _cover_ _less_ than 94 _per_ _cent_ of its _lines_ or 84 _per_ _cent_ of its _branches_, and _writes_ a _report_ to `coverage/report/index.html` |
 | `dotnet build` | _Builds_ the _service_ and its _three_ _test_ _suites_ _alone_; _needs_ `web/dist` from a _map_ _build_ |
 | `dotnet run --project tests/Tessera.ArchitectureTests` | _Checks_ the _borders_ _between_ the _service_'s _layers_ on the _built_ _program_: _eight_ _seconds_ (ADR 0010) |
 | `dotnet run --project tests/Tessera.UnitTests` | _Runs_ the _unit_ and ***property tests***: no _database_, a _second_ or _two_ |
