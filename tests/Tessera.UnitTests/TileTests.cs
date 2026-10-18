@@ -12,10 +12,25 @@ namespace Tessera.UnitTests;
 public sealed class TileTests
 {
     /// <summary>
-    /// A <b><i>layer</i></b> with three properties and a primary key, <c>id</c>, so the query under
-    /// test carries both a column list and an ORDER BY, which fixes the order of features (US-24).
+    /// A <b><i>layer</i></b> shaped like the shipped <c>food.cafes</c>: its first four properties, in
+    /// the seed's order, and its primary key, <c>fid</c>, the key the seed gives every table. So the
+    /// query under test carries a column list and the ORDER BY a shipped table gets, which fixes the
+    /// order of features (US-24). The text <c>id</c> is a property there, as in the seed, not the key.
     /// </summary>
-    private static readonly Layer Cafes = CatalogueReader.ToLayer(new CatalogueRow("food", "cafes", "geom", 4326, "POINT", """["group","layer","name"]""", """["id"]"""));
+    private static readonly Layer Cafes = CatalogueReader.ToLayer(new CatalogueRow("food", "cafes", "geom", 4326, "POINT", """["id","layer","group","name"]""", """["fid"]"""));
+
+    /// <summary>
+    /// A view of the same places. A view has no primary key, so the catalogue reads an empty key
+    /// list for it (Queries.Layers).
+    /// </summary>
+    private static readonly Layer CafesView = CatalogueReader.ToLayer(new CatalogueRow("food", "cafes_view", "geom", 4326, "POINT", """["id","name"]""", "[]"));
+
+    /// <summary>
+    /// A tile of Macau at level 15: the one that holds the area's home point, 113.55 E, 22.19 N, as
+    /// tessera.json sets it. Normal data comes from the area Tessera serves, so a reader who
+    /// works the numbers back finds Macau, not a point near 118.3 E.
+    /// </summary>
+    private static readonly TileAddress Home = TileAddress.Of(15, 26719, 14311)!;
 
     /// <summary>
     /// A buffer fixed here, apart from the shipped 256, so a change to that default leaves the
@@ -33,7 +48,7 @@ public sealed class TileTests
     // so 4194303, 2^22 - 1, is the last column at level 22. Anything past these edges names no tile.
     [Theory]
     [InlineData(0, 0, 0)]
-    [InlineData(15, 27154, 14280)]
+    [InlineData(15, 26719, 14311)]
     [InlineData(22, 4194303, 0)]
     public void Accepts_a_tile_that_exists(int z, int x, int y) =>
         Assert.NotNull(TileAddress.Of(z, x, y));
@@ -57,7 +72,18 @@ public sealed class TileTests
     // to the query fails this test until someone reads the new text and copies it over the old file.
     [Fact]
     public void Matches_the_approved_tile_query() =>
-        Assert.Equal(Approved, Queries.Tile(Cafes, TileAddress.Of(15, 27154, 14280)!, Limits).Text.ReplaceLineEndings().TrimEnd());
+        Assert.Equal(Approved, Queries.Tile(Cafes, Home, Limits).Text.ReplaceLineEndings().TrimEnd());
+
+    // US-24 test 2: a view has no key, so its tile query carries no ORDER BY. An ORDER BY on a
+    // column the view lacks would fail every tile of it; any other order would be a guess.
+    [Fact]
+    public void Gives_a_view_no_order()
+    {
+        var text = Queries.Tile(CafesView, Home, Limits).Text;
+
+        Assert.DoesNotContain("ORDER BY", text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("LIMIT @limit", text, StringComparison.Ordinal);
+    }
 
     // S-01 c1: whatever tile a request names, the text stays the approved text; the numbers travel as
     // parameters alone.
@@ -78,10 +104,10 @@ public sealed class TileTests
     [Fact]
     public void Sends_the_layer_and_the_tile_as_parameters()
     {
-        var query = Queries.Tile(Cafes, TileAddress.Of(15, 27154, 14280)!, Limits);
+        var query = Queries.Tile(Cafes, Home, Limits);
 
         Assert.DoesNotContain("food.cafes", query.Text, StringComparison.Ordinal);
-        Assert.Equal(new { layer = "food.cafes", resolution = 4096, z = 15, x = 27154, y = 14280, buffer = 64, margin = 0.015625, srid = 4326, limit = 10000 }.ToString(), query.Parameters?.ToString());
+        Assert.Equal(new { layer = "food.cafes", resolution = 4096, z = 15, x = 26719, y = 14311, buffer = 64, margin = 0.015625, srid = 4326, limit = 10000 }.ToString(), query.Parameters?.ToString());
     }
 
     // A column a seed script dropped since the list was read gives 42703. The tile answers 503, so the
@@ -94,7 +120,7 @@ public sealed class TileTests
             (_, _) => Task.FromResult(Result.Failure<byte[]?, DatabaseError>(DatabaseError.Of("42703", "column does not exist"))),
             Limits);
 
-        var answer = await server.Answer("food.cafes", 15, 27154, 14280, TestContext.Current.CancellationToken);
+        var answer = await server.Answer("food.cafes", 15, 26719, 14311, TestContext.Current.CancellationToken);
 
         Assert.Equal(503, Assert.IsAssignableFrom<Microsoft.AspNetCore.Http.IStatusCodeHttpResult>(answer).StatusCode);
     }
