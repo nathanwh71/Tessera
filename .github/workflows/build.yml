@@ -64,13 +64,14 @@ jobs:
         working-directory: etl
       - run: uv run pytest -q
         working-directory: etl
-      # The browser tests drive Chrome against the built service and a database of their own
-      # (scripts/e2e.ts). They use the Google Chrome the runner image ships with, through
-      # CHROMIUM_PATH: downloading Playwright's own browser can hang for ten minutes. The screenshot
-      # comparisons stay out: the approved images come from Playwright's own Chromium, and this
-      # Chrome draws text a few per cent differently. npm test runs them on a machine with
-      # Playwright's browser. The time limit fails a stuck run in minutes.
-      - run: npm run e2e -- --grep-invert "approved image"
+      # The browser tests drive Chromium against the built service and a database of their own
+      # (scripts/e2e.ts). Playwright runs inside its own Docker image, the one named after the
+      # version web/package.json pins. Its Chromium and fonts draw the approved images of UI-17
+      # within their tolerance on any machine, so the screenshot comparisons run here too. The
+      # runner's own Google Chrome draws text a few per cent differently, and downloading
+      # Playwright's browser alone can hang for ten minutes; the image comes from Microsoft's
+      # registry. The time limit fails a stuck run.
+      - run: npm run e2e
         timeout-minutes: 20
         env:
-          CHROMIUM_PATH: /usr/bin/google-chrome
+          TESSERA_PLAYWRIGHT_IN_DOCKER: "1"
