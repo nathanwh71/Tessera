@@ -146,7 +146,7 @@ The _fourth_ iteration _finishes_ the _map_ and _releases_ it. It _ends_ with th
 
 - **UI-10, clusters (3 points).** MapLibre clusters the _places_ in the _browser_, from the _tiles_ it has _loaded_ (ADR 0005). The proof is in `clusters.test.ts`.
 - **UI-11, names from level 16 (1 point).** The proof is in `style.test.ts`.
-- **UI-17, names that never overlap (2 points).** The proof is in `style.test.ts`, and a _browser_ _test_ whose _screenshots_ at _levels_ 16, 18 and 20 _match_ the _approved_ _images_ in `web/e2e/__screenshots__`.
+- **UI-17, names that never overlap (2 points).** The proof is in `style.test.ts`, and a _browser_ _test_ whose _screenshots_ at _levels_ 16, 18 and 20 _match_ the _approved_ _images_ in `web/e2e/__screenshots__`. The GitHub _build_ _leaves_ those _comparisons_ out: it _runs_ the _runner_'s Google Chrome, _since_ _downloading_ Playwright's _own_ _browser_ can _hang_, and that Chrome _draws_ _text_ a _few_ _per_ _cent_ _differently_ from the Chromium that _made_ the _images_. So _run_ `npm run e2e` on your _own_ _machine_, with Playwright's _browser_, _before_ you _approve_ a _change_ to the _names_.
 - **Friday 4 December: the day in hand.** If every _story_ _above_ is _done_, _build_ S-07: Nginx _answers_ the _office_'s _network_ _alone_, with 403 for _any_ _other_ _machine_. The proof is in `scripts/lib/edge.ts`. If a _story_ has slipped, _finish_ it _instead_.
 - **Monday 7 December: the review and the release.** _Run_ `npm test` from a _clean_ _copy_, then `npm start` on the _office_ _machine_, and _open_ the _map_ from another _office_ _machine_. Then _write_ the _second_ _plan_, for _Parts_ C to F.
 
