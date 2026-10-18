@@ -10,7 +10,7 @@ Tessera must _meet_ 58 _functional_ _requirements_: what the _service_, the _map
 |---|---|---|---|
 | FR-01 | The _build_ _command_ must _build_ the _service_ from a _fresh_ _copy_ of the repository. | US-00 c1 | `.github/workflows/build.yml`, which _builds_ a _fresh_ _clone_ on _each_ _push_ |
 | FR-02 | The _run_ _command_ must _start_ the _service_, and the _service_ must _answer_ an HTTP _request_ on its _port_. | US-00 c2 | `ServiceTests`, which _starts_ `Tessera.dll` and _asks_ it for a ***tile*** |
-| FR-03 | The _test_ _command_ must _run_ every _test_, and every _test_ must _pass_. | US-00 c3 | `scripts/test.ts` _runs_ every _suite_; `.github/workflows/build.yml` _runs_ all but the _approved_ _images_ |
+| FR-03 | The _test_ _command_ must _run_ every _test_, and every _test_ must _pass_. | US-00 c3 | `scripts/test.ts` _runs_ every _suite_; `.github/workflows/build.yml` _runs_ them all, and _since_ 18 _October_ 2026 _compares_ the _approved_ _images_ _inside_ Playwright's _own_ Docker _image_, _though_ no GitHub _run_ has yet _proved_ that _step_ |
 | FR-04 | The _package_ must _carry_ the ***seed script*** `db/seed/0001-macau-places.sql`, _made_ from `data/macau-pois.geojson`. | US-01 c2 | `DatabaseTests`, which _checks_ the _source_'s SHA-256 fingerprint and the _script_'s _first_ _line_ |
 | FR-05 | The ***integration tests*** must _start_ the _same_ _packaged_ _database_, _run_ the _same_ ***role*** _script_ and _read_ the _same_ _seed_ as the _service_. | US-01 c3 | `DatabaseFixture`, `DatabaseTests` |
 
@@ -28,7 +28,7 @@ Tessera must _meet_ 58 _functional_ _requirements_: what the _service_, the _map
 | ID | Requirement | Source | Checked by |
 |---|---|---|---|
 | FR-10 | `npm run etl` must _write_ _one_ SQL _script_ that _makes_ _each_ _table_ the ***pipeline file*** _lists_, with a _numbered_ `fid` as its _primary_ _key_, _one_ _column_ for _each_ _property_, a ***spatial index*** and _fresh_ _statistics_. | US-24 c1 | `etl/tests/test_table_sql.py`, `etl/tests/test_golden.py` |
-| FR-11 | The _script_ must _store_ the _shapes_ of a _file_ in another coordinate _system_, such as EPSG:3857, in longitude and latitude, SRID 4326. | US-24 c2 | `etl/tests/test_pipeline.py`, in _part_: it _checks_ the _arguments_ _sent_ to GDAL, not a _file_ in EPSG:3857 |
+| FR-11 | The _script_ must _store_ the _shapes_ of a _file_ in another coordinate _system_, such as EPSG:3857, in longitude and latitude, SRID 4326. | US-24 c2 | `etl/tests/test_pipeline.py`; `etl/tests/test_run.py`, whose `test_stores_a_source_in_web_map_metres_in_longitude_and_latitude` _runs_ the _pipeline_ on a _place_ in EPSG:3857 and _reads_ it _back_ from the _script_ at 113.55 E, 22.19 N in SRID 4326 |
 | FR-12 | The _pipeline_ must _refuse_ a _script_ _name_ _already_ _used_, or a _table_ _left_ with no _rows_, _name_ the _fault_ and _write_ no _script_. | US-24 c3 | `etl/tests/test_golden.py`, `etl/tests/test_table_sql.py` |
 | FR-13 | _Each_ _table_ must _run_ the ***filters*** its _pipeline_ _file_ _lists_, in that _order_, _each_ on the _rows_ the _one_ _before_ _kept_; the filters are `dropEmptyShapes`, `repairShapes`, `swapCoordinates`, `insideArea`, `tidyText`, `requireFields`, `dropDuplicateIds` and `dropNearDuplicates`. | US-36 c1 | `etl/tests/test_pipeline.py`, `etl/tests/test_chain.py`, `etl/tests/test_all_filters.py` |
 | FR-14 | A filter must _drop_ _each_ _row_ it _cannot_ _pass_, or, when it _says_ `"onFail": "stop"`, _end_ the _run_ with no _script_ _written_. | US-36 c2 | `etl/tests/test_filters.py`, `etl/tests/test_run.py` |
@@ -41,7 +41,7 @@ Tessera must _meet_ 58 _functional_ _requirements_: what the _service_, the _map
 
 | ID | Requirement | Source | Checked by |
 |---|---|---|---|
-| FR-19 | `Tessera seed` must _run_ _each_ _script_ in `db/seed` it has not _run_ _before_, _once_, in the _order_ of their _names_, and _record_ it; _run_ _again_, it must _run_ _nothing_. | US-24 c4 | `SeedingTests`, in _part_: no _test_ _checks_ the _order_ of _names_ |
+| FR-19 | `Tessera seed` must _run_ _each_ _script_ in `db/seed` it has not _run_ _before_, _once_, in the _order_ of their _names_, and _record_ it; _run_ _again_, it must _run_ _nothing_. | US-24 c4 | `SeedingTests`, whose `Runs_the_scripts_in_the_order_of_their_names` _writes_ _three_ _scripts_ _last_ _first_, 0010 _after_ 0002, and _reads_ _back_ the _order_ they _ran_ in |
 | FR-20 | A _script_ that _fails_ must _leave_ the _database_ as it was, and must _run_ _again_ _once_ _fixed_; a _script_ that _replaces_ _tables_ must _replace_ them in _one_ _transaction_. | US-24 c6 | `SeedingTests`; `etl/tests/test_run.py` _checks_ that a _script_ _holds_ no `BEGIN;` of GDAL's _own_ |
 
 ## 5. Serving a tile
@@ -60,10 +60,10 @@ Tessera must _meet_ 58 _functional_ _requirements_: what the _service_, the _map
 | FR-25 | `/` must _show_ a _map_ that _fills_ the _window_ and _opens_ on the _area_'s _home_ _view_, with the _places_ of the _nine_ _layers_ on a _plain_ _background_. | US-23 c1 | `web/e2e/map.spec.ts`, `web/src/app/App.test.tsx` |
 | FR-26 | `/food.cafes.html` must _open_ the _map_ with the cafés _alone_, in _view_. | US-23 c2 | `web/e2e/map.spec.ts`, `web/src/app/App.test.tsx`, `MapTests`, `ServiceTests` |
 | FR-27 | The _front_ _end_ must _keep_ its _state_ in _one_ immutable _model_ that a _pure_ `update` _function_ _alone_ _changes_, and its _tests_ must _run_ _without_ a _browser_. | US-23 c3 | `web/src/app/app.test.ts`, `web/src/architecture.test.ts` |
-| FR-28 | The _front_ _end_ must _ship_ _inside_ the _service_'s _own_ _release_. | US-23 c4 | `ServiceTests`, which fetches the _page_ and its _script_ from the _built_ _service_ |
+| FR-28 | The _front_ _end_ must _ship_ _inside_ the _service_'s _own_ _release_. | US-23 c4 | `ServiceTests`, which fetches the _page_ and its _script_ from the _built_ _service_; `scripts/lib/build.test.ts`, which _empties_ the _release_'s _map_ _folder_ _before_ _each_ _build_, so no _file_ of an older _map_ _ships_ |
 | FR-29 | `/` must _answer_ 404 when the _settings_ _switch_ the _preview_ _off_. | US-23 c5 | `MapTests` |
 | FR-30 | A _pin_ must _act_ as a _sign_, not a _button_: a _click_ on it must _open_ _nothing_. | US-23 c6 | `web/e2e/map.spec.ts` |
-| FR-31 | The _map_ must _name_ the _nine_ _layers_ in its _own_ _code_, _build_ _each_ _tile_'s _address_, `/{layer}/{z}/{x}/{y}.pbf`, on the _page_'s _own_ _origin_, and _load_ no _list_ of _layers_. | US-23 c7 | `web/src/layers/layers.test.ts`, `web/src/map/style.test.ts`, `web/e2e/map.spec.ts` |
+| FR-31 | The _map_ must _name_ the _nine_ _layers_ in its _own_ _code_, _build_ _each_ _tile_'s _address_, `/{layer}/{z}/{x}/{y}.pbf`, on the _page_'s _own_ _origin_, and _load_ no _list_ of _layers_. | US-23 c7 | `web/src/layers/layers.test.ts`, `web/src/map/style.test.ts`, `web/e2e/map.spec.ts`; `SourceTests`, whose `Lists_the_same_nine_layers_as_the_map` _compares_ the _service_'s _nine_ _layers_ with the _map_'s |
 | FR-32 | When a _tile_ _request_ _answers_ with a ***problem document***, the _page_ must _show_ its `detail`, or its `title` where it has _none_, as _text_ over the _map_. | US-23 c8 | `web/src/map/map.test.ts`, `web/src/app/App.test.tsx`, `web/e2e/map.spec.ts` |
 
 ## 7. Zooming and clusters
@@ -85,8 +85,8 @@ Tessera must _meet_ 58 _functional_ _requirements_: what the _service_, the _map
 | FR-40 | From _level_ 16, _each_ _pin_ on _screen_ must _show_ its _name_ _beside_ it in a _dark_, _plain_ tooltip. | UI-11 c1 | `web/e2e/map.spec.ts`, `web/src/map/style.test.ts` |
 | FR-41 | _Below_ _level_ 16, every _pin_ must _hide_ its _name_. | UI-11 c2 | `web/e2e/map.spec.ts` |
 | FR-42 | The _pins_ _inside_ a cluster must _hide_ their _names_ until it _opens_. | UI-11 c3 | `web/src/map/style.test.ts` |
-| FR-43 | At _any_ _level_, _each_ _name_ must _stay_ _clear_ of every _other_ _name_ and every icon, _across_ every _layer_. | UI-17 c1 | `web/e2e/map.spec.ts`, which _compares_ _images_ at _levels_ 16, 18 and 20; the _automatic_ _build_ skips them |
-| FR-44 | When _two_ _names_ would clash, a _fixed_ _order_ must _decide_ which _keeps_ its _name_: _between_ _layers_, the _order_ the _map_'s _style_ _sets_; _within_ a _layer_, the _places_' ids. | UI-17 c2 | `web/src/map/style.test.ts`; `TileTests` _holds_ the _approved_ ***tile query***, which _orders_ _places_ by _primary_ _key_ |
+| FR-43 | At _any_ _level_, _each_ _name_ must _stay_ _clear_ of every _other_ _name_ and every icon, _across_ every _layer_. | UI-17 c1 | `web/e2e/map.spec.ts`, which _compares_ _images_ at _levels_ 16, 18 and 20; the GitHub _build_ _now_ _compares_ them _inside_ Playwright's _own_ Docker _image_, _though_ no GitHub _run_ has yet _proved_ that _step_ |
+| FR-44 | When _two_ _names_ would clash, a _fixed_ _order_ must _decide_ which _keeps_ its _name_: _between_ _layers_, the _order_ the _map_'s _style_ _sets_; _within_ a _layer_, the _places_' ids. | UI-17 c2 | `web/src/map/style.test.ts`; `TileTests` _holds_ the _approved_ ***tile query***, which _orders_ _places_ by _primary_ _key_, and its `Gives_a_view_no_order` _proves_ a _view_, which has no _key_, _gets_ no _order_ |
 | FR-45 | The _map_ must _try_ a _name_ on the _right_, the _left_, _above_ and _below_ _before_ it _leaves_ the _name_ out. | UI-17 c3 | `web/src/map/style.test.ts` |
 | FR-46 | A _name_ _left_ out must _leave_ its icon on _show_, and must _appear_ _once_ _zooming_ in _makes_ _room_. | UI-17 c4 | `web/src/map/style.test.ts` |
 | FR-47 | _Crowded_ _places_ must _stay_ in clusters _below_ _level_ 16; from _level_ 16 every _place_ must _show_ its icon, and the _fixed_ _order_ must _decide_ _only_ which _names_ _win_ the _space_. | UI-17 c5 | `web/src/map/clusters.test.ts` |
@@ -97,7 +97,7 @@ Tessera must _meet_ 58 _functional_ _requirements_: what the _service_, the _map
 | ID | Requirement | Source | Checked by |
 |---|---|---|---|
 | FR-49 | A _scale_ _bar_ at the _bottom_ _left_ must _show_ a _round_ _length_, 1, 2 or 5 of a _unit_, no _longer_ than 140 pixels: 500 m at _level_ 15 and 50 m at _level_ 18 at Macau's latitude. | UI-19 c1 | `web/src/map/readouts.test.ts`, `web/e2e/map.spec.ts` |
-| FR-50 | The _bar_ must have _four_ _sections_, _filled_ and _empty_ in _turn_, _marked_ '0', the halfway _figure_ and the _full_ _length_ with its _unit_. | UI-19 c2 | `web/src/map/controls.test.tsx`, `web/e2e/map.spec.ts` |
+| FR-50 | The _bar_ must have _four_ _sections_, _filled_ and _empty_ in _turn_, _marked_ '0', the halfway _figure_ and the _full_ _length_ with its _unit_. | UI-19 c2 | `web/src/map/controls.test.tsx`, which _reads_ the _four_ _sections_ from the _bar_'s gradient in `styles.css` and the _three_ _figures_ _under_ them; `web/e2e/map.spec.ts` |
 | FR-51 | A _click_ on the _bar_ must _switch_ _between_ metric and imperial _units_, and its _label_ must _name_ the _units_ it will _switch_ to. | UI-19 c4 | `web/src/map/readouts.test.ts`, `web/src/map/controls.test.tsx`, `web/e2e/map.spec.ts` |
 | FR-52 | A compass at the _top_ of the _controls_ on the _right_ must _point_ _north_, with a _red_ _needle_ and a _red_ 'N'. | UI-19 c5 | `web/src/map/controls.test.tsx`, in _part_: no _test_ _checks_ its _place_ or its _colour_ |
 | FR-53 | With the _pointer_ over the _map_, the latitude and longitude _under_ it must _show_ to the _right_ of the _scale_ _bar_, latitude _first_, to _two_ decimal _places_, such as '22.19° N, 113.55° E', and _change_ as the _pointer_ _moves_. | UI-19 c7 | `web/src/map/readouts.test.ts`, `web/src/map/controls.test.tsx`, `web/e2e/map.spec.ts` |

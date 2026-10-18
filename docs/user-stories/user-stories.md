@@ -284,31 +284,31 @@ The _places_ _arrive_ as _files_ the _data_ _publisher_ _owns_, _each_ with _col
 | Size | 1 _point_ |
 | Builds on | US-07: the _routes_ and the _problem_ _documents_ |
 
-**In plain words.** A **malformed URL** is an _address_ disguised so that it _looks_ _clean_ _only_ _after_ a _web_ _server_ _tidies_ it, such as a _path_ that climbs _above_ the _root_, or a `..` _hidden_ as `%2e%2e`. Nginx _stands_ in _front_ of the _service_ and _refuses_ an _address_ it _cannot_ _read_. A disguised _address_ that Nginx _passes_ on _reaches_ the _service_ _exactly_ as _sent_, so it _matches_ no _route_.
+**In plain words.** A **malformed URL** is an _address_ disguised so that it _looks_ _clean_ _only_ _after_ a _web_ _server_ _tidies_ it, such as a _path_ that climbs _above_ the _root_, or a `..` _hidden_ as `%2e%2e`. Nginx _stands_ in _front_ of the _service_ and _refuses_ an _address_ it _cannot_ _read_, or _one_ that _hides_ a dot _folder_. A _copy_ of the _service_ _reached_ _directly_ _refuses_ a _hidden_ dot _folder_ _too_, _before_ it _chooses_ a _route_, _because_ Kestrel would _otherwise_ _tidy_ `/x/%2e%2e/food.cafes/…` into a _tile_'s _address_.
 
-> **Story.** **As** the _maintainer_, **I want** every _malformed_ _request_ _refused_, and every disguised _one_ _left_ unmatched, **so that** no _request_ _reaches_ a _route_ in disguise.
+> **Story.** **As** the _maintainer_, **I want** every _malformed_ or disguised _request_ _refused_, **so that** no _request_ _reaches_ a _route_ in disguise.
 
 **Acceptance criteria**
 
 1. **Given** a _request_ _target_ that climbs _above_ the _root_, _holds_ a stray or invalid `%`, an _encoded_ _null_ (`%00`) or a _raw_ _control_ _character_, **then** Nginx _answers_ 400 _before_ the _service_ _sees_ it.
 2. **Given** that 400, **then** its _body_ is a _problem_ _document_ (US-07) whose `title` _reads_ 'Bad Request', and it _never_ _repeats_ the _target_.
-3. **Given** a disguised _target_, such as `%2e%2e`, an _encoded_ _slash_ (`%2F`) or a backslash, **then** it _matches_ no _route_, and the _service_ _answers_ 404 as a _problem_ _document_.
+3. **Given** a _target_ that _hides_ a dot _folder_ as `%2e`, such as `/x/%2e%2e/`, **then** Nginx and the _service_ alike _answer_ 400 as a _problem_ _document_; **given** an _encoded_ _slash_ (`%2F`) or a backslash, **then** it _matches_ no _route_, and the _service_ _answers_ 404 as a _problem_ _document_.
 4. **Given** a _clean_ _tile_ _target_, **then** it _reaches_ US-07's _route_ _unchanged_.
 
 **Tests to write first**
 
-1. **Malformed targets are refused.** _Raw_ _requests_, _written_ _byte_ for _byte_ _through_ Nginx, for _five_ _malformed_ or disguised _targets_ _each_ _get_ 400 or 404, as a _problem_ _document_ that _hides_ the _target_.
+1. **Malformed targets are refused.** _Raw_ _requests_, _written_ _byte_ for _byte_ _through_ Nginx, for _malformed_ and disguised _targets_ _each_ _get_ _exactly_ the _status_ _criteria_ 1 and 3 _name_, as a _problem_ _document_ that _hides_ the _target_.
 2. **The answer hides the target.** No 400 _body_ _holds_ _any_ _part_ of its _target_.
-3. **A disguised address finds nothing.** The _service_ _answers_ an _unknown_ _address_ with a 404 _problem_ _document_.
+3. **A disguised address is refused.** _Sent_ _straight_ to a _copy_, `/x/%2e%2e/food.cafes/0/0/0.pbf` _gets_ 400, _while_ `%2F` and a backslash _get_ 404, _each_ as a _problem_ _document_.
 4. **Clean targets pass.** A _tile_ _request_ _through_ Nginx _gets_ 200.
 
 **Open to talk**
 
-- _Whether_ Nginx should _refuse_ the disguised _forms_ with 400 _too_, _rather_ than _leave_ them to the _service_'s 404.
+- _Whether_ Nginx should _refuse_ every `%2e`, as it does _now_, or _only_ a _hidden_ dot _folder_, as the _service_ does: _today_ `/food%2Ecafes/0/0/0.pbf` _gets_ 400 _through_ Nginx and a _tile_ from a _copy_ _reached_ _directly_.
 
 **Critical to success**
 
-- **Never repair an address.** Nginx _refuses_ what it _cannot_ _read_, and the _service_ _matches_ _routes_ on the _address_ as _sent_; neither _tidies_ a _path_ into _one_ that _matches_.
+- **Never repair an address.** Nginx and the _service_ _refuse_ what _hides_ a dot _folder_ or _cannot_ be _read_; neither _tidies_ a _path_ into _one_ that _matches_.
 
 ### Step 8 · US-35 Open the service to the office on port 80
 
@@ -862,7 +862,7 @@ _Seven_ _stories_ _keep_ the _service_ steady when the _database_ is _slow_, _bu
 1. **Given** the _service_ or the _database_ _down_ or _hanging_, **then** Nginx _serves_ every _tile_ it _holds_ at _once_, _even_ _past_ its `max-age`.
 2. **Given** an _expired_ _tile_, **then** Nginx _serves_ it _while_ it fetches a _fresh_ _copy_ _behind_ it.
 3. **Given** the _service_ _down_ and a _tile_ Nginx _never_ _held_, **then** Nginx _answers_ 503 with `Retry-After: 5`, as a _problem_ _document_.
-4. **Given** the _database_ _hanging_ and a _tile_ Nginx _never_ _held_, **then** the _service_ _waits_ _up_ to `Database.ConnectionWaitSeconds` or `Database.QueryTimeoutSeconds`, then _answers_ 503 (N-22).
+4. **Given** the _database_ _hanging_ and a _tile_ Nginx _never_ _held_, **then** the _service_ _gives_ _up_ _once_ `Database.ConnectionWaitSeconds` and `Database.QueryTimeoutSeconds` _together_ have _passed_, 13 _seconds_ as _shipped_, then _answers_ 503 (N-22).
 5. **Given** the _database_ _down_, **then** `/health` _answers_ `DOWN` _within_ a _second_ (N-25).
 
 **Tests to write first**

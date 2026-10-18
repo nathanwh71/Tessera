@@ -18,24 +18,24 @@ Tessera must _meet_ 26 _security_ _requirements_: what it must _refuse_, and to 
 | ID | Requirement | Source | Checked by |
 |---|---|---|---|
 | SR-05 | Every _value_ of a _tile_ _address_ must _reach_ the _database_ as a _bound_ ***parameter***, and a ***property test*** must _prove_ it. | S-01 c1 | `TileTests` |
-| SR-06 | Every _query_'s _text_ must _live_ in `Queries.cs`, and `Database` _alone_ must _send_ it, _save_ the _seed_'s ***journal*** schema. | S-01 c2 | `BoundaryTests`, in _part_: it _keeps_ the _database_'s _libraries_ _inside_ Infrastructure, and no _test_ _searches_ for SQL _text_ _outside_ `Queries.cs` |
+| SR-06 | Every _query_'s _text_ must _live_ in `Queries.cs`, and `Database` _alone_ must _send_ it, _save_ the _seed_'s ***journal*** schema. | S-01 c2 | `BoundaryTests`, which _keeps_ the _database_'s _libraries_ _inside_ Infrastructure; `SourceTests`, whose `Keeps_every_sql_text_in_queries_cs` _finds_ SQL _text_ in no C# _file_ of the _service_ but `Queries.cs` |
 | SR-07 | _Each_ _table_ or _column_ _name_ in a _query_ must _come_ from the catalogue, _through_ the _one_ _function_ that _quotes_ _names_. | S-01 c3 | `SqlTests`, `CatalogueTests` (_unit_), `TileTests` |
-| SR-08 | A _request_ for a ***layer*** _named_ `x; DROP TABLE cafes` must _answer_ 404, as a _problem_ _document_, and every _table_ must _keep_ its _rows_. | S-01 c4 | `ServiceTests`, in _part_: it _counts_ the _rows_ of `food.cafes` _alone_ and does not _read_ the _content_ _type_ |
+| SR-08 | A _request_ for a ***layer*** _named_ `x; DROP TABLE cafes` must _answer_ 404, as a _problem_ _document_, and every _table_ must _keep_ its _rows_. | S-01 c4 | `ServiceTests`, whose `Answers_an_attack_with_404_and_keeps_every_row` _reads_ the _problem_ _document_'s _content_ _type_ and _counts_ the _rows_ of every _table_ _before_ and _after_ |
 
 ## 3. Malformed addresses
 
 | ID | Requirement | Source | Checked by |
 |---|---|---|---|
-| SR-09 | Nginx must _answer_ 400, _before_ the _service_ _sees_ it, to a _request_ _target_ that climbs _above_ the _root_, or _holds_ a stray or invalid `%`, an _encoded_ _null_ (`%00`) or a _raw_ _control_ _character_. | S-06 c1 | `scripts/lib/edge.ts`, in _part_: it _accepts_ 400 or 404, and _sends_ no _raw_ _control_ _character_ |
-| SR-10 | That 400 must be a _problem_ _document_ whose `title` _reads_ 'Bad Request', and it must _never_ _repeat_ the _target_. | S-06 c2 | `scripts/lib/edge.ts`, in _part_: it does not _read_ the title |
-| SR-11 | A disguised _target_, such as `%2e%2e`, an _encoded_ _slash_ (`%2F`) or a backslash, must _match_ no _route_, and the _service_ must _answer_ 404 as a _problem_ _document_. | S-06 c3 | `ServiceTests`, `scripts/lib/edge.ts`, in _part_: no _test_ _sends_ a backslash |
+| SR-09 | Nginx must _answer_ 400, _before_ the _service_ _sees_ it, to a _request_ _target_ that climbs _above_ the _root_, or _holds_ a stray or invalid `%`, an _encoded_ _null_ (`%00`) or a _raw_ _control_ _character_. | S-06 c1 | `scripts/lib/edge.ts`, which _sends_ _each_ _target_ _byte_ for _byte_, _raw_ _control_ _characters_ _among_ them, and _expects_ _exactly_ 400 |
+| SR-10 | That 400 must be a _problem_ _document_ whose `title` _reads_ 'Bad Request', and it must _never_ _repeat_ the _target_. | S-06 c2 | `scripts/lib/edge.ts`, which _reads_ the title 'Bad Request' and _finds_ no _part_ of the _target_ in the _body_; `ServiceTests` |
+| SR-11 | A _target_ that _hides_ a dot _folder_ as `%2e`, such as `/x/%2e%2e/`, must _answer_ 400 as a _problem_ _document_, from Nginx and from the _service_ alike; an _encoded_ _slash_ (`%2F`) or a backslash must _match_ no _route_, and must _answer_ 404 as a _problem_ _document_. | S-06 c3 | `ServiceTests`, whose `Refuses_a_dot_folder_in_disguise_with_400` and `Answers_a_backslash_with_404` _ask_ a _copy_ _directly_; `TargetTests`; `scripts/lib/edge.ts`, which _sends_ `%2e`, `%2F` and a backslash _through_ Nginx |
 | SR-12 | A _clean_ _tile_ _target_ must _reach_ the _tile_ _route_ _unchanged_. | S-06 c4 | `scripts/lib/edge.ts` |
 
 ## 4. Errors that tell a stranger nothing
 
 | ID | Requirement | Source | Checked by |
 |---|---|---|---|
-| SR-13 | Every _error_ _answer_ from the HTTP API must be a _problem_ _document_ as RFC 9457 _defines_ it: the _content_ _type_ `application/problem+json`, with `type`, `title` and `status`, and `detail` where a _sentence_ _helps_; `status` must _match_ the HTTP _status_ _code_, and with `type` as `about:blank`, `title` must be the _status_'s _own_ _phrase_, such as 'Not Found'. | US-07 c5 | `ServiceTests`, `scripts/lib/edge.ts` |
+| SR-13 | Every _error_ _answer_ from the HTTP API must be a _problem_ _document_ as RFC 9457 _defines_ it: the _content_ _type_ `application/problem+json`, with `type`, `title` and `status`, and `detail` where a _sentence_ _helps_; `status` must _match_ the HTTP _status_ _code_, and with `type` as `about:blank`, `title` must be the _status_'s _own_ _phrase_, such as 'Not Found'. | US-07 c5 | `ServiceTests`, which _finds_ a _problem_ _document_ in the 404, the 400, and the 405 that `/health` and a _tile_ _give_ _any_ _method_ but _GET_ and _HEAD_; `scripts/lib/edge.ts`, which _finds_ _one_ in Nginx's 400, 403, 429 and 503, and in the 404 of `/malformed` _asked_ for by _name_ |
 
 ## 5. Office machines alone
 
@@ -62,7 +62,7 @@ Tessera must _meet_ 26 _security_ _requirements_: what it must _refuse_, and to 
 
 | ID | Requirement | Source | Checked by |
 |---|---|---|---|
-| SR-25 | The _service_ must _read_ its _database_'s _name_, _address_ and _port_ from the ***environment variable*** `DATABASE_URL`, and the _code_ must _name_ no _machine_; the _service_ must _refuse_ to _start_, and _name_ the variable, when it is _missing_, _empty_ or _malformed_. | US-00 c4 | `SettingsTests`, `StartTests`, in _part_: no _test_ _checks_ that the _code_ _names_ no _machine_ |
+| SR-25 | The _service_ must _read_ its _database_'s _name_, _address_ and _port_ from the ***environment variable*** `DATABASE_URL`, and the _code_ must _name_ no _machine_; the _service_ must _refuse_ to _start_, and _name_ the variable, when it is _missing_, _empty_ or _malformed_. | US-00 c4 | `SettingsTests`, `StartTests`; `SourceTests`, whose `Names_no_machine_in_the_code` _finds_ no _machine_ but the loopback _address_ in the _service_'s _code_, _project_ or ***settings files*** |
 | SR-26 | The _shipped_ `tessera.json` must _hold_ no _password_, and must _listen_ on 127.0.0.1 _alone_. | N-21 c5 | `SettingsTests` |
 
 _Two_ safeguards in the repository have no _story_ yet, so this _file_ _lists_ no _requirement_ for them. Git _ignores_ `.env`, the _file_ that _holds_ the _passwords_ (`.gitignore`), and Dependabot proposes _each_ _newer_ _release_ of the _packages_ and _images_ Tessera _pins_ (`.github/dependabot.yml`). A _story_ for _each_ would _give_ them a _criterion_, and then a _test_.
