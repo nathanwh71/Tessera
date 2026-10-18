@@ -69,7 +69,7 @@ A `PublicApi` _folder_ _joins_ the _module_ when a _second_ _module_ _needs_ _so
 
 **What gets harder**
 
-- A breach _shows_ at _test_ _time_, not as the _code_ is _typed_. The _rules_ _run_ _before_ the _service_'s _other_ _suites_, and _take_ _about_ _eight_ _seconds_.
+- A breach _shows_ at _test_ _time_, not as the _code_ is _typed_. The _rules_ _run_ _before_ the _service_'s _other_ _suites_, and _take_ 8 to 13 _seconds_ _once_ _built_ on a _quiet_ _machine_, and _up_ to 45 on a _busy_ _one_.
 - The _rules_ _see_ _only_ the _libraries_ they _load_ and _only_ _calls_ the _code_ _makes_ _directly_. They _load_ the _program_ with its _dependencies_, and Tessera _calls_ _nothing_ _through_ reflection.
 
 ## When to revisit

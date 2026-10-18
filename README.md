@@ -39,7 +39,7 @@ The thirty _stories_ in `docs/user-stories/user-stories.md` _fix_ what Tessera m
 | `npm run build` | _Builds_ the _map_, then the _service_ with the _map_ _inside_ it (US-00 c1) |
 | `npm test` | _Runs_ every _test_: the _scripts_', the _map_'s, the _service_'s _borders_ and its _two_ _suites_, the _pipeline_'s, and the _browser_ _tests_ _through_ Nginx (US-00 c3) |
 | `dotnet build` | _Builds_ the _service_ and its _three_ _test_ _suites_ _alone_; _needs_ `web/dist` from a _map_ _build_ |
-| `dotnet run --project tests/Tessera.ArchitectureTests` | _Checks_ the _borders_ _between_ the _service_'s _layers_ on the _built_ _program_: _eight_ _seconds_ (ADR 0010) |
+| `dotnet run --project tests/Tessera.ArchitectureTests` | _Checks_ the _borders_ _between_ the _service_'s _layers_ on the _built_ _program_: 8 to 13 _seconds_ on a _quiet_ _machine_, _up_ to 45 on a _busy_ _one_ (ADR 0010) |
 | `dotnet run --project tests/Tessera.UnitTests` | _Runs_ the _unit_ and ***property tests***: no _database_, a _second_ or _two_ |
 | `dotnet run --project tests/Tessera.IntegrationTests` | _Starts_ the _packaged_ _database_ in Docker and _tests_ _through_ it and _through_ _real_ HTTP (US-00 c3) |
 | `npm install` | _Installs_ the _scripts_' _tools_: zx and TypeScript |
