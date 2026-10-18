@@ -118,8 +118,13 @@ public sealed class Database : IAsyncDisposable
                 Timeout = pool.ConnectionWaitSeconds,
                 // A query text sent three times on a connection becomes a prepared statement: the
                 // database parses and plans it once, keeps the plan, and reruns it with new values
-                // each time. Measured on 14 October 2026, this raised the rate from 1,580 to 2,408
-                // tiles a second.
+                // each time. On 14 October 2026 it raised the rate from 1,580 to 2,408 tiles a
+                // second, with no tile cache: one 30-second k6 run per figure, random tiles at
+                // levels 13 to 18, on a 2-processor machine that the service, PostGIS and k6
+                // shared, against the build of that day. The figures compare the two settings, not
+                // an office server. The k6 script was not kept; the notes live in Git alone, in
+                // docs/changes/2026-10-14-measured-under-load.md (commit a36a011, deleted in
+                // 99d5002).
                 MaxAutoPrepare = 32,
                 AutoPrepareMinUsages = 3,
             }.ConnectionString),
