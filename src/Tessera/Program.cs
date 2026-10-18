@@ -25,10 +25,10 @@ static async Task<int> Serve()
     {
         app = TesseraHost.Build();
     }
-    // The three ways a settings check fails: a value outside its limits, several problems at once,
-    // and a key the binder cannot place. Any other exception is a fault, and escapes.
-    catch (Exception error)
-        when (error is OptionsValidationException or AggregateException or InvalidOperationException)
+    // The two ways a settings check fails: one section's problems, or several sections' at once.
+    // A misspelt key or a value that is not a number is one problem among the rest (US-00 c4). Any
+    // other exception is a fault, and escapes.
+    catch (Exception error) when (error is OptionsValidationException or AggregateException)
     {
         return Fail(Settings.Problems(error));
     }

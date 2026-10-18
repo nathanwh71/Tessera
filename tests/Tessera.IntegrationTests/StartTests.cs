@@ -58,6 +58,25 @@ public sealed class StartTests
         Assert.Contains("DATABASE_URL", errors, StringComparison.Ordinal);
     }
 
+    // US-00 c4 and N-21 c4: one failed start names every problem, a misspelt key among them, and
+    // stops with the same exit code as any other settings problem.
+    [Fact]
+    public async Task Names_a_misspelt_key_with_every_other_problem()
+    {
+        var (code, errors) = await Run(new Dictionary<string, string>
+        {
+            ["Tiles__CacheSecond"] = "5",
+            ["Tiles__MaxZoom"] = "31",
+            ["Database__PoolSize"] = "0",
+        });
+
+        Assert.Equal(1, code);
+        Assert.Contains("Tiles: 'CacheSecond' is not a setting", errors, StringComparison.Ordinal);
+        Assert.Contains("MaxZoom", errors, StringComparison.Ordinal);
+        Assert.Contains("PoolSize", errors, StringComparison.Ordinal);
+        Assert.Contains("DATABASE_URL", errors, StringComparison.Ordinal);
+    }
+
     // N-23 c3 and test 3, and N-25: with the database down, the program starts anyway and asks each
     // browser to wait, so the service and the database may start in either order.
     [Fact]
