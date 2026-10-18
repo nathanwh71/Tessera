@@ -159,7 +159,7 @@ export function seedReport(printed: string): readonly string[] {
 /**
  * Playwright's own Docker image for a version of @playwright/test: Ubuntu with the Chromium,
  * the fonts and the libraries that version was tested with. The approved images of UI-17 (test 3)
- * were drawn in it, and it draws the same pixels on any machine, so the screenshots match there.
+ * match within their tolerance there, since the image brings the same browser to every machine.
  */
 export const playwrightImage = (version: string): string => `mcr.microsoft.com/playwright:v${version}-noble`;
 

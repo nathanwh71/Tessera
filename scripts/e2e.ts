@@ -16,7 +16,7 @@
 // The approved images of UI-17 match only when Chromium draws them as it drew them: another
 // browser, or other fonts, moves a few per cent of the pixels. With TESSERA_PLAYWRIGHT_IN_DOCKER
 // set, Playwright runs inside its own image for the version web/package.json pins, which carries
-// the same Chromium and fonts on any machine; the automatic build runs it so.
+// the same Chromium and fonts wherever it runs; the automatic build runs it so.
 import { randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createServer } from 'node:net';
