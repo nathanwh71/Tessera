@@ -98,10 +98,12 @@ server {
     # A copy on this same machine accepts a connection in far less than a second, so one that has
     # not done so is down, and the request moves to the other copy at once.
     proxy_connect_timeout 1s;
-    # Longer than the service's own worst case, 3 seconds' wait for a connection and a 10-second
-    # query (Database settings), so the service answers its own 503 first, and only a copy that
-    # hangs meets this limit.
-    proxy_read_timeout 15s;
+    # Longer than the service's own worst case, so the service answers its own 503 first, and only
+    # a copy that hangs meets this limit. That worst case is the wait for a connection and the
+    # query's limit together, 3 + 10 = 13 seconds (Database settings); with the database frozen
+    # by 'docker pause', the service answered in 13.0 to 14.1 seconds (18 October 2026). The
+    # other 6 seconds leave room for a busy machine. Raise this with either setting.
+    proxy_read_timeout 20s;
     # A request that meets a copy that crashed or hangs goes to the other copy. Only a crash or a hang
     # counts against a copy; a 503 from a database outage, which both copies share, does not.
     proxy_next_upstream error timeout;
@@ -115,9 +117,9 @@ server {
         proxy_pass http://tessera;
         proxy_cache tiles;
         # Many people asking for one new tile at once cost one query (N-24). The others wait as long
-        # as the first request may take, 15 seconds, the same as proxy_read_timeout.
+        # as the first request may take, 20 seconds, the same as proxy_read_timeout.
         proxy_cache_lock on;
-        proxy_cache_lock_timeout 15s;
+        proxy_cache_lock_timeout 20s;
         # A tile already held is served while the service or the database cannot answer, and an
         # expired one is served while a fresh copy is fetched behind it.
         proxy_cache_use_stale error timeout updating http_500 http_502 http_503 http_504;

@@ -9,7 +9,7 @@
 | Part | What it does |
 |---|---|
 | `AddFile` | _Adds_ `tessera.json`, then the _environment_ _again_, so a variable _wins_ over the _file_ |
-| `Section<T>` | _Binds_ _one_ _section_ to its _record_, _refuses_ a _key_ the _record_ _lacks_, and _checks_ _each_ `[Range]` |
+| `Section<T>` | _Binds_ _one_ _section_ to its _record_, and _checks_ _each_ `[Range]` and _each_ _key_: a _key_ the _record_ _lacks_, or a _value_ of the _wrong_ _kind_, _joins_ the _same_ _list_ of _problems_ |
 | `ValidateOnStart` | _Runs_ the _checks_ when the _program_ _starts_, _rather_ than on _first_ _use_ |
 | `Check` | _Runs_ every _check_ at _once_; a _failure_ _throws_ with every _problem_ it _found_ |
 | `Problems` | _Turns_ that _failure_ into the _list_ of _problems_ `Program.cs` _prints_ |

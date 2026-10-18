@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Modules.Tessera.Domain;
 using Modules.Tessera.Features;
 using Modules.Tessera.Infrastructure;
@@ -92,11 +94,36 @@ public sealed class TileTests
         var server = new TileServer(
             () => CatalogueReader.FromRows([new CatalogueRow("food", "cafes", "geom", 4326, "POINT", "[]")]),
             (_, _) => Task.FromResult(Result.Failure<byte[]?, DatabaseError>(DatabaseError.Of("42703", "column does not exist"))),
-            Limits);
+            Limits,
+            NullLogger.Instance);
 
         var answer = await server.Answer("food.cafes", 15, 27154, 14280, TestContext.Current.CancellationToken);
 
         Assert.Equal(503, Assert.IsAssignableFrom<Microsoft.AspNetCore.Http.IStatusCodeHttpResult>(answer).StatusCode);
+    }
+
+    // N-22 c4: a refusal waiting cannot cure is the service's own fault. The answer, 500, names no
+    // cause, so a stranger learns nothing; the log names the cause, the layer and the tile, so the
+    // maintainer can find it.
+    [Fact]
+    public async Task Logs_the_cause_of_a_500()
+    {
+        var log = new Lines();
+        var server = new TileServer(
+            () => CatalogueReader.FromRows([new CatalogueRow("food", "cafes", "geom", 4326, "POINT", "[]")]),
+            (_, _) => Task.FromResult(Result.Failure<byte[]?, DatabaseError>(DatabaseError.Of("42883", "function st_asmvt does not exist"))),
+            Limits,
+            log);
+
+        var answer = await server.Answer("food.cafes", 15, 26766, 14284, TestContext.Current.CancellationToken);
+
+        Assert.Equal(500, Assert.IsAssignableFrom<Microsoft.AspNetCore.Http.IStatusCodeHttpResult>(answer).StatusCode);
+        var (level, text) = Assert.Single(log.Written);
+        Assert.Equal(LogLevel.Error, level);
+        Assert.Contains("food.cafes", text, StringComparison.Ordinal);
+        Assert.Contains("15/26766/14284", text, StringComparison.Ordinal);
+        Assert.Contains("42883", text, StringComparison.Ordinal);
+        Assert.Contains("function st_asmvt does not exist", text, StringComparison.Ordinal);
     }
 
     // N-18 test 1: the header follows the setting.
@@ -113,5 +140,22 @@ public sealed class TileTests
         Assert.Equal(TileServer.Tag([1, 2, 3]), TileServer.Tag([1, 2, 3]));
         Assert.NotEqual(TileServer.Tag([1, 2, 3]), TileServer.Tag([1, 2, 4]));
         Assert.StartsWith("W/\"", TileServer.Tag([]).ToString(), StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A log that keeps each line it is given, with its level, so a test can read what the service
+    /// wrote. Each line is the text a real log would show.
+    /// </summary>
+    private sealed class Lines : ILogger
+    {
+        public List<(LogLevel Level, string Text)> Written { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
+            Written.Add((logLevel, formatter(state, exception)));
     }
 }

@@ -60,10 +60,9 @@ public sealed class SettingsTests
             Common.Infrastructure.Settings.Check(host.Services);
             return "";
         }
-        // The three ways a settings check fails, as Program.cs catches them; any other exception is a
-        // fault in the test, and escapes.
-        catch (Exception error)
-            when (error is OptionsValidationException or AggregateException or InvalidOperationException)
+        // The two ways a settings check fails, as Program.cs catches them; any other exception is
+        // a fault in the test, and escapes.
+        catch (Exception error) when (error is OptionsValidationException or AggregateException)
         {
             return string.Join("; ", Common.Infrastructure.Settings.Problems(error));
         }
@@ -110,6 +109,30 @@ public sealed class SettingsTests
     [Fact]
     public void Refuses_a_key_it_does_not_know() =>
         Assert.Contains("'CacheSecond'", Problems("""{"Tiles":{"CacheSecond":60}}"""), StringComparison.Ordinal);
+
+    // US-00 c4 and N-21 c4: a misspelt key is one more problem in the list, named with its
+    // section, so it hides neither a value out of range, in its own section or another, nor a
+    // missing URL.
+    [Fact]
+    public void Names_a_misspelt_key_with_every_other_problem()
+    {
+        var problems = Problems("""{"Tiles":{"CacheSecond":5,"MaxZoom":31},"Database":{"PoolSize":0}}""", url: null);
+
+        Assert.Contains("Tiles: 'CacheSecond' is not a setting", problems, StringComparison.Ordinal);
+        Assert.Contains("MaxZoom", problems, StringComparison.Ordinal);
+        Assert.Contains("PoolSize", problems, StringComparison.Ordinal);
+        Assert.Contains("DATABASE_URL", problems, StringComparison.Ordinal);
+    }
+
+    // A value that is not a number is named with its section too, beside the other problems.
+    [Fact]
+    public void Names_a_value_it_cannot_read_with_every_other_problem()
+    {
+        var problems = Problems("""{"Tiles":{"CacheSeconds":"soon","MaxZoom":31}}""");
+
+        Assert.Contains("Tiles: CacheSeconds must be a whole number, not 'soon'", problems, StringComparison.Ordinal);
+        Assert.Contains("MaxZoom", problems, StringComparison.Ordinal);
+    }
 
     [Fact]
     public void Leaves_a_misspelt_section_at_its_defaults() =>

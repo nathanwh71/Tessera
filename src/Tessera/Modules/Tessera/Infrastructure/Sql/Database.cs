@@ -79,9 +79,21 @@ public sealed class Database : IAsyncDisposable
     private readonly NpgsqlDataSource _source;
 
     /// <summary>
+    /// The longest a query may take, from asking for a connection to the last row: the wait for a
+    /// connection and the query's own limit together, the worst case the settings promise (N-22
+    /// c2). Nginx's proxy_read_timeout must stay above it, so the service answers its own 503
+    /// first.
+    /// </summary>
+    private readonly TimeSpan _limit;
+
+    /// <summary>
     /// Private, so only <see cref="Open"/> builds one, and every pool keeps the limits of N-22.
     /// </summary>
-    private Database(NpgsqlDataSource source) => _source = source;
+    private Database(NpgsqlDataSource source, TimeSpan limit)
+    {
+        _source = source;
+        _limit = limit;
+    }
 
     /// <summary>
     /// The longest a ping may take, from connecting to the answer: one second, so <c>/health</c>
@@ -93,36 +105,51 @@ public sealed class Database : IAsyncDisposable
     /// <param name="connection">Npgsql's connection string, made from the database URL.</param>
     /// <param name="pool">The pool's limits (N-22).</param>
     public static Database Open(string connection, DatabaseSettings pool) =>
-        new(NpgsqlDataSource.Create(new NpgsqlConnectionStringBuilder(connection)
-        {
-            // The name shows in pg_stat_activity, so the maintainer can tell Tessera's connections apart.
-            ApplicationName = "tessera",
-            MaxPoolSize = pool.PoolSize,
-            ConnectionLifetime = pool.ConnectionLifetimeSeconds,
-            CommandTimeout = pool.QueryTimeoutSeconds,
-            // Covers both opening a connection and waiting for a free one in the pool.
-            Timeout = pool.ConnectionWaitSeconds,
-            // A query text sent three times on a connection becomes a prepared statement: the database
-            // parses and plans it once, keeps the plan, and reruns it with new values each time.
-            // Measured on 14 October 2026, this raised the rate from 1,580 to 2,408 tiles a second.
-            MaxAutoPrepare = 32,
-            AutoPrepareMinUsages = 3,
-        }.ConnectionString));
+        new(
+            NpgsqlDataSource.Create(new NpgsqlConnectionStringBuilder(connection)
+            {
+                // The name shows in pg_stat_activity, so the maintainer can tell Tessera's
+                // connections apart.
+                ApplicationName = "tessera",
+                MaxPoolSize = pool.PoolSize,
+                ConnectionLifetime = pool.ConnectionLifetimeSeconds,
+                CommandTimeout = pool.QueryTimeoutSeconds,
+                // Covers both opening a connection and waiting for a free one in the pool.
+                Timeout = pool.ConnectionWaitSeconds,
+                // A query text sent three times on a connection becomes a prepared statement: the
+                // database parses and plans it once, keeps the plan, and reruns it with new values
+                // each time. On 14 October 2026 it raised the rate from 1,580 to 2,408 tiles a
+                // second, with no tile cache: one 30-second k6 run per figure, random tiles at
+                // levels 13 to 18, on a 2-processor machine that the service, PostGIS and k6
+                // shared, against the build of that day. The figures compare the two settings, not
+                // an office server. The k6 script was not kept; the notes live in Git alone, in
+                // docs/changes/2026-10-14-measured-under-load.md (commit a36a011, deleted in
+                // 99d5002).
+                MaxAutoPrepare = 32,
+                AutoPrepareMinUsages = 3,
+            }.ConnectionString),
+            Limit(pool));
+
+    // A query limit of 0 means no limit, so the whole wait has none either.
+    private static TimeSpan Limit(DatabaseSettings pool) =>
+        pool.QueryTimeoutSeconds == 0
+            ? Timeout.InfiniteTimeSpan
+            : TimeSpan.FromSeconds(pool.ConnectionWaitSeconds + pool.QueryTimeoutSeconds);
 
     /// <summary>
     /// Runs a query and turns each row into a <typeparamref name="T"/>, matching columns to fields by
     /// name, so a record such as CatalogueRow needs no code of its own to read a row.
     /// </summary>
     public Task<Result<ImmutableArray<T>, DatabaseError>> Rows<T>(Query query, CancellationToken cancel = default) =>
-        Run(async connection =>
-            (await connection.QueryAsync<T>(Command(query, cancel)).ConfigureAwait(false)).ToImmutableArray(), cancel);
+        Run(async (connection, limit) =>
+            (await connection.QueryAsync<T>(Command(query, limit)).ConfigureAwait(false)).ToImmutableArray(), cancel);
 
     /// <summary>
     /// Runs a query that returns one value, or null when no row comes back; the <b><i>tile</i></b>
     /// route reads null as an empty tile.
     /// </summary>
     public Task<Result<T?, DatabaseError>> Single<T>(Query query, CancellationToken cancel = default) where T : class =>
-        Run(async connection => await connection.QuerySingleOrDefaultAsync<T>(Command(query, cancel)).ConfigureAwait(false), cancel);
+        Run(async (connection, limit) => await connection.QuerySingleOrDefaultAsync<T>(Command(query, limit)).ConfigureAwait(false), cancel);
 
     /// <summary>
     /// True when the database answers <c>SELECT 1</c> within a second, the wait for a free connection
@@ -131,13 +158,9 @@ public sealed class Database : IAsyncDisposable
     /// </summary>
     public async Task<bool> Ping(CancellationToken stop)
     {
-        // This token, tied to the caller's, takes the ping out of the pool's queue once PingLimit
-        // runs out, so a ping that gave up never takes a connection a tile is waiting for.
-        var limit = CancellationTokenSource.CreateLinkedTokenSource(stop);
-        limit.CancelAfter(PingLimit);
         try
         {
-            await PingOnce(limit.Token).WaitAsync(PingLimit, stop).ConfigureAwait(false);
+            await Within(PingLimit, PingOnce, stop).ConfigureAwait(false);
             return true;
         }
         // A cancel from the caller's own token is no fault of the database, so it escapes and the
@@ -149,23 +172,17 @@ public sealed class Database : IAsyncDisposable
         {
             return false;
         }
-        finally
-        {
-            // Cancel the token before releasing it, so the queue hears of it whichever clock ran out first.
-            await limit.CancelAsync().ConfigureAwait(false);
-            limit.Dispose();
-        }
     }
 
     /// <summary>
     /// One ping, which throws on failure rather than returning a Result, since Ping wants only
     /// 'answered or not' and treats every failure alike.
     /// </summary>
-    private async Task PingOnce(CancellationToken limit)
+    private async Task<int> PingOnce(CancellationToken limit)
     {
         var connection = await _source.OpenConnectionAsync(limit).ConfigureAwait(false);
         await using (connection.ConfigureAwait(false))
-            await connection.ExecuteScalarAsync<int>(Command(Queries.Ping, limit)).ConfigureAwait(false);
+            return await connection.ExecuteScalarAsync<int>(Command(Queries.Ping, limit)).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -175,19 +192,71 @@ public sealed class Database : IAsyncDisposable
 
     // The cancellation token reaches the wait for a connection too, so a request that gives up leaves
     // the pool's queue at once (N-26 c2).
-    private async Task<Result<T, DatabaseError>> Run<T>(Func<NpgsqlConnection, Task<T>> work, CancellationToken cancel)
+    //
+    // The query keeps its own clock, _limit, as the ping does. Npgsql's limits alone do not hold
+    // when the database freezes, as under 'docker pause': past the query's limit, Npgsql opens a
+    // second connection to ask the server to cancel the query, and waits on that connection's
+    // answer, which never comes, for up to two more connection waits, and holds a thread while it
+    // waits. Measured on 18 October 2026, that made a 10-second limit answer after 16 seconds,
+    // past Nginx's 15; with this clock it answered after 13 to 14. At _limit the request answers
+    // 503 and leaves the query to finish, or fail, out of sight; its connection goes back to the
+    // pool once Npgsql gives up on it.
+    private async Task<Result<T, DatabaseError>> Run<T>(
+        Func<NpgsqlConnection, CancellationToken, Task<T>> work, CancellationToken cancel)
     {
         try
         {
-            // Closing the connection is awaited too, so ConfigureAwait must wrap the connection itself.
-            var connection = await _source.OpenConnectionAsync(cancel).ConfigureAwait(false);
-            await using (connection.ConfigureAwait(false))
-                return Result.Success<T, DatabaseError>(await work(connection).ConfigureAwait(false));
+            return Result.Success<T, DatabaseError>(
+                await Within(_limit, limit => RunOnce(work, limit), cancel).ConfigureAwait(false));
         }
         catch (NpgsqlException error)
         {
             return Result.Failure<T, DatabaseError>(Error(error));
         }
+        // The service's own clock ran out: the same 57014 as a query past Npgsql's limit. A cancel
+        // from the caller's own token is no fault of the database, so it escapes.
+        catch (Exception error)
+            when (error is TimeoutException or OperationCanceledException && !cancel.IsCancellationRequested)
+        {
+            return Result.Failure<T, DatabaseError>(
+                DatabaseError.Of(PostgresErrorCodes.QueryCanceled, "The query ran past its time."));
+        }
+    }
+
+    // Runs the work on a clock of its own: past the limit, it throws TimeoutException at once,
+    // whatever the work is doing. The work's token, tied to the caller's, is cancelled at the same
+    // limit, so a request still waiting for a connection leaves the pool's queue, and a ping that
+    // gave up never takes a connection a tile is waiting for. The token is released only once the
+    // work has ended, by the continuation below. Cancelling a query on a frozen database blocks
+    // for seconds while Npgsql asks the server to stop it, so the request never waits for that:
+    // the token's own timer cancels it out of sight.
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Reliability",
+        "CA2000:Dispose objects before losing scope",
+        Justification = "The continuation disposes the clock when the work ends, which may come after Within returns.")]
+    private static async Task<T> Within<T>(TimeSpan limit, Func<CancellationToken, Task<T>> work, CancellationToken cancel)
+    {
+        var clock = CancellationTokenSource.CreateLinkedTokenSource(cancel);
+        clock.CancelAfter(limit);
+        var run = work(clock.Token);
+        _ = run.ContinueWith(
+            static (_, ended) => ((IDisposable)ended!).Dispose(),
+            clock,
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+        return await run.WaitAsync(limit, cancel).ConfigureAwait(false);
+    }
+
+    // One run of the work on a borrowed connection, which throws on failure; Run turns each
+    // failure into a value.
+    private async Task<T> RunOnce<T>(Func<NpgsqlConnection, CancellationToken, Task<T>> work, CancellationToken limit)
+    {
+        // Closing the connection is awaited too, so ConfigureAwait must wrap the connection
+        // itself.
+        var connection = await _source.OpenConnectionAsync(limit).ConfigureAwait(false);
+        await using (connection.ConfigureAwait(false))
+            return await work(connection, limit).ConfigureAwait(false);
     }
 
     // A PostgresException is the database's own refusal, with its SQLSTATE. A query, or a wait for a

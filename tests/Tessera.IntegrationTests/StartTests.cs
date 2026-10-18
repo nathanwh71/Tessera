@@ -58,6 +58,25 @@ public sealed class StartTests
         Assert.Contains("DATABASE_URL", errors, StringComparison.Ordinal);
     }
 
+    // US-00 c4 and N-21 c4: one failed start names every problem, a misspelt key among them, and
+    // stops with the same exit code as any other settings problem.
+    [Fact]
+    public async Task Names_a_misspelt_key_with_every_other_problem()
+    {
+        var (code, errors) = await Run(new Dictionary<string, string>
+        {
+            ["Tiles__CacheSecond"] = "5",
+            ["Tiles__MaxZoom"] = "31",
+            ["Database__PoolSize"] = "0",
+        });
+
+        Assert.Equal(1, code);
+        Assert.Contains("Tiles: 'CacheSecond' is not a setting", errors, StringComparison.Ordinal);
+        Assert.Contains("MaxZoom", errors, StringComparison.Ordinal);
+        Assert.Contains("PoolSize", errors, StringComparison.Ordinal);
+        Assert.Contains("DATABASE_URL", errors, StringComparison.Ordinal);
+    }
+
     // N-23 c3 and test 3, and N-25: with the database down, the program starts anyway and asks each
     // browser to wait, so the service and the database may start in either order.
     [Fact]
@@ -93,11 +112,13 @@ public sealed class StartTests
             Assert.False(program.HasExited);
             answer.Dispose();
 
-            // N-25 c2: /health says DOWN, and names no fault. Its ping waits a second at most; a
-            // tile is refused within half a second.
+            // N-25 c2 and N-28 c5: /health says DOWN within a second, and names no fault. A tile is
+            // refused within half a second. The tile above has borne the first request's warm-up,
+            // so the clock times /health alone: 25 to 40 ms in runs on 18 October 2026, with the
+            // whole suite running beside it.
             var clock = Stopwatch.StartNew();
             using var health = await client.GetAsync("/health", TestContext.Current.CancellationToken);
-            Assert.True(clock.Elapsed < TimeSpan.FromSeconds(2), $"/health took {clock.Elapsed}");
+            Assert.True(clock.Elapsed < TimeSpan.FromSeconds(1), $"/health took {clock.Elapsed}");
             Assert.Equal(System.Net.HttpStatusCode.ServiceUnavailable, health.StatusCode);
             Assert.Equal("""{"status":"DOWN"}""", await health.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
 

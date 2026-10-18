@@ -29,7 +29,9 @@ public sealed record DatabaseSettings
 
     /// <summary>
     /// The longest a query may run before the database cancels it, so a runaway query cannot hold a
-    /// connection for ever, and its request answers 503 (N-22 c2); 0 means no limit.
+    /// connection for ever, and its request answers 503 (N-22 c2); 0 means no limit. With
+    /// ConnectionWaitSeconds it sets the longest a request waits on the database, 13 seconds as
+    /// shipped; Nginx's proxy_read_timeout, 20 seconds, must stay above that sum (Database.Run).
     /// </summary>
     [Range(0, int.MaxValue)]
     public int QueryTimeoutSeconds { get; init; } = 10;

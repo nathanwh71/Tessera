@@ -21,7 +21,7 @@ public sealed class CatalogueTests(DatabaseFixture database) : IClassFixture<Dat
     /// controls which list and which database it meets, with no web server to start.
     /// </summary>
     private static TileServer Server(LayerCatalogue catalogue, Database reader) =>
-        new(() => catalogue, reader.Single<byte[]>, Tiles);
+        new(() => catalogue, reader.Single<byte[]>, Tiles, Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance);
 
     // The stage: one of each kind US-03 names. xUnit runs this before each test, so every step may
     // run again on a stage it has already set. The test makes its own tables, as US-03 asks;
