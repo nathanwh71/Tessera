@@ -39,8 +39,10 @@ export const FONT_FILES: FontFiles = { latin: latinFont, latinExt: latinExtFont 
 /**
  * The whole world in Web Mercator, the flat projection every web map uses, which cuts off near the
  * poles: the map may not pan past it (UI-09, criterion 5). The east and west edges stop a
- * ten-thousandth of a degree short of 180°, since MapLibre failed to start with bounds that span
- * exactly 360° (seen in 6.13; not yet checked in the 6.14 that package.json pins).
+ * ten-thousandth of a degree short of 180°, since MapLibre fails to start with bounds that span
+ * exactly 360°: its constructor throws a TypeError ('Cannot read properties of null') while it
+ * fits the view to the bounds. Seen in 6.13, and again on 18 October 2026 in the 6.14.0 that
+ * package.json pins, in Playwright's Chromium; with these bounds the same map starts.
  */
 export const WORLD: [[number, number], [number, number]] = [
 	[-179.9999, -85.051129],
