@@ -40,7 +40,7 @@
 
 ## Capstone (6 pomodoros)
 
-_Write_ ADR 0011, 'TLS on the office network', in Nygard's _form_. On a _branch_, _carry_ out the _chosen_ _way_ in `nginx/Dockerfile` and `nginx/default.conf.template`: the certificate, _port_ 80 _sending_ _browsers_ on to 443, and HSTS if you _chose_ it. _Add_ a _check_ of the redirect and the certificate to `scripts/lib/edge.ts`, _add_ the renewal to the runbook from _plan_ 05, confirm that Dependabot's alerts are on, and _record_ the _policy_ for _updates_ in `docs/guides/`.
+_Write_ ADR 0012, 'TLS on the office network', in Nygard's _form_. On a _branch_, _carry_ out the _chosen_ _way_ in `nginx/Dockerfile` and `nginx/default.conf.template`: the certificate, _port_ 80 _sending_ _browsers_ on to 443, and HSTS if you _chose_ it. _Add_ a _check_ of the redirect and the certificate to `scripts/lib/edge.ts`, _add_ the renewal to the runbook from _plan_ 05, confirm that Dependabot's alerts are on, and _record_ the _policy_ for _updates_ in `docs/guides/`.
 
 ## Resources
 
