@@ -65,7 +65,7 @@ jobs:
       # than the floors in scripts/lib/coverage.ts: 94 per cent of lines, 84 of branches.
       - run: node scripts/coverage.ts
       # Keeps the report, with each line the tests miss, for a week, even when the floors fail.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage-report
