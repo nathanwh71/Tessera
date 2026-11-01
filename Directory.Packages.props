@@ -7,7 +7,7 @@
     <PackageVersion Include="dbup-postgresql" Version="7.0.1" />
     <!-- Stops the build when a switch over a closed set of records misses a case. -->
     <PackageVersion Include="ExhaustiveMatching.Analyzer" Version="0.5.0" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="2.0.295" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.317" />
   </ItemGroup>
   <ItemGroup Label="Tests">
     <PackageVersion Include="xunit.v3" Version="4.0.2" />
